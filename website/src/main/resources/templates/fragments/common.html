@@ -1,0 +1,102 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+
+<!-- ==================== 公共导航栏 ==================== -->
+<nav th:fragment="navbar" class="navbar">
+    <a href="/" class="logo"><i class="fas fa-stopwatch"></i> ChronoTeam</a>
+    <div class="nav-links">
+        <a href="/browse"><i class="fas fa-search"></i> 瀏覽商品</a>
+        <a href="javascript:void(0)" onclick="requireLogin('/sell', '❌ 請先登入後再發佈出售！')" class="btn btn-gold">
+            <i class="fas fa-plus-circle"></i> 發佈出售
+        </a>
+
+        <!-- 未登录 -->
+        <a href="javascript:void(0)" th:if="${#authorization.expression('!isAuthenticated()')}" onclick="openLoginModal()"><i class="fas fa-sign-in-alt"></i> 登入</a>
+        <a href="javascript:void(0)" th:if="${#authorization.expression('!isAuthenticated()')}" onclick="openRegisterModal()"><i class="fas fa-user-plus"></i> 註冊</a>
+
+        <!-- 已登录：用户下拉菜单 -->
+        <div th:if="${#authorization.expression('isAuthenticated()')}" class="nav-dropdown">
+            <a href="javascript:void(0)" class="nav-dropdown-trigger">
+                <i class="fas fa-user-circle"></i> 我的帳戶 <i class="fas fa-caret-down" style="font-size: 0.8rem;"></i>
+            </a>
+            <div class="nav-dropdown-menu">
+                <div class="user-header">
+                    <i class="fas fa-user-circle" style="font-size: 1.5rem;"></i>
+                    <div class="username" sec:authentication="name">用戶名</div>
+                </div>
+
+                <!-- 🟢 修改：將「帳戶信息」和「我的訂單」合併為「個人中心」 -->
+                <a href="/account/dashboard"><i class="fas fa-user-cog"></i> 個人中心</a>
+
+                <!-- 🟢 管理中心（僅 admin 可見） -->
+                <a href="/admin/dashboard" th:if="${#authorization.expression('isAuthenticated()') and #authentication.name == 'admin'}"
+                   style="background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%); color: var(--primary); font-weight: 600;">
+                    <i class="fas fa-shield-alt"></i> 管理中心
+                </a>
+
+                <button type="button" class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> 登出</button>
+                <button type="button" class="delete-account-btn" onclick="return false;"><i class="fas fa-user-slash"></i> 註銷賬戶</button>
+            </div>
+        </div>
+
+        <!-- 购物车下拉菜单 -->
+        <div class="nav-dropdown">
+            <a href="javascript:void(0)" class="nav-dropdown-trigger" onclick="toggleCartDropdown(event)">
+                <i class="fas fa-shopping-cart"></i> 購物車
+                <span id="cartCountBadge" class="cart-badge" style="display:none;">0</span>
+            </a>
+            <div class="nav-dropdown-menu cart-dropdown-menu" id="cartDropdown">
+                <div class="cart-header"><h3><i class="fas fa-shopping-cart"></i> 購物車</h3></div>
+                <div class="cart-items-container" id="cartItemsContainer">
+                    <div class="cart-empty"><i class="fas fa-shopping-basket" style="font-size: 3rem; color: #ddd; margin-bottom: 1rem;"></i><p>購物車是空的</p></div>
+                </div>
+                <div class="cart-footer">
+                    <div class="cart-total"><span>總計：</span><span id="cartTotalAmount" style="color: var(--accent); font-weight: 700; font-size: 1.2rem;">HK$ 0</span></div>
+                    <button class="btn btn-primary checkout-btn" onclick="checkout()"><i class="fas fa-credit-card"></i> 結賬</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- ==================== 登录/注册弹窗 ==================== -->
+<div th:fragment="modals">
+    <!-- 注册弹窗 -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+            <button class="modal-close" onclick="closeRegisterModal()" aria-label="關閉">&times;</button>
+            <h3 style="margin-bottom:1.2rem; color:var(--primary); text-align:center; font-size:1.3rem;"><i class="fas fa-user-plus" style="color:var(--gold); margin-right:0.5rem;"></i>創建新帳戶</h3>
+            <form id="registerForm" onsubmit="handleRegister(event)">
+                <div style="margin-bottom:0.8rem;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">用戶名 *</label><input type="text" name="username" required maxlength="50" placeholder="3-50位，字母數字組合" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem;"></div>
+                <div style="margin-bottom:0.8rem;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">真實姓名 *</label><input type="text" name="name" required maxlength="100" placeholder="請輸入您的真實姓名" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem;"></div>
+                <div style="margin-bottom:0.8rem;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">電子郵件 *</label><input type="email" name="email" required maxlength="100" placeholder="example@email.com" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem;"></div>
+                <div style="margin-bottom:0.8rem; position:relative;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">密碼 *</label><input type="password" name="password" id="regPassword" required minlength="6" placeholder="至少6位字符" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem; padding-right:2.5rem;"><i class="fas fa-eye password-toggle" id="toggleRegPassword" onclick="togglePassword('regPassword', this)" aria-label="切換密碼可見性"></i></div>
+                <div style="margin-bottom:0.8rem;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">確認密碼 *</label><input type="password" name="confirmPassword" id="confirmPassword" required minlength="6" placeholder="請再次輸入密碼" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem;"></div>
+                <div style="margin-bottom:1.2rem;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">手機號碼 *</label><input type="tel" name="phone" required maxlength="20" placeholder="例如: +852 1234 5678" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem;"></div>
+                <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:0.7rem;"><i class="fas fa-user-check"></i> 立即註冊</button>
+            </form>
+            <div id="registerMsg" style="margin-top:0.8rem; text-align:center; font-size:0.85rem; min-height:1.2rem;"></div>
+            <p style="margin-top:0.8rem; text-align:center; color:var(--gray); font-size:0.85rem;">已有帳戶？<a href="javascript:void(0)" onclick="openLoginModal()" style="color:var(--accent); font-weight:500;">立即登入</a></p>
+        </div>
+    </div>
+
+    <!-- 登录弹窗 -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeLoginModal()" aria-label="關閉">&times;</button>
+            <h3 style="margin-bottom:1.5rem; color:var(--primary); text-align:center;"><i class="fas fa-sign-in-alt" style="color:var(--gold); margin-right:0.5rem;"></i>歡迎回來</h3>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div style="margin-bottom:0.8rem;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">用戶名 *</label><input type="text" name="username" required maxlength="50" placeholder="請輸入註冊時的用戶名" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem;"></div>
+                <div style="margin-bottom:1rem; position:relative;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">密碼 *</label><input type="password" name="password" id="loginPassword" required minlength="6" placeholder="請輸入密碼" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem; padding-right:2.5rem;"><i class="fas fa-eye password-toggle" id="toggleLoginPassword" onclick="togglePassword('loginPassword', this)" aria-label="切換密碼可見性"></i></div>
+                <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:0.7rem;"><i class="fas fa-sign-in-alt"></i> 立即登入</button>
+            </form>
+            <div id="loginMsg" style="margin-top:0.8rem; text-align:center; font-size:0.85rem; min-height:1.2rem;"></div>
+            <p style="margin-top:0.8rem; text-align:center; color:var(--gray); font-size:0.85rem;">還沒有帳戶？<a href="javascript:void(0)" onclick="switchToRegister()" style="color:var(--accent); font-weight:500;">立即註冊</a></p>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

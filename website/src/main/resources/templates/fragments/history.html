@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>瀏覽歷史 - ChronoTeam</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/sidebar.css">
+  <style>
+    .dashboard-container { display: flex; min-height: calc(100vh - 150px); max-width: 1400px; margin: 2rem auto; padding: 0 1rem; gap: 2rem; }
+    .main-content { flex: 1; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 2.5rem; }
+    .page-title { font-size: 1.8rem; color: var(--primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.8rem; border-bottom: 2px solid var(--light); padding-bottom: 1rem; }
+    .page-title i { color: var(--gold); }
+    .page-subtitle { color: var(--gray); margin-bottom: 2rem; font-size: 0.95rem; }
+
+    .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem; }
+    .history-card { background: white; border: 1px solid #e9ecef; border-radius: 12px; overflow: hidden; transition: all 0.3s; display: flex; flex-direction: column; }
+    .history-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.08); transform: translateY(-5px); }
+
+    .hist-img { height: 200px; background: var(--light); overflow: hidden; position: relative; }
+    .hist-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+    .history-card:hover .hist-img img { transform: scale(1.08); }
+
+    .hist-info { padding: 1.2rem; flex: 1; display: flex; flex-direction: column; }
+    .hist-brand { color: var(--gold); font-weight: 600; font-size: 0.85rem; margin-bottom: 0.3rem; text-transform: uppercase;}
+    .hist-name { font-weight: 600; color: var(--primary); margin-bottom: 0.8rem; font-size: 1rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.8em; }
+    .hist-time { font-size: 0.8rem; color: var(--gray); margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.3rem;}
+    .hist-price { color: var(--accent); font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; margin-top: auto;}
+
+    .hist-actions { display: flex; gap: 0.5rem; }
+    .btn-sm { padding: 0.5rem 0.8rem; font-size: 0.85rem; border-radius: 6px; text-decoration: none; cursor: pointer; border: none; transition: 0.3s; display: inline-flex; align-items: center; gap: 0.4rem; justify-content: center; flex: 1; font-weight: 500; }
+    .btn-view { background: var(--light); color: var(--primary); border: 1px solid #ddd; }
+    .btn-view:hover { background: var(--gold); color: white; border-color: var(--gold); }
+
+    .empty-state { text-align: center; padding: 4rem 2rem; }
+    .empty-state i { font-size: 4rem; color: #ddd; margin-bottom: 1rem; }
+    .footer { background: var(--primary); color: rgba(255, 255, 255, 0.7); padding: 2rem; text-align: center; margin-top: 3rem; }
+    @media (max-width: 900px) { .dashboard-container { flex-direction: column; } }
+  </style>
+</head>
+<body>
+<div th:replace="~{fragments/common :: navbar}"></div>
+<div class="dashboard-container">
+  <!-- 🟢 引入側邊欄，高亮 'history' -->
+  <div th:replace="~{fragments/sidebar :: sidebar(activePage='history')}"></div>
+  <main class="main-content">
+    <h2 class="page-title"><i class="fas fa-history"></i> 瀏覽歷史</h2>
+    <p class="page-subtitle">您最近瀏覽過的商品都在這裡，系統最多保留 200 條記錄，並自動清理半年前的數據</p>
+
+    <!-- 🟢 歷史列表 -->
+    <div class="history-grid" th:if="${!historyList.isEmpty()}">
+      <div class="history-card" th:each="hist : ${historyList}">
+        <div class="hist-img">
+          <!-- 顯示圖片 -->
+          <img th:src="@{/images/products/{img}(img=${hist.product.image})}"
+               th:alt="${hist.product.description}"
+               onerror="this.src='/images/placeholder.png'">
+        </div>
+        <div class="hist-info">
+          <div class="hist-brand" th:text="${hist.product.brand} ?: 'ChronoTeam'">Brand</div>
+          <!-- 顯示圖片名稱 (商品描述) -->
+          <div class="hist-name" th:text="${hist.product.description}">Product Name</div>
+          <!-- 顯示瀏覽時間 -->
+          <div class="hist-time">
+            <i class="far fa-clock"></i>
+            <span th:text="${#temporals.format(hist.viewedAt, 'yyyy-MM-dd HH:mm')}">2024-01-01 12:00</span>
+          </div>
+          <div class="hist-price">
+            HK$ <span th:text="${#numbers.formatDecimal(hist.product.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+          </div>
+          <div class="hist-actions">
+            <!-- 顯示網址 (商品詳情頁連結) -->
+            <a th:href="@{/product/{id}(id=${hist.product.id})}" class="btn-sm btn-view">
+              <i class="fas fa-eye"></i> 再次查看
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🟢 空狀態 -->
+    <div th:if="${historyList.isEmpty()}" class="empty-state">
+      <i class="fas fa-history"></i>
+      <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有瀏覽記錄</h3>
+      <p style="color: var(--gray); margin-bottom: 1.5rem;">去瀏覽商品，您的瀏覽歷史將自動保存在這裡</p>
+      <a href="/browse" class="btn btn-gold"><i class="fas fa-search"></i> 瀏覽商品</a>
+    </div>
+  </main>
+</div>
+<footer class="footer">
+  <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
+</footer>
+<div th:replace="~{fragments/common :: modals}"></div>
+<script th:inline="javascript">
+  const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+</script>
+<script src="/js/common.js"></script>
+</body>
+</html>

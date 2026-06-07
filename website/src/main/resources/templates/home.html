@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChronoTeam | 專業二手名錶交易平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!--  1. 引入公共 CSS (包含导航栏、按钮、弹窗、购物车等所有公共样式) -->
+    <link rel="stylesheet" href="/css/common.css">
+
+    <!--  2. 首页专属 CSS (只保留 Hero、搜索栏、商品卡片等首页特有样式) -->
+    <style>
+        /* Hero 區域 */
+        .hero { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; padding: 4rem 2rem; text-align: center; }
+        .hero h1 { font-size: 2.5rem; margin-bottom: 1rem; background: linear-gradient(to right, #fff, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero p { font-size: 1.2rem; opacity: 0.9; margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+
+        /* 搜索欄 */
+        .search-bar { background: white; padding: 2rem; border-radius: 12px; max-width: 800px; margin: -2rem auto 2rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); position: relative; z-index: 10; }
+        .search-form { display: flex; gap: 1rem; flex-wrap: wrap; }
+        .search-form input, .search-form select { flex: 1; min-width: 150px; padding: 0.8rem 1rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; transition: border-color 0.3s; }
+        .search-form input:focus, .search-form select:focus { outline: none; border-color: var(--gold); }
+        .search-form .btn { padding: 0.8rem 2rem; white-space: nowrap; }
+
+        /* 分類快捷入口 */
+        .categories { padding: 3rem 2rem; max-width: 1200px; margin: 0 auto; }
+        .section-title { text-align: center; margin-bottom: 2rem; color: var(--primary); position: relative; }
+        .section-title::after { content: ''; display: block; width: 60px; height: 3px; background: var(--gold); margin: 0.5rem auto; border-radius: 2px; }
+        .category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; }
+        .category-card { background: white; padding: 1.5rem 1rem; border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
+        .category-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); }
+        .category-card i { font-size: 2rem; color: var(--gold); margin-bottom: 0.5rem; }
+        .category-card span { font-weight: 500; color: var(--primary); }
+
+        /* 熱門商品 */
+        .featured { background: white; padding: 3rem 2rem; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; max-width: 1200px; margin: 0 auto; }
+        .product-card { background: var(--light); border-radius: 12px; overflow: hidden; transition: transform 0.3s; border: 1px solid #eee; }
+        .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+        .product-img { height: 200px; background: linear-gradient(135deg, #f5f5f5, #e9ecef); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .product-img img { width: 100%; height: 100%; object-fit: cover; }
+        .product-info { padding: 1rem; }
+        .product-brand { color: var(--gold); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; }
+        .product-name { font-weight: 600; margin: 0.3rem 0; color: var(--primary); }
+        .product-price { color: var(--accent); font-size: 1.3rem; font-weight: 700; margin: 0.5rem 0; }
+        .product-condition { display: inline-block; padding: 0.2rem 0.6rem; background: #e9ecef; border-radius: 4px; font-size: 0.8rem; color: var(--gray); margin-bottom: 0.8rem; }
+        .product-actions { display: flex; gap: 0.5rem; }
+        .product-actions .btn { flex: 1; justify-content: center; padding: 0.5rem; font-size: 0.9rem; }
+
+        /* 平台特色 */
+        .features { padding: 4rem 2rem; background: var(--secondary); color: white; text-align: center; }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; max-width: 1000px; margin: 0 auto; }
+        .feature-item i { font-size: 2.5rem; color: var(--gold); margin-bottom: 1rem; }
+        .feature-item h3 { margin-bottom: 0.5rem; }
+        .feature-item p { opacity: 0.8; font-size: 0.95rem; }
+
+        /* 頁腳 */
+        .footer { background: var(--primary); color: rgba(255, 255, 255, 0.7); padding: 3rem 2rem 1rem; text-align: center; }
+        .footer-links { display: flex; justify-content: center; gap: 2rem; margin: 1.5rem 0; flex-wrap: wrap; }
+        .footer-links a { color: rgba(255, 255, 255, 0.9); text-decoration: none; transition: color 0.3s; }
+        .footer-links a:hover { color: var(--gold); }
+        .copyright { border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1rem; font-size: 0.9rem; }
+
+        /* 首页专属响应式 */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            .search-form { flex-direction: column; }
+            .search-form .btn { width: 100%; }
+        }
+    </style>
+</head>
+
+<body>
+
+<!--  3. 引入公共导航栏 (删除了原本 50 多行的 nav 代码) -->
+<div th:replace="~{fragments/common :: navbar}"></div>
+
+<!-- Hero 區域 -->
+<section class="hero">
+    <h1><i class="fas fa-gem"></i> 專業二手名錶交易平台</h1>
+    <p>嚴選認證 · 真實保證 · 安全交易 · 全球配送</p>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/browse" class="btn btn-primary"><i class="fas fa-search"></i> 立即選購</a>
+        <a href="javascript:void(0)" onclick="requireLogin('/sell', '❌ 請先登入後再賣出手錶！')" class="btn btn-outline">
+            <i class="fas fa-tag"></i> 賣出手錶
+        </a>
+    </div>
+</section>
+
+<!-- 搜索欄 -->
+<div class="search-bar">
+    <form class="search-form" th:action="@{/browse}" method="get">
+        <input type="text" name="keyword" placeholder="搜尋品牌、型號..." th:value="${param.keyword}">
+        <select name="brand">
+            <option value="">所有品牌</option>
+            <option value="rolex" th:selected="${param.brand == 'rolex'}">Rolex 勞力士</option>
+            <option value="omega" th:selected="${param.brand == 'omega'}">Omega 歐米茄</option>
+            <option value="patek" th:selected="${param.brand == 'patek'}">Patek Philippe 百達翡麗</option>
+            <option value="ap" th:selected="${param.brand == 'ap'}">Audemars Piguet 愛彼</option>
+            <option value="cartier" th:selected="${param.brand == 'cartier'}">Cartier 卡地亞</option>
+        </select>
+        <select name="priceRange">
+            <option value="">價格區間</option>
+            <option value="0-5000" th:selected="${param.priceRange == '0-5000'}">HK$ 0 - 5,000</option>
+            <option value="5000-20000" th:selected="${param.priceRange == '5000-20000'}">HK$ 5,000 - 20,000</option>
+            <option value="20000-50000" th:selected="${param.priceRange == '20000-50000'}">HK$ 20,000 - 50,000</option>
+            <option value="50000+" th:selected="${param.priceRange == '50000+'}">HK$ 50,000+</option>
+        </select>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> 搜尋</button>
+    </form>
+</div>
+
+<!-- 分類快捷入口 -->
+<section class="categories">
+    <h2 class="section-title"><i class="fas fa-th-large"></i> 熱門分類</h2>
+    <div class="category-grid">
+        <div class="category-card" onclick="location.href='/browse?category=dress'"><i class="fas fa-tie"></i><span>正裝錶</span></div>
+        <div class="category-card" onclick="location.href='/browse?category=dive'"><i class="fas fa-water"></i><span>潛水錶</span></div>
+        <div class="category-card" onclick="location.href='/browse?category=chronograph'"><i class="fas fa-stopwatch"></i><span>計時碼錶</span></div>
+        <div class="category-card" onclick="location.href='/browse?category=vintage'"><i class="fas fa-history"></i><span>古董錶</span></div>
+        <div class="category-card" onclick="location.href='/browse?brand=rolex'"><i class="fas fa-crown"></i><span>勞力士</span></div>
+        <div class="category-card" onclick="location.href='/browse?condition=excellent'"><i class="fas fa-star"></i><span>近全新</span></div>
+    </div>
+</section>
+
+<!-- 熱門商品 -->
+<section class="featured">
+    <h2 class="section-title"><i class="fas fa-fire"></i> 精選熱賣</h2>
+    <div class="product-grid">
+        <!-- 商品卡片 1 -->
+        <div class="product-card">
+            <div class="product-img"><img src="/images/products/watch1.png" alt="Rolex Submariner"></div>
+            <div class="product-info">
+                <div class="product-brand">Rolex</div>
+                <div class="product-name">Submariner Date 116610LN</div>
+                <div class="product-condition"><i class="fas fa-check-circle"></i> 95% 新 · 附盒證</div>
+                <div class="product-price">HK$ 68,000</div>
+                <div class="product-actions">
+                    <a href="/product/1" class="btn btn-outline"><i class="fas fa-eye"></i> 詳情</a>
+                    <button onclick="addToCart(1)" class="btn btn-primary"><i class="fas fa-cart-plus"></i> 加入</button>
+                </div>
+            </div>
+        </div>
+        <!-- 商品卡片 2 -->
+        <div class="product-card">
+            <div class="product-img"><img src="/images/products/watch2.png" alt="Omega Speedmaster"></div>
+            <div class="product-info">
+                <div class="product-brand">Omega</div>
+                <div class="product-name">Speedmaster Professional Moonwatch</div>
+                <div class="product-condition"><i class="fas fa-check-circle"></i> 90% 新 · 保養中</div>
+                <div class="product-price">HK$ 32,500</div>
+                <div class="product-actions">
+                    <a href="/product/2" class="btn btn-outline"><i class="fas fa-eye"></i> 詳情</a>
+                    <button onclick="addToCart(2)" class="btn btn-primary"><i class="fas fa-cart-plus"></i> 加入</button>
+                </div>
+            </div>
+        </div>
+        <!-- 商品卡片 3 -->
+        <div class="product-card">
+            <div class="product-img"><img src="/images/products/watch3.png" alt="Cartier Santos"></div>
+            <div class="product-info">
+                <div class="product-brand">Cartier</div>
+                <div class="product-name">Santos de Cartier Medium</div>
+                <div class="product-condition"><i class="fas fa-check-circle"></i> 98% 新 · 全套</div>
+                <div class="product-price">HK$ 45,800</div>
+                <div class="product-actions">
+                    <a href="/product/3" class="btn btn-outline"><i class="fas fa-eye"></i> 詳情</a>
+                    <button onclick="addToCart(3)" class="btn btn-primary"><i class="fas fa-cart-plus"></i> 加入</button>
+                </div>
+            </div>
+        </div>
+        <!-- 商品卡片 4 -->
+        <div class="product-card">
+            <div class="product-img"><img src="/images/products/watch4.png" alt="AP Royal Oak"></div>
+            <div class="product-info">
+                <div class="product-brand">AP</div>
+                <div class="product-name">Royal Oak 15400ST</div>
+                <div class="product-condition"><i class="fas fa-check-circle"></i> 92% 新 · 原廠保卡</div>
+                <div class="product-price">HK$ 128,000</div>
+                <div class="product-actions">
+                    <a href="/product/4" class="btn btn-outline"><i class="fas fa-eye"></i> 詳情</a>
+                    <button onclick="addToCart(4)" class="btn btn-primary"><i class="fas fa-cart-plus"></i> 加入</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="/browse" class="btn btn-outline">查看更多 <i class="fas fa-arrow-right"></i></a>
+    </div>
+</section>
+
+<!-- 平台特色 -->
+<section class="features">
+    <h2 class="section-title" style="color: white;"><i class="fas fa-shield-alt"></i> 為什麼選擇 ChronoTeam</h2>
+    <div class="features-grid">
+        <div class="feature-item"><i class="fas fa-certificate"></i><h3>專業鑑定</h3><p>每隻手錶經認證鐘錶師檢測，出具鑑定報告</p></div>
+        <div class="feature-item"><i class="fas fa-lock"></i><h3>安全交易</h3><p>平台擔保付款，確認收貨後才放款給賣家</p></div>
+        <div class="feature-item"><i class="fas fa-undo"></i><h3>7天退換</h3><p>收到商品7天內如有問題，支持無理由退換</p></div>
+        <div class="feature-item"><i class="fas fa-headset"></i><h3>專屬客服</h3><p>一對一專業顧問，全程協助選購與售後</p></div>
+    </div>
+</section>
+
+<!-- 頁腳 -->
+<footer class="footer">
+    <div class="footer-links">
+        <a href="/about">關於我們</a>
+        <a href="/authentication">鑑定流程</a>
+        <a href="/sell-guide">賣家指南</a>
+        <a href="/buyer-protection">買家保障</a>
+        <a href="/contact">聯絡我們</a>
+        <a href="/faq">常見問題</a>
+    </div>
+    <div style="margin: 1rem 0;">
+        <a href="#" style="margin: 0 0.5rem; color: white;"><i class="fab fa-facebook fa-lg"></i></a>
+        <a href="#" style="margin: 0 0.5rem; color: white;"><i class="fab fa-instagram fa-lg"></i></a>
+        <a href="#" style="margin: 0 0.5rem; color: white;"><i class="fab fa-whatsapp fa-lg"></i></a>
+    </div>
+    <div class="copyright">
+        &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.
+        <br>當前時間：<span th:text="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd HH:mm:ss')}">--</span>
+    </div>
+</footer>
+
+<!--  4. 引入公共弹窗 HTML (删除了原本 100 多行的 Modal 代码) -->
+<div th:replace="~{fragments/common :: modals}"></div>
+
+<!--  5. 注入登录状态变量 (必须在 common.js 之前) -->
+<script th:inline="javascript">
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+</script>
+
+<!--  6. 引入公共 JS (删除了原本 300 多行的购物车、登录、注册、登出 JS 代码) -->
+<script src="/js/common.js"></script>
+
+</body>
+</html>

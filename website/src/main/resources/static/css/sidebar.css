@@ -1,0 +1,98 @@
+/* ==================== 左側側邊欄樣式 ==================== */
+
+/* 側邊欄容器 */
+.sidebar {
+  width: 280px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  height: fit-content;
+  position: sticky;
+  top: 100px;
+}
+
+/* 側邊欄頭部 */
+.sidebar-header {
+  text-align: center;
+  padding-bottom: 1.5rem;
+  border-bottom: 2px solid var(--light);
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-header i {
+  font-size: 3rem;
+  color: var(--gold);
+}
+
+.sidebar-header h3 {
+  margin-top: 0.5rem;
+  color: var(--primary);
+}
+
+.sidebar-header p {
+  color: var(--gray);
+  font-size: 0.9rem;
+  margin-top: 0.2rem;
+}
+
+/* 側邊欄菜單 */
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-category {
+  margin-bottom: 1.5rem;
+}
+
+.menu-category-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gray);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  padding-left: 0.5rem;
+  letter-spacing: 1px;
+}
+
+/* 菜單項目 */
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem 1rem;
+  color: var(--primary);
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-weight: 500;
+  font-size: 0.95rem;
+  margin-bottom: 0.2rem;
+}
+
+.menu-item:hover {
+  background: var(--light);
+  color: var(--gold);
+}
+
+.menu-item.active {
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--gold);
+  border-left: 3px solid var(--gold);
+  font-weight: 600;
+}
+
+.menu-item i {
+  width: 20px;
+  text-align: center;
+}
+
+/* 響應式設計 */
+@media (max-width: 900px) {
+  .sidebar {
+    width: 100%;
+    position: static;
+  }
+}

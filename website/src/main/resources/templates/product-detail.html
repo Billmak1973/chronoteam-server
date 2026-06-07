@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="${product.description} + ' - ChronoTeam'">商品詳情</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- ✅ 1. 引入公共 CSS -->
+  <link rel="stylesheet" href="/css/common.css">
+
+  <!-- ✅ 2. 頁面特有 CSS (只保留商品詳情和評論區樣式) -->
+  <style>
+    .detail-container { max-width: 1200px; margin: 2rem auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); display: flex; gap: 3rem; }
+    .detail-img { flex: 1; background: white; overflow: hidden; border-radius: 8px; }
+    .detail-img img { width: 100%; height: 500px; object-fit: contain; }
+    .detail-info { flex: 1; }
+    .price { color: var(--accent); font-size: 2rem; font-weight: 700; margin: 1rem 0; }
+    .details-text { white-space: pre-wrap; line-height: 1.8; color: #555; background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid var(--gold); }
+
+    .reviews-section { max-width: 1200px; margin: 2rem auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
+    .reviews-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--light); }
+    .reviews-header h2 { color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+    .reviews-header h2 i { color: var(--gold); }
+    .review-form { margin-bottom: 2rem; padding: 1.5rem; background: var(--light); border-radius: 8px; }
+    .review-form h3 { margin-bottom: 1rem; color: var(--primary); font-size: 1.1rem; }
+    .rating-select { display: flex; gap: 0.5rem; margin-bottom: 1rem; font-size: 1.5rem; color: #ddd; }
+    .rating-select i { cursor: pointer; transition: color 0.2s; }
+    .rating-select i:hover, .rating-select i.active { color: var(--gold); }
+    .review-textarea { width: 100%; min-height: 120px; padding: 1rem; border: 2px solid #e9ecef; border-radius: 8px; font-family: inherit; font-size: 0.95rem; resize: vertical; margin-bottom: 1rem; }
+    .review-textarea:focus { outline: none; border-color: var(--gold); }
+    .reviews-list { display: flex; flex-direction: column; gap: 1.5rem; }
+    .review-card { padding: 1.5rem; background: var(--light); border-radius: 8px; border-left: 3px solid var(--gold); }
+    .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; }
+    .reviewer-name { font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+    .review-rating { color: var(--gold); }
+    .review-date { font-size: 0.85rem; color: var(--gray); }
+    .review-content { color: #555; line-height: 1.7; white-space: pre-wrap; }
+    .no-reviews { text-align: center; padding: 3rem; color: var(--gray); }
+    .no-reviews i { font-size: 3rem; margin-bottom: 1rem; color: #ddd; }
+
+    @media (max-width: 768px) {
+        .detail-container { flex-direction: column; gap: 2rem; }
+        .detail-img img { height: 350px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ✅ 3. 引入公共導航欄 -->
+<div th:replace="~{fragments/common :: navbar}"></div>
+
+<!-- === 商品詳情 === -->
+<div class="detail-container">
+  <div class="detail-img">
+    <img th:src="@{/images/products/{img}(img=${product.image})}" th:alt="${product.description}" onerror="this.src='/images/placeholder.png'">
+  </div>
+  <div class="detail-info">
+    <h1 th:text="${product.description}">手錶名稱</h1>
+    <p style="color: var(--gray); margin: 0.5rem 0;">
+      分類：<span th:text="${product.category}" style="font-weight: 600;">Watch</span> |
+      庫存：<span th:text="${product.stock}" style="font-weight: 600;">0</span> 隻
+    </p>
+    <div class="price" th:text="'HK$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 0, 'POINT')}">HK$ 0</div>
+
+    <h3 style="margin-top: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+      <i class="fas fa-file-alt" style="color: var(--gold);"></i> 來源與詳細介紹
+    </h3>
+    <p class="details-text" th:text="${product.details} ?: '暫無詳細介紹'">這裡是手錶的來源...</p>
+
+    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+      <!-- 🟢 修改：傳入 currentProductId 給 common.js 中的 addToCart 函數 -->
+      <button type="button" onclick="addToCart(currentProductId)" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;">
+        <i class="fas fa-cart-plus"></i> 加入購物車
+      </button>
+      <a href="/browse" class="btn btn-outline" style="padding: 0.8rem 2rem; font-size: 1rem;">
+        <i class="fas fa-arrow-left"></i> 返回瀏覽
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- === 評論區 === -->
+<div class="reviews-section">
+  <div class="reviews-header">
+    <h2>
+      <i class="fas fa-comments"></i> 用戶評論
+      <span style="font-size: 0.9rem; color: var(--gray); font-weight: normal;">
+                (<span th:text="${reviews != null ? #lists.size(reviews) : 0}">0</span> 條評論)
+            </span>
+    </h2>
+  </div>
+
+  <!-- 發表評論表單（僅限已登錄用戶） -->
+  <div th:if="${#authorization.expression('isAuthenticated()')}" class="review-form">
+    <h3><i class="fas fa-pen" style="color: var(--gold);"></i> 發表您的評論</h3>
+    <form id="reviewForm" onsubmit="submitReview(event)">
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">評分：</label>
+        <div class="rating-select" id="ratingSelect">
+          <i class="fas fa-star" data-rating="1" onclick="selectRating(1)"></i>
+          <i class="fas fa-star" data-rating="2" onclick="selectRating(2)"></i>
+          <i class="fas fa-star" data-rating="3" onclick="selectRating(3)"></i>
+          <i class="fas fa-star" data-rating="4" onclick="selectRating(4)"></i>
+          <i class="fas fa-star" data-rating="5" onclick="selectRating(5)"></i>
+        </div>
+        <input type="hidden" id="rating" name="rating" required>
+      </div>
+      <textarea class="review-textarea" id="reviewContent" name="content" placeholder="請分享您對這款手錶的看法..." required maxlength="1000"></textarea>
+      <div style="text-align: right; color: var(--gray); font-size: 0.85rem; margin-bottom: 1rem;">
+        <span id="charCount">0</span>/1000
+      </div>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> 提交評論</button>
+    </form>
+  </div>
+
+  <!-- 未登錄提示 -->
+  <div th:if="${#authorization.expression('!isAuthenticated()')}" style="text-align: center; padding: 2rem; background: var(--light); border-radius: 8px; margin-bottom: 2rem;">
+    <i class="fas fa-lock" style="font-size: 2rem; color: var(--gold); margin-bottom: 1rem;"></i>
+    <p style="color: var(--gray); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">🔒 該賬號沒有登錄，無法評論</p>
+    <button onclick="openLoginModal()" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> 立即登入</button>
+  </div>
+
+  <!-- 評論列表 -->
+  <div class="reviews-list" id="reviewsList">
+    <div th:if="${reviews == null || #lists.isEmpty(reviews)}" class="no-reviews">
+      <i class="fas fa-comment-slash" style="color: var(--gold);"></i>
+      <p style="font-size: 1.1rem; color: var(--gray); margin-top: 1rem;">📝 該產品還沒有用戶發表評價哦！</p>
+      <p style="font-size: 0.9rem; color: var(--gray); margin-top: 0.5rem;">成為第一個留下評論的人吧～</p>
+    </div>
+    <div th:each="review : ${reviews}" class="review-card">
+      <div class="review-header">
+        <div class="reviewer-name">
+          <i class="fas fa-user-circle"></i>
+          <span th:text="${review.customer.username}">用戶名</span>
+        </div>
+        <div style="text-align: right;">
+          <div class="review-rating">
+            <i class="fas fa-star" th:each="i : ${#numbers.sequence(1, review.rating ?: 0)}"></i>
+            <i class="far fa-star" th:each="i : ${#numbers.sequence((review.rating ?: 0) + 1, 5)}"></i>
+          </div>
+          <div class="review-date" th:text="${#temporals.format(review.createdAt, 'yyyy-MM-dd HH:mm')}">2026-01-01</div>
+        </div>
+      </div>
+      <div class="review-content" th:text="${review.content}">評論內容...</div>
+    </div>
+  </div>
+</div>
+
+<!-- === 頁腳 === -->
+<footer class="footer">
+  <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
+</footer>
+
+<!-- ✅ 4. 引入公共彈窗 HTML (登入/註冊) -->
+<div th:replace="~{fragments/common :: modals}"></div>
+
+<!-- ✅ 5. 注入 Thymeleaf 變量 (必須在 common.js 之前) -->
+<script th:inline="javascript">
+  const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+  const currentProductId = [[${ product.id }]];
+</script>
+
+<!-- ✅ 6. 引入公共 JS -->
+<script src="/js/common.js"></script>
+
+<!-- ✅ 7. 頁面特有 JS -->
+<script>
+  // 🟢 覆蓋 common.js 中的彈窗函數，使其支持在當前頁面直接打開彈窗（而不是跳轉到首頁）
+  function openLoginModal() {
+      const modal = document.getElementById('loginModal');
+      if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+      else { window.location.href = '/'; }
+  }
+  function openRegisterModal() {
+      const modal = document.getElementById('registerModal');
+      if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+      else { window.location.href = '/'; }
+  }
+  function closeLoginModal() {
+      const modal = document.getElementById('loginModal');
+      if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+  }
+  function closeRegisterModal() {
+      const modal = document.getElementById('registerModal');
+      if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+  }
+
+  // 點擊遮罩層關閉彈窗
+  document.addEventListener('DOMContentLoaded', function () {
+      const registerModal = document.getElementById('registerModal');
+      const loginModal = document.getElementById('loginModal');
+      if (registerModal) registerModal.addEventListener('click', function (e) { if (e.target === this) closeRegisterModal(); });
+      if (loginModal) loginModal.addEventListener('click', function (e) { if (e.target === this) closeLoginModal(); });
+  });
+
+  // ESC 鍵關閉彈窗
+  document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { closeRegisterModal(); closeLoginModal(); }
+  });
+
+  // === 評論區特有邏輯 ===
+  let currentRating = 0;
+
+  function selectRating(rating) {
+      currentRating = rating;
+      document.getElementById('rating').value = rating;
+      const stars = document.querySelectorAll('#ratingSelect i');
+      stars.forEach((star, index) => {
+          if (index < rating) {
+              star.classList.remove('far');
+              star.classList.add('fas', 'active');
+              star.style.color = 'var(--gold)';
+          } else {
+              star.classList.remove('fas', 'active');
+              star.classList.add('far');
+              star.style.color = '#ddd';
+          }
+      });
+  }
+
+  document.getElementById('reviewContent')?.addEventListener('input', function () {
+      document.getElementById('charCount').textContent = this.value.length;
+  });
+
+  async function submitReview(e) {
+      e.preventDefault();
+      if (currentRating === 0) { showNotification('❌ 請先選擇評分', true); return; }
+      const content = document.getElementById('reviewContent').value.trim();
+      if (!content) { showNotification('❌ 請輸入評論內容', true); return; }
+
+      try {
+          const response = await fetch('/api/review/' + currentProductId, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rating: currentRating, content: content })
+          });
+          if (response.ok) {
+              showNotification('✅ 評論提交成功！');
+              setTimeout(() => location.reload(), 1500); // 1.5秒後刷新頁面
+          } else {
+              const result = await response.json();
+              showNotification('❌ 提交失敗：' + (result.message || '請稍後重試'), true);
+          }
+      } catch (error) {
+          console.error('提交評論錯誤:', error);
+          showNotification('❌ 網絡錯誤，請稍後重試', true);
+      }
+  }
+</script>
+
+</body>
+</html>
