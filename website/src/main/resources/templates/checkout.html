@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>安全結賬 - ChronoTeam</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <style>
+        .checkout-container { max-width: 800px; margin: 3rem auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .order-summary { background: var(--light); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 1.1rem; }
+        .total-row { font-size: 1.5rem; font-weight: 700; color: var(--accent); border-top: 2px solid #ddd; padding-top: 1rem; margin-top: 1rem; }
+        .pay-btn { width: 100%; padding: 1rem; font-size: 1.2rem; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/common :: navbar}"></div>
+
+<div class="checkout-container">
+    <h2 style="margin-bottom: 1.5rem; color: var(--primary);"><i class="fas fa-lock" style="color: var(--gold);"></i> 安全結賬</h2>
+
+    <div class="order-summary">
+        <div class="summary-row">
+            <span>訂單編號：</span>
+            <span th:text="${order.orderNo}">ORD-123456</span>
+        </div>
+        <div class="summary-row">
+            <span>支付方式：</span>
+            <span>模擬 PayPal / 信用卡</span>
+        </div>
+        <div class="summary-row total-row">
+            <span>應付總額：</span>
+            <span>HK$ <span th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span></span>
+        </div>
+    </div>
+
+    <div style="text-align: center; color: var(--gray); margin-bottom: 1rem;">
+        <i class="fas fa-shield-alt"></i> 此為模擬支付環境，不會產生真實扣款
+        3. 點擊下方按鈕即可完成模擬支付流程。
+    </div>
+
+    <button id="confirmPayBtn" class="btn btn-primary pay-btn" th:attr="data-orderno=${order.orderNo}, data-amount=${order.totalAmount}">
+        <i class="fas fa-credit-card"></i> 確認支付 HK$ <span th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+    </button>
+</div>
+
+<script th:inline="javascript">
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+</script>
+<script src="/js/common.js"></script>
+<script>
+    document.getElementById('confirmPayBtn').addEventListener('click', async function() {
+        const btn = this;
+        const orderNo = btn.getAttribute('data-orderno');
+        const amount = btn.getAttribute('data-amount');
+
+        // 1. UI 進入 Loading 狀態 (模擬網絡延遲)
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 正在與銀行通訊...';
+
+        try {
+            // 模擬 1.5 秒的網絡延遲，增加真實感
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // 2. 發送支付請求
+            const response = await fetch('/checkout/api/pay', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderNo: orderNo, amount: amount })
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // 3. 支付成功，跳轉到成功頁面
+                   window.location.href = `/checkout/payment-success?orderNo=${orderNo}`;  // ✅ 正確
+            } else {
+                // 支付失敗，恢復按鈕狀態並提示
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-credit-card"></i> 重新嘗試支付';
+                showNotification('❌ ' + (result.message || '支付失敗'), true);
+            }
+        } catch (error) {
+            console.error('支付錯誤:', error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-credit-card"></i> 重新嘗試支付';
+            showNotification('❌ 網絡連接失敗，請重試', true);
+        }
+    });
+</script>
+</body>
+</html>

@@ -109,7 +109,37 @@ function formatPrice(price) {
     return new Intl.NumberFormat('zh-HK', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
 }
 
-function checkout() { window.location.href = '/checkout'; }
+async function checkout() {
+    if (!isLoggedIn) {
+        showNotification('❌ 請先登入！', true);
+        return;
+    }
+
+    // 顯示 Loading
+    const btn = document.querySelector('.checkout-btn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
+    try {
+        const response = await fetch('/checkout/api/create', { method: 'POST' });
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            // 獲取生成的 orderNo，跳轉到結賬頁面
+            window.location.href = `/checkout?orderNo=${result.data}`;
+        } else {
+            showNotification('❌ ' + (result.message || '創建訂單失敗'), true);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('結賬錯誤:', error);
+        showNotification('❌ 網絡錯誤', true);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
 
 async function addToCart(productId) {
     // 检查是否登录 (兼容未定义的情况)

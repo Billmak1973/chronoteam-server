@@ -32,7 +32,7 @@ public class LoginLog {
     @Column(name = "login_time")
     private LocalDateTime loginTime;
 
-    // 🟢 輔助方法：解析設備名稱
+    //  輔助方法：解析設備名稱
     @Transient
     public String getDeviceName() {
         if (userAgent == null) return "未知設備";
@@ -46,7 +46,7 @@ public class LoginLog {
         return "未知設備";
     }
 
-    // 🟢 輔助方法：解析瀏覽器名稱
+    //  輔助方法：解析瀏覽器名稱
     @Transient
     public String getBrowserName() {
         if (userAgent == null) return "未知瀏覽器";
@@ -59,7 +59,7 @@ public class LoginLog {
         return "未知瀏覽器";
     }
 
-    // 🟢 輔助方法：獲取對應的 FontAwesome 圖標
+    //  輔助方法：獲取對應的 FontAwesome 圖標
     @Transient
     public String getDeviceIcon() {
         String device = getDeviceName().toLowerCase();
@@ -68,31 +68,30 @@ public class LoginLog {
         return "fas fa-desktop";
     }
 
-    // 🟢 輔助方法：IP 地址脫敏 (例如: 192.168.1.100 -> 192.168.*.*)
-    // 🟢 輔助方法：IP 地址脫敏 (例如: 192.168.1.100 -> 192.168.*.*)
+    //  輔助方法：IP 地址脫敏 (例如: 192.168.1.100 -> 192.168.*.*)
     @Transient
     public String getMaskedIp() {
         if (ipAddress == null || "Unknown".equals(ipAddress)) {
             return "未知";
         }
 
-        // 🟢 處理 IPv6 localhost (::1 或 0:0:0:0:0:0:0:1)
+        //  處理 IPv6 localhost (::1 或 0:0:0:0:0:0:0:1)
         if ("0:0:0:0:0:0:0:1".equals(ipAddress) || "::1".equals(ipAddress)) {
             return "127.0.0.1 (本地)";
         }
 
-        // 🟢 處理 IPv4 localhost
+        // 處理 IPv4 localhost
         if ("127.0.0.1".equals(ipAddress)) {
             return "127.0.0.1 (本地)";
         }
 
-        // 🟢 正常 IPv4 地址脫敏 (保留前兩段)
+        //  正常 IPv4 地址脫敏 (保留前兩段)
         String[] parts = ipAddress.split("\\.");
         if (parts.length == 4) {
             return parts[0] + "." + parts[1] + ".*.*";
         }
 
-        // 🟢 IPv6 或其他格式地址處理
+        //  IPv6 或其他格式地址處理
         return ipAddress.substring(0, Math.min(ipAddress.length(), 6)) + "***";
     }
 }

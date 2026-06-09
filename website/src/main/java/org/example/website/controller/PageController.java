@@ -1,14 +1,11 @@
 package org.example.website.controller;
 
-import org.example.website.entity.Customer;
-import org.example.website.entity.LoginLog;
-import org.example.website.entity.SellApplication; // 🟢 新增：引入 SellApplication
-import org.example.website.entity.Favorite;
-import org.example.website.entity.ViewHistory; // 🟢 新增
+import org.example.website.entity.*;
 import org.example.website.repository.LoginLogRepository;
 import org.example.website.repository.SellApplicationRepository; // 🟢 新增：引入 SellApplicationRepository
 import org.example.website.repository.FavoriteRepository; // 🟢 新增
 import org.example.website.service.CustomerService;
+import org.example.website.service.OrderService;
 import org.example.website.service.ViewHistoryService; // 🟢 新增
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -35,18 +32,21 @@ public class PageController {
     private final SellApplicationRepository sellApplicationRepository; // 🟢 新增：聲明 SellApplicationRepository
     private final FavoriteRepository favoriteRepository; // 🟢 新增聲明
     private final ViewHistoryService viewHistoryService; // 🟢 新增依賴
+    private final OrderService orderService; // 🟢 新增
 
     // 🟢 2. 通過構造函數注入依賴 (加入了 SellApplicationRepository)
     public PageController(CustomerService customerService,
                           LoginLogRepository loginLogRepository,
                           SellApplicationRepository sellApplicationRepository,
                           FavoriteRepository favoriteRepository,
-                          ViewHistoryService viewHistoryService) {
+                          ViewHistoryService viewHistoryService,
+                          OrderService orderService) {
         this.customerService = customerService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
         this.favoriteRepository = favoriteRepository;
         this.viewHistoryService = viewHistoryService;
+        this.orderService = orderService; // 🟢 賦值
     }
 
     @GetMapping("/")
@@ -90,7 +90,15 @@ public class PageController {
     }
 
     @GetMapping("/account/orders")
-    public String myOrders() {
+    public String myOrders(Model model, Authentication authentication) {
+        String username = authentication.getName();
+        Customer customer = customerService.findByUsername(username);
+
+        // 🟢 查詢當前用戶的訂單列表
+        List<Order> orders = orderService.getUserOrders(username);
+
+        model.addAttribute("customer", customer);
+        model.addAttribute("orders", orders); // 🟢 傳遞給前端
         return "orders";
     }
 
