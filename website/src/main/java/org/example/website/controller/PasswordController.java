@@ -19,7 +19,7 @@ public class PasswordController {
 
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
-    // 🟢 新增：注入安全問題 Repository
+    //  新增：注入安全問題 Repository
     private final SecurityQuestionRepository securityQuestionRepository;
 
     public PasswordController(CustomerRepository customerRepository,
@@ -40,7 +40,7 @@ public class PasswordController {
             String newPassword = (String) request.get("newPassword");
             String verificationMethod = (String) request.get("verificationMethod");
 
-            // 🔍 添加日志
+            //  添加日志
             System.out.println("🔐 修改密码请求 - 用户: " + username + ", 验证方式: " + verificationMethod);
 
             // 获取当前用户
@@ -49,7 +49,7 @@ public class PasswordController {
 
             boolean isVerified = false;
 
-            // 🟢 验证方式 1：使用当前密码
+            //  验证方式 1：使用当前密码
             if ("password".equals(verificationMethod)) {
                 String currentPassword = (String) request.get("currentPassword");
                 System.out.println("🔑 使用密码验证");
@@ -63,7 +63,7 @@ public class PasswordController {
                             .body(ApiResponse.error("當前密碼不正確"));
                 }
             }
-            // 🟢 验证方式 2：回答安全问题
+            //  验证方式 2：回答安全问题
             else if ("question".equals(verificationMethod)) {
                 System.out.println("🛡️ 使用安全问题验证");
 
@@ -126,7 +126,7 @@ public class PasswordController {
                         .body(ApiResponse.error("無效的驗證方式"));
             }
 
-            // 🟢 验证通过，开始更新密码
+            //  验证通过，开始更新密码
             if (isVerified) {
                 // 可选：检查新密码是否和旧密码一样
                 if (passwordEncoder.matches(newPassword, customer.getPassword())) {

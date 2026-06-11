@@ -1,22 +1,27 @@
-
 package org.example.website.service;
 
 import org.example.website.dto.RegisterRequest;
 import org.example.website.entity.Customer;
 import org.example.website.repository.CustomerRepository;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class CustomerService {
-    // 🟢 1. 去掉 static
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RedisTemplate<String, Object> redisTemplate; 
 
-    public CustomerService(CustomerRepository customerRepository, PasswordEncoder passwordEncoder) {
+    // 修改構造函數，加入 RedisTemplate
+    public CustomerService(CustomerRepository customerRepository,
+                           PasswordEncoder passwordEncoder,
+                           RedisTemplate<String, Object> redisTemplate) {
         this.customerRepository = customerRepository;
         this.passwordEncoder = passwordEncoder;
+        this.redisTemplate = redisTemplate;
     }
 
     @Transactional
@@ -31,12 +36,34 @@ public class CustomerService {
         customer.setPassword(passwordEncoder.encode(request.getPassword()));
         customer.setPhone(request.getPhone());
         customer.setCreditLimit(5000.00);
-        return customerRepository.save(customer);
+
+        Customer savedCustomer = customerRepository.save(customer);
+
+        // 🟢 註冊成功後，將用戶資訊存入 Redis，設定 1 小時過期
+        String redisKey = "user:info:" + savedCustomer.getUsername();
+        redisTemplate.opsForValue().set(redisKey, savedCustomer, 1, TimeUnit.HOURS);
+
+        return savedCustomer;
     }
 
-    // 🟢 2. 去掉 static，改為實例方法
     public Customer findByUsername(String username) {
-        return customerRepository.findByUsername(username)
+        // 🟢 1. 先從 Redis 快取中查找
+        String redisKey = "user:info:" + username;
+        Customer cachedCustomer = (Customer) redisTemplate.opsForValue().get(redisKey);
+
+        if (cachedCustomer != null) {
+            System.out.println(" 從 Redis 快取中獲取用戶: " + username);
+            return cachedCustomer;
+        }
+
+        // 🟢 2. 快取沒有，再去資料庫查找
+        System.out.println(" 從資料庫獲取用戶: " + username);
+        Customer customer = customerRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在，請重新登入"));
+
+        // 🟢 3. 將資料庫查到的結果放入 Redis，設定 1 小時過期
+        redisTemplate.opsForValue().set(redisKey, customer, 1, TimeUnit.HOURS);
+
+        return customer;
     }
 }

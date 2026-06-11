@@ -11,13 +11,32 @@
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 1.1rem; }
         .total-row { font-size: 1.5rem; font-weight: 700; color: var(--accent); border-top: 2px solid #ddd; padding-top: 1rem; margin-top: 1rem; }
         .pay-btn { width: 100%; padding: 1rem; font-size: 1.2rem; margin-top: 1rem; }
+
+        /* 🟢 新增：支付方式样式 */
+        .payment-methods { margin-bottom: 2rem; }
+        .payment-option { display: flex; align-items: center; padding: 1rem; border: 2px solid #e9ecef; border-radius: 8px; margin-bottom: 1rem; cursor: pointer; transition: all 0.3s; }
+        .payment-option:hover { border-color: var(--gold); background: rgba(212, 175, 55, 0.05); }
+        .payment-option input[type="radio"] { margin-right: 1rem; width: 20px; height: 20px; cursor: pointer; }
+        .payment-option label { flex: 1; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+        .payment-option label i { color: var(--gold); font-size: 1.2rem; }
+
+        /* 店铺选择区域样式 */
+        #storeSelection { margin-top: 1rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--gold); }
+        #storeSelect { width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; margin-top: 0.5rem; cursor: pointer; }
+        #storeSelect:focus { outline: none; border-color: var(--gold); }
+        .store-info { margin-top: 1rem; padding: 1rem; background: #fff3cd; border-radius: 6px; font-size: 0.9rem; }
+        .store-info strong { color: #856404; display: block; margin-bottom: 0.5rem; }
+        .store-info ul { margin: 0.5rem 0 0 1.5rem; color: #856404; }
+        .store-info li { margin-bottom: 0.3rem; }
     </style>
 </head>
 <body>
 <div th:replace="~{fragments/common :: navbar}"></div>
 
 <div class="checkout-container">
-    <h2 style="margin-bottom: 1.5rem; color: var(--primary);"><i class="fas fa-lock" style="color: var(--gold);"></i> 安全結賬</h2>
+    <h2 style="margin-bottom: 1.5rem; color: var(--primary);">
+        <i class="fas fa-lock" style="color: var(--gold);"></i> 安全結賬
+    </h2>
 
     <div class="order-summary">
         <div class="summary-row">
@@ -26,7 +45,7 @@
         </div>
         <div class="summary-row">
             <span>支付方式：</span>
-            <span>模擬 PayPal / 信用卡</span>
+            <span id="paymentMethodDisplay">線上支付</span>
         </div>
         <div class="summary-row total-row">
             <span>應付總額：</span>
@@ -34,9 +53,62 @@
         </div>
     </div>
 
-    <div style="text-align: center; color: var(--gray); margin-bottom: 1rem;">
-        <i class="fas fa-shield-alt"></i> 此為模擬支付環境，不會產生真實扣款
-        3. 點擊下方按鈕即可完成模擬支付流程。
+    <!-- 🟢 新增：支付方式选择 -->
+    <div class="payment-methods">
+        <h3 style="margin-bottom: 1rem; color: var(--primary); font-size: 1.1rem;">
+            <i class="fas fa-wallet" style="color: var(--gold); margin-right: 0.5rem;"></i>
+            選擇支付方式
+        </h3>
+
+        <!-- 线上支付 -->
+        <div class="payment-option">
+            <input type="radio" name="paymentMethod" value="ONLINE" id="pay-online" checked onchange="togglePaymentMethod()">
+            <label for="pay-online">
+                <i class="fas fa-credit-card"></i>
+                <div>
+                    <div style="font-weight: 600;">線上支付</div>
+                    <div style="font-size: 0.85rem; color: var(--gray);">PayPal / 信用卡 / 銀行轉帳</div>
+                </div>
+            </label>
+        </div>
+
+        <!-- 线下支付 -->
+        <div class="payment-option">
+            <input type="radio" name="paymentMethod" value="OFFLINE" id="pay-offline" onchange="togglePaymentMethod()">
+            <label for="pay-offline">
+                <i class="fas fa-store"></i>
+                <div>
+                    <div style="font-weight: 600;">線下店鋪支付</div>
+                    <div style="font-size: 0.85rem; color: var(--gray);">到店支付，支持現金/信用卡/轉帳</div>
+                </div>
+            </label>
+        </div>
+
+        <!-- 店铺选择（默认隐藏，选择线下支付时显示） -->
+        <div id="storeSelection" style="display: none;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">
+                <i class="fas fa-map-marker-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                選擇取貨/支付店鋪：
+            </label>
+            <select id="storeSelect" name="storeId" onchange="updateStoreInfo()">
+                <option value="">請選擇店鋪</option>
+                <option value="store-central">中環皇后大道中 99 號店</option>
+                <option value="store-tsimsatsui">尖沙咀廣東道 88 號店</option>
+                <option value="store-causeway">銅鑼灣軒尼詩道 500 號店</option>
+            </select>
+
+            <div id="storeInfo" class="store-info" style="display: none;">
+                <strong><i class="fas fa-info-circle"></i> 重要提示：</strong>
+                <ul id="storeInfoList">
+                    <!-- 动态填充 -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align: center; color: var(--gray); margin-bottom: 1rem; padding: 1rem; background: var(--light); border-radius: 8px;">
+        <i class="fas fa-shield-alt"></i>
+        <span id="paymentHint">此為模擬支付環境，不會產生真實扣款。點擊下方按鈕即可完成模擬支付流程。</span>
     </div>
 
     <button id="confirmPayBtn" class="btn btn-primary pay-btn" th:attr="data-orderno=${order.orderNo}, data-amount=${order.totalAmount}">
@@ -46,23 +118,123 @@
 
 <script th:inline="javascript">
     const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-<script src="/js/common.js"></script>
-<script>
-    document.getElementById('confirmPayBtn').addEventListener('click', async function() {
-        const btn = this;
-        const orderNo = btn.getAttribute('data-orderno');
-        const amount = btn.getAttribute('data-amount');
 
-        // 1. UI 進入 Loading 狀態 (模擬網絡延遲)
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 正在與銀行通訊...';
+    // 店铺信息数据
+    const storeData = {
+        'store-central': {
+            name: '中環店',
+            address: '中環皇后大道中 99 號',
+            phone: '+852 2123 4567',
+            hours: '10:00 AM - 8:00 PM',
+            tips: [
+                '訂單確認後，請前往選定店鋪支付',
+                '店鋪保留訂單 7 天，逾期自動取消',
+                '支付完成後，店員會即時更新訂單狀態',
+                '請出示訂單編號給店員'
+            ]
+        },
+        'store-tsimsatsui': {
+            name: '尖沙咀店',
+            address: '尖沙咀廣東道 88 號',
+            phone: '+852 2234 5678',
+            hours: '11:00 AM - 9:00 PM',
+            tips: [
+                '訂單確認後，請前往選定店鋪支付',
+                '店鋪保留訂單 7 天，逾期自動取消',
+                '支付完成後，店員會即時更新訂單狀態',
+                '請出示訂單編號給店員'
+            ]
+        },
+        'store-causeway': {
+            name: '銅鑼灣店',
+            address: '銅鑼灣軒尼詩道 500 號',
+            phone: '+852 2345 6789',
+            hours: '12:00 PM - 10:00 PM',
+            tips: [
+                '訂單確認後，請前往選定店鋪支付',
+                '店鋪保留訂單 7 天，逾期自動取消',
+                '支付完成後，店員會即時更新訂單狀態',
+                '請出示訂單編號給店員'
+            ]
+        }
+    };
 
-        try {
-            // 模擬 1.5 秒的網絡延遲，增加真實感
+    // 切换支付方式
+    function togglePaymentMethod() {
+        const isOnline = document.getElementById('pay-online').checked;
+        const storeSelection = document.getElementById('storeSelection');
+        const paymentMethodDisplay = document.getElementById('paymentMethodDisplay');
+        const paymentHint = document.getElementById('paymentHint');
+        const confirmBtn = document.getElementById('confirmPayBtn');
+
+        if (isOnline) {
+            // 线上支付
+            storeSelection.style.display = 'none';
+            paymentMethodDisplay.textContent = '線上支付';
+            paymentHint.innerHTML = '<i class="fas fa-shield-alt"></i> 此為模擬支付環境，不會產生真實扣款。點擊下方按鈕即可完成模擬支付流程。';
+            confirmBtn.innerHTML = '<i class="fas fa-credit-card"></i> 確認線上支付 HK$ ' + confirmBtn.getAttribute('data-amount');
+        } else {
+            // 线下支付
+            storeSelection.style.display = 'block';
+            paymentMethodDisplay.textContent = '線下店鋪支付';
+            paymentHint.innerHTML = '<i class="fas fa-store"></i> 選擇店鋪後，訂單將被保留 7 天。請在期限內前往店鋪完成支付。';
+            confirmBtn.innerHTML = '<i class="fas fa-store"></i> 確認訂單（到店支付）';
+        }
+    }
+
+    // 更新店铺信息
+    function updateStoreInfo() {
+        const storeId = document.getElementById('storeSelect').value;
+        const storeInfo = document.getElementById('storeInfo');
+        const storeInfoList = document.getElementById('storeInfoList');
+
+        if (storeId && storeData[storeId]) {
+            const store = storeData[storeId];
+            storeInfoList.innerHTML = `
+                <li><strong>店鋪：</strong>${store.name}</li>
+                <li><strong>地址：</strong>${store.address}</li>
+                <li><strong>電話：</strong>${store.phone}</li>
+                <li><strong>營業時間：</strong>${store.hours}</li>
+                <li style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(133, 100, 4, 0.3);">
+                    <strong>注意事項：</strong>
+                    <ul style="margin-top: 0.3rem;">
+                        ${store.tips.map(tip => `<li>${tip}</li>`).join('')}
+                    </ul>
+                </li>
+            `;
+            storeInfo.style.display = 'block';
+        } else {
+            storeInfo.style.display = 'none';
+        }
+    }
+
+    // 修改支付按钮点击事件
+document.getElementById('confirmPayBtn').addEventListener('click', async function() {
+    const btn = this;
+    const orderNo = btn.getAttribute('data-orderno');
+    const amount = btn.getAttribute('data-amount');
+    const isOnline = document.getElementById('pay-online').checked;
+    const storeSelect = document.getElementById('storeSelect');
+    const storeId = storeSelect ? storeSelect.value : '';
+
+    // 验证线下支付是否选择了店铺
+    if (!isOnline && !storeId) {
+        showNotification('❌ 請選擇線下支付店鋪', true);
+        if (storeSelect) storeSelect.focus();
+        return;
+    }
+
+    // UI 进入 Loading 状态
+    btn.disabled = true;
+    const originalBtnText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 處理中...';
+
+    try {
+        if (isOnline) {
+            // 模拟 1.5 秒的网络延迟
             await new Promise(resolve => setTimeout(resolve, 1500));
 
-            // 2. 發送支付請求
+            // 线上支付逻辑
             const response = await fetch('/checkout/api/pay', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -72,21 +244,48 @@
             const result = await response.json();
 
             if (response.ok && result.success) {
-                // 3. 支付成功，跳轉到成功頁面
-                   window.location.href = `/checkout/payment-success?orderNo=${orderNo}`;  // ✅ 正確
+                // 直接跳转，不等待
+                window.location.href = `/checkout/payment-success?orderNo=${orderNo}`;
             } else {
-                // 支付失敗，恢復按鈕狀態並提示
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-credit-card"></i> 重新嘗試支付';
+                btn.innerHTML = originalBtnText;
                 showNotification('❌ ' + (result.message || '支付失敗'), true);
             }
-        } catch (error) {
-            console.error('支付錯誤:', error);
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-credit-card"></i> 重新嘗試支付';
-            showNotification('❌ 網絡連接失敗，請重試', true);
+        } else {
+            // 🟢 线下支付逻辑 - 直接跳转，不等待 API 响应
+            try {
+                const response = await fetch('/checkout/api/offline-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orderNo: orderNo,
+                        storeId: storeId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // ✅ 關鍵修復：使用 window.location.replace 確保跳轉
+                    window.location.replace(`/checkout/offline-success?orderNo=${orderNo}&storeId=${storeId}`);
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnText;
+                    showNotification('❌ ' + (result.message || '創建訂單失敗'), true);
+                }
+            } catch (apiError) {
+                console.error('API 錯誤:', apiError);
+                // 即使 API 失敗，也嘗試跳轉（讓用戶看到訂單信息）
+                window.location.replace(`/checkout/offline-success?orderNo=${orderNo}&storeId=${storeId}`);
+            }
         }
-    });
+    } catch (error) {
+        console.error('支付錯誤:', error);
+        btn.disabled = false;
+        btn.innerHTML = originalBtnText;
+        showNotification('❌ 網絡連接失敗，請重試', true);
+    }
+});
 </script>
 </body>
 </html>

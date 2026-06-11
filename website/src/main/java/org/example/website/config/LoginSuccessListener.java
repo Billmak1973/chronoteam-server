@@ -34,7 +34,7 @@ public class LoginSuccessListener implements ApplicationListener<AuthenticationS
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
-            // 🔑 關鍵修改：優先檢查各種代理頭部以獲取真實 IP
+            //  關鍵修改：優先檢查各種代理頭部以獲取真實 IP
             String[] ipHeaders = {
                     "X-Real-IP", "X-Forwarded-For", "Proxy-Client-IP",
                     "WL-Proxy-Client-IP", "HTTP_CLIENT_IP", "HTTP_X_FORWARDED_FOR"

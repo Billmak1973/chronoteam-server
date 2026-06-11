@@ -8,14 +8,12 @@
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <style>
-        /* 佈局相關 */
         .dashboard-container { display: flex; min-height: calc(100vh - 150px); max-width: 1400px; margin: 2rem auto; padding: 0 1rem; gap: 2rem; }
         .main-content { flex: 1; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 2.5rem; }
         .page-title { font-size: 1.8rem; color: var(--primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.8rem; border-bottom: 2px solid var(--light); padding-bottom: 1rem; }
         .page-title i { color: var(--gold); }
         .page-subtitle { color: var(--gray); margin-bottom: 2rem; font-size: 0.95rem; }
 
-        /* 訂單卡片 */
         .order-card { background: white; border: 1px solid #e9ecef; border-radius: 12px; margin-bottom: 1.5rem; overflow: hidden; transition: all 0.3s; }
         .order-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.08); transform: translateY(-2px); }
 
@@ -30,7 +28,6 @@
 
         .order-amount { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
 
-        /* 狀態徽章 */
         .status-badge { padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; }
         .status-PENDING { background: #fff3cd; color: #856404; }
         .status-PAID { background: #d4edda; color: #155724; }
@@ -44,6 +41,8 @@
         .btn-view:hover { background: var(--gold); color: white; border-color: var(--gold); }
         .btn-pay { background: var(--accent); color: white; }
         .btn-pay:hover { background: #c73e54; }
+        .btn-contact { background: var(--gold); color: var(--primary); }
+        .btn-contact:hover { background: #b8972b; }
 
         .empty-state { text-align: center; padding: 4rem 2rem; }
         .empty-state i { font-size: 4rem; color: #ddd; margin-bottom: 1rem; }
@@ -56,17 +55,14 @@
 <div th:replace="~{fragments/common :: navbar}"></div>
 
 <div class="dashboard-container">
-    <!-- 🟢 引入側邊欄，高亮 'orders' -->
     <div th:replace="~{fragments/sidebar :: sidebar(activePage='orders')}"></div>
 
     <main class="main-content">
         <h2 class="page-title"><i class="fas fa-box"></i> 我的訂單</h2>
         <p class="page-subtitle">查看您的所有購買記錄與訂單狀態</p>
 
-        <!-- 🟢 訂單列表 -->
         <div th:if="${!orders.isEmpty()}">
             <div class="order-card" th:each="order : ${orders}">
-                <!-- 訂單頭部：訂單號與時間 -->
                 <div class="order-header">
                     <div class="order-no">
                         <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
@@ -78,7 +74,6 @@
                     </div>
                 </div>
 
-                <!-- 訂單主體：狀態、金額、操作 -->
                 <div class="order-body">
                     <div class="order-info">
                         <p>訂單狀態：
@@ -93,7 +88,27 @@
                                                (${order.status.name() == 'COMPLETED'} ? '已完成' : '已取消')))">狀態</span>
                             </span>
                         </p>
-                        <p>支付方式：<strong th:text="${order.paymentMethod}">PAYPAL_SIM</strong></p>
+
+                        <p>支付方式：
+                            <strong>
+                                <span th:if="${order.paymentMethod == 'OFFLINE_STORE'}">線下店鋪支付</span>
+                                <span th:if="${order.paymentMethod == 'PAYPAL_SIM'}">線上支付 (PayPal/信用卡)</span>
+                                <span th:unless="${order.paymentMethod == 'OFFLINE_STORE' or order.paymentMethod == 'PAYPAL_SIM'}"
+                                      th:text="${order.paymentMethod}">其他</span>
+                            </strong>
+
+                            <span th:if="${order.offlineStoreId != null}"
+                                  style="color: var(--gold); font-size: 0.85rem; margin-left: 0.5rem; font-weight: 500;">
+                                (<i class="fas fa-map-marker-alt"></i>
+                                <span th:switch="${order.offlineStoreId}">
+                                    <span th:case="'store-central'">中環店</span>
+                                    <span th:case="'store-tsimsatsui'">尖沙咀店</span>
+                                    <span th:case="'store-causeway'">銅鑼灣店</span>
+                                    <span th:case="*">[[${order.offlineStoreId}]]</span>
+                                </span>)
+                            </span>
+                        </p>
+
                         <p th:if="${order.paidAt != null}">付款時間：<strong th:text="${#temporals.format(order.paidAt, 'yyyy-MM-dd HH:mm')}">-</strong></p>
                     </div>
 
@@ -105,18 +120,23 @@
                         <a href="javascript:void(0)" class="btn-sm btn-view" onclick="showNotification('📦 訂單詳情頁開發中...')">
                             <i class="fas fa-eye"></i> 查看詳情
                         </a>
-                        <!-- 🟢 如果是待付款狀態，顯示「去支付」按鈕，跳轉到結帳頁 -->
-                        <a th:if="${order.status.name() == 'PENDING'}"
+
+                        <a th:if="${order.status.name() == 'PENDING' and order.paymentMethod == 'PAYPAL_SIM'}"
                            th:href="@{/checkout(orderNo=${order.orderNo})}"
                            class="btn-sm btn-pay">
                             <i class="fas fa-credit-card"></i> 去支付
                         </a>
+
+                        <button th:if="${order.status.name() == 'PENDING' and order.paymentMethod == 'OFFLINE_STORE'}"
+                                class="btn-sm btn-contact"
+                                onclick="showNotification('📞 請前往選擇的店鋪完成付款，或聯繫客服：+852 1234 5678')">
+                            <i class="fas fa-phone"></i> 聯繫店鋪
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 🟢 空狀態 -->
         <div th:if="${orders.isEmpty()}" class="empty-state">
             <i class="fas fa-box-open"></i>
             <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有任何訂單</h3>

@@ -40,6 +40,10 @@ public class Order {
     @Column(name = "payment_method", length = 20)
     private String paymentMethod = "PAYPAL_SIM";
 
+    // 2.  新增欄位：記錄具體的線下店鋪 ID (可為空)
+    @Column(name = "offline_store_id", length = 50)
+    private String offlineStoreId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", length = 20)
     private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
@@ -58,6 +62,6 @@ public class Order {
 
     //  支付狀態枚舉
     public enum PaymentStatus {
-        UNPAID, PAID_SIMULATED, PAID_REAL
+        UNPAID, PAID_SIMULATED, PAID_REAL, PENDING_OFFLINE, PAID_OFFLINE
     }
 }

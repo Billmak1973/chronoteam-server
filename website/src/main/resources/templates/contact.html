@@ -6,10 +6,10 @@
   <title>聯絡我們 - ChronoTeam</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <!-- ✅ 1. 引入公共 CSS (包含导航栏、按钮、弹窗等所有公共样式) -->
+  <!--  1. 引入公共 CSS (包含导航栏、按钮、弹窗等所有公共样式) -->
   <link rel="stylesheet" href="/css/common.css">
 
-  <!-- ✅ 2. 页面特有 CSS (只保留联系我们页面的专属样式) -->
+  <!--  2. 页面特有 CSS (只保留联系我们页面的专属样式) -->
   <style>
     .page-hero { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; padding: 4rem 2rem; text-align: center; }
     .page-hero h1 { font-size: 2.5rem; margin-bottom: 1rem; color: var(--gold); }
@@ -62,7 +62,7 @@
 </head>
 <body>
 
-<!-- ✅ 3. 引入公共导航栏 (自动包含完整的购物车下拉菜单和登录状态判断) -->
+<!--  3. 引入公共导航栏 (自动包含完整的购物车下拉菜单和登录状态判断) -->
 <div th:replace="~{fragments/common :: navbar}"></div>
 
 <!-- === 頁面主體 === -->
@@ -180,18 +180,18 @@
   <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
 </footer>
 
-<!-- ✅ 4. 引入公共弹窗 HTML (登录/注册弹窗) -->
+<!--  4. 引入公共弹窗 HTML (登录/注册弹窗) -->
 <div th:replace="~{fragments/common :: modals}"></div>
 
-<!-- ✅ 5. 注入登录状态变量 (必须在 common.js 之前，用于购物车拦截) -->
+<!--  5. 注入登录状态变量 (必须在 common.js 之前，用于购物车拦截) -->
 <script th:inline="javascript">
   const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
 </script>
 
-<!-- ✅ 6. 引入公共 JS (包含购物车逻辑、弹窗控制、登出等) -->
+<!--  6. 引入公共 JS (包含购物车逻辑、弹窗控制、登出等) -->
 <script src="/js/common.js"></script>
 
-<!-- ✅ 7. 页面特有 JS -->
+<!--  7. 页面特有 JS -->
 <script>
   // ===== 表單提交處理 =====
   function handleSubmit(event) {

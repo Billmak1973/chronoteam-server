@@ -29,10 +29,10 @@ public class PageController {
     // 🟢 1. 聲明依賴變量
     private final CustomerService customerService;
     private final LoginLogRepository loginLogRepository;
-    private final SellApplicationRepository sellApplicationRepository; // 🟢 新增：聲明 SellApplicationRepository
-    private final FavoriteRepository favoriteRepository; // 🟢 新增聲明
-    private final ViewHistoryService viewHistoryService; // 🟢 新增依賴
-    private final OrderService orderService; // 🟢 新增
+    private final SellApplicationRepository sellApplicationRepository; //  新增：聲明 SellApplicationRepository
+    private final FavoriteRepository favoriteRepository; // 新增聲明
+    private final ViewHistoryService viewHistoryService; //  新增依賴
+    private final OrderService orderService; //  新增
 
     // 🟢 2. 通過構造函數注入依賴 (加入了 SellApplicationRepository)
     public PageController(CustomerService customerService,
@@ -46,7 +46,7 @@ public class PageController {
         this.sellApplicationRepository = sellApplicationRepository;
         this.favoriteRepository = favoriteRepository;
         this.viewHistoryService = viewHistoryService;
-        this.orderService = orderService; // 🟢 賦值
+        this.orderService = orderService; //  賦值
     }
 
     @GetMapping("/")
@@ -59,7 +59,7 @@ public class PageController {
         return "test";  // 對應 templates/test.html（可選）
     }
 
-    // 🟢 3. 全新的個人中心首頁路由 (帶有側邊欄的 Dashboard)
+    //  3. 全新的個人中心首頁路由 (帶有側邊欄的 Dashboard)
     @GetMapping("/account/dashboard")
     public String dashboard(Model model) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -69,7 +69,7 @@ public class PageController {
         return "dashboard";
     }
 
-    // 🟢 4. 帳戶信息頁面路由
+    //  4. 帳戶信息頁面路由
     @GetMapping("/account/profile")
     public String accountProfile(Model model) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -94,7 +94,7 @@ public class PageController {
         String username = authentication.getName();
         Customer customer = customerService.findByUsername(username);
 
-        // 🟢 查詢當前用戶的訂單列表
+        //  查詢當前用戶的訂單列表
         List<Order> orders = orderService.getUserOrders(username);
 
         model.addAttribute("customer", customer);
@@ -131,7 +131,7 @@ public class PageController {
         return "password";
     }
 
-    // 🟢 5. 修改：安全設置頁面路由 (加入真實登錄記錄查詢)
+    //  5. 修改：安全設置頁面路由 (加入真實登錄記錄查詢)
     @GetMapping("/account/security")
     public String securitySettings(Model model) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -148,7 +148,7 @@ public class PageController {
             currentSessionId = attributes.getRequest().getSession().getId();
         }
 
-        // 🟢 將數據傳遞給 Thymeleaf 前端
+        //  將數據傳遞給 Thymeleaf 前端
         model.addAttribute("customer", customer);
         model.addAttribute("loginLogs", loginLogs);
         model.addAttribute("currentSessionId", currentSessionId);
@@ -165,7 +165,7 @@ public class PageController {
         return "admin-dashboard"; // 對應 templates/admin-dashboard.html
     }
 
-    // 🟢 6. 修改：我的寄售商品頁面路由
+    //  6. 修改：我的寄售商品頁面路由
     @GetMapping("/account/consignment")
     public String myConsignment(Model model) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -227,7 +227,7 @@ public class PageController {
     }
 
     /**
-     * 🟢 新增：我的收藏頁面路由
+     *  新增：我的收藏頁面路由
      */
     @GetMapping("/account/favorites")
     public String myFavorites(Model model) {

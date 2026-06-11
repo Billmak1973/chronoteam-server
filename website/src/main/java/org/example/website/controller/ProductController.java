@@ -17,9 +17,9 @@ import java.util.List;
 public class ProductController {
     private final ProductRepository productRepository;
     private final ReviewRepository reviewRepository;
-    private final ViewHistoryService viewHistoryService; // 🟢 新增：聲明 Service
+    private final ViewHistoryService viewHistoryService;
 
-    // 🟢 修改構造函數，注入 ViewHistoryService
+    //  修改構造函數，注入 ViewHistoryService
     public ProductController(ProductRepository productRepository,
                              ReviewRepository reviewRepository,
                              ViewHistoryService viewHistoryService) {
@@ -42,7 +42,7 @@ public class ProductController {
         List<Review> reviews = reviewRepository.findByProduct_IdOrderByCreatedAtDesc(id);
         model.addAttribute("reviews", reviews);
 
-        // 🟢 【新增】：記錄瀏覽歷史 (僅限已登入用戶)
+        //  【新增】：記錄瀏覽歷史 (僅限已登入用戶)
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
             String username = authentication.getName();
             viewHistoryService.recordView(username, id);

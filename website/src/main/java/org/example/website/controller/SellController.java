@@ -141,7 +141,7 @@ public class SellController {
 
         String username = authentication.getName();
 
-        // 🟢 【新增】查詢當前用戶信息並放入 Model，供側邊欄 (sidebar.html) 渲染使用
+        //  【新增】查詢當前用戶信息並放入 Model，供側邊欄 (sidebar.html) 渲染使用
         Customer customer = customerRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
         model.addAttribute("customer", customer);
@@ -233,7 +233,7 @@ public class SellController {
                 return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
             }
 
-            // 🟢 徹底刪除數據庫記錄
+            //  徹底刪除數據庫記錄
             sellApplicationRepository.deleteById(id);
 
             return ResponseEntity.ok(ApiResponse.ok("申請記錄已徹底刪除"));

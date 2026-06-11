@@ -21,7 +21,7 @@ public class ViewHistoryController {
     }
 
     /**
-     * 🟢 清除瀏覽歷史
+     *  清除瀏覽歷史
      */
     @PostMapping("/clear")
     public ResponseEntity<ApiResponse> clearHistory(

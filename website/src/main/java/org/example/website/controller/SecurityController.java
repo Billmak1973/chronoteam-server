@@ -24,7 +24,7 @@ public class SecurityController {
         this.customerService = customerService;
     }
 
-    // 1. 獲取當前用戶的安全問題列表 (⚠️ 絕對不能把答案返回給前端)
+    // 1. 獲取當前用戶的安全問題列表 ( 絕對不能把答案返回給前端)
     @GetMapping("/questions")
     public ResponseEntity<?> getMyQuestions(Authentication authentication) {
         String username = authentication.getName();
@@ -56,7 +56,7 @@ public class SecurityController {
         }
     }
 
-    // 3. 🔐 新增：驗證原答案並更新答案
+    // 3.  新增：驗證原答案並更新答案
     @PutMapping("/question/{id}/update-answer")
     public ResponseEntity<?> updateAnswer(
             @PathVariable Long id,

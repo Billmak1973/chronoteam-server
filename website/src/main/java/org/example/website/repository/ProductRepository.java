@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer> {
 
-    // 🔑 核心修改：加入 actualBrands, hasOthers, mainBrands 參數
+    //  核心修改：加入 actualBrands, hasOthers, mainBrands 參數
     @Query("SELECT p FROM Product p WHERE " +
             "(:keyword IS NULL OR p.description LIKE %:keyword%) AND " +
             "(:categorySize = 0 OR p.category IN :category) AND " +

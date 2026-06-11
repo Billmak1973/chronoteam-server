@@ -119,4 +119,29 @@ public class OrderService {
     public List<Order> getUserOrders(String username) {
         return orderRepository.findByCustomer_UsernameOrderByCreatedAtDesc(username);
     }
+
+    /**
+     * 🟢 新增：處理線下支付邏輯 (封裝數據庫操作與業務校驗)
+     */
+    @Transactional
+    public Order processOfflinePayment(String orderNo, String username, String storeId) {
+        // 1. 獲取訂單並校驗權限 (防越權攻擊)
+        Order order = orderRepository.findByOrderNoAndCustomer_Username(orderNo, username)
+                .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
+
+        // 2. 冪等性校驗 (必須是未支付狀態才能選擇線下支付)
+        if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID) {
+            throw new RuntimeException("訂單狀態異常，無法更改支付方式。當前狀態: " + order.getPaymentStatus());
+        }
+
+        // 3. 🟢 更新支付狀態與方式 (分離存儲)
+        order.setPaymentStatus(Order.PaymentStatus.PENDING_OFFLINE);
+        order.setPaymentMethod("OFFLINE_STORE"); // 🟢 保持簡短，符合 length=20 限制
+        order.setOfflineStoreId(storeId);        // 🟢 將具體店鋪 ID 存入專屬欄位
+
+        // 注意：OrderStatus 保持 PENDING，等待店員收款後再由後台管理系統流轉為 PAID
+
+        // 4. 保存並返回
+        return orderRepository.save(order);
+    }
 }
