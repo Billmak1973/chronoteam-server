@@ -1,14 +1,8 @@
 package org.example.website.service;
 
 import lombok.RequiredArgsConstructor;
-import org.example.website.entity.Cart;
-import org.example.website.entity.Customer;
-import org.example.website.entity.Order;
-import org.example.website.entity.Product;
-import org.example.website.repository.CartRepository;
-import org.example.website.repository.CustomerRepository;
-import org.example.website.repository.OrderRepository;
-import org.example.website.repository.ProductRepository;
+import org.example.website.entity.*;
+import org.example.website.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,10 +19,8 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final ProductRepository productRepository;
     private final CustomerRepository customerRepository; // 新增：直接獲取用戶實體
+    private final OrderItemRepository orderItemRepository;
 
-    /**
-     * 1. 創建訂單並鎖定庫存
-     */
     @Transactional
     public Order createOrder(String username) {
         // 獲取用戶購物車
@@ -42,19 +34,18 @@ public class OrderService {
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 獲取當前用戶實體 (避免依賴 Cart 的懶加載，更加安全)
+        // 獲取當前用戶實體
         Customer customer = customerRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
         // 創建訂單實體
         Order order = new Order();
-        // 使用 UUID 生成更安全的訂單號，防止併發重複
         order.setOrderNo("ORD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         order.setCustomer(customer);
         order.setTotalAmount(totalAmount);
         order.setStatus(Order.OrderStatus.PENDING);
         order.setPaymentStatus(Order.PaymentStatus.UNPAID);
-        order.setPaymentMethod("PAYPAL_SIM"); // 模擬支付方式
+        order.setPaymentMethod("PAYPAL_SIM");
 
         // 校驗並扣減庫存
         for (Cart item : cartItems) {
@@ -67,14 +58,23 @@ public class OrderService {
             productRepository.save(product);
         }
 
-        // 保存訂單
+        // 【新增】保存訂單（先保存訂單以獲取 ID）
         Order savedOrder = orderRepository.save(order);
 
-        // 訂單生成後，清空購物車 (防止重複下單)
+        // 【新增】創建 OrderItem 記錄
+        for (Cart cartItem : cartItems) {
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrder(savedOrder);  // 關聯訂單
+            orderItem.setProduct(cartItem.getProduct());  // 關聯商品
+            orderItem.setQuantity(cartItem.getQuantity());  // 數量
+            orderItem.setPrice(cartItem.getPrice());  // 單價
+            orderItemRepository.save(orderItem);  // 保存訂单项
+        }
+
+        // 訂單生成後，清空購物車
         cartRepository.deleteByCustomer_Username(username);
 
         return savedOrder;
-        // 💡 進階提示：真實場景中，若用戶未支付，應有定時任務在 15 分鐘後取消訂單並回滾庫存。
     }
 
     /**
@@ -121,7 +121,7 @@ public class OrderService {
     }
 
     /**
-     * 🟢 新增：處理線下支付邏輯 (封裝數據庫操作與業務校驗)
+     * 處理線下支付邏輯 (封裝數據庫操作與業務校驗)
      */
     @Transactional
     public Order processOfflinePayment(String orderNo, String username, String storeId) {
@@ -134,10 +134,10 @@ public class OrderService {
             throw new RuntimeException("訂單狀態異常，無法更改支付方式。當前狀態: " + order.getPaymentStatus());
         }
 
-        // 3. 🟢 更新支付狀態與方式 (分離存儲)
+        // 3.  更新支付狀態與方式 (分離存儲)
         order.setPaymentStatus(Order.PaymentStatus.PENDING_OFFLINE);
-        order.setPaymentMethod("OFFLINE_STORE"); // 🟢 保持簡短，符合 length=20 限制
-        order.setOfflineStoreId(storeId);        // 🟢 將具體店鋪 ID 存入專屬欄位
+        order.setPaymentMethod("OFFLINE_STORE"); //  保持簡短，符合 length=20 限制
+        order.setOfflineStoreId(storeId);        //  將具體店鋪 ID 存入專屬欄位
 
         // 注意：OrderStatus 保持 PENDING，等待店員收款後再由後台管理系統流轉為 PAID
 

@@ -27,13 +27,21 @@
                     <div class="username" sec:authentication="name">用戶名</div>
                 </div>
 
-                <!-- 🟢 修改：將「帳戶信息」和「我的訂單」合併為「個人中心」 -->
+                <!--  修改：將「帳戶信息」和「我的訂單」合併為「個人中心」 -->
                 <a href="/account/dashboard"><i class="fas fa-user-cog"></i> 個人中心</a>
 
-                <!-- 🟢 管理中心（僅 admin 可見） -->
+                <!--  管理中心（僅 admin 可見） -->
                 <a href="/admin/dashboard" th:if="${#authorization.expression('isAuthenticated()') and #authentication.name == 'admin'}"
                    style="background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%); color: var(--primary); font-weight: 600;">
                     <i class="fas fa-shield-alt"></i> 管理中心
+                </a>
+
+                <!--  新增：消息通知和系统通知 (暂时不跳转，点击提示) -->
+                <a href="javascript:void(0)" onclick="showNotification('📩 消息通知功能開發中，暫無新消息')">
+                    <i class="fas fa-envelope"></i> 消息通知
+                </a>
+                <a href="javascript:void(0)" onclick="showNotification('🔔 系統通知功能開發中，暫無新通知')">
+                    <i class="fas fa-bell"></i> 系統通知
                 </a>
 
                 <button type="button" class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> 登出</button>

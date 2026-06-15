@@ -2,11 +2,11 @@ package org.example.website.controller;
 
 import org.example.website.entity.*;
 import org.example.website.repository.LoginLogRepository;
-import org.example.website.repository.SellApplicationRepository; // 🟢 新增：引入 SellApplicationRepository
-import org.example.website.repository.FavoriteRepository; // 🟢 新增
+import org.example.website.repository.SellApplicationRepository;
+import org.example.website.repository.FavoriteRepository;
 import org.example.website.service.CustomerService;
 import org.example.website.service.OrderService;
-import org.example.website.service.ViewHistoryService; // 🟢 新增
+import org.example.website.service.ViewHistoryService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -15,18 +15,18 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.math.BigDecimal; // 🟢 新增
-import java.math.RoundingMode; // 🟢 新增
-import java.util.ArrayList; // 🟢 新增
-import java.util.HashMap; // 🟢 新增
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map; // 🟢 新增
-import java.util.stream.Collectors; // 🟢 新增
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller  // 關鍵：返回視圖名稱，不是 JSON
 public class PageController {
 
-    // 🟢 1. 聲明依賴變量
+    //  1. 聲明依賴變量
     private final CustomerService customerService;
     private final LoginLogRepository loginLogRepository;
     private final SellApplicationRepository sellApplicationRepository; //  新增：聲明 SellApplicationRepository
@@ -34,7 +34,7 @@ public class PageController {
     private final ViewHistoryService viewHistoryService; //  新增依賴
     private final OrderService orderService; //  新增
 
-    // 🟢 2. 通過構造函數注入依賴 (加入了 SellApplicationRepository)
+    //  2. 通過構造函數注入依賴 (加入了 SellApplicationRepository)
     public PageController(CustomerService customerService,
                           LoginLogRepository loginLogRepository,
                           SellApplicationRepository sellApplicationRepository,
@@ -56,7 +56,7 @@ public class PageController {
 
     @GetMapping("/test")
     public String testPage() {
-        return "test";  // 對應 templates/test.html（可選）
+        return "test";  // 對應 templates/test.html
     }
 
     //  3. 全新的個人中心首頁路由 (帶有側邊欄的 Dashboard)
@@ -94,11 +94,26 @@ public class PageController {
         String username = authentication.getName();
         Customer customer = customerService.findByUsername(username);
 
-        //  查詢當前用戶的訂單列表
+        // 查詢當前用戶的訂單列表
         List<Order> orders = orderService.getUserOrders(username);
 
+
+        // 分離待付款和已支付訂單
+        List<Order> unpaidOrders = orders.stream()
+                .filter(order -> order.getPaymentStatus() == Order.PaymentStatus.UNPAID ||
+                        order.getPaymentStatus() == Order.PaymentStatus.PENDING_OFFLINE)
+                .collect(Collectors.toList());
+
+        List<Order> paidOrders = orders.stream()
+                .filter(order -> order.getPaymentStatus() == Order.PaymentStatus.PAID_SIMULATED ||
+                        order.getPaymentStatus() == Order.PaymentStatus.PAID_REAL ||
+                        order.getPaymentStatus() == Order.PaymentStatus.PAID_OFFLINE)
+                .collect(Collectors.toList());
+
         model.addAttribute("customer", customer);
-        model.addAttribute("orders", orders); // 🟢 傳遞給前端
+        model.addAttribute("unpaidOrders", unpaidOrders);
+        model.addAttribute("paidOrders", paidOrders);
+
         return "orders";
     }
 

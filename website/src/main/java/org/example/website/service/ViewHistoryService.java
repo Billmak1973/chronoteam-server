@@ -37,23 +37,23 @@ public class ViewHistoryService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("商品不存在"));
 
-        // 🟢 檢查是否已存在該商品的瀏覽記錄
+        //  檢查是否已存在該商品的瀏覽記錄
         ViewHistory existingHistory = viewHistoryRepository
                 .findByCustomer_UsernameAndProduct_Id(username, productId);
 
         if (existingHistory != null) {
-            // 🟢 如果已存在，只更新瀏覽時間
+            //  如果已存在，只更新瀏覽時間
             existingHistory.setViewedAt(LocalDateTime.now());
             viewHistoryRepository.save(existingHistory);
         } else {
-            // 🟢 如果不存在，創建新記錄
+            // 如果不存在，創建新記錄
             ViewHistory history = new ViewHistory();
             history.setCustomer(customer);
             history.setProduct(product);
             viewHistoryRepository.save(history);
         }
 
-        // 🟢 清理超過 200 條的記錄
+        //  清理超過 200 條的記錄
         List<ViewHistory> allHistories = viewHistoryRepository
                 .findByCustomer_UsernameOrderByViewedAtDesc(username);
         if (allHistories.size() > 200) {
@@ -72,7 +72,7 @@ public class ViewHistoryService {
 
 
     /**
-     * 🟢 清除瀏覽歷史
+     * 清除瀏覽歷史
      */
     @Transactional
     public void clearHistory(String username, String period) {
@@ -87,7 +87,7 @@ public class ViewHistoryService {
         if ("all".equals(period)) {
             viewHistoryRepository.deleteAllForUser(username);
         } else {
-            // 🟢 【修改處】：調用新的方法名，刪除「最近」的記錄
+            //  【修改處】：調用新的方法名，刪除「最近」的記錄
             viewHistoryRepository.deleteRecentForUser(username, cutoffDate);
         }
     }

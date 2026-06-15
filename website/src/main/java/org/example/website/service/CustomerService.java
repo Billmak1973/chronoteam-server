@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 public class CustomerService {
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
-    private final RedisTemplate<String, Object> redisTemplate; 
+    private final RedisTemplate<String, Object> redisTemplate;
 
     // 修改構造函數，加入 RedisTemplate
     public CustomerService(CustomerRepository customerRepository,
@@ -47,7 +47,7 @@ public class CustomerService {
     }
 
     public Customer findByUsername(String username) {
-        // 🟢 1. 先從 Redis 快取中查找
+        //  1. 先從 Redis 快取中查找
         String redisKey = "user:info:" + username;
         Customer cachedCustomer = (Customer) redisTemplate.opsForValue().get(redisKey);
 
@@ -56,12 +56,12 @@ public class CustomerService {
             return cachedCustomer;
         }
 
-        // 🟢 2. 快取沒有，再去資料庫查找
+        // 2. 快取沒有，再去資料庫查找
         System.out.println(" 從資料庫獲取用戶: " + username);
         Customer customer = customerRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在，請重新登入"));
 
-        // 🟢 3. 將資料庫查到的結果放入 Redis，設定 1 小時過期
+        //  3. 將資料庫查到的結果放入 Redis，設定 1 小時過期
         redisTemplate.opsForValue().set(redisKey, customer, 1, TimeUnit.HOURS);
 
         return customer;

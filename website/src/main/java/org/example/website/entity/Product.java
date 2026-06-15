@@ -41,4 +41,17 @@ public class Product {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    /**
+     * 總評論數
+     */
+    @Column(name = "total_review_count")
+    private Integer totalReviewCount;
+
+    /**
+     * 總分數
+     * (若您的評分系統皆為整數累加，也可將類型改為 Integer)
+     */
+    @Column(name = "total_score")
+    private BigDecimal totalScore;
 }
