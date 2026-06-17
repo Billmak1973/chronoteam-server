@@ -29,4 +29,23 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     // 2. 查询某条根评论的【楼中楼回复】（支持分页和动态排序）
     @Query("SELECT r FROM Review r WHERE r.parentId = :parentId")
     Page<Review> findRepliesByParentId(@Param("parentId") Long parentId, Pageable pageable);
+
+
+    // 1. 【我的评论】：只要是我发出的 (cust_username = 我)，按时间倒序
+    Page<Review> findByCustomer_UsernameOrderByCreatedAtDesc(String username, Pageable pageable);
+
+    // 2. 【回复我的】：别人回复我 (reply_to_user = 我 且 cust_username != 我)
+    Page<Review> findByReplyToUserAndCustomer_UsernameNotOrderByCreatedAtDesc(
+            String replyToUser,
+            String notUsername,
+            Pageable pageable
+    );
+
+    // 3. 【@我的】：内容包含 @我 且 不是我发的 (使用 LIKE 查询)
+    @Query("SELECT r FROM Review r WHERE r.content LIKE %:keyword% AND r.customer.username <> :username ORDER BY r.createdAt DESC")
+    Page<Review> findMentions(
+            @Param("keyword") String keyword, // 传入 "@username"
+            @Param("username") String username,
+            Pageable pageable
+    );
 }

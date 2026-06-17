@@ -258,3 +258,33 @@ function requireLogin(url, message) {
     window.location.href = url;
     return true;
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof isLoggedIn !== 'undefined' && isLoggedIn) {
+        //  只在頁面加載時請求一次，拒絕定時輪詢以節省伺服器資源
+        fetchUnreadNotifications();
+    }
+});
+
+async function fetchUnreadNotifications() {
+    try {
+        const response = await fetch('/api/notifications/unread-count');
+        const data = await response.json();
+        const badge = document.getElementById('notificationBadge');
+
+        if (badge) {
+            //  只有未讀數量大於 0 時才顯示紅點與數字
+            if (data.count > 0) {
+                badge.textContent = data.count > 99 ? '99+' : data.count;
+                badge.style.display = 'inline-flex'; // 使用 inline-flex 確保與購物車 badge 垂直居中對齊
+            } else {
+                badge.style.display = 'none'; // 沒有未讀消息時徹底隱藏
+            }
+        }
+    } catch (error) {
+        console.error('獲取通知失敗', error);
+    }
+}
+
+//  暴露一個全局函數，方便在其他頁面操作（如：點擊通知、刪除評論後）手動刷新紅點
+window.refreshNotificationBadge = fetchUnreadNotifications;

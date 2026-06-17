@@ -124,3 +124,52 @@ body {
 @media (max-width: 480px) {
     .modal-content { width: 95%; max-width: 95%; padding: 1.2rem; max-height: 90vh; }
 }
+
+/* ==========================================
+   🟢 React 購物車補充樣式 (新增)
+   ========================================== */
+.cart-body {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 350px;
+  padding: 1rem;
+  background: var(--light);
+}
+
+.cart-loading {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--gray);
+}
+
+.cart-loading i {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: var(--gold);
+}
+
+.cart-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cart-item.updating {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.stock-warning {
+  font-size: 0.75rem;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.total-amount {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.3rem;
+}

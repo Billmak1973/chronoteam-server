@@ -51,6 +51,10 @@ public class Review {
     @Column(name = "dislike_count", nullable = false)
     private Integer dislikeCount = 0;
 
+    // 是否置頂字段 (默認為 false)
+    @Column(name = "pinned", nullable = false)
+    private Boolean pinned = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -323,4 +323,13 @@ public class PageController {
 
         return "settlement"; // 對應 templates/settlement.html
     }
+
+    @GetMapping("/account/reviews")
+    public String myReviewsPage(Model model, Authentication authentication) {
+        // 這裡不需要傳太多數據，因為前端會通過 AJAX 加載
+        String username = authentication.getName();
+        Customer customer = customerService.findByUsername(username);
+        model.addAttribute("customer", customer);
+        return "reviews"; // 對應 templates/reviews.html
+    }
 }
