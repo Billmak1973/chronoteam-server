@@ -2,11 +2,14 @@ package org.example.website.controller;
 
 import org.example.website.entity.*;
 import org.example.website.repository.LoginLogRepository;
+import org.example.website.repository.NotificationRepository;
 import org.example.website.repository.SellApplicationRepository;
 import org.example.website.repository.FavoriteRepository;
 import org.example.website.service.CustomerService;
 import org.example.website.service.OrderService;
 import org.example.website.service.ViewHistoryService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
@@ -17,10 +20,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @Controller  // 關鍵：返回視圖名稱，不是 JSON
@@ -29,10 +29,11 @@ public class PageController {
     //  1. 聲明依賴變量
     private final CustomerService customerService;
     private final LoginLogRepository loginLogRepository;
-    private final SellApplicationRepository sellApplicationRepository; //  新增：聲明 SellApplicationRepository
+    private final SellApplicationRepository sellApplicationRepository;
     private final FavoriteRepository favoriteRepository; // 新增聲明
     private final ViewHistoryService viewHistoryService; //  新增依賴
     private final OrderService orderService; //  新增
+    private final NotificationRepository notificationRepository; // 🟢 新增聲明
 
     //  2. 通過構造函數注入依賴 (加入了 SellApplicationRepository)
     public PageController(CustomerService customerService,
@@ -40,13 +41,15 @@ public class PageController {
                           SellApplicationRepository sellApplicationRepository,
                           FavoriteRepository favoriteRepository,
                           ViewHistoryService viewHistoryService,
-                          OrderService orderService) {
+                          OrderService orderService,
+                          NotificationRepository notificationRepository) {
         this.customerService = customerService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
         this.favoriteRepository = favoriteRepository;
         this.viewHistoryService = viewHistoryService;
-        this.orderService = orderService; //  賦值
+        this.orderService = orderService;
+        this.notificationRepository = notificationRepository;
     }
 
     @GetMapping("/")
@@ -331,5 +334,24 @@ public class PageController {
         Customer customer = customerService.findByUsername(username);
         model.addAttribute("customer", customer);
         return "reviews"; // 對應 templates/reviews.html
+    }
+
+    //  新增：系統通知頁面路由
+    @GetMapping("/account/notifications")
+    public String myNotifications(Model model, Authentication authentication) {
+        String username = authentication.getName();
+        Customer customer = customerService.findByUsername(username);
+
+        // 1. 獲取所有通知
+        List<Notification> notifications = notificationRepository.findByRecipientUsernameOrderByCreatedAtDesc(username);
+
+        // 2. 🟢 核心：進入頁面後，自動將所有通知標記為已讀
+        notifications.forEach(n -> n.setRead(true));
+        notificationRepository.saveAll(notifications);
+
+        model.addAttribute("customer", customer);
+        model.addAttribute("notifications", notifications);
+
+        return "notifications"; // 對應 templates/notifications.html
     }
 }

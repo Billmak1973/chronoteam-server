@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableScheduling //  啟用定時任務
 public class WebsiteApplication {
+    //cd frontend
     //PS C:\Users\User\IdeaProjects\chronoteam-server\website\frontend> npm run build
     public static void main(String[] args) {
         SpringApplication.run(WebsiteApplication.class, args);

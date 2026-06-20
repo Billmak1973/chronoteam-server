@@ -12,6 +12,38 @@
         .dashboard-container { display: flex; min-height: calc(100vh - 150px); max-width: 1400px; margin: 2rem auto; padding: 0 1rem; gap: 2rem; }
         .main-content { flex: 1; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 2.5rem; }
 
+        /* 🟢 核心修改：Sidebar 黏性導航樣式 */
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+
+            /* === 核心修改開始 === */
+            height: fit-content;              /* 讓高度適應內容，避免過長溢出 */
+            position: sticky;                 /* 啟用黏性定位 */
+            top: 100px;                       /* 距離頂部 100px 時開始固定 (根據你的 Navbar 高度調整) */
+            max-height: calc(100vh - 120px);  /* 防止側邊欄過長溢出屏幕 */
+            overflow-y: auto;                 /* 如果菜單太多，允許側邊欄內部滾動 */
+            /* === 核心修改結束 === */
+        }
+
+        /* 美化側邊欄內部滾動條 (可選) */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #e9ecef;
+            border-radius: 3px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--gold);
+        }
+
         /* Tab 样式 */
         .tabs { display: flex; border-bottom: 2px solid #e9ecef; margin-bottom: 2rem; gap: 2rem; }
         .tab-btn {
@@ -126,7 +158,7 @@
                 <i class="fas fa-reply"></i> 回復我的
             </button>
             <button class="tab-btn" onclick="switchTab('MENTION', this)">
-                <i class="fas fa-at"></i> 我的
+                <i class="fas fa-at"></i> 提到我的
             </button>
         </div>
 

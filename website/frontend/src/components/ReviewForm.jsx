@@ -1,0 +1,95 @@
+import React, { useState } from 'react';
+
+const ReviewForm = ({ productId, orderNo, onSuccess }) => {
+    const [rating, setRating] = useState(0);
+    const [hoverRating, setHoverRating] = useState(0);
+    const [content, setContent] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleStarClick = (e, starIndex) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const isLeftHalf = (e.clientX - rect.left) < (rect.width / 2);
+        setRating(isLeftHalf ? starIndex - 0.5 : starIndex);
+    };
+
+    const handleStarHover = (e, starIndex) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const isLeftHalf = (e.clientX - rect.left) < (rect.width / 2);
+        setHoverRating(isLeftHalf ? starIndex - 0.5 : starIndex);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (rating === 0) return alert('請先選擇評分');
+        if (!content.trim()) return alert('請輸入評價內容');
+
+        setIsSubmitting(true);
+        try {
+            const res = await fetch('/api/review/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ productId, orderNo, rating, content })
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert('評價提交成功');
+                setContent('');
+                setRating(0);
+                onSuccess(); // 通知父組件刷新列表
+            } else {
+                alert(result.message || '提交失敗');
+            }
+        } catch (err) {
+            alert('網絡錯誤');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const displayRating = hoverRating || rating;
+
+    return (
+        <div className="review-form order-review">
+            <h3><i className="fas fa-star" style={{color: 'var(--gold)'}}></i> 對該訂單商品進行評價</h3>
+            <form onSubmit={handleSubmit}>
+                <div className="rating-section">
+                    <label className="rating-label">評分：<span className="rating-display">{displayRating.toFixed(1)}</span></label>
+                    <div className="rating-stars" onMouseLeave={() => setHoverRating(0)}>
+                        {[1, 2, 3, 4, 5].map(i => (
+                            <i
+                                key={i}
+                                className={
+                                    displayRating >= i ? "fas fa-star rating-star" :
+                                    displayRating === i - 0.5 ? "fas fa-star-half-alt rating-star" :
+                                    "far fa-star rating-star"
+                                }
+                                onClick={(e) => handleStarClick(e, i)}
+                                onMouseMove={(e) => handleStarHover(e, i)}
+                            ></i>
+                        ))}
+                    </div>
+                    <div className="rating-hint">
+                        <i className="fas fa-info-circle"></i> 懸停並點擊星星的左半邊為 0.5 分，右半邊為整星
+                    </div>
+                </div>
+                <div style={{marginBottom: '1rem'}}>
+                    <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500}}>評價內容：</label>
+                    <textarea
+                        className="review-textarea"
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        placeholder="請分享您對該商品的使用體驗..."
+                        maxLength="1000"
+                        required
+                    ></textarea>
+                    <div className="char-count">{content.length}/1000</div>
+                </div>
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                    {isSubmitting ? <><i className="fas fa-spinner fa-spin"></i> 提交中...</> : <><i className="fas fa-paper-plane"></i> 提交評價</>}
+                </button>
+            </form>
+        </div>
+    );
+};
+export default ReviewForm;

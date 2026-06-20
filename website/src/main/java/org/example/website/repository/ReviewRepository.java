@@ -7,6 +7,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -48,4 +50,23 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             @Param("username") String username,
             Pageable pageable
     );
+    long countByProduct_IdAndPinned(Integer productId, Boolean pinned);
+
+    /**
+     *  高效統計：統計用戶收到的「回復我」的未讀數量
+     * 邏輯：查找 reply_to_user = 當前用戶，且創建時間 > 最後查看時間 的記錄總數
+     */
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.replyToUser = :username AND r.createdAt > :lastViewedAt")
+    long countUnreadReplies(@Param("username") String username, @Param("lastViewedAt") LocalDateTime lastViewedAt);
+
+    /**
+     *  高效統計：統計用戶收到的「@我的」未讀數量
+     * 邏輯：查找內容包含 @用戶名，且創建時間 > 最後查看時間，且不是自己發的
+     */
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.content LIKE %:keyword% " +
+            "AND r.customer.username <> :username " +
+            "AND r.createdAt > :lastViewedAt")
+    long countUnreadMentions(@Param("keyword") String keyword,
+                             @Param("username") String username,
+                             @Param("lastViewedAt") LocalDateTime lastViewedAt);
 }

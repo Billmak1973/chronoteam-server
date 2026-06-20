@@ -41,8 +41,10 @@
                     <span id="notificationBadge" class="cart-badge" style="display:none; position: absolute; top: -5px; right: -5px; font-size: 10px; padding: 2px 5px; background: #dc3545;">0</span>
                 </a>
 
-                <a href="javascript:void(0)" onclick="showNotification('🔔 系統通知功能開發中，暫無新通知')">
-                    <i class="fas fa-bell"></i> 系統通知
+                <!--  系统通知 → 系统通知页面（评论被删除等） -->
+                <a href="/account/notifications" style="text-decoration: none; color: inherit; position: relative;">
+                    <i class="fas fa-bell"></i> 系统通知
+                    <span id="systemNotificationBadge" class="cart-badge" style="display:none; position: absolute; top: -5px; right: -5px; font-size: 10px; padding: 2px 5px; background: #ffc107; color: #212529;">0</span>
                 </a>
 
                 <button type="button" class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> 登出</button>

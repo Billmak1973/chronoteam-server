@@ -1,9 +1,17 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import FavoriteButton from './FavoriteButton.jsx'
-import CartDropdown from './CartDropdown.jsx'
-import ReplySection from './ReplySection.jsx' //  引入樓中樓回覆組件
+
+// 加上 ./components/ 路徑
+import FavoriteButton from './components/FavoriteButton.jsx'
+import CartDropdown from './components/CartDropdown.jsx'
+
+//引入全新的評論區頂層組件與隔離後的 CSS
+import ReviewsContainer from './components/ReviewsContainer'
+import './Reviews.css'
 import './index.css'
+
+// 🟢 探針必須放在所有 import 之後！
+console.log("🟢🟢🟢 【探針】React main.jsx 已成功加載並開始執行！");
 
 // ==========================================
 // 1. 掛載「收藏按鈕」組件 (僅在商品詳情頁生效)
@@ -36,25 +44,28 @@ if (cartMountNode) {
 }
 
 // ==========================================
-// 3. 批量掛載「樓中樓回覆區」組件 (商品詳情頁多處生效)
+// 3. 🟢 掛載「完整評論區」組件
 // ==========================================
-// 因為一頁有多條根評論，所以用 querySelectorAll 找出所有掛載點
-const replyMountNodes = document.querySelectorAll('.react-reply-mount')
+const reviewsRootNode = document.getElementById('reviews-react-root')
 
-replyMountNodes.forEach(node => {
-  // 從 Thymeleaf 渲染的 data-* 屬性中提取數據，傳遞給 React 組件
+if (reviewsRootNode) {
+  console.log("✅ 找到評論區掛載點，準備渲染 React..."); // 加這行
+
   const props = {
-    reviewId: node.getAttribute('data-review-id'),
-    initialReplyCount: parseInt(node.getAttribute('data-reply-count')) || 0,
-    productId: node.getAttribute('data-product-id'),
-    currentUsername: node.getAttribute('data-current-username'),
-    isAdmin: node.getAttribute('data-is-admin') === 'true'
+    productId: parseInt(reviewsRootNode.dataset.productId),
+    currentUsername: reviewsRootNode.dataset.currentUsername || '',
+    isAdmin: reviewsRootNode.dataset.isAdmin === 'true',
+    canReview: reviewsRootNode.dataset.canReview === 'true',
+    reviewOrderNo: reviewsRootNode.dataset.reviewOrderNo || '',
+    initialTotalCount: parseInt(reviewsRootNode.dataset.totalReviewCount) || 0,
+    initialAvgRating: parseFloat(reviewsRootNode.dataset.totalScore) || 0
   }
 
-  // 為每一個根評論的掛載點，渲染一個獨立的 ReplySection 組件
-  ReactDOM.createRoot(node).render(
+  ReactDOM.createRoot(reviewsRootNode).render(
     <React.StrictMode>
-      <ReplySection {...props} />
+      <ReviewsContainer {...props} />
     </React.StrictMode>
   )
-})
+} else {
+  console.warn("⚠️ 找不到 id 為 reviews-react-root 的 HTML 節點！");
+}

@@ -1,54 +1,66 @@
 package org.example.website.service;
 
-import org.example.website.entity.Notification;
-import org.example.website.repository.NotificationRepository;
+import org.example.website.entity.UserInteractionStats;
+import org.example.website.repository.ReviewRepository;
+import org.example.website.repository.UserInteractionStatsRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 public class NotificationService {
-    private final NotificationRepository notificationRepository;
 
-    public NotificationService(NotificationRepository notificationRepository) {
-        this.notificationRepository = notificationRepository;
+    private final UserInteractionStatsRepository statsRepository;
+    private final ReviewRepository reviewRepository;
+
+    public NotificationService(UserInteractionStatsRepository statsRepository,
+                               ReviewRepository reviewRepository) {
+        this.statsRepository = statsRepository;
+        this.reviewRepository = reviewRepository;
     }
 
-    // 🟢 增加 productId 參數，用於生成跳轉到商品詳情頁的 URL
-    @Transactional
-    public void createReplyNotification(String recipient, String sender, Long reviewId, String content, Integer productId) {
-        Notification notification = new Notification();
-        notification.setRecipientUsername(recipient);
-        notification.setSenderUsername(sender);
-        notification.setType(Notification.NotificationType.REPLY);
+    public static final String TYPE_REVIEW_REPLY = "REVIEW_REPLY";
+    public static final String TYPE_REVIEW_MENTION = "REVIEW_MENTION";
 
-        // 截斷過長內容
-        String shortContent = content.length() > 20 ? content.substring(0, 20) + "..." : content;
-        notification.setContent(sender + " 回復了你的評論: " + shortContent);
+    /**
+     * 🟢 核心：獲取未讀消息數量 (僅需 2 次 DB 交互：1次查時間，1次查數量)
+     */
+    public long getUnreadCount(String username, String type) {
+        // 1. 獲取該用戶該類型的最後查看時間 (只需查一次)
+        Optional<UserInteractionStats> statsOpt = statsRepository.findByUsernameAndType(username, type);
 
-        // 生成跳轉連結，帶上 reviewId 方便前端定位或高亮
-        notification.setTargetUrl("/product/" + productId + "?highlightReview=" + reviewId);
-        notification.setRelatedReviewId(reviewId);
+        LocalDateTime lastViewedAt;
+        if (statsOpt.isPresent()) {
+            lastViewedAt = statsOpt.get().getLastViewedAt();
+        } else {
+            // 如果從沒看過，設為很久以前，這樣所有歷史消息都算未讀
+            lastViewedAt = LocalDateTime.now().minusYears(10);
+        }
 
-        notificationRepository.save(notification);
+        // 2. 根據類型調用 Repository 進行一次性統計 (只需查一次)
+        if (TYPE_REVIEW_REPLY.equals(type)) {
+            return reviewRepository.countUnreadReplies(username, lastViewedAt);
+        } else if (TYPE_REVIEW_MENTION.equals(type)) {
+            return reviewRepository.countUnreadMentions("@" + username, username, lastViewedAt);
+        }
+
+        return 0;
     }
 
-    @Transactional
-    public void createMentionNotification(String recipient, String sender, Long reviewId, String content, Integer productId) {
-        Notification notification = new Notification();
-        notification.setRecipientUsername(recipient);
-        notification.setSenderUsername(sender);
-        notification.setType(Notification.NotificationType.MENTION);
-
-        String shortContent = content.length() > 20 ? content.substring(0, 20) + "..." : content;
-        notification.setContent(sender + " 在評論中提到了你: " + shortContent);
-
-        notification.setTargetUrl("/product/" + productId + "?highlightReview=" + reviewId);
-        notification.setRelatedReviewId(reviewId);
-
-        notificationRepository.save(notification);
+    /**
+     * 標記已讀 (更新基準時間)
+     */
+    public void markAsRead(String username, String type) {
+        LocalDateTime now = LocalDateTime.now();
+        int updatedRows = statsRepository.updateLastViewedAt(username, type, now);
+        if (updatedRows == 0) {
+            statsRepository.insertInitialRecord(username, type, now);
+        }
     }
 
-    public long getUnreadCount(String username) {
-        return notificationRepository.countByRecipientUsernameAndIsReadFalse(username);
+    public long getTotalUnreadCount(String username) {
+        // 這裡只會執行 2 次 SQL 查詢 (一次 Reply, 一次 Mention)，無論有多少條消息，都是 O(1) 複雜度
+        return getUnreadCount(username, TYPE_REVIEW_REPLY) +
+                getUnreadCount(username, TYPE_REVIEW_MENTION);
     }
 }
