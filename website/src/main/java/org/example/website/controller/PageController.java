@@ -1,26 +1,32 @@
 package org.example.website.controller;
 
+import org.example.website.dto.ApiResponse;
 import org.example.website.entity.*;
-import org.example.website.repository.LoginLogRepository;
-import org.example.website.repository.NotificationRepository;
-import org.example.website.repository.SellApplicationRepository;
-import org.example.website.repository.FavoriteRepository;
+import org.example.website.repository.*;
 import org.example.website.service.CustomerService;
 import org.example.website.service.OrderService;
+import org.example.website.service.UserBlockService;
 import org.example.website.service.ViewHistoryService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Controller  // 關鍵：返回視圖名稱，不是 JSON
@@ -33,8 +39,8 @@ public class PageController {
     private final FavoriteRepository favoriteRepository; // 新增聲明
     private final ViewHistoryService viewHistoryService; //  新增依賴
     private final OrderService orderService; //  新增
-    private final NotificationRepository notificationRepository; // 🟢 新增聲明
-
+    private final NotificationRepository notificationRepository; //  新增聲明
+    private final StockNotificationRepository stockNotificationRepository;
     //  2. 通過構造函數注入依賴 (加入了 SellApplicationRepository)
     public PageController(CustomerService customerService,
                           LoginLogRepository loginLogRepository,
@@ -42,7 +48,8 @@ public class PageController {
                           FavoriteRepository favoriteRepository,
                           ViewHistoryService viewHistoryService,
                           OrderService orderService,
-                          NotificationRepository notificationRepository) {
+                          NotificationRepository notificationRepository,
+                          StockNotificationRepository stockNotificationRepository) {
         this.customerService = customerService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -50,6 +57,7 @@ public class PageController {
         this.viewHistoryService = viewHistoryService;
         this.orderService = orderService;
         this.notificationRepository = notificationRepository;
+        this.stockNotificationRepository = stockNotificationRepository;
     }
 
     @GetMapping("/")
@@ -336,22 +344,75 @@ public class PageController {
         return "reviews"; // 對應 templates/reviews.html
     }
 
-    //  新增：系統通知頁面路由
     @GetMapping("/account/notifications")
     public String myNotifications(Model model, Authentication authentication) {
         String username = authentication.getName();
         Customer customer = customerService.findByUsername(username);
 
         // 1. 獲取所有通知
-        List<Notification> notifications = notificationRepository.findByRecipientUsernameOrderByCreatedAtDesc(username);
+        List<Notification> allNotifications = notificationRepository
+                .findByRecipientUsernameOrderByCreatedAtDesc(username);
 
-        // 2. 🟢 核心：進入頁面後，自動將所有通知標記為已讀
-        notifications.forEach(n -> n.setRead(true));
-        notificationRepository.saveAll(notifications);
+        // 2. 分類通知
+        List<Notification> stockNotifications = allNotifications.stream()
+                .filter(n -> n.getType() == Notification.NotificationType.STOCK)
+                .collect(Collectors.toList());
 
+        List<Notification> adminNotifications = allNotifications.stream()
+                .filter(n -> n.getType() == Notification.NotificationType.SYSTEM)
+                .collect(Collectors.toList());
+
+        // 3. 進入頁面後，自動將所有通知標記為已讀
+        allNotifications.forEach(n -> n.setRead(true));
+        notificationRepository.saveAll(allNotifications);
+
+        // 4. 傳遞數據到前端
         model.addAttribute("customer", customer);
-        model.addAttribute("notifications", notifications);
+        model.addAttribute("stockNotifications", stockNotifications);
+        model.addAttribute("adminNotifications", adminNotifications);
 
-        return "notifications"; // 對應 templates/notifications.html
+        return "notifications";
+    }
+
+    @GetMapping("/account/stock-notifications")
+    public String stockNotifications(Model model,
+                                     @RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "12") int size,
+                                     Authentication authentication) {
+        String username = authentication.getName();
+        Customer customer = customerService.findByUsername(username);
+        model.addAttribute("customer", customer);
+
+        //  修正 1：排序字段應為 createdAt (實體類中的字段名)
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        //  修正 2：調用 Repository 中新增的分頁方法
+        Page<StockNotification> notificationPage = stockNotificationRepository
+                .findByUsernameOrderByCreatedAtDesc(username, pageable);
+
+        model.addAttribute("notifications", notificationPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", notificationPage.getTotalPages());
+        model.addAttribute("totalElements", notificationPage.getTotalElements());
+
+        return "stock-notifications";
+    }
+
+    // 新增：根據 ID 取消訂閱 (用於前端 AJAX)
+    @DeleteMapping("/api/stock-notification/unsubscribe-by-id/{id}")
+    public ResponseEntity<?> unsubscribeById(@PathVariable Integer id, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+        }
+
+        String username = authentication.getName();
+        Optional<StockNotification> notification = stockNotificationRepository.findById(Long.valueOf(id));
+
+        if (notification.isPresent() && notification.get().getUsername().equals(username)) {
+            stockNotificationRepository.deleteById(Long.valueOf(id));
+            return ResponseEntity.ok(ApiResponse.ok("已取消訂閱"));
+        }
+
+        return ResponseEntity.badRequest().body(ApiResponse.error("找不到該訂閱記錄"));
     }
 }

@@ -54,6 +54,12 @@
                th:classappend="${activePage == 'favorites'} ? 'active' : ''">
                 <i class="fas fa-heart"></i> 我的收藏
             </a>
+
+            <a href="/account/stock-notifications" class="menu-item"
+               th:classappend="${activePage == 'stock-notifications'} ? 'active' : ''">
+                <i class="fas fa-bell"></i> 到貨通知
+            </a>
+
             <a href="/account/history" class="menu-item"
                th:classappend="${activePage == 'history'} ? 'active' : ''">
                 <i class="fas fa-history"></i> 瀏覽歷史

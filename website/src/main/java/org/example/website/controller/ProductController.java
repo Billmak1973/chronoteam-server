@@ -1,5 +1,8 @@
 package org.example.website.controller;
 
+import lombok.Data;
+import org.example.website.dto.ApiResponse;
+import org.example.website.dto.ProductUpdateRequest;
 import org.example.website.entity.Order;
 import org.example.website.entity.Product;
 import org.example.website.entity.Review;
@@ -13,13 +16,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -214,4 +217,52 @@ public String productDetail(@PathVariable Integer id,
 
     return "product-detail";
 }
+    @PutMapping("/api/admin/product/{id}")
+    public ResponseEntity<ApiResponse> updateProduct(
+            @PathVariable Integer id,
+            @RequestBody ProductUpdateRequest request,
+            Authentication authentication) {
+
+        // 权限检查
+        if (!"admin".equals(authentication.getName())) {
+            return ResponseEntity.status(403)
+                    .body(ApiResponse.error("无权操作，仅限管理员"));
+        }
+
+        try {
+            Product product = productRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("商品不存在"));
+
+            // 更新字段
+            if (request.getPrice() != null) {
+                product.setPrice(request.getPrice());
+            }
+            if (request.getStock() != null) {
+                product.setStock(request.getStock());
+            }
+            if (request.getCategory() != null) {
+                product.setCategory(request.getCategory());
+            }
+            if (request.getBrand() != null) {
+                product.setBrand(request.getBrand());
+            }
+            if (request.getDescription() != null) {
+                product.setDescription(request.getDescription());
+            }
+            if (request.getDetails() != null) {
+                product.setDetails(request.getDetails());
+            }
+            if (request.getImage() != null) {
+                product.setImage(request.getImage());
+            }
+
+            productRepository.save(product);
+
+            return ResponseEntity.ok(ApiResponse.ok("修改成功"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("修改失败: " + e.getMessage()));
+        }
+    }
+
 }

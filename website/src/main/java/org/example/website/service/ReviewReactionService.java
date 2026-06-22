@@ -2,9 +2,11 @@
 package org.example.website.service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.website.entity.Notification;
 import org.example.website.entity.RateLimitLog;
 import org.example.website.entity.Review;
 import org.example.website.entity.ReviewReaction;
+import org.example.website.repository.NotificationRepository;
 import org.example.website.repository.RateLimitLogRepository;
 import org.example.website.repository.ReviewReactionRepository;
 import org.example.website.repository.ReviewRepository;
@@ -24,7 +26,7 @@ public class ReviewReactionService {
     private final RateLimitLogRepository rateLimitRepository;
     private final ReviewRepository reviewRepository;
     private final RateLimitCleanupService cleanupService;  // 用於安排延遲任務
-
+    private final NotificationRepository notificationRepository;
     // 常量
     private static final int WARNING_THRESHOLD = 2;   // 超过2次开始记录
     private static final int BAN_THRESHOLD = 6;        // 超过等于6次封禁
@@ -228,16 +230,60 @@ public class ReviewReactionService {
             log.setUpdatedAt(now);
 
             // 關鍵：當達到封禁閾值時，設置封禁時間並安排延遲任務
+//            if (newTimes >= BAN_THRESHOLD && log.getBannedUntil() == null) {
+//                LocalDateTime bannedUntil = now.plusMinutes(BAN_DURATION_MINUTES);
+//                log.setBannedUntil(bannedUntil);
+//                rateLimitRepository.save(log);
+//
+//                // 安排延遲任務，在封禁結束時自動轉移記錄到歷史表
+//                cleanupService.scheduleUnbanTask(log.getId(), bannedUntil);
+//
+//                System.out.println("⚠️ 用戶 " + username + " 因頻繁操作被封禁10分鐘，將在 " + bannedUntil + " 解封");
+//            }
             if (newTimes >= BAN_THRESHOLD && log.getBannedUntil() == null) {
                 LocalDateTime bannedUntil = now.plusMinutes(BAN_DURATION_MINUTES);
                 log.setBannedUntil(bannedUntil);
                 rateLimitRepository.save(log);
 
-                // 安排延遲任務，在封禁結束時自動轉移記錄到歷史表
+                // 安排延遲任務，封禁結束時自動轉移記錄到歷史表
                 cleanupService.scheduleUnbanTask(log.getId(), bannedUntil);
-
                 System.out.println("⚠️ 用戶 " + username + " 因頻繁操作被封禁10分鐘，將在 " + bannedUntil + " 解封");
-            } else {
+
+                // ========================================
+                // 🟢 新增：自動發送系統通知，告知用戶封禁起止時間
+                // ========================================
+                try {
+                    Notification banNotification = new Notification();
+                    banNotification.setRecipientUsername(username);
+                    banNotification.setSenderUsername("system");
+                    banNotification.setType(Notification.NotificationType.SYSTEM);
+                    banNotification.setTitle("⚠️ 點贊/踩功能已暫時鎖定");
+
+                    // 格式化時間，讓用戶一眼看懂
+                    java.time.format.DateTimeFormatter formatter =
+                            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+                    String startTime = now.format(formatter);
+                    String endTime   = bannedUntil.format(formatter);
+
+                    banNotification.setContent(
+                            "系統檢測到您在短時間內頻繁操作（1 分鐘內連續點贊/踩達 "
+                                    + newTimes + " 次），為防止濫用，您的點贊與踩功能已被暫時鎖定。\n\n"
+                                    + "🔒 鎖定開始時間：" + startTime + "\n"
+                                    + "🔓 鎖定結束時間：" + endTime + "\n\n"
+                                    + "在此期間您將無法對任何評論進行點贊或踩操作。"
+                                    + "鎖定期滿後將自動恢復，請勿重複頻繁操作以免再次觸發封禁。"
+                    );
+
+                    banNotification.setCreatedAt(now);
+                    notificationRepository.save(banNotification);
+
+                    System.out.println("📨 已向用戶 " + username + " 發送封禁系統通知");
+                } catch (Exception notifyEx) {
+                    // 通知發送失敗不應影響封禁邏輯本身
+                    System.err.println("❌ 發送封禁通知失敗: " + notifyEx.getMessage());
+                }
+            }
+            else {
                 rateLimitRepository.save(log);
             }
 

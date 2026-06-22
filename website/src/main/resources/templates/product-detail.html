@@ -36,7 +36,7 @@
     .btn-price:hover { background: linear-gradient(135deg, var(--gold) 0%, #d4af37 100%); color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); }
 
     /* ========================================== */
-    /* 🟢 評論區基礎樣式 */
+    /*  評論區基礎樣式 */
     /* ========================================== */
     .reviews-section { max-width: 1200px; margin: 2rem auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); }
     .reviews-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid var(--light); }
@@ -51,7 +51,7 @@
     .rating-label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
     .rating-display { display: inline-block; background: var(--gold); color: var(--primary); padding: 0.3rem 0.8rem; border-radius: 6px; font-weight: 700; font-size: 1.1rem; margin-left: 0.5rem; min-width: 50px; text-align: center; }
 
-    /* 🟢 修復後的評分星星樣式 */
+    /*  修復後的評分星星樣式 */
     .rating-stars {
         display: flex;
         gap: 0.6rem;
@@ -72,7 +72,7 @@
         transform: scale(1.15);
     }
 
-    /* 🟢 核心修復：定義「被選中/激活」狀態的顏色 */
+    /*  核心修復：定義「被選中/激活」狀態的顏色 */
     /* 你的 React 代碼中使用了 fa-star (實心) 和 fa-star-half-alt (半星) */
     /* 我們需要強制讓這兩種圖標在顯示時變成金色 */
     .rating-stars .fas.fa-star,
@@ -110,32 +110,82 @@
     .review-reactions { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; margin-left: 1rem; flex-shrink: 0; }
     .review-reaction-group { display: flex; gap: 0.3rem; align-items: center; }
     .review-action-btn { padding: 0.3rem 0.6rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
-    .btn-reply { background: #6c757d; color: white; }
-    .btn-reply:hover { background: #5a6268; transform: translateY(-2px); }
+    .btn-reply {
+  background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(246, 211, 101, 0.3);
+}
+
+.btn-reply:hover {
+  background: linear-gradient(135deg, #fda085 0%, #f6d365 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(246, 211, 101, 0.4);
+}
 
     /* ========================================== */
-    /* 🟢 重點修復：點贊/踩按鈕樣式 (高權重 + !important) */
+    /*  重點修復：點贊/踩按鈕樣式 (高權重 + !important) */
     /* ========================================== */
-    .btn-like { background: #e9ecef; color: #495057; border: 1px solid #dee2e6; }
-    .btn-like:hover { background: #dee2e6; transform: translateY(-2px); }
+    /* === 點贊按鈕樣式 === */
+.btn-like {
+    background: #e9ecef;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s;
+}
 
-    /* 強制覆蓋任何可能的背景干擾 */
-    .btn-like.active {
-        background: #87CEEB !important;
-        color: white !important;
-        border-color: #87CEEB !important;
-    }
-    .btn-like.active i { color: white !important; }
+/* 默認 hover（未激活狀態） */
+.btn-like:hover:not(.active) {
+    background: #dee2e6;
+    transform: translateY(-2px);
+}
 
-    .btn-dislike { background: #e9ecef; color: #495057; border: 1px solid #dee2e6; }
-    .btn-dislike:hover { background: #dee2e6; transform: translateY(-2px); }
+/* 激活狀態 - 天藍色漸變 */
+.btn-like.active {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+    color: white !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+}
 
-    .btn-dislike.active {
-        background: #FFB6C1 !important;
-        color: white !important;
-        border-color: #FFB6C1 !important;
-    }
-    .btn-dislike.active i { color: white !important; }
+/* 激活狀態的 hover - 增強效果 */
+.btn-like.active:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6) !important;
+}
+
+/* 激活狀態的圖標 */
+.btn-like.active i {
+    color: white !important;
+}
+
+/* === 踩按鈕樣式 === */
+.btn-dislike {
+    background: #e9ecef;
+    color: #495057;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s;
+}
+
+/* 默認 hover（未激活狀態） */
+.btn-dislike:hover:not(.active) {
+    background: #dee2e6;
+    transform: translateY(-2px);
+}
+
+/* 激活狀態 - 青綠色漸變 */
+.btn-dislike.active {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
+    color: white !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
+}
+
+/* 激活狀態的 hover - 增強效果 */
+.btn-dislike.active:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(17, 153, 142, 0.6) !important;
+}
 
     .reaction-count { font-size: 0.75rem; color: var(--gray); font-weight: 500; }
 
@@ -176,7 +226,7 @@
     .btn-pin.pinned { background: #28a745; }
     .btn-pin.pinned:hover { background: #218838; }
 
-    /* 🟢 表單樣式 */
+    /*  表單樣式 */
     .reply-form { margin-top: 0.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #6c757d; animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     .reply-form textarea { width: 100%; min-height: 60px; padding: 0.8rem; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; font-size: 0.9rem; resize: vertical; margin-bottom: 0.8rem; }
@@ -214,7 +264,7 @@
     .btn-collapse:hover { background: #b8972b; transform: translateY(-2px); }
 
     /* ========================================== */
-    /* 🟢 重點修復：置頂樣式 (簡化選擇器，避免干擾按鈕) */
+    /*  重點修復：置頂樣式 (簡化選擇器，避免干擾按鈕) */
     /* ========================================== */
     .review-card.pinned {
       border-left: 4px solid #17a2b8;
@@ -238,7 +288,7 @@
     }
 
     /* ========================================== */
-    /* 🟢 React 評論區補充樣式 */
+    /*  React 評論區補充樣式 */
     /* ========================================== */
     .review-rating-summary {
         display: flex; align-items: center; justify-content: space-between;
@@ -304,6 +354,32 @@
         .review-rating-summary { flex-direction: column; gap: 1.5rem; text-align: center; }
         .review-rating-summary > div:last-child { border-left: none !important; border-top: 2px dashed #e9ecef; padding-left: 0 !important; padding-top: 1.5rem; width: 100%; }
     }
+.btn-pin-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-pin-header:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-pin-header.active {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+  color: white !important;
+}
   </style>
 </head>
 <body>
@@ -315,7 +391,7 @@
   <div class="detail-img">
     <img th:src="@{/images/products/{img}(img=${product.image})}" th:alt="${product.description}" onerror="this.src='/images/placeholder.png'">
 
-    <!-- 🟢 React 收藏按鈕掛載點 -->
+    <!--  React 收藏按鈕掛載點 -->
     <div id="favorite-react-root"
          th:data-product-id="${product.id}"
          th:data-is-favorite="${isFavorite}">
@@ -336,21 +412,27 @@
     <p class="details-text" th:text="${product.details} ?: '暫無詳細介紹'">這裡是手錶的來源...</p>
 
     <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-      <button type="button" onclick="addToCart(currentProductId)" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;">
+      <!-- 原代码: onclick="addToCart(currentProductId)" -->
+      <button type="button" onclick="handleAddToCartClick()" class="btn btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;">
         <i class="fas fa-cart-plus"></i> 加入購物車
       </button>
-      <button type="button" onclick="notifyWhenAvailable()" class="btn btn-gold" style="padding: 0.8rem 2rem; font-size: 1rem;">
+
+      <button type="button" id="notifyBtn" onclick="handleNotifyClick()" class="btn btn-gold" style="padding: 0.8rem 2rem; font-size: 1rem;">
         <i class="fas fa-bell"></i> 到貨通知
       </button>
+
       <a href="/browse" class="btn btn-outline" style="padding: 0.8rem 2rem; font-size: 1rem;">
         <i class="fas fa-arrow-left"></i> 返回瀏覽
       </a>
-      <button th:if="${#authentication.name == 'admin'}" type="button" class="btn-stock" onclick="showNotification('🔒 修改庫存功能開發中')">
-        <i class="fas fa-boxes"></i> 修改庫存
+      <button th:if="${#authentication.name == 'admin'}"
+              type="button"
+              class="btn-stock"
+              onclick="openEditModal()">
+        <i class="fas fa-edit"></i> 编辑商品
       </button>
-      <button th:if="${#authentication.name == 'admin'}" type="button" class="btn-price" onclick="showNotification('🔒 修改價格功能開發中')">
-        <i class="fas fa-tag"></i> 修改價格
-      </button>
+<!--      <button th:if="${#authentication.name == 'admin'}" type="button" class="btn-price" onclick="showNotification('🔒 修改價格功能開發中')">-->
+<!--        <i class="fas fa-tag"></i> 修改價格-->
+<!--      </button>-->
     </div>
   </div>
 </div>
@@ -380,26 +462,469 @@
 
 <div th:replace="~{fragments/common :: modals}"></div>
 
+<!-- ========================================== -->
+<!-- 管理員專屬：等待名單模態框 -->
+<!-- ========================================== -->
+<div id="waitlistModal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 500px;">
+    <button class="modal-close" onclick="closeWaitlistModal()">&times;</button>
+    <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+      <i class="fas fa-users" style="color: var(--gold);"></i> 等待到貨用戶名單
+    </h3>
+    <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 1rem;">
+      共有 <strong id="waitlistCount" style="color: var(--accent);">0</strong> 位用戶正在等待此商品。
+    </p>
+
+    <!-- 名單列表容器 -->
+    <div id="waitlistBody" style="max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; border: 1px solid #e9ecef; border-radius: 8px;">
+      <div style="text-align: center; padding: 2rem; color: var(--gray);">
+        <i class="fas fa-spinner fa-spin"></i> 加載中...
+      </div>
+    </div>
+
+    <!-- 一鍵發送按鈕 -->
+    <button id="sendNotifyBtn" class="btn btn-gold" style="width: 100%; justify-content: center; padding: 0.8rem;" onclick="sendStockNotification()">
+      <i class="fas fa-paper-plane"></i> 一鍵發送系統通知
+    </button>
+  </div>
+</div>
+<!-- ========================================== -->
+<!--  管理员专属：编辑商品模态框 -->
+<!-- ========================================== -->
+<div id="editProductModal" class="modal" style="display: none;">
+  <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+    <button class="modal-close" onclick="closeEditModal()">&times;</button>
+    <h3 style="margin-bottom: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+      <i class="fas fa-edit" style="color: var(--gold);"></i> 编辑商品信息
+    </h3>
+
+    <form id="editProductForm" onsubmit="saveProduct(event)">
+      <!-- 价格 -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          <i class="fas fa-tag" style="color: var(--gold); margin-right: 0.5rem;"></i> 价格 (HK$)
+        </label>
+        <input type="number" id="editPrice" step="0.01" min="0" required
+               th:value="${product.price}"
+               style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+      </div>
+
+      <!-- 库存 -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          <i class="fas fa-boxes" style="color: var(--gold); margin-right: 0.5rem;"></i> 库存数量
+        </label>
+        <input type="number" id="editStock" min="0" required
+               th:value="${product.stock}"
+               style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+      </div>
+
+      <!-- 分类 -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          <i class="fas fa-th-large" style="color: var(--gold); margin-right: 0.5rem;"></i> 分类
+        </label>
+        <select id="editCategory" required
+                style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+          <option value="Watch" th:selected="${product.category == 'Watch'}">Watch</option>
+          <option value="dive" th:selected="${product.category == 'dive'}">潜水表</option>
+          <option value="dress" th:selected="${product.category == 'dress'}">正装表</option>
+          <option value="chronograph" th:selected="${product.category == 'chronograph'}">计时码表</option>
+          <option value="vintage" th:selected="${product.category == 'vintage'}">古董表</option>
+        </select>
+      </div>
+
+      <!-- 品牌 -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          <i class="fas fa-crown" style="color: var(--gold); margin-right: 0.5rem;"></i> 品牌
+        </label>
+        <input type="text" id="editBrand" required
+               th:value="${product.brand}"
+               placeholder="例如：Rolex, Omega, AP..."
+               style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+      </div>
+
+      <!-- 商品描述（简介） -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          <i class="fas fa-align-left" style="color: var(--gold); margin-right: 0.5rem;"></i> 商品简介
+        </label>
+        <textarea id="editDescription" rows="3" required
+                  th:text="${product.description}"
+                  placeholder="简短描述商品..."
+                  style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+      </div>
+
+      <!-- 详细介绍 -->
+      <div class="form-group" style="margin-bottom: 1rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          <i class="fas fa-file-alt" style="color: var(--gold); margin-right: 0.5rem;"></i> 详细介绍
+        </label>
+        <textarea id="editDetails" rows="5"
+                  th:text="${product.details}"
+                  placeholder="详细介绍商品的来源、特点、规格等..."
+                  style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+      </div>
+
+      <!-- 图片 URL -->
+      <div class="form-group" style="margin-bottom: 1.5rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+          <i class="fas fa-image" style="color: var(--gold); margin-right: 0.5rem;"></i> 图片文件名
+        </label>
+        <input type="text" id="editImage"
+               th:value="${product.image}"
+               placeholder="例如：watch1.png"
+               style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+        <small style="color: var(--gray); font-size: 0.85rem; margin-top: 0.3rem; display: block;">
+          <i class="fas fa-info-circle"></i> 图片需先上传至 /images/products/ 目录
+        </small>
+      </div>
+
+      <!-- 按钮 -->
+      <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <button type="button" onclick="closeEditModal()"
+                style="padding: 0.8rem 1.5rem; background: #e9ecef; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--primary);">
+          <i class="fas fa-times"></i> 取消
+        </button>
+        <button type="submit"
+                style="padding: 0.8rem 2rem; background: var(--gold); border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--primary);">
+          <i class="fas fa-save"></i> 保存修改
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ========================================== -->
+<!-- 1. 統一在這裡獲取所有 Thymeleaf 後端變量 -->
+<!-- ========================================== -->
 <script th:inline="javascript">
   const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
   const currentProductId = [[${ product.id }]];
   const currentUsername = [[${ #authentication.name }]];
   const isAdmin = [[${ #authentication.name == 'admin' }]];
+  const currentStock = [[${ product.stock }]];
 </script>
 
 <script src="/js/common.js"></script>
 <script type="module" th:src="@{/react-assets/assets/index.js}"></script>
 
+<!-- ========================================== -->
+<!-- 2. 純 JS 邏輯區 (直接復用上面的全局變量) -->
+<!-- ========================================== -->
 <script>
-  function notifyWhenAvailable() {
-    if (!isLoggedIn) {
-      showNotification('❌ 請先登入後再使用到貨通知功能！', true);
-      setTimeout(() => openLoginModal(), 500);
-      return;
-    }
-    showNotification('🔔 到貨通知功能開發中，商品到貨後我們會第一時間通知您！');
-  }
-</script>
+  // 直接映射變量，避免命名混亂
+  const productId = currentProductId;
+  const productStock = currentStock;
 
+  let isSubscribed = false;
+  let subscriberCount = 0;
+
+  //  頁面加載時：獲取訂閱狀態與人數
+  async function loadNotificationStatus() {
+      const btn = document.getElementById('notifyBtn');
+      if (!btn) return; // 安全護欄
+
+      // 如果未登入，直接顯示基礎 UI
+      if (!isLoggedIn) {
+          updateButtonUI();
+          return;
+      }
+
+      try {
+          const res = await fetch(`/api/stock-notification/status/${productId}`);
+          const data = await res.json();
+          if (data.success) {
+              isSubscribed = data.data.isSubscribed;
+              subscriberCount = data.data.totalSubscribers;
+          }
+      } catch (e) {
+          console.error('獲取訂閱狀態失敗:', e);
+      }
+
+      // 渲染最終 UI
+      updateButtonUI();
+  }
+
+  //  核心：根據「庫存」與「訂閱狀態」動態渲染按鈕 UI
+  function updateButtonUI() {
+      const btn = document.getElementById('notifyBtn');
+      if (!btn) return;
+
+      if (productStock > 0) {
+          // 【情況 A】：庫存 > 0 (現貨充足)
+          btn.innerHTML = '<i class="fas fa-bell"></i> 到貨通知';
+          btn.className = 'btn btn-gold';
+          btn.title = '點擊查看提示';
+      } else {
+          // 【情況 B】：庫存 = 0 (缺貨狀態)
+          if (isSubscribed) {
+              btn.innerHTML = `<i class="fas fa-check-circle"></i> 已訂閱 (${subscriberCount}人等待中)`;
+              btn.className = 'btn btn-outline';
+              btn.title = '點擊取消訂閱';
+          } else {
+              btn.innerHTML = `<i class="fas fa-bell"></i> 到貨通知 (已有${subscriberCount}人訂閱)`;
+              btn.className = 'btn btn-gold';
+              btn.title = '點擊訂閱到貨通知';
+          }
+      }
+  }
+
+  //  核心重構：點擊事件處理 (區分管理員與顧客)
+  async function handleNotifyClick() {
+      if (!isLoggedIn) {
+          showNotification('❌ 請先登入後再使用到貨通知功能！', true);
+          setTimeout(() => openLoginModal(), 500);
+          return;
+      }
+
+      // ==============================
+      //  管理員視角邏輯
+      // ==============================
+      if (isAdmin) {
+          if (productStock <= 0) {
+              // 情況 A：庫存 = 0，攔截並提示
+              alert('⚠️ 當前庫存為 0，無法發送通知！\n請先修改庫存後再操作。');
+              return;
+          } else {
+              // 情況 B：庫存 > 0，彈出等待名單模態框
+              openWaitlistModal();
+              return;
+          }
+      }
+
+      // ==============================
+      // 顧客視角邏輯 (庫存 > 0 時)
+      // ==============================
+      if (productStock > 0) {
+          showNotification('🛒 該商品現貨充足，請直接加入購物車購買，無需訂閱到貨通知哦！');
+          const btn = document.getElementById('notifyBtn');
+          btn.style.animation = 'shake 0.5s ease';
+          setTimeout(() => btn.style.animation = '', 500);
+          return;
+      }
+
+      // ==============================
+      // 顧客視角邏輯 (庫存 = 0 時：訂閱/取消訂閱)
+      // ==============================
+      try {
+          let url, method, successMsg;
+
+          if (isSubscribed) {
+              url = `/api/stock-notification/unsubscribe/${productId}`;
+              method = 'DELETE';
+              successMsg = '💔 已取消訂閱';
+          } else {
+              url = `/api/stock-notification/subscribe/${productId}`;
+              method = 'POST';
+              successMsg = '✅ 訂閱成功！到貨後將第一時間通知您！';
+          }
+
+          const res = await fetch(url, { method: method });
+          const data = await res.json();
+
+          if (data.success) {
+              isSubscribed = !isSubscribed;
+              subscriberCount += isSubscribed ? 1 : -1;
+              updateButtonUI();
+              showNotification(successMsg);
+          } else {
+              showNotification('❌ ' + data.message, true);
+          }
+      } catch (e) {
+          console.error('訂閱操作失敗:', e);
+          showNotification('❌ 網絡錯誤，請稍後重試', true);
+      }
+  }
+
+  //  點擊事件處理：加入購物車 (包含缺貨攔截與滾動提示)
+  function handleAddToCartClick() {
+      // 1. 檢查庫存
+      if (currentStock <= 0) {
+          // 2. 彈出確認窗口
+          const isConfirmed = confirm("⚠️ 該產品已售罄！\n\n如果您非常想要這款手錶，請點擊「確定」，我們將為您定位到「到貨通知」按鈕。");
+
+          // 3. 自動滾動並高亮提示
+          if (isConfirmed) {
+              const notifyBtn = document.getElementById('notifyBtn'); // 修復：直接用 ID 獲取
+              if (notifyBtn) {
+                  notifyBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  notifyBtn.style.boxShadow = "0 0 15px var(--accent)";
+                  notifyBtn.style.transition = "box-shadow 0.5s ease";
+                  setTimeout(() => {
+                      notifyBtn.style.boxShadow = "";
+                  }, 2000);
+              }
+          }
+          return; // 停止執行，不加入購物車
+      }
+
+      // 4. 庫存充足，調用原本的加入購物車函數 (來自 common.js)
+      addToCart(currentProductId);
+  }
+
+  // ==========================================
+  //  管理員專屬 JS 函數
+  // ==========================================
+
+  // 1. 打開等待名單模態框
+  async function openWaitlistModal() {
+      const modal = document.getElementById('waitlistModal');
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden'; // 禁止背景滾動
+
+      const body = document.getElementById('waitlistBody');
+      body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);"><i class="fas fa-spinner fa-spin"></i> 加載中...</div>';
+
+      try {
+          const res = await fetch(`/api/stock-notification/waitlist/${productId}`);
+          const data = await res.json();
+
+          if (data.success) {
+              const list = data.data;
+              document.getElementById('waitlistCount').textContent = list.length;
+
+              if (list.length === 0) {
+                  body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);">暫無用戶訂閱此商品</div>';
+                  document.getElementById('sendNotifyBtn').disabled = true;
+              } else {
+                  let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                  list.forEach(item => {
+                      html += `<li style="padding: 0.8rem 1rem; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center;">
+                                  <span><i class="fas fa-user" style="color: var(--gold); margin-right: 0.5rem;"></i> ${item.username}</span>
+                                  <span style="font-size: 0.8rem; color: var(--gray);">${item.createdAt}</span>
+                               </li>`;
+                  });
+                  html += '</ul>';
+                  body.innerHTML = html;
+                  document.getElementById('sendNotifyBtn').disabled = false;
+              }
+          } else {
+              body.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--accent);">${data.message}</div>`;
+          }
+      } catch (e) {
+          body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--accent);">網絡錯誤，請刷新重試</div>';
+      }
+  }
+
+  // 2. 關閉模態框
+  function closeWaitlistModal() {
+      document.getElementById('waitlistModal').style.display = 'none';
+      document.body.style.overflow = '';
+  }
+
+  // 3. 一鍵發送通知
+  async function sendStockNotification() {
+      const btn = document.getElementById('sendNotifyBtn');
+      const originalText = btn.innerHTML;
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
+
+      try {
+          const res = await fetch(`/api/stock-notification/notify/${productId}`, { method: 'POST' });
+          const data = await res.json();
+
+          if (data.success) {
+              showNotification(`✅ ${data.message}`);
+              closeWaitlistModal();
+              // 刷新按鈕狀態 (因為已通知，人數會變為 0)
+              loadNotificationStatus();
+          } else {
+              showNotification('❌ ' + data.message, true);
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+          }
+      } catch (e) {
+          showNotification('❌ 網絡錯誤', true);
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+      }
+  }
+
+    // ==========================================
+// 编辑商品功能
+// ==========================================
+
+// 打开编辑模态框
+function openEditModal() {
+  const modal = document.getElementById('editProductModal');
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden'; // 禁止背景滚动
+
+  // 因為 HTML 中的 th:value 和 th:text 已經在頁面渲染時自動填入了初始值，不需要 JS 再次賦值。
+}
+
+// 关闭编辑模态框
+function closeEditModal() {
+  document.getElementById('editProductModal').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// 保存商品修改 (這部分代碼沒問題，保持不變)
+async function saveProduct(event) {
+  event.preventDefault();
+
+  const submitBtn = event.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.innerHTML;
+
+  // 显示加载状态
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+
+  // 收集表单数据
+  const formData = {
+    price: parseFloat(document.getElementById('editPrice').value),
+    stock: parseInt(document.getElementById('editStock').value),
+    category: document.getElementById('editCategory').value,
+    brand: document.getElementById('editBrand').value,
+    description: document.getElementById('editDescription').value,
+    details: document.getElementById('editDetails').value,
+    image: document.getElementById('editImage').value
+  };
+
+  try {
+    const response = await fetch(`/api/admin/product/${productId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(formData)
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      showNotification('✅ 商品信息修改成功！');
+      closeEditModal();
+      // 刷新页面以显示最新数据
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showNotification('❌ ' + (result.message || '修改失败'), true);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
+  } catch (error) {
+    console.error('保存失败:', error);
+    showNotification('❌ 网络错误，请稍后重试', true);
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = originalText;
+  }
+}
+
+// 点击模态框背景关闭
+document.getElementById('editProductModal')?.addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeEditModal();
+  }
+});
+
+  // 頁面加載完成後執行
+  document.addEventListener('DOMContentLoaded', loadNotificationStatus);
+</script>
 </body>
 </html>

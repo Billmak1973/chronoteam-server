@@ -64,6 +64,7 @@ public class Notification {
     private LocalDateTime createdAt;
 
     public enum NotificationType {
-        SYSTEM      // 系統通知（評論被刪除、賬戶異常等）
+        SYSTEM,     // 系統通知（評論被刪除、賬戶異常、封禁等）
+        STOCK       // 到貨通知（關注的商品已補貨到貨）
     }
 }

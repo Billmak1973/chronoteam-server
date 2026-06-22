@@ -28,4 +28,18 @@ public class RateLimitLog {
     private LocalDateTime bannedUntil;  // 封禁结束时间（如果被封禁）
 
     // Getters and Setters (Lombok @Data 已自动生成)
+
+    /**
+     * 執行禁言的管理員帳號
+     * 如果是系統自動觸發（如頻繁點贊），可以設為 "SYSTEM"
+     */
+    @Column(name = "banned_by", length = 50)
+    private String bannedBy;
+
+    /**
+     * 禁言原因
+     * 使用 TEXT 類型以支持較長的說明文字
+     */
+    @Column(name = "ban_reason", columnDefinition = "TEXT")
+    private String banReason;
 }

@@ -266,19 +266,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+//  獲取未讀通知數量 (修復版：區分系統通知與消息通知)
 async function fetchUnreadNotifications() {
     try {
         const response = await fetch('/api/notifications/unread-count');
         const data = await response.json();
-        const badge = document.getElementById('notificationBadge');
 
-        if (badge) {
-            //  只有未讀數量大於 0 時才顯示紅點與數字
-            if (data.count > 0) {
-                badge.textContent = data.count > 99 ? '99+' : data.count;
-                badge.style.display = 'inline-flex'; // 使用 inline-flex 確保與購物車 badge 垂直居中對齊
+        // 1. 消息通知 (信封圖標，對應 /account/reviews 互動中心)
+        const msgBadge = document.getElementById('notificationBadge');
+        if (msgBadge) {
+            if (data.messageCount > 0) {
+                msgBadge.textContent = data.messageCount > 99 ? '99+' : data.messageCount;
+                msgBadge.style.display = 'inline-flex';
             } else {
-                badge.style.display = 'none'; // 沒有未讀消息時徹底隱藏
+                msgBadge.style.display = 'none';
+            }
+        }
+
+        //  2. 系統通知 (鈴鐺圖標，對應 /account/notifications，如管理員刪評)
+        const sysBadge = document.getElementById('systemNotificationBadge');
+        if (sysBadge) {
+            if (data.systemCount > 0) {
+                sysBadge.textContent = data.systemCount > 99 ? '99+' : data.systemCount;
+                sysBadge.style.display = 'inline-flex';
+            } else {
+                sysBadge.style.display = 'none';
             }
         }
     } catch (error) {
@@ -286,5 +298,5 @@ async function fetchUnreadNotifications() {
     }
 }
 
-//  暴露一個全局函數，方便在其他頁面操作（如：點擊通知、刪除評論後）手動刷新紅點
+// 暴露全局函數，方便在其他頁面操作後手動刷新紅點
 window.refreshNotificationBadge = fetchUnreadNotifications;

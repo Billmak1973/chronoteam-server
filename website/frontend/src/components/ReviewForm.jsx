@@ -6,6 +6,9 @@ const ReviewForm = ({ productId, orderNo, onSuccess }) => {
     const [content, setContent] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    //  核心：用于控制表单是否显示（评价成功后立即隐藏）
+    const [isSubmitted, setIsSubmitted] = useState(false);
+
     const handleStarClick = (e, starIndex) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const isLeftHalf = (e.clientX - rect.left) < (rect.width / 2);
@@ -32,11 +35,17 @@ const ReviewForm = ({ productId, orderNo, onSuccess }) => {
                 body: JSON.stringify({ productId, orderNo, rating, content })
             });
             const result = await res.json();
+
             if (result.success) {
-                alert('評價提交成功');
-                setContent('');
-                setRating(0);
-                onSuccess(); // 通知父組件刷新列表
+                alert('✅ 評價提交成功！');
+
+                // 🟢 核心修复 1：立即隐藏当前表单，防止重复提交
+                setIsSubmitted(true);
+
+                // 🟢 核心修复 2：通知父组件刷新数据
+                if (onSuccess) {
+                    onSuccess();
+                }
             } else {
                 alert(result.message || '提交失敗');
             }
@@ -46,6 +55,11 @@ const ReviewForm = ({ productId, orderNo, onSuccess }) => {
             setIsSubmitting(false);
         }
     };
+
+    //  如果已经提交成功，直接不渲染任何内容
+    if (isSubmitted) {
+        return null;
+    }
 
     const displayRating = hoverRating || rating;
 
@@ -73,6 +87,7 @@ const ReviewForm = ({ productId, orderNo, onSuccess }) => {
                         <i className="fas fa-info-circle"></i> 懸停並點擊星星的左半邊為 0.5 分，右半邊為整星
                     </div>
                 </div>
+
                 <div style={{marginBottom: '1rem'}}>
                     <label style={{display: 'block', marginBottom: '0.5rem', fontWeight: 500}}>評價內容：</label>
                     <textarea
@@ -85,6 +100,7 @@ const ReviewForm = ({ productId, orderNo, onSuccess }) => {
                     ></textarea>
                     <div className="char-count">{content.length}/1000</div>
                 </div>
+
                 <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
                     {isSubmitting ? <><i className="fas fa-spinner fa-spin"></i> 提交中...</> : <><i className="fas fa-paper-plane"></i> 提交評價</>}
                 </button>
@@ -92,4 +108,5 @@ const ReviewForm = ({ productId, orderNo, onSuccess }) => {
         </div>
     );
 };
+
 export default ReviewForm;

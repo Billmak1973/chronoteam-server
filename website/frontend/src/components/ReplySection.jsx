@@ -23,19 +23,26 @@ const ReplySection = ({
   const [replyToUser, setReplyToUser] = useState('');
   const [replyParentId, setReplyParentId] = useState(null);
 
-  // 🟢【核心修復】當 showReplyForm 變成 true 時，根據是否有回覆決定是否展開
+  // 🟢 新增：禁言相關狀態
+  const [showBlockModal, setShowBlockModal] = useState(false);
+  const [targetBlockUser, setTargetBlockUser] = useState('');
+  const [blockValue, setBlockValue] = useState(1);
+  const [blockUnit, setBlockUnit] = useState('day');
+  const [blockedUsers, setBlockedUsers] = useState([]); // 記錄當前頁面已禁言的用戶
+
+  // 【核心修復】當 showReplyForm 變成 true 時，根據是否有回覆決定是否展開
   useEffect(() => {
     if (showReplyForm) {
       // 只有當已有回覆時，才展開評論區列表
       if (initialReplyCount > 0) {
         setIsOpen(true);
       } else {
-        setIsOpen(false); // 🟢 沒有回覆時，不展開列表區域，直接顯示表單
+        setIsOpen(false); //  沒有回覆時，不展開列表區域，直接顯示表單
       }
       setReplyParentId(null);
       if (rootUsername) setReplyToUser(rootUsername);
     }
-  }, [showReplyForm, rootUsername, initialReplyCount]); // 🟢 加入 initialReplyCount 依賴
+  }, [showReplyForm, rootUsername, initialReplyCount]); //  加入 initialReplyCount 依賴
 
   const fetchReplies = useCallback(async (targetPage = 0, targetSort = sort) => {
     setLoading(true);
@@ -108,6 +115,83 @@ const ReplySection = ({
         ));
       }
     } catch (err) { console.error(err); }
+  };
+
+  // 🟢 新增：禁言相關函數
+  const confirmBlock = async (durationMinutes) => {
+    try {
+      const params = new URLSearchParams();
+      if (isAdmin && durationMinutes) {
+        params.append('durationMinutes', durationMinutes);
+        params.append('reason', '管理員禁言');
+      }
+
+      const response = await fetch(
+        `/api/user/${targetBlockUser}/toggle-block?${params}`,
+        { method: 'POST', credentials: 'same-origin' }
+      );
+
+      const result = await response.json();
+      if (response.ok) {
+        showNotification(isAdmin ?
+          `✅ 已全局禁言用戶 ${blockValue} ${blockUnit === 'day' ? '天' : blockUnit === 'week' ? '週' : '月'}` :
+          '✅ 已禁言該用戶，雙方將無法互相回覆');
+        // 更新本地狀態，將按鈕切換為「解除禁言」
+        setBlockedUsers(prev => [...prev, targetBlockUser]);
+      } else {
+        showNotification('❌ ' + result.message, true);
+      }
+    } catch (error) {
+      showNotification('❌ 網絡錯誤', true);
+    }
+    setShowBlockModal(false);
+  };
+
+  const handleConfirmBlock = () => {
+    const val = parseInt(blockValue);
+    if (!val || val <= 0) {
+      showNotification('❌ 請輸入有效的數字', true);
+      return;
+    }
+
+    let totalMinutes = 0;
+    if (blockUnit === 'day') {
+      totalMinutes = val * 24 * 60;
+    } else if (blockUnit === 'week') {
+      totalMinutes = val * 7 * 24 * 60;
+    } else if (blockUnit === 'month') {
+      totalMinutes = val * 30 * 24 * 60;
+    }
+
+    confirmBlock(totalMinutes);
+  };
+
+  const handleUnblock = async (targetUsername) => {
+    if (!window.confirm('確定要解除禁言嗎？')) return;
+    try {
+      const response = await fetch(`/api/user/${targetUsername}/unblock`, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      });
+      if (response.ok) {
+        showNotification('✅ 已解除禁言');
+        setBlockedUsers(prev => prev.filter(u => u !== targetUsername));
+      } else {
+        const result = await response.json();
+        showNotification('❌ ' + (result.message || '解除失敗'), true);
+      }
+    } catch (error) {
+      showNotification('❌ 網絡錯誤', true);
+    }
+  };
+
+  const handleBlockClick = (targetUsername) => {
+    setTargetBlockUser(targetUsername);
+    if (isAdmin) {
+      setShowBlockModal(true); // 管理員彈出模態框
+    } else {
+      confirmBlock(null); // 普通用戶直接雙向禁言
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -195,6 +279,11 @@ const ReplySection = ({
                         <i className="far fa-thumbs-down"></i> {reply.dislikeCount || 0}
                       </button>
                       <button className="reply-action-btn" onClick={() => {
+
+                      if (!currentUsername || currentUsername === 'anonymousUser') {
+                          alert('⚠️ 请先登录！未登录用户不能回复。');
+                                  return;
+                      }
                         setReplyParentId(reply.id);
                         setReplyToUser(reply.customer.username);
                         setShowReplyForm(true);
@@ -204,6 +293,39 @@ const ReplySection = ({
                       {(reply.customer.username === currentUsername || isAdmin) && (
                         <button className="reply-action-btn delete" onClick={() => handleDeleteReply(reply.id)}>
                           <i className="fas fa-trash-alt"></i> 刪除
+                        </button>
+                      )}
+
+                      {/* 🟢 禁言/解除禁言按鈕（只要不是自己的回覆就能看到） */}
+                      {currentUsername && currentUsername !== 'anonymousUser' && reply.customer.username !== currentUsername && (
+                        blockedUsers.includes(reply.customer.username) ? (
+                          <button
+                            className="reply-action-btn btn-unblock"
+                            onClick={() => handleUnblock(reply.customer.username)}
+                            title="解除禁言"
+                            style={{ color: '#28a745', borderColor: '#28a745' }}
+                          >
+                            <i className="fas fa-unlock"></i> 解除禁言
+                          </button>
+                        ) : (
+                          <button
+                            className="reply-action-btn btn-ban"
+                            onClick={() => handleBlockClick(reply.customer.username)}
+                            title={isAdmin ? "全局禁言" : "雙向禁言"}
+                          >
+                            <i className="fas fa-ban"></i> 禁言
+                          </button>
+                        )
+                      )}
+
+                      {/* 拉黑按鈕（僅管理員可見） */}
+                      {currentUsername && isAdmin && (
+                        <button
+                          className="reply-action-btn btn-blacklist"
+                          onClick={() => showNotification(`🚫 拉黑用戶 ${reply.customer.username} 功能開發中`)}
+                          title="拉黑用戶"
+                        >
+                          <i className="fas fa-user-slash"></i> 拉黑
                         </button>
                       )}
                     </div>
@@ -257,6 +379,66 @@ const ReplySection = ({
           <div className="form-actions">
             <button className="btn-cancel-reply" onClick={() => { setShowReplyForm(false); setReplyParentId(null); }}>取消</button>
             <button className="btn-submit-reply" onClick={handleSubmitReply}>提交</button>
+          </div>
+        </div>
+      )}
+
+      {/*  新增：管理員禁言時長選擇模態框 (使用內聯樣式確保全局居中) */}
+      {showBlockModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowBlockModal(false)}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+        >
+          <div
+            className="modal-box"
+            onClick={e => e.stopPropagation()}
+            style={{ background: 'white', padding: '2rem', borderRadius: '12px', width: '90%', maxWidth: '500px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}
+          >
+            <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>
+              <i className="fas fa-gavel" style={{ color: 'var(--accent)', marginRight: '0.5rem' }}></i>
+              管理員禁言
+            </h3>
+            <p style={{ marginBottom: '1rem', color: 'var(--gray)' }}>
+              請輸入禁言時長，用戶 <strong>{targetBlockUser}</strong> 在期間內將無法在任何評論區回覆：
+            </p>
+
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', margin: '1.5rem 0' }}>
+              {/* 數字輸入框 */}
+              <input
+                type="number"
+                min="1"
+                value={blockValue}
+                onChange={(e) => setBlockValue(e.target.value)}
+                placeholder="請輸入數字"
+                style={{ flex: 1, padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px' }}
+              />
+              {/* 單位選擇下拉框 */}
+              <select
+                value={blockUnit}
+                onChange={(e) => setBlockUnit(e.target.value)}
+                style={{ padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', minWidth: '80px' }}
+              >
+                <option value="day">天</option>
+                <option value="week">週</option>
+                <option value="month">月</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <button
+                onClick={() => setShowBlockModal(false)}
+                style={{ padding: '0.5rem 1rem', background: '#e9ecef', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmBlock}
+                style={{ padding: '0.5rem 1rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                確認禁言
+              </button>
+            </div>
           </div>
         </div>
       )}
