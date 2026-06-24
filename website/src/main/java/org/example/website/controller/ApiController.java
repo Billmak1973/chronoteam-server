@@ -1,27 +1,27 @@
 package org.example.website.controller;
 
 import org.example.website.dto.ApiResponse;
-import org.example.website.dto.LoginRequest;  //  新增 DTO
+import org.example.website.dto.LoginRequest;
 import org.example.website.dto.RegisterRequest;
 import org.example.website.entity.Customer;
 import org.example.website.service.CustomerService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;  //  新增
-import org.springframework.security.authentication.BadCredentialsException;  //  新增
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;  //  新增
-import org.springframework.security.core.Authentication;  //  新增
-import org.springframework.security.core.context.SecurityContextHolder;  //  新增
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;  // 改用 jakarta
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api")
 public class ApiController {
 
     private final CustomerService customerService;
-    private final AuthenticationManager authenticationManager;  //  新增：用於驗證登入
+    private final AuthenticationManager authenticationManager;
 
     //  構造函數同時注入兩個依賴
     public ApiController(CustomerService customerService,

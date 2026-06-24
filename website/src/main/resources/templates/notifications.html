@@ -170,12 +170,40 @@
 
           <div class="notif-content" th:text="${notif.content}">管理員對您的評論進行了處理。</div>
 
-          <div th:if="${notif.deleteReason != null}" class="delete-reason-box">
+          <!--  禁言通知專屬樣式 -->
+          <div th:if="${notif.title != null and #strings.contains(notif.title, '禁言')}"
+               class="delete-reason-box"
+               style="background: #fff3cd; border-color: #ffc107;">
+            <strong><i class="fas fa-gavel"></i> 禁言詳情：</strong>
+            <p th:if="${notif.deleteReason != null}" style="margin:0.5rem 0;">
+              <strong>原因：</strong><span th:text="${notif.deleteReason}">違反社區規範</span>
+            </p>
+            <div style="margin-top: 1rem;">
+              <!-- 🟢 根據申訴狀態顯示不同按鈕 -->
+              <!-- 情況1：沒有申訴記錄或申訴已被處理（非PENDING），顯示提交申訴按鈕 -->
+              <button th:unless="${appealStatusMap[notif.id]}"
+                      class="btn-sm"
+                      style="background: var(--gold); color: var(--primary); border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;"
+                      th:onclick="|openAppealModal(${notif.id}, 'BAN')|">
+                <i class="fas fa-file-alt"></i> 提交申訴
+              </button>
+
+              <!-- 情況2：申訴正在審核中（PENDING），顯示灰色禁用按鈕 -->
+              <button th:if="${appealStatusMap[notif.id]}"
+                      class="btn-sm"
+                      disabled
+                      style="background: #e9ecef; color: #6c757d; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: not-allowed; font-weight: 600;">
+                <i class="fas fa-hourglass-half"></i> 申訴審核中
+              </button>
+            </div>
+          </div>
+
+          <div th:if="${notif.deleteReason != null and (notif.title == null or !#strings.contains(notif.title, '禁言'))}" class="delete-reason-box">
             <strong><i class="fas fa-exclamation-triangle"></i> 管理員處理原因：</strong>
             <p th:text="${notif.deleteReason}" style="margin:0;">該內容不符合社區規範，因此被移除。</p>
             <div th:if="${notif.deletedContent != null}" class="deleted-content-preview">
               <i class="fas fa-quote-left"></i>
-              <span th:text="${notif.deletedContent}">喜歡</span>
+              <span th:text="${notif.deletedContent}"></span>
             </div>
           </div>
         </div>
@@ -187,6 +215,46 @@
       </div>
     </div>
 
+    <!-- 🟢 申訴模態框 -->
+    <div id="appealModal" class="modal" style="display: none; z-index: 9999;">
+      <div class="modal-content" style="max-width: 500px;">
+        <button class="modal-close" onclick="closeAppealModal()">&times;</button>
+        <h3 style="margin-bottom: 1.5rem; color: var(--primary);">
+          <i class="fas fa-file-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+          提交申訴
+        </h3>
+        <form id="appealForm" onsubmit="submitAppeal(event)">
+          <input type="hidden" id="appealNotificationId">
+          <!-- 🟢 新增：隱藏的申訴類型欄位，默認為 BAN -->
+          <input type="hidden" id="appealType" value="BAN">
+
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">
+              申訴原因 <span style="color: var(--accent);">*</span>
+            </label>
+            <textarea id="appealReason"
+                      required
+                      rows="5"
+                      placeholder="請詳細說明您的申訴理由，例如：&#10;1. 您認為處罰不當的原因&#10;2. 相關證據或解釋&#10;3. 其他需要補充的信息..."
+                      style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
+            <small style="color: var(--gray); font-size: 0.85rem; margin-top: 0.3rem; display: block;">
+              <i class="fas fa-info-circle"></i> 請如實填寫，管理員將在 48 小時內回覆
+            </small>
+          </div>
+          <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+            <button type="button"
+                    onclick="closeAppealModal()"
+                    style="padding: 0.6rem 1.5rem; background: #e9ecef; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary);">
+              取消
+            </button>
+            <button type="submit"
+                    style="padding: 0.6rem 1.5rem; background: var(--gold); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary);">
+              <i class="fas fa-paper-plane"></i> 提交申訴
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -220,24 +288,99 @@
     const stockBtn = document.getElementById('tab-btn-stock');
     const adminBtn = document.getElementById('tab-btn-admin');
 
-    //  智能邏輯：
-    // 1. 如果有到貨通知，默認顯示到貨通知
-    // 2. 如果只有管理通知，默認顯示管理通知
-    // 3. 如果兩個都有，優先顯示到貨通知
-    // 4. 如果都沒有，默認顯示到貨通知
-
     const hasStockNotif = stockNotifications && stockNotifications.length > 0;
     const hasAdminNotif = adminNotifications && adminNotifications.length > 0;
 
     if (hasStockNotif) {
-      // 有到貨通知，顯示到貨通知 tab
       switchTab('stock', stockBtn);
     } else if (hasAdminNotif) {
-      // 只有管理通知，顯示管理通知 tab
       switchTab('admin', adminBtn);
     } else {
-      // 都沒有，默認顯示到貨通知 tab
       switchTab('stock', stockBtn);
+    }
+  });
+
+  // ==========================================
+  // 🟢 申訴功能 (整合版)
+  // ==========================================
+
+  // 打開申訴模態框 (接收 notificationId 和 appealType)
+  function openAppealModal(notificationId, appealType) {
+    document.getElementById('appealNotificationId').value = notificationId;
+    document.getElementById('appealType').value = appealType; // 🟢 設置類型 (例如: BAN)
+    document.getElementById('appealReason').value = '';
+    document.getElementById('appealModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAppealModal() {
+    document.getElementById('appealModal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+
+  async function submitAppeal(event) {
+    event.preventDefault();
+
+    const notificationId = document.getElementById('appealNotificationId').value;
+    const reason = document.getElementById('appealReason').value.trim();
+    const appealType = document.getElementById('appealType').value; // 🟢 獲取類型
+
+    if (!reason) {
+      showNotification('❌ 請填寫申訴原因', true);
+      return;
+    }
+
+    // 按鈕加載狀態
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+
+    try {
+      // 🟢 注意 URL 為 /api/appeal/submit
+      const response = await fetch('/api/appeal/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notificationId: notificationId,
+          reason: reason,
+          appealType: appealType // 🟢 傳遞類型給後端
+        })
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        showNotification('✅ ' + result.message);
+        closeAppealModal();
+
+        // 🟢 提交成功後，將該卡片的申訴按鈕替換為「審核中」狀態
+        // 使用 CSS 選擇器找到對應 notificationId 的按鈕 (提供即時的 UI 反饋，不用等刷新)
+        const btn = document.querySelector(`button[onclick*="openAppealModal(${notificationId}"]`);
+        if(btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-hourglass-half"></i> 申訴審核中';
+            btn.style.background = '#e9ecef';
+            btn.style.color = '#6c757d';
+            btn.style.cursor = 'not-allowed';
+        }
+      } else {
+        showNotification('❌ ' + (result.message || '提交失敗'), true);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }
+    } catch (error) {
+      console.error('提交申訴錯誤:', error);
+      showNotification('❌ 網絡錯誤，請稍後重試', true);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+    }
+  }
+
+  // 點擊模態框外部關閉
+  document.getElementById('appealModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeAppealModal();
     }
   });
 </script>

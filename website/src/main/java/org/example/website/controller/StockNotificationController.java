@@ -108,7 +108,7 @@ public class StockNotificationController {
 
 
     // ==========================================
-    // 🟢 新增：管理員專屬接口
+    //  新增：管理員專屬接口
     // ==========================================
 
     /**
@@ -147,7 +147,7 @@ public class StockNotificationController {
 
         Product product = productRepository.findById(productId).orElseThrow(() -> new RuntimeException("商品不存在"));
 
-        // 🟢 防呆校驗：如果庫存依然為0，不允許發送
+        //  防呆校驗：如果庫存依然為0，不允許發送
         if (product.getStock() <= 0) {
             return ResponseEntity.badRequest().body(ApiResponse.error("當前庫存為 0，無法發送通知！請先修改庫存。"));
         }

@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,7 +19,6 @@ public class SecurityController {
 
     private final SecurityQuestionRepository sqRepository;
     private final CustomerService customerService;
-
     public SecurityController(SecurityQuestionRepository sqRepository, CustomerService customerService) {
         this.sqRepository = sqRepository;
         this.customerService = customerService;
@@ -90,5 +90,48 @@ public class SecurityController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("修改失敗: " + e.getMessage()));
         }
+    }
+
+    @GetMapping("/security-level")
+    public ResponseEntity<?> getSecurityLevel(Authentication authentication) {
+        String username = authentication.getName();
+        Customer customer = customerService.findByUsername(username);
+        List<SecurityQuestion> questions = sqRepository.findByCustomer_UsernameOrderByCreatedAtDesc(username);
+
+        // 计算安全等级（0-100）
+        int securityLevel = 0;
+
+        // 邮箱绑定（25分）
+        if (customer.getEmail() != null && !customer.getEmail().isEmpty()) {
+            securityLevel += 25;
+        }
+
+        // 手机绑定（25分）
+        if (customer.getPhone() != null && !customer.getPhone().isEmpty()) {
+            securityLevel += 25;
+        }
+
+        // 密码设置（25分）
+        if (customer.getPassword() != null && !customer.getPassword().isEmpty()) {
+            securityLevel += 25;
+        }
+
+        // 安全问答（25分，至少设置1个问题）
+        if (questions != null && !questions.isEmpty()) {
+            securityLevel += 25;
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("level", securityLevel);
+        data.put("levelText", getSecurityLevelText(securityLevel));
+
+        return ResponseEntity.ok(ApiResponse.okWithData("成功", data));
+    }
+
+    private String getSecurityLevelText(int level) {
+        if (level >= 100) return "極高";
+        if (level >= 75) return "強";
+        if (level >= 50) return "中";
+        return "弱";
     }
 }

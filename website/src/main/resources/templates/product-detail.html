@@ -218,8 +218,70 @@
 
     .btn-ban { background: #ffc107; color: #212529; padding: 0.4rem 0.8rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.3rem; }
     .btn-ban:hover { background: #e0a800; transform: translateY(-2px); }
+    /* === 解除禁言按钮样式 === */
+.btn-unblock {
+    /* 绿色渐变背景，看起来更有质感 */
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+
+    /* 尺寸与排版 */
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+
+    /* 布局 */
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem; /* 图标和文字的间距 */
+
+    /* 交互效果 */
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 带一点Q弹的动画 */
+    box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3); /* 淡淡的绿色阴影 */
+}
+
+/* 鼠标悬停效果 */
+.btn-unblock:hover {
+    transform: translateY(-2px) scale(1.02); /* 上浮并轻微放大 */
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4); /* 阴影加深 */
+    filter: brightness(1.1); /* 变亮一点 */
+}
+
+/* 点击瞬间效果 */
+.btn-unblock:active {
+    transform: scale(0.95);
+}
+
+/* 图标样式微调 */
+.btn-unblock i {
+    font-size: 0.9rem;
+}
     .btn-blacklist { background: #6c757d; color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.3rem; }
     .btn-blacklist:hover { background: #5a6268; transform: translateY(-2px); }
+     /* 舉報按鈕樣式 */
+.btn-report {
+    background: #fd7e14;
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.btn-report:hover {
+    background: #e96b0a;
+    transform: translateY(-2px);
+}
+
 
     .btn-pin { background: #17a2b8; color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.3rem; }
     .btn-pin:hover { background: #138496; transform: translateY(-2px); }
@@ -338,6 +400,15 @@
     .reply-action-btn:hover { background: #dee2e6; }
     .reply-action-btn.delete { background: none; color: var(--accent); border: none; }
 
+    .reply-action-btn.btn-report {
+    background: #fd7e14;
+    color: white;
+    border: 1px solid #fd7e14;
+}
+.reply-action-btn.btn-report:hover {
+    background: #e96b0a;
+    border-color: #e96b0a;
+}
     .reply-pagination { display: flex; justify-content: center; gap: 6px; margin-top: 15px; flex-wrap: wrap; }
     .page-ellipsis { padding: 0.6rem 0.5rem; color: var(--gray); }
 
@@ -380,6 +451,72 @@
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
   color: white !important;
 }
+
+    /* 🟢 全局禁言彈窗樣式 */
+.global-ban-modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.global-ban-content {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 16px;
+    text-align: center;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    border-top: 5px solid var(--accent);
+    animation: slideUp 0.4s ease;
+}
+
+.ban-icon {
+    font-size: 3.5rem;
+    color: var(--accent);
+    margin-bottom: 1rem;
+}
+
+.global-ban-content h3 {
+    color: var(--primary);
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.global-ban-content p {
+    color: #555;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    font-weight: 500;
+}
+
+.ban-close-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.ban-close-btn:hover {
+    background: var(--gold);
+    color: var(--primary);
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
   </style>
 </head>
 <body>
@@ -596,6 +733,37 @@
   </div>
 </div>
 
+<!-- ========================================== -->
+<!--  禁言提示弹窗 (供 React 評論區全局調用) -->
+<!-- ========================================== -->
+<div id="blockedModal" class="modal" style="display: none; z-index: 9999;">
+  <div class="modal-content" style="max-width: 420px; text-align: center; padding: 2rem;">
+    <button class="modal-close" onclick="closeBlockedModal()">&times;</button>
+    <div style="font-size: 3.5rem; color: var(--accent); margin-bottom: 1rem;">
+      <i class="fas fa-ban"></i>
+    </div>
+    <h3 style="color: var(--primary); margin-bottom: 1rem; font-size: 1.3rem;">
+      <i class="fas fa-exclamation-triangle" style="color: var(--accent); margin-right: 0.5rem;"></i>
+      無法回復
+    </h3>
+    <p id="blockedModalMessage" style="color: var(--gray); margin-bottom: 1.5rem; line-height: 1.6; font-size: 1rem;">
+      您已經被對方禁言，無法回復！！！
+    </p>
+    <button class="btn btn-primary" onclick="closeBlockedModal()" style="width: 100%; justify-content: center; padding: 0.8rem;">
+      <i class="fas fa-check"></i> 我知道了
+    </button>
+  </div>
+</div>
+
+<!--  全局禁言提示彈窗 -->
+<div id="globalBanModal" class="global-ban-modal" style="display: none;">
+  <div class="global-ban-content">
+    <div class="ban-icon"><i class="fas fa-ban"></i></div>
+    <h3>⚠️ 賬號受限</h3>
+    <p id="banMessageText">...</p>
+    <button class="ban-close-btn" onclick="closeGlobalBanModal()">我知道了</button>
+  </div>
+</div>
 
 <!-- ========================================== -->
 <!-- 1. 統一在這裡獲取所有 Thymeleaf 後端變量 -->
@@ -610,6 +778,78 @@
 
 <script src="/js/common.js"></script>
 <script type="module" th:src="@{/react-assets/assets/index.js}"></script>
+
+<!-- ========================================== -->
+<!--  全局彈窗 JS (普通禁言 + 管理員全局禁言) -->
+<!-- ========================================== -->
+<script>
+  // 🟢 全局彈窗函數，供 React 評論區組件調用 (普通用戶互相禁言)
+  window.showBlockedModal = function(message) {
+      const modal = document.getElementById('blockedModal');
+      const msgEl = document.getElementById('blockedModalMessage');
+      if (msgEl) msgEl.textContent = message || '您已經被對方禁言，無法回復！！！';
+      if (modal) modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden'; // 禁止背景滾動
+  };
+
+  window.closeBlockedModal = function() {
+      const modal = document.getElementById('blockedModal');
+      if (modal) modal.style.display = 'none';
+      document.body.style.overflow = '';
+  };
+
+  //  新增：管理員全局禁言彈窗函數，供 React 評論區組件調用
+  window.showGlobalBanModal = function(username, expiresAtStr) {
+      const modal = document.getElementById('globalBanModal');
+      const msgEl = document.getElementById('banMessageText');
+
+      // 格式化時間 (將 ISO 字符串轉為本地時間)
+      const date = new Date(expiresAtStr);
+      const dateStr = date.toLocaleString('zh-TW', {
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit'
+      });
+
+      // 設置消息
+      if (msgEl) {
+          msgEl.textContent = `${username}，你因之前的評論不當已被禁言至 ${dateStr}！`;
+      }
+
+      // 顯示彈窗
+      if (modal) {
+          modal.style.display = 'flex';
+          document.body.style.overflow = 'hidden'; // 禁止背景滾動
+
+          // 4秒後自動消失
+          setTimeout(() => {
+              closeGlobalBanModal();
+          }, 4000);
+      }
+  };
+
+  //  關閉全局禁言彈窗
+  window.closeGlobalBanModal = function() {
+      const modal = document.getElementById('globalBanModal');
+      if (modal) {
+          modal.style.display = 'none';
+          document.body.style.overflow = '';
+      }
+  };
+
+  // 點擊遮罩層關閉
+  document.addEventListener('click', function(e) {
+      // 1. 關閉普通禁言彈窗
+      const modal = document.getElementById('blockedModal');
+      if (modal && e.target === modal) {
+          closeBlockedModal();
+      }
+      // 2. 關閉全局禁言彈窗
+      const globalModal = document.getElementById('globalBanModal');
+      if (globalModal && e.target === globalModal) {
+          closeGlobalBanModal();
+      }
+  });
+</script>
 
 <!-- ========================================== -->
 <!-- 2. 純 JS 邏輯區 (直接復用上面的全局變量) -->
@@ -696,7 +936,7 @@
       }
 
       // ==============================
-      // 顧客視角邏輯 (庫存 > 0 時)
+      //  顧客視角邏輯 (庫存 > 0 時)
       // ==============================
       if (productStock > 0) {
           showNotification('🛒 該商品現貨充足，請直接加入購物車購買，無需訂閱到貨通知哦！');
@@ -707,7 +947,7 @@
       }
 
       // ==============================
-      // 顧客視角邏輯 (庫存 = 0 時：訂閱/取消訂閱)
+      //  顧客視角邏輯 (庫存 = 0 時：訂閱/取消訂閱)
       // ==============================
       try {
           let url, method, successMsg;

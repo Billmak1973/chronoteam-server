@@ -25,7 +25,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -41,6 +43,10 @@ public class PageController {
     private final OrderService orderService; //  新增
     private final NotificationRepository notificationRepository; //  新增聲明
     private final StockNotificationRepository stockNotificationRepository;
+    private final UserBlockRepository userBlockRepository;
+    private final AppealRepository appealRepository;
+    private final SecurityQuestionRepository securityQuestionRepository;
+
     //  2. 通過構造函數注入依賴 (加入了 SellApplicationRepository)
     public PageController(CustomerService customerService,
                           LoginLogRepository loginLogRepository,
@@ -49,7 +55,10 @@ public class PageController {
                           ViewHistoryService viewHistoryService,
                           OrderService orderService,
                           NotificationRepository notificationRepository,
-                          StockNotificationRepository stockNotificationRepository) {
+                          StockNotificationRepository stockNotificationRepository,
+                          UserBlockRepository userBlockRepository,
+                          AppealRepository appealRepository,
+                          SecurityQuestionRepository securityQuestionRepository) {
         this.customerService = customerService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -58,6 +67,9 @@ public class PageController {
         this.orderService = orderService;
         this.notificationRepository = notificationRepository;
         this.stockNotificationRepository = stockNotificationRepository;
+        this.userBlockRepository = userBlockRepository;
+        this.appealRepository = appealRepository;
+        this.securityQuestionRepository = securityQuestionRepository;
     }
 
     @GetMapping("/")
@@ -164,20 +176,24 @@ public class PageController {
         String username = authentication.getName();
         Customer customer = customerService.findByUsername(username);
 
-        // 🟢 獲取真實登錄記錄 (最近 10 條)
+        //  獲取真實登錄記錄 (最近 10 條)
         List<LoginLog> loginLogs = loginLogRepository.findTop10ByUsernameOrderByLoginTimeDesc(username);
 
-        // 🟢 獲取當前 Session ID，用於前端標記「當前設備」
+        //  獲取當前 Session ID，用於前端標記「當前設備」
         String currentSessionId = null;
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null && attributes.getRequest().getSession(false) != null) {
             currentSessionId = attributes.getRequest().getSession().getId();
         }
 
+        List<SecurityQuestion> securityQuestions =
+                securityQuestionRepository.findByCustomer_UsernameOrderByCreatedAtDesc(username);
+
         //  將數據傳遞給 Thymeleaf 前端
         model.addAttribute("customer", customer);
         model.addAttribute("loginLogs", loginLogs);
         model.addAttribute("currentSessionId", currentSessionId);
+        model.addAttribute("securityQuestions", securityQuestions); // 添加这行
 
         return "security"; // 對應 templates/security.html
     }
@@ -362,14 +378,25 @@ public class PageController {
                 .filter(n -> n.getType() == Notification.NotificationType.SYSTEM)
                 .collect(Collectors.toList());
 
-        // 3. 進入頁面後，自動將所有通知標記為已讀
+        // 3. 查詢每個管理通知的申訴狀態
+        Map<Long, Boolean> appealStatusMap = new HashMap<>();
+        for (Notification notif : adminNotifications) {
+            // 檢查是否有待處理的申訴
+            boolean hasPendingAppeal = appealRepository
+                    .findByNotificationIdAndStatus(notif.getId(), Appeal.AppealStatus.PENDING)
+                    .isPresent();
+            appealStatusMap.put(notif.getId(), hasPendingAppeal);
+        }
+
+        // 4. 進入頁面後，自動將所有通知標記為已讀
         allNotifications.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(allNotifications);
 
-        // 4. 傳遞數據到前端
+        // 5. 傳遞數據到前端
         model.addAttribute("customer", customer);
         model.addAttribute("stockNotifications", stockNotifications);
         model.addAttribute("adminNotifications", adminNotifications);
+        model.addAttribute("appealStatusMap", appealStatusMap); //  傳遞申訴狀態
 
         return "notifications";
     }
@@ -414,5 +441,18 @@ public class PageController {
         }
 
         return ResponseEntity.badRequest().body(ApiResponse.error("找不到該訂閱記錄"));
+    }
+
+    @GetMapping("/account/blocked-users")
+    public String blockedUsers(Model model, Authentication authentication) {
+        String username = authentication.getName();
+        Customer customer = customerService.findByUsername(username);
+
+        // 查詢當前用戶禁言的所有記錄 (需要確保 UserBlockRepository 有這個方法)
+        List<UserBlock> blockedUsers = userBlockRepository.findByBlockerUsername(username);
+
+        model.addAttribute("customer", customer);
+        model.addAttribute("blockedUsers", blockedUsers);
+        return "blocked-users"; // 對應 templates/blocked-users.html
     }
 }

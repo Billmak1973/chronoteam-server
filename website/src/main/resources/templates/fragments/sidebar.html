@@ -77,6 +77,10 @@
                th:classappend="${activePage == 'notifications'} ? 'active' : ''">
                 <i class="fas fa-bell"></i> 系統通知
             </a>
+            <a href="/account/blocked-users" class="menu-item"
+               th:classappend="${activePage == 'blocked-users'} ? 'active' : ''">
+                <i class="fas fa-ban"></i> 禁言名單
+            </a>
         </div>
 
         <!-- 財務管理 -->

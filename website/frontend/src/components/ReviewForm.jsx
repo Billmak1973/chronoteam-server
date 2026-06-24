@@ -39,15 +39,31 @@ const ReviewForm = ({ productId, orderNo, onSuccess }) => {
             if (result.success) {
                 alert('✅ 評價提交成功！');
 
-                // 🟢 核心修复 1：立即隐藏当前表单，防止重复提交
+                //  核心修复 1：立即隐藏当前表单，防止重复提交
                 setIsSubmitted(true);
 
-                // 🟢 核心修复 2：通知父组件刷新数据
+                //  核心修复 2：通知父组件刷新数据
                 if (onSuccess) {
                     onSuccess();
                 }
             } else {
-                alert(result.message || '提交失敗');
+                //  新增：處理管理員全局禁言錯誤
+                if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
+                    // 調用 HTML 中定義的全局彈窗函數
+                    if (window.showGlobalBanModal) {
+                        window.showGlobalBanModal(
+                            currentUsername,  // 當前用戶名
+                            result.data.expiresAt  // 禁言過期時間
+                        );
+                    } else {
+                        // 降級處理：如果函數不存在，顯示普通 alert
+                        const date = new Date(result.data.expiresAt);
+                        alert(`您已被管理員禁言至 ${date.toLocaleString('zh-TW')}，期間無法發表評論`);
+                    }
+                } else {
+                    // 普通錯誤提示
+                    alert(result.message || '提交失敗');
+                }
             }
         } catch (err) {
             alert('網絡錯誤');

@@ -24,7 +24,7 @@ import java.util.Set;
 @RequestMapping("/browse")
 public class BrowseController {
     private final ProductRepository productRepository;
-    private final FavoriteRepository favoriteRepository; //  新增依賴
+    private final FavoriteRepository favoriteRepository;
 
     //  修改構造函數，注入 FavoriteRepository
     public BrowseController(ProductRepository productRepository, FavoriteRepository favoriteRepository) {

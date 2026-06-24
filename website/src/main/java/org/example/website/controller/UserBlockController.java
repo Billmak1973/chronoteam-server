@@ -2,11 +2,15 @@ package org.example.website.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.website.dto.ApiResponse;
+import org.example.website.repository.UserBlockRepository;
 import org.example.website.service.UserBlockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -15,6 +19,7 @@ import java.util.Map;
 public class UserBlockController {
 
     private final UserBlockService userBlockService;
+    private final UserBlockRepository userBlockRepository;
 
     /**
      *  禁言/解除禁言按钮（一个接口，两种用法）
@@ -89,5 +94,16 @@ public class UserBlockController {
         response.put("isGloballyBanned", isGloballyBanned);
 
         return ResponseEntity.ok(response);
+    }
+
+    // 获取我禁言的用户列表
+    @GetMapping("/blocked-list")
+    public ResponseEntity<List<String>> getBlockedList(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.ok(new ArrayList<>());
+        }
+        String username = authentication.getName();
+        List<String> blockedList = userBlockRepository.findBlockedUsernamesByBlockerUsername(username);
+        return ResponseEntity.ok(blockedList);
     }
 }

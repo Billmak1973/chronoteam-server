@@ -1,4 +1,3 @@
-
 package org.example.website.controller;
 
 import org.example.website.dto.ApiResponse;
@@ -6,6 +5,7 @@ import org.example.website.entity.*;
 import org.example.website.repository.*;
 import org.example.website.service.ReviewReactionService;
 import org.example.website.repository.*; // 確保引入了 ReviewReactionRepository
+import org.example.website.service.UserBlockService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +33,8 @@ public class ReviewController {
     private final CustomerRepository customerRepository; //  新增：用於樓中樓回覆時獲取用戶實體
     private final ReviewReactionRepository reviewReactionRepository;
     private final NotificationRepository notificationRepository;
+    private final UserBlockService userBlockService;
+    private final UserBlockRepository userBlockRepository;
     //  構造函數注入所有依賴
     public ReviewController(ReviewRepository reviewRepository,
                             OrderRepository orderRepository,
@@ -40,7 +42,9 @@ public class ReviewController {
                             ReviewReactionService reactionService,
                             CustomerRepository customerRepository,
                             ReviewReactionRepository reviewReactionRepository,
-                            NotificationRepository notificationRepository
+                            NotificationRepository notificationRepository,
+                            UserBlockService userBlockService,
+                            UserBlockRepository userBlockRepository
                            ) {
         this.reviewRepository = reviewRepository;
         this.orderRepository = orderRepository;
@@ -49,6 +53,8 @@ public class ReviewController {
         this.customerRepository = customerRepository;
         this.reviewReactionRepository = reviewReactionRepository;
         this.notificationRepository = notificationRepository;
+        this.userBlockService = userBlockService;
+        this.userBlockRepository = userBlockRepository;
     }
 
 
@@ -63,6 +69,29 @@ public class ReviewController {
 
             String username = authentication.getName();
 
+            // ================= 🟢 新增：檢查管理員全局禁言 =================
+            var activeBan = userBlockService.getActiveGlobalBan(username);
+            if (activeBan.isPresent()) {
+                // 構造包含過期時間的錯誤數據
+                Map<String, Object> errorData = new HashMap<>();
+                errorData.put("banned", true);
+                errorData.put("expiresAt", activeBan.get().getExpiresAt()); // 發送 ISO 格式時間給前端
+
+                // 返回特定錯誤 "GLOBAL_BAN"，前端 React 會捕獲這個 message 並彈窗
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
+            }
+            // ================= 檢查結束 =================
+
+            String replyToUser = (String) request.get("replyToUser");
+            if (replyToUser != null && !replyToUser.trim().isEmpty()) {
+                // 調用 UserBlockService 檢查 A→B 或 B→A 是否存在 (普通用戶互相禁言)
+                if (userBlockService.isBlocked(username, replyToUser)) {
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("您已禁言對方，因此無法回復"));
+                }
+            }
+
             //  2. 验证 productId
             if (request.get("productId") == null) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("商品ID不能為空"));
@@ -76,9 +105,9 @@ public class ReviewController {
             }
             content = content.trim();
 
-            // 解析樓中樓參數
+            // 解析樓中樓參數 (parentId)
+            // 注意：replyToUser 已在上方解析，此處直接使用即可
             Long parentId = request.get("parentId") != null ? Long.valueOf(request.get("parentId").toString()) : null;
-            String replyToUser = (String) request.get("replyToUser");
 
             Product product = productRepository.findById(productId)
                     .orElseThrow(() -> new RuntimeException("商品不存在"));
@@ -138,6 +167,7 @@ public class ReviewController {
                     .body(ApiResponse.error("提交失敗: " + (e.getMessage() != null ? e.getMessage() : "未知錯誤")));
         }
     }
+
     @GetMapping("/{parentId}/replies")
     public ResponseEntity<?> getReplies(@PathVariable Long parentId,
                                         @RequestParam(defaultValue = "0") int page,
@@ -226,6 +256,17 @@ public class ReviewController {
                 return ResponseEntity.status(403).body(ApiResponse.error("無權修改此評論"));
             }
 
+            // 檢查當前用戶是否被管理員全局禁言
+            var activeBan = userBlockService.getActiveGlobalBan(username);
+            if (activeBan.isPresent()) {
+                Map<String, Object> errorData = new HashMap<>();
+                errorData.put("banned", true);
+                errorData.put("expiresAt", activeBan.get().getExpiresAt());
+
+                return ResponseEntity.badRequest()
+                        .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
+            }
+
             // 更新內容
             review.setContent(newContent.trim());
             reviewRepository.save(review);
@@ -236,78 +277,8 @@ public class ReviewController {
         }
     }
 
-    /**
-     * 刪除評論 (並同步更新商品的統計數據)
-     */
-//    @DeleteMapping("/{id}")
-//    public ResponseEntity<ApiResponse> deleteReview(
-//            @PathVariable Long id,
-//            @RequestBody(required = false)Map<String, String> requestBody,
-//            Authentication authentication) {
-//        try {
-//            String username = authentication.getName();
-//            Review review = reviewRepository.findById(id)
-//                    .orElseThrow(() -> new RuntimeException("評論不存在"));
-//
-//            if(Boolean.TRUE.equals(review.getPinned())){
-//                return ResponseEntity.badRequest()
-//                        .body(ApiResponse.error("置頂評論不能被刪除，請先取消置頂"));
-//            }
-//
-//            // 🟢 權限校驗：管理員或評論作者
-//            if (!review.getCustomer().getUsername().equals(username) && !"admin".equals(username)) {
-//                return ResponseEntity.status(403).body(ApiResponse.error("無權刪除此評論"));
-//            }
-//
-//            // 如果是管理員刪除，檢查請求體是否有刪除原因
-//            String deleteReason = null;
-//            if (requestBody != null) {
-//                deleteReason = requestBody.get("deleteReason");
-//            }
-//            if ("admin".equals(username) && (deleteReason == null || deleteReason.trim().isEmpty())) {
-//                return ResponseEntity.badRequest()
-//                        .body(ApiResponse.error("管理員刪除評論必須填寫原因"));
-//            }
-//
-//            // 獲取關聯的商品和評分
-//            Product product = review.getProduct();
-//            Double rating = review.getRating();
-//            String reviewContent = review.getContent();  //  保存被刪除的內容
-//            String reviewOwnerUsername = review.getCustomer().getUsername();  //  保存評論所有者
-//
-//            // 1. 刪除評論記錄
-//            reviewRepository.delete(review);
-//
-//            // 3. 同步更新 Product 的統計數據
-//            if (product != null && review.getParentId() == null) {
-//                // 扣減總評論數
-//                Integer currentCount = product.getTotalReviewCount();
-//                if (currentCount != null && currentCount > 0) {
-//                    product.setTotalReviewCount(currentCount - 1);
-//                } else {
-//                    product.setTotalReviewCount(0);
-//                }
-//
-//                // 扣減總分數
-//                BigDecimal currentScore = product.getTotalScore();
-//                if (currentScore != null && rating != null) {
-//                    BigDecimal deductedScore = currentScore.subtract(BigDecimal.valueOf(rating));
-//                    if (deductedScore.compareTo(BigDecimal.ZERO) < 0) {
-//                        deductedScore = BigDecimal.ZERO;
-//                    }
-//                    product.setTotalScore(deductedScore);
-//                } else {
-//                    product.setTotalScore(BigDecimal.ZERO);
-//                }
-//
-//                productRepository.save(product);
-//            }
-//
-//            return ResponseEntity.ok(ApiResponse.ok("評論已刪除"));
-//        } catch (Exception e) {
-//            return ResponseEntity.internalServerError().body(ApiResponse.error("刪除評論失敗: " + e.getMessage()));
-//        }
-//    }
+
+
 
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse> deleteReview(
@@ -653,7 +624,7 @@ public class ReviewController {
             replyCounts.put(root.getId(), reviewRepository.countByParentId(root.getId()));
         }
 
-        // 🟢 4. 獲取當前用戶名 (如果未登錄則為 null)
+        //  4. 獲取當前用戶名 (如果未登錄則為 null)
         String currentUsername = null;
         if (authentication != null && authentication.isAuthenticated()
                 && !"anonymousUser".equals(authentication.getPrincipal())) {
@@ -678,7 +649,7 @@ public class ReviewController {
             userMap.put("username", r.getCustomer().getUsername());
             map.put("customer", userMap);
 
-            // 🟢 6. 【核心修復】檢查當前用戶是否點贊/踩
+            //  6. 檢查當前用戶是否點贊/踩
             boolean isLikedByMe = false;
             boolean isDislikedByMe = false;
 

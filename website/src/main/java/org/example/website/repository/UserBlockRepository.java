@@ -3,6 +3,7 @@ package org.example.website.repository;
 import org.example.website.entity.UserBlock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
@@ -27,4 +28,9 @@ public interface UserBlockRepository extends JpaRepository<UserBlock, Long> {
 
     // 删除禁言记录
     void deleteByBlockerUsernameAndBlockedUsername(String blocker, String blocked);
+
+    // 查询当前用户禁言了哪些人
+    @Query("SELECT ub.blockedUsername FROM UserBlock ub WHERE ub.blockerUsername = :username")
+    List<String> findBlockedUsernamesByBlockerUsername(@Param("username") String username);
+
 }
