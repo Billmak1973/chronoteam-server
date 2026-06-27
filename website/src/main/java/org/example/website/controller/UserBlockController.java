@@ -3,6 +3,7 @@ package org.example.website.controller;
 import lombok.RequiredArgsConstructor;
 import org.example.website.dto.ApiResponse;
 import org.example.website.repository.UserBlockRepository;
+import org.example.website.service.AdminPenaltyService;
 import org.example.website.service.UserBlockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -20,6 +21,7 @@ public class UserBlockController {
 
     private final UserBlockService userBlockService;
     private final UserBlockRepository userBlockRepository;
+    private final AdminPenaltyService adminPenaltyService;
 
     /**
      *  禁言/解除禁言按钮（一个接口，两种用法）
@@ -38,7 +40,7 @@ public class UserBlockController {
 
         if (isAdmin && durationMinutes != null) {
             // 管理员禁言（全局禁言）
-            result = userBlockService.adminBanUser(
+            result = adminPenaltyService.adminBanUser(
                     targetUsername, currentUsername, durationMinutes, reason
             );
         } else {
@@ -87,7 +89,7 @@ public class UserBlockController {
         String currentUsername = authentication.getName();
 
         boolean canInteract = userBlockService.canInteract(currentUsername, targetUsername);
-        boolean isGloballyBanned = userBlockService.isGloballyBanned(currentUsername);
+        boolean isGloballyBanned = adminPenaltyService.isGloballyBanned(currentUsername);
 
         response.put("success", true);
         response.put("canReply", canInteract && !isGloballyBanned);

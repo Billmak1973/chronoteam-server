@@ -41,6 +41,13 @@ public class AdminPenalty {
     @Column(name = "status", nullable = false, length = 20)
     private PenaltyStatus status = PenaltyStatus.ACTIVE;
 
+    @Column(name = "notification_id")
+    private Long notificationId;
+
+    //  新增：關聯的申訴 ID（可選）
+    @Column(name = "appeal_id")
+    private Long appealId;
+
     public enum PenaltyType {
         BAN,         // 封禁 (有期限)
         BLACKLIST    // 拉黑 (永久)
@@ -48,7 +55,7 @@ public class AdminPenalty {
 
     public enum PenaltyStatus {
         ACTIVE,      // 生效中 (包含永久拉黑，以及未到期的封禁)
-        REVOKED,     // 已提前解除 (管理員手動原諒)
-        EXPIRED      // 已過期/已完成 (封禁時間已到，系統自動釋放)
+        EXPIRED,      // 已過期/已完成 (封禁時間已到，系統自動釋放)
+        REVOKED
     }
 }

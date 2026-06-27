@@ -27,6 +27,7 @@ public class ReviewReactionService {
     private final ReviewRepository reviewRepository;
     private final RateLimitCleanupService cleanupService;  // 用於安排延遲任務
     private final NotificationRepository notificationRepository;
+    private final AdminPenaltyService adminPenaltyService;
     // 常量
     private static final int WARNING_THRESHOLD = 2;   // 超过2次开始记录
     private static final int BAN_THRESHOLD = 6;        // 超过等于6次封禁
@@ -47,6 +48,15 @@ public class ReviewReactionService {
             response.put("banned", true);
             return response;
         }
+
+        // 檢查是否被管理員永久拉黑
+        if (adminPenaltyService.isBlacklisted(username)) {
+            response.put("success", false);
+            response.put("message", "BLACKLISTED");
+            response.put("blacklisted", true);
+            return response;
+        }
+
 
         try {
             // 2. 处理点赞/取消点赞逻辑
@@ -126,6 +136,14 @@ public class ReviewReactionService {
             response.put("success", false);
             response.put("message", "點贊已頻繁！請" + checkResult.getRemainingMinutes() + "分鐘後再試！");
             response.put("banned", true);
+            return response;
+        }
+
+        // 檢查是否被管理員永久拉黑
+        if (adminPenaltyService.isBlacklisted(username)) {
+            response.put("success", false);
+            response.put("message", "BLACKLISTED");
+            response.put("blacklisted", true);
             return response;
         }
 
@@ -229,17 +247,6 @@ public class ReviewReactionService {
             log.setTimes(newTimes);
             log.setUpdatedAt(now);
 
-            // 關鍵：當達到封禁閾值時，設置封禁時間並安排延遲任務
-//            if (newTimes >= BAN_THRESHOLD && log.getBannedUntil() == null) {
-//                LocalDateTime bannedUntil = now.plusMinutes(BAN_DURATION_MINUTES);
-//                log.setBannedUntil(bannedUntil);
-//                rateLimitRepository.save(log);
-//
-//                // 安排延遲任務，在封禁結束時自動轉移記錄到歷史表
-//                cleanupService.scheduleUnbanTask(log.getId(), bannedUntil);
-//
-//                System.out.println("⚠️ 用戶 " + username + " 因頻繁操作被封禁10分鐘，將在 " + bannedUntil + " 解封");
-//            }
             if (newTimes >= BAN_THRESHOLD && log.getBannedUntil() == null) {
                 LocalDateTime bannedUntil = now.plusMinutes(BAN_DURATION_MINUTES);
                 log.setBannedUntil(bannedUntil);
@@ -250,7 +257,7 @@ public class ReviewReactionService {
                 System.out.println("⚠️ 用戶 " + username + " 因頻繁操作被封禁10分鐘，將在 " + bannedUntil + " 解封");
 
                 // ========================================
-                // 🟢 新增：自動發送系統通知，告知用戶封禁起止時間
+                //  新增：自動發送系統通知，告知用戶封禁起止時間
                 // ========================================
                 try {
                     Notification banNotification = new Notification();

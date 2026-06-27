@@ -302,13 +302,21 @@
                     <div class="product-price">
                         HK$ <span th:text="${#numbers.formatDecimal(product.price, 1, 'COMMA', 0, 'POINT')}">0</span>
                     </div>
+                    <!-- 如果库存为0，显示已售罄提示 -->
+                    <div th:if="${product.stock != null and product.stock == 0}"
+                         style="color: var(--accent); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">
+                        (已售罄)
+                    </div>
+
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                         <a th:href="@{/product/{id}(id=${product.id})}" class="btn btn-outline"
                            style="flex: 1; text-align: center; padding: 0.5rem;">
                             <i class="fas fa-eye"></i> 詳情
                         </a>
-                        <!--  調用 common.js 中的 addToCart，會自動更新導航欄的購物車 -->
-                        <button type="button" th:onclick="|addToCart(${product.id})|" class="btn btn-primary"
+                        <!-- 修改：加入按钮逻辑。如果库存为0，调用提示函数；否则调用 addToCart -->
+                        <button type="button"
+                                th:onclick="${product.stock != null and product.stock == 0} ? 'showSoldOutHint()' : |addToCart(${product.id})|"
+                                class="btn btn-primary"
                                 style="flex: 1; text-align: center; padding: 0.5rem;">
                             <i class="fas fa-cart-plus"></i> 加入
                         </button>
@@ -422,6 +430,12 @@
             showNotification('❌ 網絡錯誤', true);
         }
     }
+
+    function showSoldOutHint() {
+    // 使用项目通用的 showNotification 进行提示
+    showNotification('⚠️ 商品已售罄，请进入详情页查看或选择到货通知', true);
+}
+
 </script>
 </body>
 </html>

@@ -98,17 +98,24 @@ const ReplySection = ({
                 } else if (isOpen) {
                     await fetchReplies(0, 'newest');
                 }
-            }else {
-                         //  新增：檢查是否為全局禁言
-                         if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
-                             if (window.showGlobalBanModal) {
-                                 window.showGlobalBanModal(currentUsername, result.data.expiresAt);
-                             }
-                             return; // 攔截，不執行後續操作
-                         }
-                         // 普通錯誤提示
-                         alert(result.message || '提交失敗');
-                     }
+            } else {
+                //最高優先級 - 攔截「永久拉黑」錯誤，彈出紅色警告框
+                if (result.message === "BLACKLISTED") {
+                    if (window.showBlacklistedModal) {
+                        window.showBlacklistedModal(); // 調用 HTML 中定義的紅色彈窗
+                    }
+                    return; // 攔截，不執行後續操作
+                }
+                //  新增：檢查是否為全局禁言
+                if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
+                    if (window.showGlobalBanModal) {
+                        window.showGlobalBanModal(currentUsername, result.data.expiresAt);
+                    }
+                    return; // 攔截，不執行後續操作
+                }
+                // 普通錯誤提示
+                alert(result.message || '提交失敗');
+            }
         } catch (error) { console.error('提交回覆失敗:', error); }
     };
 
@@ -125,29 +132,59 @@ const ReplySection = ({
     };
 
     const handleReaction = async (replyId, isDislike = false) => {
+        // 樓中樓點贊/踩的未登入攔截
+        if (!currentUsername || currentUsername === 'anonymousUser') {
+            if (typeof window.showLoginRequiredModal === 'function') {
+                window.showLoginRequiredModal();
+            }
+            return;
+        }
         const api = isDislike ? `/api/review/${replyId}/dislike` : `/api/review/${replyId}/like`;
         try {
             const res = await fetch(api, { method: 'POST', credentials: 'same-origin' });
             const result = await res.json();
+
             if (result.success) {
                 setReplies(prev => prev.map(r =>
-                    r.id === replyId ? { ...r, likeCount: result.likeCount, dislikeCount: result.dislikeCount } : r
+                    r.id === replyId ? {
+                        ...r,
+                        likeCount: result.likeCount,
+                        dislikeCount: result.dislikeCount,
+                        // 核心修復：同步點讚/踩的布爾狀態
+                        isLikedByMe: result.liked,
+                        isDislikedByMe: result.disliked
+                    } : r
                 ));
+            } else {
+                // ================= 失敗情況下的攔截邏輯 =================
+
+                // 1. 最高優先級：攔截「永久拉黑」錯誤，彈出紅色警告框
+                if (result.message === "BLACKLISTED" || result.blacklisted) {
+                    if (window.showBlacklistedModal) {
+                        window.showBlacklistedModal(); // 調用 HTML 中定義的紅色彈窗
+                    }
+                    return; // 攔截，不執行後續的普通錯誤提示
+                }
+
+                // 2. 普通錯誤提示 (例如：網絡錯誤、評論不存在等)
+                console.error('點贊/踩失敗:', result.message);
             }
-        } catch (err) { console.error(err); }
+        } catch (err) {
+            console.error('網絡請求錯誤:', err);
+        }
     };
 
     // 【架構優化】：使用父組件傳遞的 onBlockUser 函數，實現全局狀態同步
     const confirmBlock = async (durationMinutes) => {
         if (isAdmin && durationMinutes) {
             let totalMinutes = 0;
-          if (blockUnit === 'day') {
-              totalMinutes = durationMinutes * 24 * 60;  // 1天 = 1440分钟
-          } else if (blockUnit === 'week') {
-              totalMinutes = durationMinutes * 7 * 24 * 60;  //1周 = 7天
-          } else if (blockUnit === 'month') {
-              totalMinutes = durationMinutes * 30 * 24 * 60;  //1月 ≈ 30天
-          }
+            if (blockUnit === 'day') {
+                totalMinutes = durationMinutes * 24 * 60;  // 1天 = 1440分钟
+            } else if (blockUnit === 'week') {
+                totalMinutes = durationMinutes * 7 * 24 * 60;  //1周 = 7天
+            } else if (blockUnit === 'month') {
+                totalMinutes = durationMinutes * 30 * 24 * 60;  //1月 ≈ 30天
+            }
             const params = new URLSearchParams();
             params.append('durationMinutes', totalMinutes);
             params.append('reason', '管理員禁言');
@@ -208,10 +245,21 @@ const ReplySection = ({
         }
     };
 
+    // 🚫 管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗) 不是react自帶的
+    const handleBlacklist = (targetUsername) => {
+        // 調用 HTML 中定義的全局函數，打開漂亮的自定義彈窗
+        if (typeof window.openBlacklistConfirmModal === 'function') {
+            window.openBlacklistConfirmModal(targetUsername);
+        } else {
+            // 降級處理：萬一 HTML 彈窗沒加載成功，給予提示
+            notify('❌ 系統彈窗組件未加載，請刷新頁面後重試', true);
+        }
+    };
+
     const formatDate = (dateStr) => {
-        if(!dateStr) return '';
+        if (!dateStr) return '';
         const d = new Date(dateStr);
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     };
 
     return (
@@ -283,17 +331,31 @@ const ReplySection = ({
                                         </div>
                                         <div className="reply-content">{reply.content}</div>
                                         <div className="reply-actions">
-                                            <button className="reply-action-btn" onClick={() => handleReaction(reply.id)}>
-                                                <i className="far fa-thumbs-up"></i> {reply.likeCount || 0}
+                                            {/* 點贊按鈕 */}
+                                            <button
+                                                className={`reply-action-btn btn-like ${reply.isLikedByMe ? 'active' : ''}`}
+                                                onClick={() => handleReaction(reply.id)}
+                                            >
+                                                <i className={reply.isLikedByMe ? "fas fa-thumbs-up" : "far fa-thumbs-up"}></i> {reply.likeCount || 0}
                                             </button>
-                                            <button className="reply-action-btn" onClick={() => handleReaction(reply.id, true)}>
-                                                <i className="far fa-thumbs-down"></i> {reply.dislikeCount || 0}
+
+                                            {/* 踩按鈕 */}
+                                            <button
+                                                className={`reply-action-btn btn-dislike ${reply.isDislikedByMe ? 'active' : ''}`}
+                                                onClick={() => handleReaction(reply.id, true)}
+                                            >
+                                                <i className={reply.isDislikedByMe ? "fas fa-thumbs-down" : "far fa-thumbs-down"}></i> {reply.dislikeCount || 0}
                                             </button>
+
                                             {/* 【核心修復 3】：樓中樓回復按鈕，加入禁言攔截與全局彈窗 */}
                                             <button className="reply-action-btn" onClick={async () => {
                                                 // 1. 登錄檢查
+                                                // 1. 登錄檢查
                                                 if (!currentUsername || currentUsername === 'anonymousUser') {
-                                                    alert('⚠️ 請先登錄！未登錄用戶不能回復。');
+                                                    //  【修改這裡】：替換掉原本的 alert
+                                                    if (typeof window.showLoginRequiredModal === 'function') {
+                                                        window.showLoginRequiredModal();
+                                                    }
                                                     return;
                                                 }
                                                 // 2. 核心攔截：檢查是否被該樓中樓作者禁言
@@ -348,25 +410,29 @@ const ReplySection = ({
                                                 )
                                             )}
 
-                                        {/*  舉報按鈕（僅其他登錄用戶可見，本人和admin不可見） */}
-                                        {currentUsername && currentUsername !== 'anonymousUser' &&
-                                         reply.customer.username !== currentUsername &&
-                                         !isAdmin && (
-                                            <button
-                                                className="reply-action-btn btn-report"
-                                                onClick={() => notify('🚨 舉報功能開發中')}
-                                                title="舉報不當內容"
-                                            >
-                                                <i className="fas fa-flag"></i> 舉報
-                                            </button>
-                                        )}
+                                            {/*  舉報按鈕（僅其他登錄用戶可見，本人和admin不可見） */}
+                                            {currentUsername && currentUsername !== 'anonymousUser' &&
+                                                reply.customer.username !== currentUsername &&
+                                                !isAdmin && (
+                                                    <button
+                                                        className="reply-action-btn btn-report"
+                                                        onClick={() => {
+                                                            if (typeof window.openReportModal === 'function') {
+                                                                window.openReportModal(reply.id, reply.customer.username, 'REVIEW', reply.content);
+                                                            }
+                                                        }}
+                                                        title="舉報不當內容"
+                                                    >
+                                                        <i className="fas fa-flag"></i> 舉報
+                                                    </button>
+                                                )}
                                             {currentUsername && isAdmin && (
                                                 <button
                                                     className="reply-action-btn btn-blacklist"
-                                                    onClick={() => notify(`🚫 拉黑用戶 ${reply.customer.username} 功能開發中`)}
-                                                    title="拉黑用戶"
+                                                    onClick={() => handleBlacklist(reply.customer.username)} //調用真實函數
+                                                    title="永久拉黑該用戶"
                                                 >
-                                                    <i className="fas fa-user-slash"></i> 拉黑
+                                                    <i className="fas fa-user-slash"></i> 永久拉黑
                                                 </button>
                                             )}
                                         </div>

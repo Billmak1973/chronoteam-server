@@ -25,14 +25,14 @@ public interface ViewHistoryRepository extends JpaRepository<ViewHistory, Long> 
     @Query("DELETE FROM ViewHistory vh WHERE vh.viewedAt < :cutoffDate")
     void deleteOlderThan(@Param("cutoffDate") LocalDateTime cutoffDate);
 
-    // 🟢 【修改處 1】：刪除「最近」指定時間範圍內的記錄 (將 < 改為 >=)
-    // ⚠️ 注意：因為 Customer 實體的 @Id 就是 username，所以 vh.customer.username 是正確的寫法，千萬不要改成 id！
+    // 刪除「最近」指定時間範圍內的記錄 (將 < 改為 >=)
+    // 注意：因為 Customer 實體的 @Id 就是 username，所以 vh.customer.username 是正確的寫法，千萬不要改成 id！
     @Modifying
     @Transactional
     @Query("DELETE FROM ViewHistory vh WHERE vh.customer.username = :username AND vh.viewedAt >= :cutoffDate")
     void deleteRecentForUser(@Param("username") String username, @Param("cutoffDate") LocalDateTime cutoffDate);
 
-    // 🟢 【修改處 2】：刪除用戶的所有瀏覽記錄 (保持不變)
+    // 刪除用戶的所有瀏覽記錄 (保持不變)
     @Modifying
     @Transactional
     @Query("DELETE FROM ViewHistory vh WHERE vh.customer.username = :username")

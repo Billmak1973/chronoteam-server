@@ -3,10 +3,8 @@ package org.example.website.controller;
 import org.example.website.dto.ApiResponse;
 import org.example.website.entity.*;
 import org.example.website.repository.*;
-import org.example.website.service.CustomerService;
-import org.example.website.service.OrderService;
-import org.example.website.service.UserBlockService;
-import org.example.website.service.ViewHistoryService;
+import org.example.website.service.*;
+import org.example.website.repository.AdminPenaltyRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +23,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,8 +46,9 @@ public class PageController {
     private final UserBlockRepository userBlockRepository;
     private final AppealRepository appealRepository;
     private final SecurityQuestionRepository securityQuestionRepository;
+    private final AdminPenaltyRepository adminPenaltyRepository;
+    private final AdminPenaltyService adminPenaltyService;
 
-    //  2. 通過構造函數注入依賴 (加入了 SellApplicationRepository)
     public PageController(CustomerService customerService,
                           LoginLogRepository loginLogRepository,
                           SellApplicationRepository sellApplicationRepository,
@@ -58,7 +59,9 @@ public class PageController {
                           StockNotificationRepository stockNotificationRepository,
                           UserBlockRepository userBlockRepository,
                           AppealRepository appealRepository,
-                          SecurityQuestionRepository securityQuestionRepository) {
+                          SecurityQuestionRepository securityQuestionRepository,
+                          AdminPenaltyRepository adminPenaltyRepository,
+                          AdminPenaltyService adminPenaltyService) {
         this.customerService = customerService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -70,6 +73,8 @@ public class PageController {
         this.userBlockRepository = userBlockRepository;
         this.appealRepository = appealRepository;
         this.securityQuestionRepository = securityQuestionRepository;
+        this.adminPenaltyRepository = adminPenaltyRepository;
+        this.adminPenaltyService = adminPenaltyService;
     }
 
     @GetMapping("/")
@@ -360,6 +365,7 @@ public class PageController {
         return "reviews"; // 對應 templates/reviews.html
     }
 
+
     @GetMapping("/account/notifications")
     public String myNotifications(Model model, Authentication authentication) {
         String username = authentication.getName();
@@ -378,25 +384,65 @@ public class PageController {
                 .filter(n -> n.getType() == Notification.NotificationType.SYSTEM)
                 .collect(Collectors.toList());
 
-        // 3. 查詢每個管理通知的申訴狀態
-        Map<Long, Boolean> appealStatusMap = new HashMap<>();
+        // ==========================================
+        //  3. 核心重構：計算每條管理通知的「綜合狀態」
+        // ==========================================
+        Map<Long, String> notificationStatusMap = new HashMap<>();
+
         for (Notification notif : adminNotifications) {
-            // 檢查是否有待處理的申訴
-            boolean hasPendingAppeal = appealRepository
-                    .findByNotificationIdAndStatus(notif.getId(), Appeal.AppealStatus.PENDING)
-                    .isPresent();
-            appealStatusMap.put(notif.getId(), hasPendingAppeal);
+            // 只處理「禁言相關」的通知 (根據標題包含"禁言"來判斷)
+            if (notif.getTitle() != null && notif.getTitle().contains("禁言")) {
+
+                // 1. 查找對應的處罰記錄 (透過 notificationId 精確綁定)
+                Optional<AdminPenalty> penaltyOpt = adminPenaltyRepository.findByNotificationId(notif.getId());
+
+                // 2. 查找對應的申訴記錄 (取最新的一條)
+                Optional<Appeal> appealOpt = appealRepository.findTopByNotificationIdOrderByCreatedAtDesc(notif.getId());
+
+                if (appealOpt.isPresent()) {
+                    // 【情況 A：有申訴記錄】 -> 根據申訴狀態決定 UI 顯示
+                    Appeal appeal = appealOpt.get();
+                    if (appeal.getStatus() == Appeal.AppealStatus.PENDING) {
+                        notificationStatusMap.put(notif.getId(), "APPEAL_PENDING"); // 審核中
+                    } else if (appeal.getStatus() == Appeal.AppealStatus.APPROVED) {
+                        notificationStatusMap.put(notif.getId(), "APPEAL_APPROVED"); // 申訴成功
+                    } else if (appeal.getStatus() == Appeal.AppealStatus.REJECTED) {
+                        notificationStatusMap.put(notif.getId(), "APPEAL_REJECTED"); // 申訴失敗
+                    }
+                } else {
+                    // 【情況 B：無申訴記錄】 -> 根據處罰狀態決定 UI 顯示
+                    if (penaltyOpt.isPresent()) {
+                        AdminPenalty penalty = penaltyOpt.get();
+
+                        //  觸發精確的懶檢查，確保過期的記錄在資料庫中被標記為 EXPIRED
+                        adminPenaltyService.checkAndUpdatePenaltyStatus(penalty.getId());
+
+                        // 重新獲取最新狀態 (因為懶檢查可能剛剛更新了資料庫)
+                        penalty = adminPenaltyRepository.findById(penalty.getId()).get();
+
+                        if (penalty.getStatus() == AdminPenalty.PenaltyStatus.ACTIVE) {
+                            notificationStatusMap.put(notif.getId(), "SHOW_APPEAL_BTN"); // 生效中，可申訴
+                        } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.EXPIRED) {
+                            notificationStatusMap.put(notif.getId(), "EXPIRED_NO_APPEAL"); // 已過期
+                        } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.REVOKED) {
+                            notificationStatusMap.put(notif.getId(), "REVOKED_NO_APPEAL"); // 管理員手動解封
+                        }
+                    } else {
+                        notificationStatusMap.put(notif.getId(), "NO_PENALTY_RECORD"); // 歷史髒數據 (沒有對應的處罰記錄)
+                    }
+                }
+            }
         }
 
         // 4. 進入頁面後，自動將所有通知標記為已讀
         allNotifications.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(allNotifications);
 
-        // 5. 傳遞數據到前端
+        // 5. 傳遞數據到前端 ( 傳遞新的狀態 Map 替換原來的 appealStatusMap)
         model.addAttribute("customer", customer);
         model.addAttribute("stockNotifications", stockNotifications);
         model.addAttribute("adminNotifications", adminNotifications);
-        model.addAttribute("appealStatusMap", appealStatusMap); //  傳遞申訴狀態
+        model.addAttribute("notificationStatusMap", notificationStatusMap);
 
         return "notifications";
     }

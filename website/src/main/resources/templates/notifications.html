@@ -13,40 +13,15 @@
     .page-title { font-size: 1.8rem; color: var(--primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.8rem; border-bottom: 2px solid var(--light); padding-bottom: 1rem; }
     .page-title i { color: var(--gold); }
 
-    /*  Tab 切換樣式 */
-    .notification-tabs {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      border-bottom: 2px solid #e9ecef;
-    }
-    .tab-btn {
-      padding: 1rem 2rem;
-      background: none;
-      border: none;
-      border-bottom: 3px solid transparent;
-      cursor: pointer;
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: var(--gray);
-      transition: all 0.3s;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: -2px;
-    }
+    /* Tab 切換樣式 */
+    .notification-tabs { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #e9ecef; }
+    .tab-btn { padding: 1rem 2rem; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-size: 1.05rem; font-weight: 600; color: var(--gray); transition: all 0.3s; display: flex; align-items: center; gap: 0.5rem; margin-bottom: -2px; }
     .tab-btn:hover { color: var(--primary); }
-    .tab-btn.active {
-      color: var(--primary);
-      border-bottom-color: var(--gold);
-    }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--gold); }
 
     /* 通知卡片樣式 */
     .notification-list { display: flex; flex-direction: column; gap: 1rem; }
-    .notification-card {
-        background: white; border: 1px solid #e9ecef; border-radius: 10px;
-        padding: 1.5rem; transition: all 0.3s; position: relative; overflow: hidden;
-    }
+    .notification-card { background: white; border: 1px solid #e9ecef; border-radius: 10px; padding: 1.5rem; transition: all 0.3s; position: relative; overflow: hidden; }
     .notification-card:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.05); transform: translateY(-2px); }
     .notification-card.unread { border-left: 4px solid var(--accent); background: #fff9fa; }
     .notification-card.stock-notif { border-left-color: var(--gold); background: #fffef5; }
@@ -54,28 +29,15 @@
     .notif-header { display: flex; justify-content: space-between; margin-bottom: 0.8rem; }
     .notif-title { font-weight: 700; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; }
     .notif-date { color: var(--gray); font-size: 0.85rem; }
-
     .notif-content { color: #555; line-height: 1.6; margin-bottom: 1rem; }
 
     /* 刪除原因專屬樣式 */
-    .delete-reason-box {
-        background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px;
-        padding: 1rem; margin-top: 0.5rem; color: #856404;
-    }
+    .delete-reason-box { background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; padding: 1rem; margin-top: 0.5rem; color: #856404; }
     .delete-reason-box strong { display: block; margin-bottom: 0.3rem; color: #664d03; }
-    .deleted-content-preview {
-        margin-top: 0.8rem; padding: 0.8rem; background: rgba(0,0,0,0.03);
-        border-radius: 6px; font-style: italic; font-size: 0.9rem; color: #666;
-    }
+    .deleted-content-preview { margin-top: 0.8rem; padding: 0.8rem; background: rgba(0,0,0,0.03); border-radius: 6px; font-style: italic; font-size: 0.9rem; color: #666; }
 
     /* 到貨通知專屬樣式 */
-    .stock-info {
-        background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
-        border-left: 4px solid var(--gold);
-        padding: 1rem;
-        border-radius: 8px;
-        margin-top: 0.5rem;
-    }
+    .stock-info { background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%); border-left: 4px solid var(--gold); padding: 1rem; border-radius: 8px; margin-top: 0.5rem; }
     .stock-info strong { color: #856404; display: block; margin-bottom: 0.5rem; }
     .stock-info .product-name { color: var(--primary); font-weight: 600; }
     .stock-info .stock-count { color: var(--accent); font-weight: 700; }
@@ -105,25 +67,20 @@
   <main class="main-content">
     <h2 class="page-title"><i class="fas fa-bell"></i> 系統通知</h2>
 
-    <!--  Tab 切換按鈕（移除了全部通知和數字徽章） -->
+    <!-- Tab 切換按鈕 -->
     <div class="notification-tabs">
       <button class="tab-btn" id="tab-btn-stock" onclick="switchTab('stock', this)">
-        <i class="fas fa-bell" style="color: var(--gold);"></i>
-        到貨通知
+        <i class="fas fa-bell" style="color: var(--gold);"></i> 到貨通知
       </button>
       <button class="tab-btn" id="tab-btn-admin" onclick="switchTab('admin', this)">
-        <i class="fas fa-exclamation-triangle" style="color: var(--accent);"></i>
-        管理通知
+        <i class="fas fa-exclamation-triangle" style="color: var(--accent);"></i> 管理通知
       </button>
     </div>
 
-    <!--  到貨通知 -->
+    <!-- 到貨通知 -->
     <div id="tab-stock" class="tab-content">
       <div th:if="${!stockNotifications.isEmpty()}" class="notification-list">
-        <div th:each="notif : ${stockNotifications}"
-             class="notification-card stock-notif"
-             th:classappend="${!notif.read} ? 'unread' : ''">
-
+        <div th:each="notif : ${stockNotifications}" class="notification-card stock-notif" th:classappend="${!notif.read} ? 'unread' : ''">
           <div class="notif-header">
             <div class="notif-title">
               <i class="fas fa-bell" style="color: var(--gold);"></i>
@@ -131,14 +88,11 @@
             </div>
             <div class="notif-date" th:text="${#temporals.format(notif.createdAt, 'yyyy-MM-dd HH:mm')}">2026-06-21</div>
           </div>
-
           <div class="notif-content" th:text="${notif.content}">您關注的 AP Royal Oak 15400ST 已補貨到庫...</div>
-
           <div class="stock-info">
             <strong><i class="fas fa-box-open"></i> 商品資訊</strong>
             <a th:href="${notif.targetUrl}" class="product-name" style="text-decoration: none; color: var(--primary);">
-              <i class="fas fa-external-link-alt" style="font-size: 0.8rem; margin-right: 0.3rem;"></i>
-              點擊查看商品詳情
+              <i class="fas fa-external-link-alt" style="font-size: 0.8rem; margin-right: 0.3rem;"></i> 點擊查看商品詳情
             </a>
             <div style="margin-top: 0.5rem; font-size: 0.9rem;">
               <span class="stock-count"><i class="fas fa-check-circle"></i> 庫存充足，立即搶購！</span>
@@ -153,13 +107,10 @@
       </div>
     </div>
 
-    <!--  管理通知 -->
+    <!-- 管理通知 -->
     <div id="tab-admin" class="tab-content">
       <div th:if="${!adminNotifications.isEmpty()}" class="notification-list">
-        <div th:each="notif : ${adminNotifications}"
-             class="notification-card"
-             th:classappend="${!notif.read} ? 'unread' : ''">
-
+        <div th:each="notif : ${adminNotifications}" class="notification-card" th:classappend="${!notif.read} ? 'unread' : ''">
           <div class="notif-header">
             <div class="notif-title">
               <i class="fas fa-exclamation-triangle" style="color: var(--accent);"></i>
@@ -167,10 +118,9 @@
             </div>
             <div class="notif-date" th:text="${#temporals.format(notif.createdAt, 'yyyy-MM-dd HH:mm')}">2026-06-20</div>
           </div>
-
           <div class="notif-content" th:text="${notif.content}">管理員對您的評論進行了處理。</div>
 
-          <!--  禁言通知專屬樣式 -->
+          <!--  禁言通知專屬樣式 (已整合 6 種狀態) -->
           <div th:if="${notif.title != null and #strings.contains(notif.title, '禁言')}"
                class="delete-reason-box"
                style="background: #fff3cd; border-color: #ffc107;">
@@ -178,26 +128,63 @@
             <p th:if="${notif.deleteReason != null}" style="margin:0.5rem 0;">
               <strong>原因：</strong><span th:text="${notif.deleteReason}">違反社區規範</span>
             </p>
-            <div style="margin-top: 1rem;">
-              <!-- 🟢 根據申訴狀態顯示不同按鈕 -->
-              <!-- 情況1：沒有申訴記錄或申訴已被處理（非PENDING），顯示提交申訴按鈕 -->
-              <button th:unless="${appealStatusMap[notif.id]}"
-                      class="btn-sm"
-                      style="background: var(--gold); color: var(--primary); border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;"
-                      th:onclick="|openAppealModal(${notif.id}, 'BAN')|">
-                <i class="fas fa-file-alt"></i> 提交申訴
-              </button>
 
-              <!-- 情況2：申訴正在審核中（PENDING），顯示灰色禁用按鈕 -->
-              <button th:if="${appealStatusMap[notif.id]}"
-                      class="btn-sm"
-                      disabled
-                      style="background: #e9ecef; color: #6c757d; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: not-allowed; font-weight: 600;">
-                <i class="fas fa-hourglass-half"></i> 申訴審核中
-              </button>
+            <!-- ================== 全新 6 種狀態提示框 ================== -->
+            <div style="margin-top: 1rem;">
+              <!-- 情況 1：未申訴且仍在禁言期 (ACTIVE) -> 黃色警告框 + 申訴按鈕 -->
+              <div th:if="${notificationStatusMap[notif.id] == 'SHOW_APPEAL_BTN'}"
+                   style="display: flex; align-items: center; justify-content: space-between; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; padding: 0.8rem 1rem;">
+                <div style="color: #856404; font-size: 0.95rem;">
+                  <i class="fas fa-exclamation-circle" style="margin-right: 0.5rem;"></i>
+                  您目前處於禁言狀態，如有異議可提交申訴。
+                </div>
+                <button class="btn-sm"
+                        style="background: var(--gold); color: var(--primary); border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;"
+                        th:onclick="|openAppealModal(${notif.id}, 'BAN')|">
+                  <i class="fas fa-file-alt"></i> 提交申訴
+                </button>
+              </div>
+
+              <!-- 情況 2：申訴審核中 (PENDING) -> 灰色信息框 -->
+              <div th:if="${notificationStatusMap[notif.id] == 'APPEAL_PENDING'}"
+                   style="background: #e9ecef; border: 1px solid #ced4da; border-radius: 8px; padding: 0.8rem 1rem; color: #6c757d; font-size: 0.95rem;">
+                <i class="fas fa-hourglass-half" style="margin-right: 0.5rem;"></i>
+                您的申訴已提交，管理員正在審核中，請耐心等待。
+              </div>
+
+              <!-- 情況 3：申訴成功 (APPROVED) -> 綠色成功框 -->
+              <div th:if="${notificationStatusMap[notif.id] == 'APPEAL_APPROVED'}"
+                   style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 0.8rem 1rem; color: #155724; font-size: 0.95rem; font-weight: 500;">
+                <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
+                <strong>申訴成功！</strong> 您的申訴已通過，禁言處罰已提前解除。
+              </div>
+
+              <!-- 情況 4：申訴失敗 (REJECTED) -> 紅色危險框 -->
+              <div th:if="${notificationStatusMap[notif.id] == 'APPEAL_REJECTED'}"
+                   style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 0.8rem 1rem; color: #721c24; font-size: 0.95rem; font-weight: 500;">
+                <i class="fas fa-times-circle" style="margin-right: 0.5rem;"></i>
+                <strong>申訴被駁回。</strong> 管理員維持原判，請遵守社區規範。
+              </div>
+
+              <!-- 情況 5：禁言已過期且未申訴 (EXPIRED) -> 淺灰色中性框 -->
+              <div th:if="${notificationStatusMap[notif.id] == 'EXPIRED_NO_APPEAL'}"
+                   style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 0.8rem 1rem; color: #6c757d; font-size: 0.95rem;">
+                <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
+                禁言期已滿，您的帳戶已自動恢復正常。
+              </div>
+
+              <!-- 情況 6：管理員手動解封 (REVOKED_NO_APPEAL) -> 藍色/青色提示框 -->
+              <div th:if="${notificationStatusMap[notif.id] == 'REVOKED_NO_APPEAL'}"
+                   style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 0.8rem 1rem; color: #0c5460; font-size: 0.95rem; font-weight: 500;">
+                <i class="fas fa-user-shield" style="margin-right: 0.5rem;"></i>
+                <strong>處罰已撤銷。</strong> 管理員已為您提前解除禁言。
+              </div>
             </div>
+            <!-- ==================================================== -->
+
           </div>
 
+          <!-- 一般刪除評論通知 -->
           <div th:if="${notif.deleteReason != null and (notif.title == null or !#strings.contains(notif.title, '禁言'))}" class="delete-reason-box">
             <strong><i class="fas fa-exclamation-triangle"></i> 管理員處理原因：</strong>
             <p th:text="${notif.deleteReason}" style="margin:0;">該內容不符合社區規範，因此被移除。</p>
@@ -215,40 +202,27 @@
       </div>
     </div>
 
-    <!-- 🟢 申訴模態框 -->
+    <!-- 申訴模態框 -->
     <div id="appealModal" class="modal" style="display: none; z-index: 9999;">
       <div class="modal-content" style="max-width: 500px;">
         <button class="modal-close" onclick="closeAppealModal()">&times;</button>
         <h3 style="margin-bottom: 1.5rem; color: var(--primary);">
-          <i class="fas fa-file-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
-          提交申訴
+          <i class="fas fa-file-alt" style="color: var(--gold); margin-right: 0.5rem;"></i> 提交申訴
         </h3>
         <form id="appealForm" onsubmit="submitAppeal(event)">
           <input type="hidden" id="appealNotificationId">
-          <!-- 🟢 新增：隱藏的申訴類型欄位，默認為 BAN -->
           <input type="hidden" id="appealType" value="BAN">
-
           <div style="margin-bottom: 1.5rem;">
             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">
               申訴原因 <span style="color: var(--accent);">*</span>
             </label>
-            <textarea id="appealReason"
-                      required
-                      rows="5"
-                      placeholder="請詳細說明您的申訴理由，例如：&#10;1. 您認為處罰不當的原因&#10;2. 相關證據或解釋&#10;3. 其他需要補充的信息..."
+            <textarea id="appealReason" required rows="5"
+                      placeholder="請詳細說明您的申訴理由..."
                       style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
-            <small style="color: var(--gray); font-size: 0.85rem; margin-top: 0.3rem; display: block;">
-              <i class="fas fa-info-circle"></i> 請如實填寫，管理員將在 48 小時內回覆
-            </small>
           </div>
           <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-            <button type="button"
-                    onclick="closeAppealModal()"
-                    style="padding: 0.6rem 1.5rem; background: #e9ecef; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary);">
-              取消
-            </button>
-            <button type="submit"
-                    style="padding: 0.6rem 1.5rem; background: var(--gold); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary);">
+            <button type="button" onclick="closeAppealModal()" style="padding: 0.6rem 1.5rem; background: #e9ecef; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary);">取消</button>
+            <button type="submit" style="padding: 0.6rem 1.5rem; background: var(--gold); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary);">
               <i class="fas fa-paper-plane"></i> 提交申訴
             </button>
           </div>
@@ -265,49 +239,32 @@
 <div th:replace="~{fragments/common :: modals}"></div>
 <script th:inline="javascript">
   const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-  //  傳遞後端數據到前端
   const stockNotifications = /*[[${stockNotifications}]]*/ [];
   const adminNotifications = /*[[${adminNotifications}]]*/ [];
 </script>
 <script src="/js/common.js"></script>
 
 <script>
-  //  Tab 切換功能
   function switchTab(tabName, btn) {
-    // 移除所有 active 類
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-    // 添加 active 到當前選中的 tab
     btn.classList.add('active');
     document.getElementById('tab-' + tabName).classList.add('active');
   }
 
-  //  頁面加載時智能選擇默認 Tab
   document.addEventListener('DOMContentLoaded', function() {
     const stockBtn = document.getElementById('tab-btn-stock');
     const adminBtn = document.getElementById('tab-btn-admin');
-
     const hasStockNotif = stockNotifications && stockNotifications.length > 0;
     const hasAdminNotif = adminNotifications && adminNotifications.length > 0;
-
-    if (hasStockNotif) {
-      switchTab('stock', stockBtn);
-    } else if (hasAdminNotif) {
-      switchTab('admin', adminBtn);
-    } else {
-      switchTab('stock', stockBtn);
-    }
+    if (hasStockNotif) switchTab('stock', stockBtn);
+    else if (hasAdminNotif) switchTab('admin', adminBtn);
+    else switchTab('stock', stockBtn);
   });
 
-  // ==========================================
-  // 🟢 申訴功能 (整合版)
-  // ==========================================
-
-  // 打開申訴模態框 (接收 notificationId 和 appealType)
   function openAppealModal(notificationId, appealType) {
     document.getElementById('appealNotificationId').value = notificationId;
-    document.getElementById('appealType').value = appealType; // 🟢 設置類型 (例如: BAN)
+    document.getElementById('appealType').value = appealType;
     document.getElementById('appealReason').value = '';
     document.getElementById('appealModal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -320,50 +277,30 @@
 
   async function submitAppeal(event) {
     event.preventDefault();
-
     const notificationId = document.getElementById('appealNotificationId').value;
     const reason = document.getElementById('appealReason').value.trim();
-    const appealType = document.getElementById('appealType').value; // 🟢 獲取類型
+    const appealType = document.getElementById('appealType').value;
 
-    if (!reason) {
-      showNotification('❌ 請填寫申訴原因', true);
-      return;
-    }
+    if (!reason) { showNotification('❌ 請填寫申訴原因', true); return; }
 
-    // 按鈕加載狀態
     const submitBtn = event.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
 
     try {
-      // 🟢 注意 URL 為 /api/appeal/submit
       const response = await fetch('/api/appeal/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          notificationId: notificationId,
-          reason: reason,
-          appealType: appealType // 🟢 傳遞類型給後端
-        })
+        body: JSON.stringify({ notificationId, reason, appealType })
       });
-
       const result = await response.json();
 
       if (response.ok && result.success) {
         showNotification('✅ ' + result.message);
         closeAppealModal();
-
-        // 🟢 提交成功後，將該卡片的申訴按鈕替換為「審核中」狀態
-        // 使用 CSS 選擇器找到對應 notificationId 的按鈕 (提供即時的 UI 反饋，不用等刷新)
-        const btn = document.querySelector(`button[onclick*="openAppealModal(${notificationId}"]`);
-        if(btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-hourglass-half"></i> 申訴審核中';
-            btn.style.background = '#e9ecef';
-            btn.style.color = '#6c757d';
-            btn.style.cursor = 'not-allowed';
-        }
+        // 提交成功後，刷新頁面以顯示最新的「審核中」狀態
+        location.reload();
       } else {
         showNotification('❌ ' + (result.message || '提交失敗'), true);
         submitBtn.disabled = false;
@@ -377,11 +314,8 @@
     }
   }
 
-  // 點擊模態框外部關閉
   document.getElementById('appealModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-      closeAppealModal();
-    }
+    if (e.target === this) closeAppealModal();
   });
 </script>
 </body>

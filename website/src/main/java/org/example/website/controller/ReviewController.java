@@ -3,6 +3,7 @@ package org.example.website.controller;
 import org.example.website.dto.ApiResponse;
 import org.example.website.entity.*;
 import org.example.website.repository.*;
+import org.example.website.service.AdminPenaltyService;
 import org.example.website.service.ReviewReactionService;
 import org.example.website.repository.*; // 確保引入了 ReviewReactionRepository
 import org.example.website.service.UserBlockService;
@@ -35,6 +36,9 @@ public class ReviewController {
     private final NotificationRepository notificationRepository;
     private final UserBlockService userBlockService;
     private final UserBlockRepository userBlockRepository;
+    private final ReviewArchiveRepository reviewArchiveRepository;
+    private final AdminPenaltyService adminPenaltyService;
+
     //  構造函數注入所有依賴
     public ReviewController(ReviewRepository reviewRepository,
                             OrderRepository orderRepository,
@@ -44,7 +48,9 @@ public class ReviewController {
                             ReviewReactionRepository reviewReactionRepository,
                             NotificationRepository notificationRepository,
                             UserBlockService userBlockService,
-                            UserBlockRepository userBlockRepository
+                            UserBlockRepository userBlockRepository,
+                            ReviewArchiveRepository reviewArchiveRepository,
+                            AdminPenaltyService adminPenaltyService
                            ) {
         this.reviewRepository = reviewRepository;
         this.orderRepository = orderRepository;
@@ -55,6 +61,8 @@ public class ReviewController {
         this.notificationRepository = notificationRepository;
         this.userBlockService = userBlockService;
         this.userBlockRepository = userBlockRepository;
+        this.reviewArchiveRepository=reviewArchiveRepository;
+        this.adminPenaltyService = adminPenaltyService;
     }
 
 
@@ -69,19 +77,24 @@ public class ReviewController {
 
             String username = authentication.getName();
 
-            // ================= 🟢 新增：檢查管理員全局禁言 =================
-            var activeBan = userBlockService.getActiveGlobalBan(username);
+            // =================  新增：檢查管理員全局禁言 =================
+            var activeBan = adminPenaltyService.getActiveGlobalBan(username);
             if (activeBan.isPresent()) {
                 // 構造包含過期時間的錯誤數據
                 Map<String, Object> errorData = new HashMap<>();
                 errorData.put("banned", true);
-                errorData.put("expiresAt", activeBan.get().getExpiresAt()); // 發送 ISO 格式時間給前端
+                errorData.put("expiresAt", activeBan.get().getEndTime()); // 發送 ISO 格式時間給前端
 
                 // 返回特定錯誤 "GLOBAL_BAN"，前端 React 會捕獲這個 message 並彈窗
                 return ResponseEntity.badRequest()
                         .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
             }
             // ================= 檢查結束 =================
+            //檢查是否被管理員永久拉黑
+            if (adminPenaltyService.isBlacklisted(username)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ApiResponse(false, "BLACKLISTED", "您已被管理員永久拉黑，無法發表評論或回復"));
+            }
 
             String replyToUser = (String) request.get("replyToUser");
             if (replyToUser != null && !replyToUser.trim().isEmpty()) {
@@ -172,9 +185,10 @@ public class ReviewController {
     public ResponseEntity<?> getReplies(@PathVariable Long parentId,
                                         @RequestParam(defaultValue = "0") int page,
                                         @RequestParam(defaultValue = "20") int size,
-                                        @RequestParam(defaultValue = "popular") String sort) {
+                                        @RequestParam(defaultValue = "popular") String sort,
+                                        Authentication authentication) {
         try {
-            //  根据排序参数构建排序规则
+            // 根据排序参数构建排序规则
             Sort dynamicSort;
             switch (sort) {
                 case "oldest":
@@ -195,7 +209,15 @@ public class ReviewController {
             Pageable pageable = PageRequest.of(page, size, dynamicSort);
             Page<Review> replies = reviewRepository.findRepliesByParentId(parentId, pageable);
 
-            //  關鍵修復：手動提取需要的字段，避免序列化 Hibernate Proxy
+            //  2. 獲取當前登錄用戶名
+            String currentUsername = null;
+            if (authentication != null && authentication.isAuthenticated()
+                    && !"anonymousUser".equals(authentication.getPrincipal())) {
+                currentUsername = authentication.getName();
+            }
+            final String username = currentUsername;
+
+            // 關鍵修復：手動提取需要的字段，避免序列化 Hibernate Proxy
             List<Map<String, Object>> resultList = new ArrayList<>();
             for (Review reply : replies.getContent()) {
                 Map<String, Object> map = new HashMap<>();
@@ -211,11 +233,28 @@ public class ReviewController {
                 customerMap.put("username", reply.getCustomer().getUsername());
                 map.put("customer", customerMap);
 
+                //  3. 核心修復：查詢當前用戶是否對這條樓中樓點讚/踩
+                boolean isLikedByMe = false;
+                boolean isDislikedByMe = false;
+                if (username != null) {
+                    var reactionOpt = reviewReactionRepository.findByReviewIdAndUsername(reply.getId(), username);
+                    if (reactionOpt.isPresent()) {
+                        var reaction = reactionOpt.get();
+                        if ("LIKE".equals(reaction.getReactionType())) {
+                            isLikedByMe = true;
+                        } else if ("DISLIKE".equals(reaction.getReactionType())) {
+                            isDislikedByMe = true;
+                        }
+                    }
+                }
+                map.put("isLikedByMe", isLikedByMe);       // 發送給前端
+                map.put("isDislikedByMe", isDislikedByMe); // 發送給前端
+
                 resultList.add(map);
             }
 
             Map<String, Object> data = new HashMap<>();
-            data.put("replies", resultList);  //  使用手動構建的列表
+            data.put("replies", resultList);  // 使用手動構建的列表
             data.put("currentPage", page);
             data.put("totalPages", replies.getTotalPages());
             data.put("totalReplies", reviewRepository.countByParentId(parentId));
@@ -257,14 +296,20 @@ public class ReviewController {
             }
 
             // 檢查當前用戶是否被管理員全局禁言
-            var activeBan = userBlockService.getActiveGlobalBan(username);
+            var activeBan = adminPenaltyService.getActiveGlobalBan(username);
             if (activeBan.isPresent()) {
                 Map<String, Object> errorData = new HashMap<>();
                 errorData.put("banned", true);
-                errorData.put("expiresAt", activeBan.get().getExpiresAt());
+                errorData.put("expiresAt", activeBan.get().getEndTime());
 
                 return ResponseEntity.badRequest()
                         .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
+            }
+
+            // ================= 檢查是否被管理員永久拉黑 =================
+            if (adminPenaltyService.isBlacklisted(username)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ApiResponse(false, "BLACKLISTED", "您已被管理員永久拉黑，無法修改評論"));
             }
 
             // 更新內容
@@ -276,7 +321,6 @@ public class ReviewController {
             return ResponseEntity.internalServerError().body(ApiResponse.error("修改評論失敗: " + e.getMessage()));
         }
     }
-
 
 
 
@@ -300,28 +344,51 @@ public class ReviewController {
                 return ResponseEntity.status(403).body(ApiResponse.error("無權刪除此評論"));
             }
 
-            // 核心修改：獲取刪除原因，如果為空則使用默認值
-            String deleteReason = "該內容不符合社區規範，因此被移除。";
-            if (requestBody != null && requestBody.containsKey("deleteReason")) {
+            // ==========================================
+            //  核心修改：獲取刪除原因 (用戶自行刪除留空，管理員刪除則讀取前端傳來的原因，不再寫死默認值)
+            String deleteReason = null;
+
+            // 只有管理員刪除時，才會嘗試從請求體中獲取原因
+            if ("admin".equals(username) && requestBody != null && requestBody.containsKey("deleteReason")) {
                 String reasonFromBody = requestBody.get("deleteReason");
                 if (reasonFromBody != null && !reasonFromBody.trim().isEmpty()) {
-                    deleteReason = reasonFromBody;
+                    deleteReason = reasonFromBody.trim();
                 }
             }
+            // ==========================================
 
-            // 日誌記錄：方便後續審計（可選）
-            System.out.println("管理員 [" + username + "] 刪除評論 ID: " + id + ", 原因: " + deleteReason);
+            // 日誌記錄：方便後續審計 (優化輸出，避免打印 null)
+            System.out.println("刪除評論 ID: " + id + ", 操作者: [" + username + "], 原因: " + (deleteReason != null ? deleteReason : "無"));
 
             // 獲取關聯的商品和評分
             Product product = review.getProduct();
             Double rating = review.getRating();
 
-            // 保存被刪除的內容和用戶名，用於發送通知
+            // 保存被刪除的內容和用戶名，用於發送通知與歸檔
             String deletedContent = review.getContent();
             String targetUser = review.getCustomer().getUsername();
             Long relatedReviewId = review.getId();
 
-            // 1. 刪除評論記錄
+            // ==========================================
+            //  【核心新增】：將評論歸檔到 ReviewArchive (無論是用戶自己刪還是管理員刪，都會執行這裡)
+            ReviewArchive archive = new ReviewArchive();
+            archive.setOriginalReviewId(relatedReviewId);
+            archive.setProductId(product.getId());
+            archive.setAuthorUsername(targetUser);
+            archive.setContent(deletedContent);
+            archive.setRating(rating);
+            archive.setParentId(review.getParentId());
+            archive.setReplyToUser(review.getReplyToUser());
+            archive.setOriginalCreatedAt(review.getCreatedAt());
+            archive.setDeletedBy(username);           // 記錄是誰刪的 (用戶自己的 username 或 "admin")
+            archive.setDeleteReason(deleteReason);    // 記錄刪除原因 (用戶自刪為 null，管理員刪則為填寫的原因)
+            archive.setLikeCountAtDelete(review.getLikeCount());
+            archive.setDislikeCountAtDelete(review.getDislikeCount());
+
+            reviewArchiveRepository.save(archive);    // 保存快照到歸檔表
+            // ==========================================
+
+            // 1. 刪除評論記錄 (在歸檔之後執行)
             reviewRepository.delete(review);
 
             // 2. 同步更新 Product 的統計數據 (僅針對根評論)
@@ -355,7 +422,7 @@ public class ReviewController {
                 notification.setTitle("您的評論已被移除");
                 notification.setContent("管理員對您的評論進行了處理。");
                 notification.setDeletedContent(deletedContent); // 存儲原文
-                notification.setDeleteReason(deleteReason);     // 存儲原因
+                notification.setDeleteReason(deleteReason);     // 存儲原因 (如果管理員沒填則為 null，前端會自動隱藏該區塊)
                 notification.setRelatedReviewId(relatedReviewId);
                 notification.setCreatedAt(java.time.LocalDateTime.now());
 

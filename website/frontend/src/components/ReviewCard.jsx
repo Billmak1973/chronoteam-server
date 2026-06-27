@@ -46,6 +46,14 @@ const ReviewCard = ({
 
     // --- 現有函數 ---
     const handleLike = async () => {
+
+        if (!currentUsername || currentUsername === 'anonymousUser') {
+            if (typeof window.showLoginRequiredModal === 'function') {
+                window.showLoginRequiredModal();
+            }
+            return;
+        }
+
         try {
             const res = await fetch(`/api/review/${review.id}/like`, { method: 'POST', credentials: 'same-origin' });
             const result = await res.json();
@@ -55,6 +63,13 @@ const ReviewCard = ({
                 setIsLiked(result.liked);
                 setIsDisliked(result.disliked);
             } else {
+                // 攔截「永久拉黑」錯誤，彈出紅色警告框
+                if (result.message === "BLACKLISTED" || result.blacklisted) {
+                    if (window.showBlacklistedModal) {
+                        window.showBlacklistedModal();
+                    }
+                    return; // 攔截，不執行後續的 alert
+                }
                 alert(result.message || '點贊失敗');
             }
         } catch (error) {
@@ -64,6 +79,14 @@ const ReviewCard = ({
     };
 
     const handleDislike = async () => {
+
+        if (!currentUsername || currentUsername === 'anonymousUser') {
+            if (typeof window.showLoginRequiredModal === 'function') {
+                window.showLoginRequiredModal();
+            }
+            return;
+        }
+
         try {
             const res = await fetch(`/api/review/${review.id}/dislike`, { method: 'POST', credentials: 'same-origin' });
             const result = await res.json();
@@ -73,6 +96,13 @@ const ReviewCard = ({
                 setIsLiked(result.liked);
                 setIsDisliked(result.disliked);
             } else {
+                // 攔截「永久拉黑」錯誤，彈出紅色警告框
+                if (result.message === "BLACKLISTED" || result.blacklisted) {
+                    if (window.showBlacklistedModal) {
+                        window.showBlacklistedModal();
+                    }
+                    return; // 攔截，不執行後續的 alert
+                }
                 alert(result.message || '踩失敗');
             }
         } catch (error) {
@@ -90,7 +120,7 @@ const ReviewCard = ({
             setCustomReason('');
         } else {
             // 普通用戶：直接確認刪除
-            if(window.confirm('確定刪除這條評論嗎？')) {
+            if (window.confirm('確定刪除這條評論嗎？')) {
                 handleDeleteAction();
             }
         }
@@ -168,13 +198,13 @@ const ReviewCard = ({
                 setIsEditing(false);
             } else {
                 // 新增：檢查是否為全局禁言
-                         if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
-                             if (window.showGlobalBanModal) {
-                                    // 這裡的 review.customer.username 是評論作者，如果是修改自己的評論，應該是 currentUsername
-                                    window.showGlobalBanModal(currentUsername, result.data.expiresAt);
-                             }
-                              return;
-                         }
+                if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
+                    if (window.showGlobalBanModal) {
+                        // 這裡的 review.customer.username 是評論作者，如果是修改自己的評論，應該是 currentUsername
+                        window.showGlobalBanModal(currentUsername, result.data.expiresAt);
+                    }
+                    return;
+                }
                 alert(result.message || '修改失敗');
             }
         } catch (error) {
@@ -208,13 +238,13 @@ const ReviewCard = ({
         if (isAdmin && durationMinutes) {
             // 管理員禁言邏輯保持不變
             let totalMinutes = 0;
-        if (blockUnit === 'day') {
-             totalMinutes = durationMinutes * 24 * 60;  //  修正：1天 = 1440分钟
-        } else if (blockUnit === 'week') {
-            totalMinutes = durationMinutes * 7 * 24 * 60;  //  正确：1周 = 7天
-         } else if (blockUnit === 'month') {
-             totalMinutes = durationMinutes * 30 * 24 * 60;  //  正确：1月 ≈ 30天
-   }
+            if (blockUnit === 'day') {
+                totalMinutes = durationMinutes * 24 * 60;  //  修正：1天 = 1440分钟
+            } else if (blockUnit === 'week') {
+                totalMinutes = durationMinutes * 7 * 24 * 60;  //  正确：1周 = 7天
+            } else if (blockUnit === 'month') {
+                totalMinutes = durationMinutes * 30 * 24 * 60;  //  正确：1月 ≈ 30天
+            }
             const params = new URLSearchParams();
             params.append('durationMinutes', totalMinutes);
             params.append('reason', '管理員禁言');
@@ -275,6 +305,36 @@ const ReviewCard = ({
         }
     };
 
+    // 🚫 管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗)
+    const handleBlacklist = (targetUsername) => {
+        if (typeof window.openBlacklistConfirmModal === 'function') {
+            window.openBlacklistConfirmModal(targetUsername);
+        } else {
+            notify('❌ 系統彈窗組件未加載，請刷新頁面後重試', true);
+        }
+    };
+    // const handleBlacklist = async (targetUsername) => {
+    //if (!window.confirm(`⚠️ 確定要永久拉黑用戶 "${targetUsername}" 嗎？\n拉黑後該用戶將永遠無法點贊、踩、評價和回復！`)) return;
+
+    // const reason = prompt("請輸入拉黑原因（將發送系統通知給該用戶）：", "嚴重違反社區規範");
+    // if (!reason) return;
+
+    // try {
+    //   const response = await fetch(`/api/admin/penalty/blacklist/${targetUsername}?reason=${encodeURIComponent(reason)}`, {
+    //   method: 'POST',
+    //   credentials: 'same-origin'
+    //     });
+    //    const result = await response.json();
+    //     if (response.ok && result.success) {
+    //        notify('✅ ' + result.message);
+    //    } else {
+    //       notify('❌ ' + result.message, true);
+    //    }
+    // } catch (error) {
+    //    notify('❌ 網絡錯誤', true);
+    //  }
+    // };
+
     const renderStars = (rating) => {
         if (!rating) return null;
         const full = Math.floor(rating);
@@ -312,9 +372,12 @@ const ReviewCard = ({
                         </button>
                         {/* 保留原有的回復截邏輯 */}
                         <button className="review-action-btn btn-reply" onClick={async () => {
-                            // 1. 登錄檢查
+                            // 1. 登錄檢
                             if (!currentUsername || currentUsername === 'anonymousUser') {
-                                alert('⚠️ 請先登錄！未登錄用戶不能回復。');
+                                //  【修改這裡】：替換掉醜陋的 alert
+                                if (typeof window.showLoginRequiredModal === 'function') {
+                                    window.showLoginRequiredModal();
+                                }
                                 return;
                             }
                             // 2. 核心攔截：檢查是否被該評論作者禁言
@@ -400,27 +463,31 @@ const ReviewCard = ({
                     )
                 )}
 
-            {/*  新增：舉報按鈕（僅其他登錄用戶可見，本人和admin不可見） */}
-            {currentUsername && currentUsername !== 'anonymousUser' &&
-             review.customer.username !== currentUsername &&
-             !isAdmin && (
-                <button
-                    className="btn-report"
-                    onClick={() => notify('🚨 舉報功能開發中')}
-                    title="舉報不當內容"
-                >
-                    <i className="fas fa-flag"></i> 舉報
-                </button>
-            )}
+                {/*  新增：舉報按鈕（僅其他登錄用戶可見，本人和admin不可見） */}
+                {currentUsername && currentUsername !== 'anonymousUser' &&
+                    review.customer.username !== currentUsername &&
+                    !isAdmin && (
+                        <button
+                            className="btn-report"
+                            onClick={() => {
+                                if (typeof window.openReportModal === 'function') {
+                                    window.openReportModal(review.id, review.customer.username, 'REVIEW', review.content);
+                                }
+                            }}
+                            title="舉報不當內容"
+                        >
+                            <i className="fas fa-flag"></i> 舉報
+                        </button>
+                    )}
 
                 {/* 拉黑按鈕：僅管理員可見 */}
                 {isAdmin && (
                     <button
                         className="btn-blacklist"
-                        onClick={() => notify(`🚫 拉黑用戶 ${review.customer.username} 功能開發中`)}
-                        title="拉黑用戶（加入黑名單）"
+                        onClick={() => handleBlacklist(review.customer.username)} //調用真實函數
+                        title="永久拉黑該用戶（加入黑名單）"
                     >
-                        <i className="fas fa-user-slash"></i> 拉黑
+                        <i className="fas fa-user-slash"></i> 永久拉黑
                     </button>
                 )}
             </div>
@@ -443,42 +510,42 @@ const ReviewCard = ({
             {showDeleteModal && (
                 <div style={modalOverlayStyle}>
                     <div style={modalContentStyle}>
-                        <h3 style={{marginBottom: '1rem', color: 'var(--primary)'}}>
-                            <i className="fas fa-exclamation-triangle" style={{color: 'var(--accent)', marginRight: '0.5rem'}}></i>
+                        <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>
+                            <i className="fas fa-exclamation-triangle" style={{ color: 'var(--accent)', marginRight: '0.5rem' }}></i>
                             刪除評論確認
                         </h3>
-                        <p style={{marginBottom: '1rem', color: 'var(--gray)'}}>
+                        <p style={{ marginBottom: '1rem', color: 'var(--gray)' }}>
                             請選擇刪除原因，這將發送通知給用戶 <strong>{review.customer.username}</strong>：
                         </p>
-                        <div style={{marginBottom: '1rem'}}>
-                            <label style={{display: 'block', marginBottom: '0.5rem', cursor: 'pointer'}}>
-                                <input type="radio" name="deleteReason" value="inappropriate" checked={deleteReason === 'inappropriate'} onChange={(e) => setDeleteReason(e.target.value)} style={{marginRight: '0.5rem'}} />
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', cursor: 'pointer' }}>
+                                <input type="radio" name="deleteReason" value="inappropriate" checked={deleteReason === 'inappropriate'} onChange={(e) => setDeleteReason(e.target.value)} style={{ marginRight: '0.5rem' }} />
                                 內容不合規 (默認)
                             </label>
-                            <label style={{display: 'block', marginBottom: '0.5rem', cursor: 'pointer'}}>
-                                <input type="radio" name="deleteReason" value="ads" checked={deleteReason === 'ads'} onChange={(e) => setDeleteReason(e.target.value)} style={{marginRight: '0.5rem'}} />
+                            <label style={{ display: 'block', marginBottom: '0.5rem', cursor: 'pointer' }}>
+                                <input type="radio" name="deleteReason" value="ads" checked={deleteReason === 'ads'} onChange={(e) => setDeleteReason(e.target.value)} style={{ marginRight: '0.5rem' }} />
                                 廣告或推廣信息
                             </label>
-                            <label style={{display: 'block', marginBottom: '0.5rem', cursor: 'pointer'}}>
-                                <input type="radio" name="deleteReason" value="irrelevant" checked={deleteReason === 'irrelevant'} onChange={(e) => setDeleteReason(e.target.value)} style={{marginRight: '0.5rem'}} />
+                            <label style={{ display: 'block', marginBottom: '0.5rem', cursor: 'pointer' }}>
+                                <input type="radio" name="deleteReason" value="irrelevant" checked={deleteReason === 'irrelevant'} onChange={(e) => setDeleteReason(e.target.value)} style={{ marginRight: '0.5rem' }} />
                                 與商品無關
                             </label>
-                            <label style={{display: 'block', marginBottom: '0.5rem', cursor: 'pointer'}}>
-                                <input type="radio" name="deleteReason" value="custom" checked={deleteReason === 'custom'} onChange={(e) => setDeleteReason(e.target.value)} style={{marginRight: '0.5rem'}} />
+                            <label style={{ display: 'block', marginBottom: '0.5rem', cursor: 'pointer' }}>
+                                <input type="radio" name="deleteReason" value="custom" checked={deleteReason === 'custom'} onChange={(e) => setDeleteReason(e.target.value)} style={{ marginRight: '0.5rem' }} />
                                 自定義原因
                             </label>
                         </div>
                         {deleteReason === 'custom' && (
                             <textarea
-                                style={{width: '100%', minHeight: '80px', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', fontFamily: 'inherit'}}
+                                style={{ width: '100%', minHeight: '80px', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ddd', fontFamily: 'inherit' }}
                                 placeholder="請輸入具體的刪除原因..."
                                 value={customReason}
                                 onChange={(e) => setCustomReason(e.target.value)}
                             />
                         )}
-                        <div style={{display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem'}}>
-                            <button onClick={() => setShowDeleteModal(false)} style={{padding: '0.5rem 1rem', background: '#e9ecef', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>取消</button>
-                            <button onClick={confirmDeleteWithReason} style={{padding: '0.5rem 1rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>確認刪除</button>
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                            <button onClick={() => setShowDeleteModal(false)} style={{ padding: '0.5rem 1rem', background: '#e9ecef', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>取消</button>
+                            <button onClick={confirmDeleteWithReason} style={{ padding: '0.5rem 1rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>確認刪除</button>
                         </div>
                     </div>
                 </div>
@@ -487,11 +554,11 @@ const ReviewCard = ({
             {showBlockModal && (
                 <div style={modalOverlayStyle} onClick={() => setShowBlockModal(false)}>
                     <div style={modalContentStyle} onClick={e => e.stopPropagation()}>
-                        <h3 style={{marginBottom: '1rem', color: 'var(--primary)'}}>
-                            <i className="fas fa-gavel" style={{color: 'var(--accent)', marginRight: '0.5rem'}}></i>
+                        <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>
+                            <i className="fas fa-gavel" style={{ color: 'var(--accent)', marginRight: '0.5rem' }}></i>
                             管理員禁言
                         </h3>
-                        <p style={{marginBottom: '1rem', color: 'var(--gray)'}}>
+                        <p style={{ marginBottom: '1rem', color: 'var(--gray)' }}>
                             請輸入禁言時長，用戶在期間內將無法在任何評論區回復：
                         </p>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', margin: '1.5rem 0' }}>
@@ -513,16 +580,16 @@ const ReviewCard = ({
                                 <option value="month">月</option>
                             </select>
                         </div>
-                        <div style={{display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem'}}>
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
                             <button
                                 onClick={() => setShowBlockModal(false)}
-                                style={{padding: '0.5rem 1rem', background: '#e9ecef', border: 'none', borderRadius: '4px', cursor: 'pointer'}}
+                                style={{ padding: '0.5rem 1rem', background: '#e9ecef', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                             >
                                 取消
                             </button>
                             <button
                                 onClick={handleConfirmBlock}
-                                style={{padding: '0.5rem 1rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer'}}
+                                style={{ padding: '0.5rem 1rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                             >
                                 確認禁言
                             </button>

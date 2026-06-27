@@ -47,6 +47,13 @@ const ReviewForm = ({ productId, orderNo, onSuccess }) => {
                     onSuccess();
                 }
             } else {
+               // 攔截「永久拉黑」錯誤，彈出紅色警告框
+               if (result.message === "BLACKLISTED") {
+                   if (window.showBlacklistedModal) {
+                          window.showBlacklistedModal(); // 直接調用，彈出紅色的永久拉黑彈窗
+                   }
+                     return; // 攔截，不執行後續的 alert
+               }
                 //  新增：處理管理員全局禁言錯誤
                 if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
                     // 調用 HTML 中定義的全局彈窗函數

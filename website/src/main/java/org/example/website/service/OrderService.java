@@ -21,24 +21,23 @@ public class OrderService {
     private final CustomerRepository customerRepository; // 新增：直接獲取用戶實體
     private final OrderItemRepository orderItemRepository;
 
+    /**
+     * 1. 創建訂單 (移除庫存扣減，僅校驗庫存是否充足)
+     */
     @Transactional
     public Order createOrder(String username) {
-        // 獲取用戶購物車
         List<Cart> cartItems = cartRepository.findByCustomer_UsernameOrderByCreatedAtDesc(username);
         if (cartItems == null || cartItems.isEmpty()) {
             throw new RuntimeException("購物車是空的，無法創建訂單");
         }
 
-        // 計算總金額
         BigDecimal totalAmount = cartItems.stream()
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 獲取當前用戶實體
         Customer customer = customerRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
-        // 創建訂單實體
         Order order = new Order();
         order.setOrderNo("ORD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
         order.setCustomer(customer);
@@ -47,61 +46,71 @@ public class OrderService {
         order.setPaymentStatus(Order.PaymentStatus.UNPAID);
         order.setPaymentMethod("PAYPAL_SIM");
 
-        // 校驗並扣減庫存
+        //  僅校驗庫存，不再扣減庫存！
         for (Cart item : cartItems) {
             Product product = item.getProduct();
             if (product.getStock() < item.getQuantity()) {
                 throw new RuntimeException("商品 [" + product.getDescription() + "] 庫存不足，當前庫存: " + product.getStock());
             }
-            // 扣減庫存
-            product.setStock(product.getStock() - item.getQuantity());
-            productRepository.save(product);
         }
 
-        // 【新增】保存訂單（先保存訂單以獲取 ID）
         Order savedOrder = orderRepository.save(order);
 
-        // 【新增】創建 OrderItem 記錄
         for (Cart cartItem : cartItems) {
             OrderItem orderItem = new OrderItem();
-            orderItem.setOrder(savedOrder);  // 關聯訂單
-            orderItem.setProduct(cartItem.getProduct());  // 關聯商品
-            orderItem.setQuantity(cartItem.getQuantity());  // 數量
-            orderItem.setPrice(cartItem.getPrice());  // 單價
-            orderItemRepository.save(orderItem);  // 保存訂单项
+            orderItem.setOrder(savedOrder);
+            orderItem.setProduct(cartItem.getProduct());
+            orderItem.setQuantity(cartItem.getQuantity());
+            orderItem.setPrice(cartItem.getPrice());
+            orderItemRepository.save(orderItem);
         }
 
-        // 訂單生成後，清空購物車
-        cartRepository.deleteByCustomer_Username(username);
-
+        //cartRepository.deleteByCustomer_Username(username);
         return savedOrder;
     }
 
     /**
-     * 2. 模擬支付處理 (核心校驗)
+     * 統一的庫存扣減方法 (防止代碼重複，並加入支付時的二次校驗防超賣)
+     */
+    private void deductStock(Order order) {
+        for (OrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            //  關鍵防護：支付時再次校驗庫存，防止並發情況下創建訂單後、支付前庫存被他人買走
+            if (product.getStock() < item.getQuantity()) {
+                throw new RuntimeException("支付失敗：商品 [" + product.getDescription() + "] 庫存不足，可能已被他人搶購，請取消訂單重試。");
+            }
+            // 真正執行扣減
+            product.setStock(product.getStock() - item.getQuantity());
+            productRepository.save(product);
+        }
+    }
+
+
+    /**
+     * 2. 線上模擬支付處理 (支付成功後扣減庫存)
      */
     @Transactional
     public Order simulatePayment(String orderNo, String username, BigDecimal payAmount) {
-        // 校驗 1: 訂單是否存在且屬於當前用戶 (防越權)
         Order order = orderRepository.findByOrderNoAndCustomer_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
 
-        // 校驗 2: 訂單狀態必須是未支付 (防重複支付/冪等性)
         if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID) {
             throw new RuntimeException("訂單狀態異常，無法重複支付。當前狀態: " + order.getPaymentStatus());
         }
 
-        // 校驗 3: 支付金額必須與訂單總金額完全一致 (防篡改金額攻擊)
         if (order.getTotalAmount().compareTo(payAmount) != 0) {
-            throw new RuntimeException("支付金額不匹配，可能存在安全風險！訂單金額: " + order.getTotalAmount() + ", 嘗試支付: " + payAmount);
+            throw new RuntimeException("支付金額不匹配，可能存在安全風險！");
         }
 
-        // 校驗通過，更新狀態
         order.setPaymentStatus(Order.PaymentStatus.PAID_SIMULATED);
         order.setStatus(Order.OrderStatus.PAID);
         order.setPaidAt(LocalDateTime.now());
+        Order savedOrder = orderRepository.save(order);
 
-        return orderRepository.save(order);
+        //  【修改處 2】：線上支付成功，真正扣減庫存！
+        deductStock(savedOrder);
+
+        return savedOrder;
     }
 
     /**
@@ -121,27 +130,27 @@ public class OrderService {
     }
 
     /**
-     * 處理線下支付邏輯 (封裝數據庫操作與業務校驗)
+     * 4. 處理線下支付邏輯 (確認線下支付訂單後扣減庫存)
      */
     @Transactional
     public Order processOfflinePayment(String orderNo, String username, String storeId) {
-        // 1. 獲取訂單並校驗權限 (防越權攻擊)
         Order order = orderRepository.findByOrderNoAndCustomer_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
 
-        // 2. 冪等性校驗 (必須是未支付狀態才能選擇線下支付)
         if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID) {
             throw new RuntimeException("訂單狀態異常，無法更改支付方式。當前狀態: " + order.getPaymentStatus());
         }
 
-        // 3.  更新支付狀態與方式 (分離存儲)
         order.setPaymentStatus(Order.PaymentStatus.PENDING_OFFLINE);
-        order.setPaymentMethod("OFFLINE_STORE"); //  保持簡短，符合 length=20 限制
-        order.setOfflineStoreId(storeId);        //  將具體店鋪 ID 存入專屬欄位
+        order.setPaymentMethod("OFFLINE_STORE");
+        order.setOfflineStoreId(storeId);
+        Order savedOrder = orderRepository.save(order);
 
-        // 注意：OrderStatus 保持 PENDING，等待店員收款後再由後台管理系統流轉為 PAID
+        // 【修改處 3】：線下支付確認生成訂單後，扣減庫存。
+        // (註：由於前端流程在此直接跳轉成功頁，此處視為「確認支付」並扣減。
+        // 若未來有「後台店員確認收款」的功能，應將此行移至後台確認收款的 API 中)
+        deductStock(savedOrder);
 
-        // 4. 保存並返回
-        return orderRepository.save(order);
+        return savedOrder;
     }
 }
