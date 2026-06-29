@@ -26,7 +26,8 @@ public class OrderService {
      */
     @Transactional
     public Order createOrder(String username) {
-        List<Cart> cartItems = cartRepository.findByCustomer_UsernameOrderByCreatedAtDesc(username);
+        List<Cart> cartItems = cartRepository.findByCustomer_UsernameAndSelectedTrue(username);
+        //List<Cart> cartItems = cartRepository.findByCustomer_UsernameOrderByCreatedAtDesc(username);
         if (cartItems == null || cartItems.isEmpty()) {
             throw new RuntimeException("購物車是空的，無法創建訂單");
         }
@@ -65,6 +66,7 @@ public class OrderService {
             orderItemRepository.save(orderItem);
         }
 
+        cartRepository.deleteByCustomer_UsernameAndSelectedTrue(username);
         //cartRepository.deleteByCustomer_Username(username);
         return savedOrder;
     }
@@ -152,5 +154,103 @@ public class OrderService {
         deductStock(savedOrder);
 
         return savedOrder;
+    }
+
+    /**
+     * 刪除訂單 (僅允許刪除待付款狀態的訂單)
+     */
+    @Transactional
+    public void deleteOrder(String orderNo, String username) {
+        // 1. 查找訂單並校驗權限 (確保只能刪自己的訂單)
+        Order order = orderRepository.findByOrderNoAndCustomer_Username(orderNo, username)
+                .orElseThrow(() -> new RuntimeException("訂單不存在或無權操作"));
+
+        // 2. 核心校驗：只允許刪除「未付款」或「待線下付款」的訂單
+        if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID &&
+                order.getPaymentStatus() != Order.PaymentStatus.PENDING_OFFLINE) {
+            throw new RuntimeException("已付款或正在處理中的訂單無法刪除");
+        }
+
+        // 3. 執行刪除
+        // (因為 Order 實體中配置了 cascade = CascadeType.ALL，關聯的 OrderItem 會自動級聯刪除)
+        orderRepository.delete(order);
+    }
+
+
+    /**
+     * 修改结账页面中的订单商品数量，并重算总价
+     */
+    @Transactional
+    public OrderItem updateOrderItemQuantity(Long orderItemId, Integer newQuantity, String username) {
+        OrderItem item = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new RuntimeException("订单商品不存在"));
+
+        Order order = item.getOrder();
+        // 校验权限和订单状态（必须是未付款的订单才能改）
+        if (!order.getCustomer().getUsername().equals(username)) {
+            throw new RuntimeException("无权操作此订单");
+        }
+        if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID) {
+            throw new RuntimeException("订单已支付或正在处理中，无法修改");
+        }
+
+        // 校验库存
+        if (newQuantity > item.getProduct().getStock()) {
+            throw new RuntimeException("库存不足，当前库存: " + item.getProduct().getStock());
+        }
+        if (newQuantity <= 0) {
+            throw new RuntimeException("数量必须大于0，若要删除请使用删除接口");
+        }
+
+        item.setQuantity(newQuantity);
+        orderItemRepository.save(item);
+
+        //  核心：重新计算订单总价
+        recalculateOrderTotal(order);
+        return item;
+    }
+
+    /**
+     * 从待支付订单中删除某个商品，并重算总价
+     */
+    @Transactional
+    public void removeOrderItem(Long orderItemId, String username) {
+        OrderItem item = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new RuntimeException("订单商品不存在"));
+
+        Order order = item.getOrder();
+        if (!order.getCustomer().getUsername().equals(username)) {
+            throw new RuntimeException("无权操作此订单");
+        }
+        if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID) {
+            throw new RuntimeException("订单已支付，无法删除商品");
+        }
+
+        // 删除该明细
+        orderItemRepository.delete(item);
+
+        //  核心：重新计算订单总价
+        recalculateOrderTotal(order);
+
+        // 如果订单被删空了，直接取消/删除该订单
+        List<OrderItem> remainingItems = orderItemRepository.findByOrder_OrderNo(order.getOrderNo());
+        if (remainingItems.isEmpty()) {
+            orderRepository.delete(order);
+            throw new RuntimeException("订单商品已清空，订单已自动取消");
+        }
+    }
+
+    /**
+     * 根据订单当前的 OrderItem 重新计算总价
+     */
+    private void recalculateOrderTotal(Order order) {
+        // 重新查询最新的 OrderItem 列表，防止缓存问题
+        List<OrderItem> items = orderItemRepository.findByOrder_OrderNo(order.getOrderNo());
+        BigDecimal newTotal = items.stream()
+                .map(i -> i.getPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        order.setTotalAmount(newTotal);
+        orderRepository.save(order);
     }
 }

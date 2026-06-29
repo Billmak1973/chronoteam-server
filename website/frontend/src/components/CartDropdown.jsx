@@ -93,10 +93,34 @@ const CartDropdown = () => {
     }
   }
 
-  // 🟢 核心修復：處理結帳邏輯 (調用後端 API 創建訂單並跳轉)
+  //  新增：切換選中狀態 (樂觀更新)
+  const toggleSelection = async (cartId, currentStatus) => {
+    const newStatus = !currentStatus
+
+    // 1. 立即更新 UI (樂觀更新)
+    const originalItems = [...cartItems]
+    setCartItems(items => items.map(item =>
+        item.id === cartId ? { ...item, selected: newStatus } : item
+    ))
+
+    try {
+        // 2. 發送 API 請求
+        await fetch(`/api/cart/toggle-selection/${cartId}?isSelected=${newStatus}`, {
+            method: 'PUT'
+        })
+    } catch (error) {
+        console.error('更新狀態失敗', error)
+        // 3. 失敗則回滾 UI
+        setCartItems(originalItems)
+    }
+  }
+
+  //  核心修復：處理結帳邏輯 (調用後端 API 創建訂單並跳轉)
   const handleCheckout = async () => {
-    if (cartItems.length === 0) {
-      alert('購物車是空的！')
+    // 【新增檢查】至少選中一個商品
+    const selectedItems = cartItems.filter(item => item.selected !== false)
+    if (selectedItems.length === 0) {
+      alert('請至少選擇一件商品進行結算！')
       return
     }
 
@@ -120,11 +144,12 @@ const CartDropdown = () => {
     }
   }
 
-  // 計算總價
-  const totalAmount = cartItems.reduce((sum, item) =>
-    sum + (item.price * item.quantity), 0
-  )
+  //  計算總價 (只計算選中的商品)
+  const totalAmount = cartItems
+    .filter(item => item.selected !== false) // 過濾掉未選中的
+    .reduce((sum, item) => sum + (item.price * item.quantity), 0)
 
+  // 購物車角標數量 (計算所有商品，保持原樣)
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
   // 格式化價格
@@ -179,6 +204,7 @@ const CartDropdown = () => {
                     item={item}
                     onUpdateQuantity={updateQuantity}
                     onRemove={removeItem}
+                    onToggleSelection={toggleSelection} // 🟢 傳遞切換函數
                     formatPrice={formatPrice}
                     isUpdating={optimisticUpdates[item.id]}
                   />
@@ -207,11 +233,19 @@ const CartDropdown = () => {
 }
 
 // 購物車商品項目組件
-const CartItem = ({ item, onUpdateQuantity, onRemove, formatPrice, isUpdating }) => {
-  const { product, quantity, id: cartId, price } = item
+const CartItem = ({ item, onUpdateQuantity, onRemove, onToggleSelection, formatPrice, isUpdating }) => {
+  const { product, quantity, id: cartId, price, selected } = item // 🟢 解構 selected
 
   return (
     <div className={`cart-item ${isUpdating ? 'updating' : ''}`}>
+      {/* 🟢 新增：Checkbox */}
+      <input
+        type="checkbox"
+        checked={selected !== false}
+        onChange={() => onToggleSelection(cartId, selected)}
+        style={{ marginRight: '10px', cursor: 'pointer', transform: 'scale(1.2)', flexShrink: 0 }}
+      />
+
       <div className="cart-item-image">
         <img
           src={`/images/products/${product.image}`}

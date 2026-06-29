@@ -70,11 +70,14 @@ body {
 .cart-items-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
 .cart-items-container::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
 .cart-items-container::-webkit-scrollbar-thumb:hover { background: #b8972b; }
-.cart-item { display: flex; gap: 1rem; padding: 1rem; background: white; border-radius: 8px; margin-bottom: 1rem; align-items: center; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); transition: transform 0.2s; }
+
+/*  核心卡片樣式 */
+.cart-item { display: flex; gap: 0.8rem; padding: 1rem; background: white; border-radius: 8px; margin-bottom: 1rem; align-items: center; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); transition: all 0.3s ease; }
 .cart-item:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08); }
 .cart-item:last-child { margin-bottom: 0; }
+
 .cart-item-img { width: 70px; height: 70px; border-radius: 6px; overflow: hidden; flex-shrink: 0; border: 1px solid #e9ecef; }
-.cart-item-img img { width: 100%; height: 100%; object-fit: cover; }
+.cart-item-img img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.3s ease, opacity 0.3s ease; }
 .cart-item-info { flex: 1; min-width: 0; }
 .cart-item-name { font-weight: 600; font-size: 0.9rem; color: var(--primary); margin-bottom: 0.4rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cart-item-price { color: var(--accent); font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem; }
@@ -85,6 +88,7 @@ body {
 .qty-value { font-weight: 600; min-width: 24px; text-align: center; font-size: 0.9rem; }
 .cart-item-remove { color: var(--gray); cursor: pointer; padding: 0.5rem; transition: all 0.2s; flex-shrink: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
 .cart-item-remove:hover { color: var(--accent); background: rgba(233, 69, 96, 0.1); }
+
 .cart-empty { text-align: center; padding: 3rem 1rem; color: var(--gray); }
 .cart-empty i { font-size: 3.5rem; margin-bottom: 1rem; color: #ddd; }
 .cart-footer { border-top: 2px solid var(--gold); padding: 1.2rem 1.5rem; background: white; flex-shrink: 0; }
@@ -114,6 +118,7 @@ body {
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(50px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
 /* === 响应式 === */
 @media (max-width: 768px) {
@@ -126,7 +131,7 @@ body {
 }
 
 /* ==========================================
-   🟢 React 購物車補充樣式 (新增)
+    React 購物車補充樣式
    ========================================== */
 .cart-body {
   flex: 1;
@@ -172,4 +177,168 @@ body {
   color: var(--accent);
   font-weight: 700;
   font-size: 1.3rem;
+}
+
+/* ==========================================
+   購物車商品復選框 (Checkbox) 與選中狀態樣式
+   ========================================== */
+.cart-item-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-right: 0.2rem;
+}
+
+.cart-item-select {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--gold);
+    transition: transform 0.2s ease;
+}
+
+.cart-item-select:hover {
+    transform: scale(1.15);
+}
+
+.cart-item:not(:has(.cart-item-select:checked)) {
+    opacity: 0.55;
+    background: #fcfcfc;
+}
+
+.cart-item:not(:has(.cart-item-select:checked)) .cart-item-img img {
+    filter: grayscale(100%);
+    opacity: 0.8;
+}
+
+.cart-item:has(.cart-item-select:checked) {
+    border-left: 3px solid var(--gold);
+}
+
+/* ==========================================
+   🚪 自定義登出確認彈窗樣式
+   ========================================== */
+
+/* 遮罩层 */
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+/* 弹窗主体 */
+.custom-modal-box {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+}
+
+/* 图标样式 */
+.logout-modal-icon {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #e94560 0%, #c73e54 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    box-shadow: 0 8px 20px rgba(233, 69, 96, 0.4);
+}
+
+.logout-modal-icon i {
+    font-size: 2rem;
+    color: white;
+}
+
+.logout-modal-title {
+    font-size: 1.5rem;
+    color: var(--primary);
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.logout-modal-message {
+    color: var(--gray);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+/* 按钮区域 */
+.logout-modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.btn-cancel-logout {
+    padding: 0.7rem 1.5rem;
+    background: #e9ecef;
+    color: var(--primary);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.btn-cancel-logout:hover {
+    background: #dee2e6;
+    transform: translateY(-2px);
+}
+
+.btn-confirm-logout {
+    padding: 0.7rem 1.5rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.btn-confirm-logout:hover {
+    background: #c73e54;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
+}
+
+/* 登出弹窗响应式 */
+@media (max-width: 480px) {
+    .custom-modal-box {
+        padding: 2rem 1.5rem;
+    }
+    .logout-modal-actions {
+        flex-direction: column;
+    }
+    .btn-cancel-logout,
+    .btn-confirm-logout {
+        width: 100%;
+        justify-content: center;
+    }
 }

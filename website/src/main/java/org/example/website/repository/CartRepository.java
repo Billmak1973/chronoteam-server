@@ -18,17 +18,16 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     // 查询用户购物车中的特定商品
     Cart findByCustomer_UsernameAndProduct_Id(String username, Integer productId);
 
-    // 更新商品数量
-    @Modifying
-    @Query("UPDATE Cart c SET c.quantity = :quantity WHERE c.id = :id")
-    void updateQuantity(@Param("id") Long id, @Param("quantity") Integer quantity);
 
     // 删除用户的购物车商品
     void deleteByCustomer_UsernameAndProduct_Id(String username, Integer productId);
 
-    // 清空用户购物车
-    void deleteByCustomer_Username(String username);
-
     // 统计用户购物车商品数量
     long countByCustomer_Username(String username);
+
+    // 查询用户选中的商品
+    List<Cart> findByCustomer_UsernameAndSelectedTrue(String username);
+
+    // 删除用户选中的商品（结算后删除）
+    void deleteByCustomer_UsernameAndSelectedTrue(String username);
 }

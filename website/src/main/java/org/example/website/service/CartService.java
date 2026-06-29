@@ -100,4 +100,18 @@ public class CartService {
     public long getCartCount(String username) {
         return cartRepository.countByCustomer_Username(username);
     }
+
+    @Transactional
+    public void toggleSelection(String username, Long cartId, boolean isSelected) {
+        Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new RuntimeException("购物车商品不存在"));
+
+        // 权限校验：确保这个购物车属于当前用户
+        if (!cart.getCustomer().getUsername().equals(username)) {
+            throw new RuntimeException("无权操作");
+        }
+
+        cart.setSelected(isSelected);
+        cartRepository.save(cart);
+    }
 }

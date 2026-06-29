@@ -1,7 +1,6 @@
 
 package org.example.website.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -42,6 +41,9 @@ public class Cart {
 
     @Column(name = "cart_order_date", nullable = false)
     private LocalDate orderDate;
+
+    @Column(name = "selected", nullable = false)
+    private Boolean selected = true;  // 默认选中
 
     @UpdateTimestamp
     @Column(name = "updated_at")

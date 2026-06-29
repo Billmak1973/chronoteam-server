@@ -131,4 +131,13 @@ public class CartController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/toggle-selection/{cartId}")
+    public ResponseEntity<ApiResponse> toggleSelection(@PathVariable Long cartId,
+                                                       @RequestParam Boolean isSelected,
+                                                       Authentication authentication) {
+        // ... 权限检查 ...
+        cartService.toggleSelection(authentication.getName(), cartId, isSelected);
+        return ResponseEntity.ok(ApiResponse.ok("更新成功"));
+    }
 }

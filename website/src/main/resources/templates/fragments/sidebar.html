@@ -50,6 +50,11 @@
                th:classappend="${activePage == 'orders'} ? 'active' : ''">
                 <i class="fas fa-box"></i> 我的訂單
             </a>
+            <!-- ：購物車菜單項 -->
+            <a href="/cart/view" class="menu-item"
+               th:classappend="${activePage == 'cart'} ? 'active' : ''">
+                <i class="fas fa-shopping-cart"></i> 購物車
+            </a>
             <a href="/account/favorites" class="menu-item"
                th:classappend="${activePage == 'favorites'} ? 'active' : ''">
                 <i class="fas fa-heart"></i> 我的收藏
@@ -80,10 +85,6 @@
             <a href="/account/blocked-users" class="menu-item"
                th:classappend="${activePage == 'blocked-users'} ? 'active' : ''">
                 <i class="fas fa-ban"></i> 禁言名單
-            </a>
-            <a href="/account/reports" class="menu-item"
-               th:classappend="${activePage == 'reports'} ? 'active' : ''">
-                <i class="fas fa-flag"></i> 舉報記錄
             </a>
         </div>
 

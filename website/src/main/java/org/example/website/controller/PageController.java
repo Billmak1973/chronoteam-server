@@ -48,6 +48,7 @@ public class PageController {
     private final SecurityQuestionRepository securityQuestionRepository;
     private final AdminPenaltyRepository adminPenaltyRepository;
     private final AdminPenaltyService adminPenaltyService;
+    private final CartService cartService;
 
     public PageController(CustomerService customerService,
                           LoginLogRepository loginLogRepository,
@@ -61,7 +62,8 @@ public class PageController {
                           AppealRepository appealRepository,
                           SecurityQuestionRepository securityQuestionRepository,
                           AdminPenaltyRepository adminPenaltyRepository,
-                          AdminPenaltyService adminPenaltyService) {
+                          AdminPenaltyService adminPenaltyService,
+                                  CartService cartService) {
         this.customerService = customerService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -75,6 +77,7 @@ public class PageController {
         this.securityQuestionRepository = securityQuestionRepository;
         this.adminPenaltyRepository = adminPenaltyRepository;
         this.adminPenaltyService = adminPenaltyService;
+        this.cartService = cartService;
     }
 
     @GetMapping("/")
@@ -500,5 +503,33 @@ public class PageController {
         model.addAttribute("customer", customer);
         model.addAttribute("blockedUsers", blockedUsers);
         return "blocked-users"; // 對應 templates/blocked-users.html
+    }
+
+    @GetMapping("/cart/view")
+    public String viewCartPage(Model model, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return "redirect:/";
+        }
+
+        String username = authentication.getName();
+
+        // 獲取當前用戶信息 (側邊欄需要用來顯示頭像、姓名、郵箱)
+        Customer customer = customerService.findByUsername(username);
+        model.addAttribute("customer", customer);
+
+        // 獲取購物車數據
+        List<Cart> cartItems = cartService.getCartItems(username);
+        long cartCount = cartService.getCartCount(username);
+
+        // 計算總價
+        double totalAmount = cartItems.stream()
+                .mapToDouble(item -> item.getPrice().doubleValue() * item.getQuantity())
+                .sum();
+
+        model.addAttribute("cartItems", cartItems);
+        model.addAttribute("totalAmount", totalAmount);
+        model.addAttribute("cartCount", cartCount);
+
+        return "cart-detail";
     }
 }

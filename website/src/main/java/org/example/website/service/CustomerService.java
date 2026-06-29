@@ -28,6 +28,10 @@ public class CustomerService {
     public Customer register(RegisterRequest request) {
         if (customerRepository.existsById(request.getUsername())) throw new RuntimeException("用戶名已存在");
         if (customerRepository.findByEmail(request.getEmail()).isPresent()) throw new RuntimeException("郵箱已被註冊");
+        // 檢查手機號碼是否已被註冊
+        if (customerRepository.findByPhone(request.getPhone()).isPresent()) {
+            throw new RuntimeException("該手機號碼已被註冊，請使用其他號碼或嘗試登入");
+        }
 
         Customer customer = new Customer();
         customer.setUsername(request.getUsername());
@@ -39,7 +43,7 @@ public class CustomerService {
 
         Customer savedCustomer = customerRepository.save(customer);
 
-        // 🟢 註冊成功後，將用戶資訊存入 Redis，設定 1 小時過期
+        //  註冊成功後，將用戶資訊存入 Redis，設定 1 小時過期
         String redisKey = "user:info:" + savedCustomer.getUsername();
         redisTemplate.opsForValue().set(redisKey, savedCustomer, 1, TimeUnit.HOURS);
 

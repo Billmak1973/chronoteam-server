@@ -6,28 +6,632 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
     <style>
-        .checkout-container { max-width: 800px; margin: 3rem auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        .order-summary { background: var(--light); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+        /* === 結賬容器與基礎佈局 === */
+        .checkout-container { max-width: 1000px; margin: 3rem auto; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .order-summary { background: var(--light); padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; border-left: 4px solid var(--gold); }
         .summary-row { display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 1.1rem; }
         .total-row { font-size: 1.5rem; font-weight: 700; color: var(--accent); border-top: 2px solid #ddd; padding-top: 1rem; margin-top: 1rem; }
-        .pay-btn { width: 100%; padding: 1rem; font-size: 1.2rem; margin-top: 1rem; }
+        .pay-btn { width: 100%; padding: 1rem; font-size: 1.2rem; margin-top: 1rem;
+    /* --- 新增以下属性来强制居中 --- */
+    display: flex;             /* 启用 Flex 布局 */
+    justify-content: center;   /* 水平居中 */
+    align-items: center;       /* 垂直居中 */
+    text-align: center;        /* 文本居中（保险起见） */
+    gap: 0.5rem;               /* 图标和文字之间的间距，可选 */}
 
-        /* 🟢 新增：支付方式样式 */
-        .payment-methods { margin-bottom: 2rem; }
-        .payment-option { display: flex; align-items: center; padding: 1rem; border: 2px solid #e9ecef; border-radius: 8px; margin-bottom: 1rem; cursor: pointer; transition: all 0.3s; }
-        .payment-option:hover { border-color: var(--gold); background: rgba(212, 175, 55, 0.05); }
-        .payment-option input[type="radio"] { margin-right: 1rem; width: 20px; height: 20px; cursor: pointer; }
-        .payment-option label { flex: 1; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
-        .payment-option label i { color: var(--gold); font-size: 1.2rem; }
+        /* === 購物車商品列表區域 === */
+        .checkout-container .cart-items-section { margin-bottom: 2rem; }
+        .checkout-container .cart-items-section h3 { margin-bottom: 1rem; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; }
+        .checkout-container .cart-items-section h3 i { color: var(--gold); }
 
-        /* 店铺选择区域样式 */
-        #storeSelection { margin-top: 1rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--gold); }
-        #storeSelect { width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; margin-top: 0.5rem; cursor: pointer; }
-        #storeSelect:focus { outline: none; border-color: var(--gold); }
-        .store-info { margin-top: 1rem; padding: 1rem; background: #fff3cd; border-radius: 6px; font-size: 0.9rem; }
-        .store-info strong { color: #856404; display: block; margin-bottom: 0.5rem; }
-        .store-info ul { margin: 0.5rem 0 0 1.5rem; color: #856404; }
-        .store-info li { margin-bottom: 0.3rem; }
+        /* 表頭樣式 - 修改為6列 */
+        .checkout-container .cart-header {
+            display: grid;
+            grid-template-columns: 50px 1fr 150px 150px 150px 80px;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            color: var(--primary);
+            border-bottom: 2px solid #e9ecef;
+            align-items: center;
+        }
+
+        /* 商品列表 - 新增滾動功能 */
+        .checkout-container .cart-items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-height: 600px;  /* 限制最大高度 */
+            overflow-y: auto;    /* 啟用垂直滾動 */
+            padding-right: 10px; /* 為滾動條留空間 */
+        }
+
+        /* 美化滾動條 */
+        .checkout-container .cart-items-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        .checkout-container .cart-items-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .checkout-container .cart-items-list::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 10px;
+        }
+        .checkout-container .cart-items-list::-webkit-scrollbar-thumb:hover {
+            background: #b8972b;
+        }
+
+        /* 單個商品卡片 - 修改為6列 */
+        .checkout-container .cart-item-card {
+            display: grid;
+            grid-template-columns: 50px 1fr 150px 150px 150px 80px;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            align-items: center;
+            transition: all 0.3s;
+            flex-shrink: 0;  /* 防止卡片被壓縮 */
+        }
+
+        .checkout-container .cart-item-card:hover {
+            border-color: var(--gold);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .checkout-container .cart-item-card.selected {
+            background: linear-gradient(135deg, #fffdf5 0%, #ffffff 100%);
+            border-color: var(--gold);
+        }
+
+        /* Checkbox 樣式 */
+        .checkout-container .item-checkbox {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        /* 商品信息 */
+        .checkout-container .item-info-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .checkout-container .item-img {
+            width: 80px;
+            height: 80px;
+            border-radius: 6px;
+            object-fit: cover;
+            border: 1px solid #e9ecef;
+        }
+
+        .checkout-container .item-name {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        /* 單價 */
+        .checkout-container .item-price {
+            text-align: right;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        /* 數量控制 */
+        .checkout-container .quantity-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .checkout-container .qty-btn {
+            width: 32px;
+            height: 32px;
+            border: 2px solid #e9ecef;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: var(--primary);
+            transition: all 0.2s;
+        }
+
+        .checkout-container .qty-btn:hover:not(:disabled) {
+            border-color: var(--gold);
+            background: var(--gold);
+            color: white;
+        }
+
+        .checkout-container .qty-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .checkout-container .qty-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+
+        /* 小計 */
+        .checkout-container .item-subtotal {
+            text-align: right;
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+
+        /* 刪除按鈕樣式 */
+        .checkout-container .delete-btn {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #e9ecef;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: var(--gray);
+            transition: all 0.2s;
+            justify-self: center;
+        }
+
+        .checkout-container .delete-btn:hover {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        /* 底部統計 */
+        .checkout-container .select-all-summary {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .checkout-container .select-all {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .checkout-container .select-all input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        /* 空購物車 */
+        .checkout-container .empty-cart {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray);
+        }
+
+        .checkout-container .empty-cart i {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* === 支付方式樣式 === */
+        .checkout-container .payment-methods { margin-bottom: 2rem; }
+        .checkout-container .payment-option { display: flex; align-items: center; padding: 1rem; border: 2px solid #e9ecef; border-radius: 8px; margin-bottom: 1rem; cursor: pointer; transition: all 0.3s; }
+        .checkout-container .payment-option:hover { border-color: var(--gold); background: rgba(212, 175, 55, 0.05); }
+        .checkout-container .payment-option input[type="radio"] { margin-right: 1rem; width: 20px; height: 20px; cursor: pointer; }
+        .checkout-container .payment-option label { flex: 1; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+        .checkout-container .payment-option label i { color: var(--gold); font-size: 1.2rem; }
+
+        /* 店鋪選擇區域樣式 */
+        .checkout-container #storeSelection { margin-top: 1rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--gold); }
+        .checkout-container #storeSelect { width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; margin-top: 0.5rem; cursor: pointer; }
+        .checkout-container #storeSelect:focus { outline: none; border-color: var(--gold); }
+        .checkout-container .store-info { margin-top: 1rem; padding: 1rem; background: #fff3cd; border-radius: 6px; font-size: 0.9rem; }
+        .checkout-container .store-info strong { color: #856404; display: block; margin-bottom: 0.5rem; }
+        .checkout-container .store-info ul { margin: 0.5rem 0 0 1.5rem; color: #856404; }
+        .checkout-container .store-info li { margin-bottom: 0.3rem; }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .checkout-container .cart-header {
+                display: none;
+            }
+
+            .checkout-container .cart-item-card {
+                grid-template-columns: 50px 1fr 80px;
+                gap: 1rem;
+            }
+
+            .checkout-container .item-price,
+            .checkout-container .quantity-control,
+            .checkout-container .item-subtotal,
+            .checkout-container .delete-btn {
+                display: none;
+            }
+
+            .checkout-container .item-price::before {
+                content: '單價：';
+                font-weight: 600;
+                color: var(--gray);
+            }
+
+            .checkout-container .item-subtotal::before {
+                content: '小計：';
+                font-weight: 600;
+                color: var(--gray);
+            }
+        }
+
+        /* === 取消全选确认提示框样式 === */
+        .confirm-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .confirm-modal-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .confirm-modal-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .confirm-modal-message {
+            color: var(--gray);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .confirm-modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-confirm-cancel,
+        .btn-confirm-yes {
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-confirm-cancel {
+            background: #e9ecef;
+            color: var(--primary);
+        }
+
+        .btn-confirm-cancel:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirm-yes {
+            background: var(--gold);
+            color: var(--primary);
+        }
+
+        .btn-confirm-yes:hover {
+            background: #b8972b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 响应式 */
+        @media (max-width: 480px) {
+            .confirm-modal-box {
+                padding: 2rem 1.5rem;
+            }
+
+            .confirm-modal-actions {
+                flex-direction: column;
+            }
+
+            .btn-confirm-cancel,
+            .btn-confirm-yes {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* 取消訂單按鈕樣式 */
+        .cancel-order-btn {
+            width: 100%;
+            padding: 1rem;
+            font-size: 1.1rem;
+            margin-top: 1rem;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .cancel-order-btn:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        /* === 🟢 新增：取消訂單精美彈窗樣式 === */
+        .delete-order-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 10001; /* 確保在取消全選彈窗之上 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: overlayFadeIn 0.3s ease;
+        }
+
+        @keyframes overlayFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .delete-order-modal-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            border-top: 5px solid #dc3545;
+            animation: modalSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+        }
+
+        .delete-order-modal-box::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(220, 53, 69, 0.2) 0%, rgba(220, 53, 69, 0) 70%);
+            z-index: 0;
+        }
+
+        @keyframes modalSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #dc3545 100%);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 1.5rem;
+            position: relative;
+            z-index: 1;
+            animation: iconPulse 2s infinite;
+        }
+
+        .modal-icon i {
+            font-size: 2rem;
+            color: white;
+        }
+
+        @keyframes iconPulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+        }
+
+        .modal-body {
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .modal-message {
+            color: var(--gray);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .order-no-highlight {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn-cancel-modal,
+        .btn-confirm-delete {
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 1rem;
+            min-width: 120px;
+        }
+
+        .btn-cancel-modal {
+            background: #e9ecef;
+            color: var(--primary);
+        }
+
+        .btn-cancel-modal:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirm-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-confirm-delete:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-confirm-delete:disabled {
+            background: #e48b93;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        /* === 删除成功跳转弹窗样式 === */
+.success-redirect-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    z-index: 10002; /* 确保在最上层 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.success-redirect-box {
+    background: white;
+    padding: 3rem 2rem;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-top: 5px solid var(--gold);
+}
+
+.success-icon {
+    font-size: 4rem;
+    color: #28a745; /* 绿色代表成功 */
+    margin-bottom: 1rem;
+    animation: popIn 0.5s ease;
+}
+
+@keyframes popIn {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
     </style>
 </head>
 <body>
@@ -38,6 +642,88 @@
         <i class="fas fa-lock" style="color: var(--gold);"></i> 安全結賬
     </h2>
 
+    <!-- 1. 購物車商品列表 -->
+    <div class="cart-items-section">
+        <h3><i class="fas fa-shopping-cart"></i> 購物車商品</h3>
+
+        <!-- 表頭 - 刪除全選checkbox，添加刪除列 -->
+        <div class="cart-header">
+            <div style="width: 50px;"></div>
+            <div>商品資訊</div>
+            <div style="text-align: right;">單價</div>
+            <div style="text-align: center;">數量</div>
+            <div style="text-align: right;">小計</div>
+            <div style="text-align: center;">刪除</div>
+        </div>
+
+        <!--  修改：遍历 orderItems，注意 data 属性绑定的是 orderItem.id -->
+        <div class="cart-items-list" id="cartItemsContainer">
+            <div th:each="item : ${orderItems}"
+                 class="cart-item-card selected"
+                 th:data-order-item-id="${item.id}"
+                 th:data-product-id="${item.product.id}"
+                 th:data-price="${item.price}"
+                 th:data-quantity="${item.quantity}"
+                 th:data-stock="${item.product.stock}">
+
+                <!-- Checkbox (保持全选逻辑) -->
+                <div style="text-align: center;">
+                    <input type="checkbox" class="item-checkbox" checked onchange="updateTotal()" style="width: 18px; height: 18px; cursor: pointer;">
+                </div>
+
+                <!-- 商品信息 -->
+                <div class="item-info-wrapper">
+                    <img th:src="@{/images/products/{img}(img=${item.product.image})}" class="item-img" onerror="this.src='/images/placeholder.png'">
+                    <span class="item-name" th:text="${item.product.description}">商品名稱</span>
+                </div>
+
+                <!-- 单价 -->
+                <div class="item-price">
+                    HK$ <span th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                </div>
+
+                <!-- 数量控制 -->
+                <div class="quantity-control">
+                    <button type="button" class="qty-btn" th:onclick="'updateQuantity(' + ${item.id} + ', -1)'" th:disabled="${item.quantity <= 1}">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <span class="qty-value" th:text="${item.quantity}">1</span>
+                    <button type="button" class="qty-btn" th:onclick="'updateQuantity(' + ${item.id} + ', 1)'" th:disabled="${item.quantity >= item.product.stock}">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+
+                <!-- 小计 -->
+                <div class="item-subtotal">
+                    HK$ <span th:text="${#numbers.formatDecimal(item.price * item.quantity, 1, 'COMMA', 0, 'POINT')}">0</span>
+                </div>
+
+                <!-- 删除按钮：传递 orderItem.id -->
+                <div style="text-align: center;">
+                    <button type="button" class="delete-btn" th:data-item-id="${item.id}" onclick="removeItem(this)" title="刪除商品">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 空订单提示 -->
+            <div th:if="${#lists.isEmpty(orderItems)}" class="empty-cart">
+                <i class="fas fa-shopping-cart"></i>
+                <p>訂單商品為空</p>
+            </div>
+        </div>
+
+        <!-- 底部統計 -->
+        <div class="select-all-summary" th:if="${!#lists.isEmpty(orderItems)}">
+            <label class="select-all">
+                <input type="checkbox" id="selectAllBottom" onchange="toggleSelectAll()" checked>
+                <span>全選</span>
+            </label>
+            <span>已選擇 <span id="selectedCount" style="font-weight: 600; color: var(--primary);" th:text="${#lists.size(orderItems)}">0</span> 件商品</span>
+        </div>
+    </div>
+
+    <!--  2. 訂單摘要 -->
     <div class="order-summary">
         <div class="summary-row">
             <span>訂單編號：</span>
@@ -49,18 +735,17 @@
         </div>
         <div class="summary-row total-row">
             <span>應付總額：</span>
-            <span>HK$ <span th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span></span>
+            <span>HK$ <span id="totalAmountDisplay" th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span></span>
         </div>
     </div>
 
-    <!-- 🟢 新增：支付方式选择 -->
+    <!--  3. 支付方式選擇 -->
     <div class="payment-methods">
         <h3 style="margin-bottom: 1rem; color: var(--primary); font-size: 1.1rem;">
-            <i class="fas fa-wallet" style="color: var(--gold); margin-right: 0.5rem;"></i>
-            選擇支付方式
+            <i class="fas fa-wallet" style="color: var(--gold); margin-right: 0.5rem;"></i> 選擇支付方式
         </h3>
 
-        <!-- 线上支付 -->
+        <!-- 線上支付 -->
         <div class="payment-option">
             <input type="radio" name="paymentMethod" value="ONLINE" id="pay-online" checked onchange="togglePaymentMethod()">
             <label for="pay-online">
@@ -72,7 +757,7 @@
             </label>
         </div>
 
-        <!-- 线下支付 -->
+        <!-- 線下支付 -->
         <div class="payment-option">
             <input type="radio" name="paymentMethod" value="OFFLINE" id="pay-offline" onchange="togglePaymentMethod()">
             <label for="pay-offline">
@@ -84,11 +769,10 @@
             </label>
         </div>
 
-        <!-- 店铺选择（默认隐藏，选择线下支付时显示） -->
+        <!-- 店鋪選擇（默認隱藏） -->
         <div id="storeSelection" style="display: none;">
             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">
-                <i class="fas fa-map-marker-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                選擇取貨/支付店鋪：
+                <i class="fas fa-map-marker-alt" style="color: var(--gold); margin-right: 0.5rem;"></i> 選擇取貨/支付店鋪：
             </label>
             <select id="storeSelect" name="storeId" onchange="updateStoreInfo()">
                 <option value="">請選擇店鋪</option>
@@ -99,13 +783,12 @@
 
             <div id="storeInfo" class="store-info" style="display: none;">
                 <strong><i class="fas fa-info-circle"></i> 重要提示：</strong>
-                <ul id="storeInfoList">
-                    <!-- 动态填充 -->
-                </ul>
+                <ul id="storeInfoList"></ul>
             </div>
         </div>
     </div>
 
+    <!-- 提示與支付按鈕 -->
     <div style="text-align: center; color: var(--gray); margin-bottom: 1rem; padding: 1rem; background: var(--light); border-radius: 8px;">
         <i class="fas fa-shield-alt"></i>
         <span id="paymentHint">此為模擬支付環境，不會產生真實扣款。點擊下方按鈕即可完成模擬支付流程。</span>
@@ -114,101 +797,365 @@
     <button id="confirmPayBtn" class="btn btn-primary pay-btn" th:attr="data-orderno=${order.orderNo}, data-amount=${order.totalAmount}">
         <i class="fas fa-credit-card"></i> 確認支付 HK$ <span th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span>
     </button>
+
+    <!-- 🟢 改造後：取消訂單按鈕 (觸發 Modal) -->
+    <button class="cancel-order-btn"
+            th:data-order-no="${order.orderNo}"
+            onclick="openDeleteOrderModal(this)">
+        <i class="fas fa-times"></i> 取消訂單
+    </button>
+</div>
+
+<!-- 取消全选确认提示框 -->
+<div id="unselectAllConfirmModal" class="confirm-modal-overlay" style="display: none;">
+    <div class="confirm-modal-box">
+        <h3 class="confirm-modal-title">确认取消全选？</h3>
+        <p class="confirm-modal-message">
+            您确定要取消所有商品的选中状态吗？
+        </p>
+        <div class="confirm-modal-actions">
+            <button class="btn-confirm-cancel" onclick="closeUnselectAllConfirm()">
+                取消操作
+            </button>
+            <button class="btn-confirm-yes" onclick="confirmUnselectAll()">
+                确认取消
+            </button>
+        </div>
+    </div>
+</div>
+
+<!--  新增：取消订单确认弹窗 (精美 Modal) -->
+<div id="deleteOrderModal" class="delete-order-overlay" style="display: none;">
+    <div class="delete-order-modal-box">
+        <div class="modal-icon">
+            <i class="fas fa-trash-alt"></i>
+        </div>
+        <h3 class="modal-title">確認取消此訂單？</h3>
+
+        <div class="modal-body">
+            <p class="modal-message">您確定要取消訂單編號為 <strong id="deleteOrderNoDisplay" class="order-no-highlight"></strong> 的訂單嗎？</p>
+            <div class="warning-box">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>取消後訂單將被刪除且無法恢復！</span>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel-modal" onclick="closeDeleteOrderModal()">取消</button>
+            <button class="btn-confirm-delete" onclick="confirmDeleteOrder()">確認取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- 删除成功后的跳转提示弹窗 -->
+<div id="successRedirectModal" class="success-redirect-overlay" style="display: none;">
+    <div class="success-redirect-box">
+        <div class="success-icon">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <h3 class="modal-title" style="color: var(--primary); margin-bottom: 1rem;">訂單已取消</h3>
+        <p class="modal-message" style="color: var(--gray); margin-bottom: 2rem; font-size: 1rem;">
+            訂單已刪除，已重置到主頁面，<br>歡迎下次選購！
+        </p>
+        <div class="countdown-timer" style="color: var(--gold); font-weight: 600; font-size: 0.9rem;">
+            <i class="fas fa-clock"></i> <span id="countdownNum">3</span> 秒後自動跳轉...
+        </div>
+    </div>
 </div>
 
 <script th:inline="javascript">
     const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
 
-    // 店铺信息数据
-    const storeData = {
-        'store-central': {
-            name: '中環店',
-            address: '中環皇后大道中 99 號',
-            phone: '+852 2123 4567',
-            hours: '10:00 AM - 8:00 PM',
-            tips: [
-                '訂單確認後，請前往選定店鋪支付',
-                '店鋪保留訂單 7 天，逾期自動取消',
-                '支付完成後，店員會即時更新訂單狀態',
-                '請出示訂單編號給店員'
-            ]
-        },
-        'store-tsimsatsui': {
-            name: '尖沙咀店',
-            address: '尖沙咀廣東道 88 號',
-            phone: '+852 2234 5678',
-            hours: '11:00 AM - 9:00 PM',
-            tips: [
-                '訂單確認後，請前往選定店鋪支付',
-                '店鋪保留訂單 7 天，逾期自動取消',
-                '支付完成後，店員會即時更新訂單狀態',
-                '請出示訂單編號給店員'
-            ]
-        },
-        'store-causeway': {
-            name: '銅鑼灣店',
-            address: '銅鑼灣軒尼詩道 500 號',
-            phone: '+852 2345 6789',
-            hours: '12:00 PM - 10:00 PM',
-            tips: [
-                '訂單確認後，請前往選定店鋪支付',
-                '店鋪保留訂單 7 天，逾期自動取消',
-                '支付完成後，店員會即時更新訂單狀態',
-                '請出示訂單編號給店員'
-            ]
+// ==========================================
+// 1. 删除商品功能 - 改为调用订单删除 API
+// ==========================================
+async function removeItem(button) {
+    const orderItemId = button.getAttribute('data-item-id'); //  获取 OrderItem ID
+    if (!confirm('確定要從訂單中移除這個商品嗎？')) return;
+
+    const card = button.closest('.cart-item-card');
+    card.style.transition = 'all 0.3s ease';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(50px)';
+
+    setTimeout(async () => {
+        try {
+            const response = await fetch(`/checkout/api/remove-item/${orderItemId}`, { method: 'DELETE' });
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                card.remove();
+                updateTotal(); // 重新计算DOM总价 - 这里会自动更新全选框状态
+                showNotification('✅ 商品已從訂單移除');
+            } else {
+                // 如果订单被删空了，后端会返回 ORDER_EMPTY
+                if (result.message === 'ORDER_EMPTY') {
+                    showNotification('⚠️ 訂單商品已清空，訂單已取消', true);
+                    setTimeout(() => window.location.href = '/browse', 1500);
+                    return;
+                }
+                showNotification('❌ ' + result.message, true);
+                card.style.opacity = '1';
+                card.style.transform = 'translateX(0)';
+            }
+        } catch (error) {
+            console.error('刪除商品失敗:', error);
+            showNotification('❌ 網絡錯誤', true);
         }
-    };
+    }, 300);
+}
 
-    // 切换支付方式
-    function togglePaymentMethod() {
-        const isOnline = document.getElementById('pay-online').checked;
-        const storeSelection = document.getElementById('storeSelection');
-        const paymentMethodDisplay = document.getElementById('paymentMethodDisplay');
-        const paymentHint = document.getElementById('paymentHint');
-        const confirmBtn = document.getElementById('confirmPayBtn');
+// ==========================================
+// 2. 数量调整功能 - 改为调用订单修改 API
+// ==========================================
+async function updateQuantity(orderItemId, change) {
+    const card = document.querySelector(`.cart-item-card[data-order-item-id="${orderItemId}"]`);
+    if (!card) return;
 
-        if (isOnline) {
-            // 线上支付
-            storeSelection.style.display = 'none';
-            paymentMethodDisplay.textContent = '線上支付';
-            paymentHint.innerHTML = '<i class="fas fa-shield-alt"></i> 此為模擬支付環境，不會產生真實扣款。點擊下方按鈕即可完成模擬支付流程。';
-            confirmBtn.innerHTML = '<i class="fas fa-credit-card"></i> 確認線上支付 HK$ ' + confirmBtn.getAttribute('data-amount');
+    const qtyElement = card.querySelector('.qty-value');
+    let currentQty = parseInt(qtyElement.textContent);
+    const newQty = currentQty + change;
+
+    try {
+        //  调用修改订单明细 API
+        const response = await fetch(`/checkout/api/update-item/${orderItemId}?quantity=${newQty}`, { method: 'PUT' });
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            const data = result.data;
+            // 更新前端显示
+            qtyElement.textContent = data.quantity;
+            card.setAttribute('data-quantity', data.quantity);
+
+            // 更新小计
+            const subtotalElement = card.querySelector('.item-subtotal span');
+            subtotalElement.textContent = formatPrice(data.subtotal);
+
+            //  更新全局总价 (后端返回了最新的 totalAmount)
+            document.getElementById('totalAmountDisplay').textContent = formatPrice(data.newTotalAmount);
+
+            // 更新支付按钮金额
+            const confirmBtn = document.getElementById('confirmPayBtn');
+            confirmBtn.setAttribute('data-amount', data.newTotalAmount);
+            confirmBtn.innerHTML = `<i class="fas fa-credit-card"></i> 確認支付 HK$ ${formatPrice(data.newTotalAmount)}`;
+
+            // 更新加减号禁用状态
+            const maxStock = parseInt(card.getAttribute('data-stock'));
+            card.querySelector('.qty-btn:first-child').disabled = (data.quantity <= 1);
+            card.querySelector('.qty-btn:last-child').disabled = (data.quantity >= maxStock);
         } else {
-            // 线下支付
-            storeSelection.style.display = 'block';
-            paymentMethodDisplay.textContent = '線下店鋪支付';
-            paymentHint.innerHTML = '<i class="fas fa-store"></i> 選擇店鋪後，訂單將被保留 7 天。請在期限內前往店鋪完成支付。';
-            confirmBtn.innerHTML = '<i class="fas fa-store"></i> 確認訂單（到店支付）';
+            showNotification('❌ ' + (result.message || '更新失敗'), true);
+        }
+    } catch (error) {
+        console.error('更新數量失敗:', error);
+        showNotification('❌ 網絡錯誤', true);
+    }
+}
+
+// 格式化价格辅助函数
+function formatPrice(price) {
+    return new Intl.NumberFormat('zh-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
+}
+
+// ==========================================
+// 3. 全選功能 - 修改版
+// ==========================================
+function toggleSelectAll() {
+    const checkboxes = document.querySelectorAll('#selectAllBottom');
+    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+
+    // 檢查是否有任何一個全選框被勾選
+    const allChecked = Array.from(checkboxes).some(cb => cb.checked);
+
+    // 如果全选框从勾选变成未勾选，显示确认提示
+    if (!allChecked) {
+        showUnselectAllConfirm();
+        return;
+    }
+
+    // 同步所有全选框
+    checkboxes.forEach(cb => cb.checked = true);
+
+    // 同步所有商品 checkbox
+    itemCheckboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        const row = checkbox.closest('.cart-item-card');
+        if(row) row.classList.add('selected');
+    });
+
+    updateTotal();
+}
+
+// ==========================================
+// 4. 更新總價 - 修改版
+// ==========================================
+function updateTotal() {
+    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+    let totalAmount = 0;
+    let selectedCount = 0;
+    let allChecked = true;
+    let noneChecked = true;
+
+    itemCheckboxes.forEach(checkbox => {
+        const card = checkbox.closest('.cart-item-card');
+        if (checkbox.checked && card) {
+            const price = parseFloat(card.getAttribute('data-price')) || 0;
+            const quantity = parseInt(card.getAttribute('data-quantity')) || 0;
+            totalAmount += price * quantity;
+            selectedCount++;
+            card.classList.add('selected');
+            noneChecked = false;
+        } else if (card) {
+            card.classList.remove('selected');
+            allChecked = false;
+        } else {
+            allChecked = false;
+        }
+    });
+
+    // 更新选中数量
+    document.getElementById('selectedCount').textContent = selectedCount;
+
+    // 更新总价显示
+    const totalAmountElement = document.getElementById('totalAmountDisplay');
+    if (totalAmountElement) {
+        totalAmountElement.textContent = totalAmount.toLocaleString('zh-HK', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    // 更新支付按钮
+    const confirmBtn = document.getElementById('confirmPayBtn');
+    if (confirmBtn) {
+        confirmBtn.setAttribute('data-amount', totalAmount.toFixed(2));
+        if (selectedCount === 0) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-shopping-cart"></i> 請選擇商品';
+        } else {
+            confirmBtn.disabled = false;
+            const isOnline = document.getElementById('pay-online').checked;
+            const icon = isOnline ? 'fa-credit-card' : 'fa-store';
+            const text = isOnline ? '確認線上支付' : '確認訂單（到店支付）';
+            confirmBtn.innerHTML = `<i class="fas ${icon}"></i> ${text} HK$ ${totalAmount.toLocaleString('zh-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
     }
 
-    // 更新店铺信息
-    function updateStoreInfo() {
-        const storeId = document.getElementById('storeSelect').value;
-        const storeInfo = document.getElementById('storeInfo');
-        const storeInfoList = document.getElementById('storeInfoList');
-
-        if (storeId && storeData[storeId]) {
-            const store = storeData[storeId];
-            storeInfoList.innerHTML = `
-                <li><strong>店鋪：</strong>${store.name}</li>
-                <li><strong>地址：</strong>${store.address}</li>
-                <li><strong>電話：</strong>${store.phone}</li>
-                <li><strong>營業時間：</strong>${store.hours}</li>
-                <li style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(133, 100, 4, 0.3);">
-                    <strong>注意事項：</strong>
-                    <ul style="margin-top: 0.3rem;">
-                        ${store.tips.map(tip => `<li>${tip}</li>`).join('')}
-                    </ul>
-                </li>
-            `;
-            storeInfo.style.display = 'block';
+    // 同步全选框状态 - 核心修改：根据单项选择状态更新全选框
+    const selectAllCheckboxes = document.querySelectorAll('#selectAllBottom');
+    selectAllCheckboxes.forEach(cb => {
+        if (itemCheckboxes.length === 0) {
+            cb.checked = false;
+        } else if (allChecked) {
+            // 所有单项都勾选，全选框勾选
+            cb.checked = true;
+        } else if (noneChecked) {
+            // 所有单项都没勾选，全选框不勾选
+            cb.checked = false;
         } else {
-            storeInfo.style.display = 'none';
+            // 部分勾选，全选框不勾选
+            cb.checked = false;
         }
+    });
+}
+
+// 显示取消全选确认框
+function showUnselectAllConfirm() {
+    const modal = document.getElementById('unselectAllConfirmModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // 禁止背景滚动
+    }
+}
+
+// 关闭确认框
+function closeUnselectAllConfirm() {
+    const modal = document.getElementById('unselectAllConfirmModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    // 恢复全选框状态
+    const checkboxes = document.querySelectorAll('#selectAllBottom');
+    checkboxes.forEach(cb => cb.checked = true);
+}
+
+// 确认取消全选
+function confirmUnselectAll() {
+    const checkboxes = document.querySelectorAll('#selectAllBottom');
+    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+
+    // 1. 取消所有全选框的勾选
+    checkboxes.forEach(cb => cb.checked = false);
+
+    // 2. 取消所有商品 checkbox
+    itemCheckboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        const row = checkbox.closest('.cart-item-card');
+        if(row) row.classList.remove('selected');
+    });
+
+    // 3. 更新总价
+    updateTotal();
+
+    // 4. 【关键修改】直接手动关闭模态框，不要调用 closeUnselectAllConfirm
+    // 因为 closeUnselectAllConfirm 里面会把勾选状态恢复成 true
+    const modal = document.getElementById('unselectAllConfirmModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = ''; // 恢复背景滚动
     }
 
-    // 修改支付按钮点击事件
+    showNotification('已取消所有商品的选中状态');
+}
+
+// ==========================================
+// 5. 店鋪信息與支付方式切換
+// ==========================================
+const storeData = {
+    'store-central': { name: '中環店', address: '中環皇后大道中 99 號', phone: '+852 2123 4567', hours: '10:00 AM - 8:00 PM', tips: ['訂單確認後，請前往選定店鋪支付', '店鋪保留訂單 7 天，逾期自動取消', '支付完成後，店員會即時更新訂單狀態', '請出示訂單編號給店員'] },
+    'store-tsimsatsui': { name: '尖沙咀店', address: '尖沙咀廣東道 88 號', phone: '+852 2234 5678', hours: '11:00 AM - 9:00 PM', tips: ['訂單確認後，請前往選定店鋪支付', '店鋪保留訂單 7 天，逾期自動取消', '支付完成後，店員會即時更新訂單狀態', '請出示訂單編號給店員'] },
+    'store-causeway': { name: '銅鑼灣店', address: '銅鑼灣軒尼詩道 500 號', phone: '+852 2345 6789', hours: '12:00 PM - 10:00 PM', tips: ['訂單確認後，請前往選定店鋪支付', '店鋪保留訂單 7 天，逾期自動取消', '支付完成後，店員會即時更新訂單狀態', '請出示訂單編號給店員'] }
+};
+
+function togglePaymentMethod() {
+    const isOnline = document.getElementById('pay-online').checked;
+    document.getElementById('storeSelection').style.display = isOnline ? 'none' : 'block';
+    document.getElementById('paymentMethodDisplay').textContent = isOnline ? '線上支付' : '線下店鋪支付';
+
+    const hint = document.getElementById('paymentHint');
+    hint.innerHTML = isOnline ?
+        '<i class="fas fa-shield-alt"></i> 此為模擬支付環境，不會產生真實扣款。點擊下方按鈕即可完成模擬支付流程。' :
+        '<i class="fas fa-store"></i> 選擇店鋪後，訂單將被保留 7 天。請在期限內前往店鋪完成支付。';
+
+    updateTotal();
+}
+
+function updateStoreInfo() {
+    const storeId = document.getElementById('storeSelect').value;
+    const storeInfo = document.getElementById('storeInfo');
+    const storeInfoList = document.getElementById('storeInfoList');
+
+    if (storeId && storeData[storeId]) {
+        const store = storeData[storeId];
+        storeInfoList.innerHTML = `
+            <li><strong>店鋪：</strong>${store.name}</li>
+            <li><strong>地址：</strong>${store.address}</li>
+            <li><strong>電話：</strong>${store.phone}</li>
+            <li><strong>營業時間：</strong>${store.hours}</li>
+            <li style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(133, 100, 4, 0.3);">
+                <strong>注意事項：</strong>
+                <ul style="margin-top: 0.3rem;">${store.tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
+            </li>`;
+        storeInfo.style.display = 'block';
+    } else {
+        storeInfo.style.display = 'none';
+    }
+}
+
+// ==========================================
+// 6. 支付按鈕點擊事件
+// ==========================================
 document.getElementById('confirmPayBtn').addEventListener('click', async function() {
     const btn = this;
     const orderNo = btn.getAttribute('data-orderno');
@@ -217,34 +1164,26 @@ document.getElementById('confirmPayBtn').addEventListener('click', async functio
     const storeSelect = document.getElementById('storeSelect');
     const storeId = storeSelect ? storeSelect.value : '';
 
-    // 验证线下支付是否选择了店铺
     if (!isOnline && !storeId) {
         showNotification('❌ 請選擇線下支付店鋪', true);
         if (storeSelect) storeSelect.focus();
         return;
     }
 
-    // UI 进入 Loading 状态
     btn.disabled = true;
     const originalBtnText = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 處理中...';
 
     try {
         if (isOnline) {
-            // 模拟 1.5 秒的网络延迟
             await new Promise(resolve => setTimeout(resolve, 1500));
-
-            // 线上支付逻辑
             const response = await fetch('/checkout/api/pay', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ orderNo: orderNo, amount: amount })
             });
-
             const result = await response.json();
-
             if (response.ok && result.success) {
-                // 直接跳转，不等待
                 window.location.href = `/checkout/payment-success?orderNo=${orderNo}`;
             } else {
                 btn.disabled = false;
@@ -252,31 +1191,18 @@ document.getElementById('confirmPayBtn').addEventListener('click', async functio
                 showNotification('❌ ' + (result.message || '支付失敗'), true);
             }
         } else {
-            // 🟢 线下支付逻辑 - 直接跳转，不等待 API 响应
-            try {
-                const response = await fetch('/checkout/api/offline-payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        orderNo: orderNo,
-                        storeId: storeId
-                    })
-                });
-
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    // ✅ 關鍵修復：使用 window.location.replace 確保跳轉
-                    window.location.replace(`/checkout/offline-success?orderNo=${orderNo}&storeId=${storeId}`);
-                } else {
-                    btn.disabled = false;
-                    btn.innerHTML = originalBtnText;
-                    showNotification('❌ ' + (result.message || '創建訂單失敗'), true);
-                }
-            } catch (apiError) {
-                console.error('API 錯誤:', apiError);
-                // 即使 API 失敗，也嘗試跳轉（讓用戶看到訂單信息）
+            const response = await fetch('/checkout/api/offline-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderNo: orderNo, storeId: storeId })
+            });
+            const result = await response.json();
+            if (response.ok && result.success) {
                 window.location.replace(`/checkout/offline-success?orderNo=${orderNo}&storeId=${storeId}`);
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = originalBtnText;
+                showNotification('❌ ' + (result.message || '創建訂單失敗'), true);
             }
         }
     } catch (error) {
@@ -284,6 +1210,120 @@ document.getElementById('confirmPayBtn').addEventListener('click', async functio
         btn.disabled = false;
         btn.innerHTML = originalBtnText;
         showNotification('❌ 網絡連接失敗，請重試', true);
+    }
+});
+
+// ==========================================
+//  7. 取消訂單功能 (精美 Modal 版)
+// ==========================================
+let pendingDeleteOrderNo = null; // 全局变量暂存订单号
+
+function openDeleteOrderModal(button) {
+    // 1. 从按钮的 data-order-no 属性中提取订单号
+    pendingDeleteOrderNo = button.getAttribute('data-order-no');
+
+    // 2. 将订单号显示在弹窗的指定位置
+    document.getElementById('deleteOrderNoDisplay').textContent = pendingDeleteOrderNo;
+
+    // 3. 显示弹窗并禁止背景滚动
+    document.getElementById('deleteOrderModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteOrderModal() {
+    document.getElementById('deleteOrderModal').style.display = 'none';
+    document.body.style.overflow = '';
+    pendingDeleteOrderNo = null;
+}
+
+async function confirmDeleteOrder() {
+    if (!pendingDeleteOrderNo) return;
+
+    const btn = document.querySelector('.btn-confirm-delete');
+    const originalText = btn.innerHTML;
+
+    // 1. 进入 Loading 状态
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
+    try {
+        const response = await fetch(`/api/order/${pendingDeleteOrderNo}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            // 2. 先关闭原来的“确认删除”弹窗
+            closeDeleteOrderModal();
+
+            // 3. 显示新的“成功跳转”弹窗
+            const successModal = document.getElementById('successRedirectModal');
+            const countdownSpan = document.getElementById('countdownNum');
+            successModal.style.display = 'flex';
+
+            // 4. 倒计时逻辑 (3秒)
+            let seconds = 3;
+            const timer = setInterval(() => {
+                seconds--;
+                countdownSpan.textContent = seconds;
+                if (seconds <= 0) {
+                    clearInterval(timer);
+                    window.location.href = '/'; // 跳转到首页
+                }
+            }, 1000);
+
+        } else {
+            // 失败处理
+            closeDeleteOrderModal();
+            showNotification('❌ ' + (result.message || '取消訂單失敗'), true);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (error) {
+        console.error('取消訂單錯誤:', error);
+        closeDeleteOrderModal();
+        showNotification('❌ 網絡錯誤，請稍後重試', true);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+// ==========================================
+// 8. 頁面初始化與全局監聽
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化總價與按鈕狀態
+    updateTotal();
+});
+
+// 点击遮罩层关闭确认框 (包含取消全選 和 取消訂單)
+document.getElementById('unselectAllConfirmModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeUnselectAllConfirm();
+    }
+});
+
+document.getElementById('deleteOrderModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeDeleteOrderModal();
+    }
+});
+
+// ESC键关闭确认框 (包含取消全選 和 取消訂單)
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const unselectAllModal = document.getElementById('unselectAllConfirmModal');
+        if (unselectAllModal && unselectAllModal.style.display === 'flex') {
+            closeUnselectAllConfirm();
+        }
+
+        const deleteOrderModal = document.getElementById('deleteOrderModal');
+        if (deleteOrderModal && deleteOrderModal.style.display === 'flex') {
+            closeDeleteOrderModal();
+        }
     }
 });
 </script>

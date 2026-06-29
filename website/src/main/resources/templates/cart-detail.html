@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>購物車 - ChronoTeam</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+
+    <!--  核心修復1：必須引入側邊欄專屬 CSS -->
+    <link rel="stylesheet" href="/css/sidebar.css">
+
+    <style>
+        /*  核心修復2：Dashboard 統一佈局樣式 */
+        .dashboard-container {
+            display: flex;
+            min-height: calc(100vh - 150px);
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            gap: 2rem;
+        }
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 2.5rem;
+        }
+
+        /* 頁面標題與副標題 */
+        .page-title {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 1rem;
+        }
+        .page-title i { color: var(--gold); }
+        .page-subtitle { color: var(--gray); margin-bottom: 2rem; font-size: 0.95rem; }
+
+        /* 購物車列表樣式 */
+        .cart-items-list {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        .cart-item {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--light);
+            transition: background 0.3s;
+        }
+        .cart-item:last-child { border-bottom: none; }
+        .cart-item:hover { background: #f8f9fa; }
+        .item-image {
+            width: 120px; height: 120px; border-radius: 8px;
+            overflow: hidden; margin-right: 1.5rem; flex-shrink: 0;
+        }
+        .item-image img { width: 100%; height: 100%; object-fit: cover; }
+        .item-info { flex: 1; }
+        .item-name { font-size: 1.2rem; font-weight: 600; color: var(--primary); margin-bottom: 0.5rem; }
+        .item-price { color: var(--accent); font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .item-quantity { display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem; }
+        .qty-btn {
+            width: 32px; height: 32px; border: 1px solid #ddd;
+            background: white; border-radius: 6px; cursor: pointer; transition: all 0.3s;
+        }
+        .qty-btn:hover { background: var(--gold); color: white; border-color: var(--gold); }
+        .qty-value { font-weight: 600; min-width: 40px; text-align: center; }
+        .item-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 1rem; }
+        .item-subtotal { font-size: 1.2rem; font-weight: 700; color: var(--primary); }
+        .btn-remove {
+            background: none; border: none; color: var(--gray);
+            cursor: pointer; font-size: 1.2rem; transition: color 0.3s;
+        }
+        .btn-remove:hover { color: var(--accent); }
+
+        /* 結算區域 */
+        .cart-summary {
+            background: white; border-radius: 12px; padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .cart-total { font-size: 1.5rem; font-weight: 700; }
+        .cart-total span { color: var(--accent); margin-left: 1rem; }
+        .cart-actions { display: flex; gap: 1rem; }
+        .btn-checkout {
+            background: var(--gold); color: var(--primary); padding: 1rem 3rem;
+            border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .btn-checkout:hover {
+            background: #b8972b; transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+        .btn-continue {
+            background: var(--light); color: var(--primary); padding: 1rem 2rem;
+            border: 2px solid var(--light); border-radius: 8px; font-size: 1rem;
+            font-weight: 600; cursor: pointer; transition: all 0.3s;
+            text-decoration: none; display: inline-block;
+        }
+        .btn-continue:hover { border-color: var(--gold); color: var(--gold); }
+
+        /* 空狀態 */
+        .empty-cart {
+            text-align: center; padding: 4rem 2rem; background: white;
+            border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .empty-cart i { font-size: 4rem; color: #ddd; margin-bottom: 1rem; }
+        .empty-cart h3 { color: var(--primary); margin-bottom: 1rem; }
+
+        /* ========================================== */
+        /*  購物車商品復選框樣式 (新增) */
+        /* ========================================== */
+
+        /* 复选框容器 */
+        .item-checkbox {
+            margin-right: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 隐藏原生 checkbox */
+        .cart-item-checkbox {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* 自定义复选框样式 */
+        .checkbox-label {
+            position: relative;
+            display: block;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        /* 选中状态 */
+        .cart-item-checkbox:checked + .checkbox-label {
+            background: var(--gold);
+            border-color: var(--gold);
+        }
+
+        /* 选中后的对勾 */
+        .cart-item-checkbox:checked + .checkbox-label::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* 悬停效果 */
+        .checkbox-label:hover {
+            border-color: var(--gold);
+            transform: scale(1.05);
+        }
+
+        /* 商品未选中时的样式 */
+        .cart-item.not-selected {
+            opacity: 0.6;
+        }
+
+        .cart-item.not-selected .item-image img {
+            filter: grayscale(100%);
+        }
+
+        /* 響應式 */
+        @media (max-width: 900px) { .dashboard-container { flex-direction: column; } }
+        @media (max-width: 768px) {
+            .cart-item { flex-direction: column; align-items: flex-start; }
+            .item-image { width: 100%; height: 200px; margin-right: 0; margin-bottom: 1rem; }
+            .item-actions { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; margin-top: 1rem; }
+            .cart-summary { flex-direction: column; gap: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+<!-- 引入公共導航欄 -->
+<div th:replace="~{fragments/common :: navbar}"></div>
+
+<!--使用 Dashboard 容器包裹 Sidebar 和 Main -->
+<div class="dashboard-container">
+
+    <!-- 正確引入 Sidebar Fragment -->
+    <div th:replace="~{fragments/sidebar :: sidebar(activePage='cart')}"></div>
+
+    <!-- 右側主內容區 -->
+    <main class="main-content">
+        <h2 class="page-title"><i class="fas fa-shopping-cart"></i> 購物車</h2>
+        <p class="page-subtitle">您購物車中有 <strong th:text="${cartCount}">0</strong> 件商品</p>
+
+        <!--  全選按鈕區域 -->
+        <div th:if="${cartItems != null and !cartItems.isEmpty()}"
+             style="margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" checked>
+                <span style="font-weight: 600; color: var(--primary);">全選</span>
+            </label>
+            <span style="color: var(--gray);">
+                已選擇 <strong id="selectedCount" th:text="${cartCount}">0</strong> 件商品
+            </span>
+        </div>
+
+        <!-- 購物車商品列表 -->
+        <div th:if="${cartItems != null and !cartItems.isEmpty()}" class="cart-items-list">
+            <div th:each="item : ${cartItems}"
+                 class="cart-item"
+                 th:data-cart-id="${item.id}">
+
+                <!--商品選擇復選框 -->
+                <div class="item-checkbox">
+                    <input type="checkbox"
+                           class="cart-item-checkbox"
+                           th:id="'checkbox-' + ${item.id}"
+                           th:data-cart-id="${item.id}"
+                           onchange="toggleItemSelection(this)"
+                           checked>
+                    <label th:for="'checkbox-' + ${item.id}" class="checkbox-label"></label>
+                </div>
+
+                <div class="item-image">
+                    <img th:src="@{/images/products/{img}(img=${item.product.image})}"
+                         th:alt="${item.product.description}"
+                         onerror="this.src='/images/placeholder.png'">
+                </div>
+
+                <div class="item-info">
+                    <div class="item-name" th:text="${item.product.description}">商品名稱</div>
+                    <div class="item-price">
+                        HK$ <span th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                    </div>
+                    <div class="item-quantity">
+                        <!-- 絕對禁止使用 [[${item.id}]]，改用 th:onclick 拼接 -->
+                        <button class="qty-btn"
+                                th:onclick="'updateQuantity(' + ${item.id} + ', -1)'">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <span class="qty-value" th:text="${item.quantity}">1</span>
+                        <button class="qty-btn"
+                                th:onclick="'updateQuantity(' + ${item.id} + ', 1)'">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="item-actions">
+                    <div class="item-subtotal">
+                        HK$ <span th:text="${#numbers.formatDecimal(item.price * item.quantity, 1, 'COMMA', 0, 'POINT')}">0</span>
+                    </div>
+                    <!-- 移除按鈕同樣使用安全拼接 -->
+                    <button class="btn-remove"
+                            th:onclick="'removeItem(' + ${item.product.id} + ')'"
+                            title="移除商品">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 購物車總結 -->
+        <div th:if="${cartItems != null and !cartItems.isEmpty()}" class="cart-summary">
+            <div class="cart-total">
+                總計：<span>HK$ <span th:text="${#numbers.formatDecimal(totalAmount, 1, 'COMMA', 0, 'POINT')}">0</span></span>
+            </div>
+            <div class="cart-actions">
+                <a href="/browse" class="btn-continue">
+                    <i class="fas fa-arrow-left"></i> 繼續購物
+                </a>
+                <button class="btn-checkout" onclick="checkout()">
+                    <i class="fas fa-credit-card"></i> 結賬
+                </button>
+            </div>
+        </div>
+
+        <!-- 空購物車提示 -->
+        <div th:if="${cartItems == null or cartItems.isEmpty()}" class="empty-cart">
+            <i class="fas fa-shopping-cart"></i>
+            <h3>購物車是空的</h3>
+            <p style="color: var(--gray); margin-bottom: 2rem;">快去選購您喜歡的手錶吧！</p>
+            <a href="/browse" class="btn btn-gold">
+                <i class="fas fa-search"></i> 瀏覽商品
+            </a>
+        </div>
+    </main>
+</div>
+
+<!-- 引入公共彈窗 -->
+<div th:replace="~{fragments/common :: modals}"></div>
+
+<!-- 注入登錄狀態 -->
+<script th:inline="javascript">
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+</script>
+<script src="/js/common.js"></script>
+
+<script>
+    // 存儲選中的購物車 ID
+    let selectedCartItems = new Set();
+
+    // 初始化：默認全選
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.cart-item-checkbox');
+        checkboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                selectedCartItems.add(checkbox.dataset.cartId);
+            }
+        });
+        updateCartTotal();
+    });
+
+    // 切換商品選擇狀態
+    function toggleItemSelection(checkbox) {
+        const cartId = checkbox.dataset.cartId;
+        const cartItem = checkbox.closest('.cart-item');
+
+        if (checkbox.checked) {
+            selectedCartItems.add(cartId);
+            cartItem.classList.remove('not-selected');
+        } else {
+            selectedCartItems.delete(cartId);
+            cartItem.classList.add('not-selected');
+        }
+
+        updateCartTotal();
+        updateSelectedCount();
+    }
+
+    // 更新購物車總價（只計算選中的商品）
+    function updateCartTotal() {
+        let total = 0;
+
+        document.querySelectorAll('.cart-item').forEach(item => {
+            const checkbox = item.querySelector('.cart-item-checkbox');
+            if (checkbox && checkbox.checked) {
+                const subtotalElement = item.querySelector('.item-subtotal span');
+                if (subtotalElement) {
+                    const subtotal = parseFloat(subtotalElement.textContent.replace(/[^0-9.]/g, ''));
+                    total += subtotal;
+                }
+            }
+        });
+
+        // 更新总价显示
+        const totalElement = document.querySelector('.cart-total span:last-child');
+        if (totalElement) {
+            totalElement.textContent = 'HK$ ' + total.toLocaleString('zh-HK');
+        }
+    }
+
+    // 更新选中数量显示
+    function updateSelectedCount() {
+        const count = selectedCartItems.size;
+        const countElement = document.getElementById('selectedCount');
+        if (countElement) {
+            countElement.textContent = count;
+        }
+    }
+
+    // 全选/取消全选
+    function toggleSelectAll() {
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.cart-item-checkbox');
+
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+            toggleItemSelection(checkbox);
+        });
+    }
+
+    // 更新商品數量
+    async function updateQuantity(cartId, change) {
+        const qtyElement = document.querySelector(`[data-cart-id="${cartId}"] .qty-value`);
+        if (!qtyElement) return;
+
+        let currentQty = parseInt(qtyElement.textContent);
+        let newQty = currentQty + change;
+
+        if (newQty < 1) {
+            if (confirm('確定要移除此商品嗎？')) {
+                await removeCartItem(cartId);
+            }
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/cart/update/${cartId}?quantity=${newQty}`, { method: 'PUT' });
+            if (response.ok) location.reload();
+            else showNotification('❌ ' + ((await response.json()).message || '更新失敗'), true);
+        } catch (error) {
+            console.error('更新數量失敗:', error);
+            showNotification('❌ 網絡錯誤', true);
+        }
+    }
+
+    // 移除商品
+    async function removeItem(productId) {
+        if (!confirm('確定要移除此商品嗎？')) return;
+        try {
+            const response = await fetch(`/api/cart/remove/${productId}`, { method: 'DELETE' });
+            if (response.ok) location.reload();
+            else showNotification('❌ 移除失敗', true);
+        } catch (error) {
+            console.error('移除商品失敗:', error);
+            showNotification('❌ 網絡錯誤', true);
+        }
+    }
+
+    // 結賬
+    async function checkout() {
+        if (selectedCartItems.size === 0) {
+            showNotification('❌ 请至少选择一件商品！', true);
+            return;
+        }
+
+        try {
+            // 将选中的商品 ID 发送给后端
+            const response = await fetch('/checkout/api/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    selectedCartIds: Array.from(selectedCartItems)
+                })
+            });
+            const result = await response.json();
+            if (response.ok && result.success) {
+                window.location.href = `/checkout?orderNo=${result.data}`;
+            } else {
+                showNotification('❌ ' + (result.message || '創建訂單失敗'), true);
+            }
+        } catch (error) {
+            console.error('結賬錯誤:', error);
+            showNotification('❌ 網絡錯誤', true);
+        }
+    }
+</script>
+</body>
+</html>

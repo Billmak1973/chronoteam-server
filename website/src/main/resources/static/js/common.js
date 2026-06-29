@@ -51,18 +51,41 @@ async function loadCartItems() {
     } catch (error) { console.error('加载购物车失败:', error); }
 }
 
+//  存储选中的购物车项ID (全局變量)
+let selectedCartItems = new Set();
+
 function renderCartItems(cartItems, totalAmount) {
     const container = document.getElementById('cartItemsContainer');
     if (!container) return;
+
+    //  核心修復：每次重新渲染時，清空並重新初始化選中狀態，防止狀態殘留
+    selectedCartItems.clear();
+
     if (!cartItems || cartItems.length === 0) {
         container.innerHTML = `<div class="cart-empty"><i class="fas fa-shopping-basket" style="font-size: 3rem; color: #ddd; margin-bottom: 1rem;"></i><p>購物車是空的</p></div>`;
         const totalEl = document.getElementById('cartTotalAmount');
         if(totalEl) totalEl.textContent = 'HK$ 0';
         return;
     }
+
     let html = '';
     cartItems.forEach(item => {
+        //  默認全部選中，或者根據後端返回的 item.selected 判斷 (若後端有返回該字段)
+        const isChecked = item.selected !== false;
+        if (isChecked) {
+            selectedCartItems.add(item.id); // 同步加入 Set
+        }
+
         html += `<div class="cart-item" data-cart-id="${item.id}" data-product-id="${item.product.id}">
+            <!--  新增：复选框 -->
+            <div class="cart-item-checkbox">
+                <input type="checkbox"
+                       class="cart-item-select"
+                       data-cart-id="${item.id}"
+                       onchange="toggleCartItemSelection(${item.id}, this.checked)"
+                       ${isChecked ? 'checked' : ''}>
+            </div>
+
             <div class="cart-item-img"><img src="/images/products/${item.product.image}" alt="${item.product.description}" onerror="this.src='/images/placeholder.png'"></div>
             <div class="cart-item-info">
                 <div class="cart-item-name">${item.product.description}</div>
@@ -77,8 +100,37 @@ function renderCartItems(cartItems, totalAmount) {
         </div>`;
     });
     container.innerHTML = html;
+
+    // 初始渲染時，直接顯示後端計算的總價（因為默認全選）
     const totalEl = document.getElementById('cartTotalAmount');
     if(totalEl) totalEl.textContent = 'HK$ ' + formatPrice(totalAmount);
+}
+
+//  切换购物车项选择状态
+function toggleCartItemSelection(cartId, isChecked) {
+    if (isChecked) {
+        selectedCartItems.add(cartId);
+    } else {
+        selectedCartItems.delete(cartId);
+    }
+    // 重新计算总价（只计算选中的商品）
+    calculateSelectedTotal();
+}
+
+//  计算选中商品的总价
+function calculateSelectedTotal() {
+    const checkboxes = document.querySelectorAll('.cart-item-select:checked');
+    let total = 0;
+
+    checkboxes.forEach(checkbox => {
+        const cartItem = checkbox.closest('.cart-item');
+        const priceText = cartItem.querySelector('.cart-item-price').textContent.replace('HK$ ', '').replace(/,/g, '');
+        const quantity = parseInt(cartItem.querySelector('.qty-value').textContent);
+        total += parseFloat(priceText) * quantity;
+    });
+
+    const totalEl = document.getElementById('cartTotalAmount');
+    if(totalEl) totalEl.textContent = 'HK$ ' + formatPrice(total);
 }
 
 async function updateCartQuantity(cartId, newQuantity) {
@@ -109,24 +161,38 @@ function formatPrice(price) {
     return new Intl.NumberFormat('zh-HK', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
 }
 
+//  修改 checkout 函数，只结算选中的商品
 async function checkout() {
     if (!isLoggedIn) {
         showNotification('❌ 請先登入！', true);
         return;
     }
 
-    // 顯示 Loading
+    // 检查是否有选中的商品
+    if (selectedCartItems.size === 0) {
+        showNotification('❌ 請至少選擇一件商品！', true);
+        return;
+    }
+
+    // 显示 Loading
     const btn = document.querySelector('.checkout-btn');
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
 
     try {
-        const response = await fetch('/checkout/api/create', { method: 'POST' });
+        // 将选中的商品ID发送到后端
+        const response = await fetch('/checkout/api/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                selectedCartIds: Array.from(selectedCartItems)
+            })
+        });
         const result = await response.json();
 
         if (response.ok && result.success) {
-            // 獲取生成的 orderNo，跳轉到結賬頁面
+            // 获取生成的 orderNo，跳转到结账页面
             window.location.href = `/checkout?orderNo=${result.data}`;
         } else {
             showNotification('❌ ' + (result.message || '創建訂單失敗'), true);
@@ -220,21 +286,91 @@ async function handleRegister(e) {
 
 async function handleLogin(e) {
     e.preventDefault();
-    const form = e.target; const msg = document.getElementById('loginMsg'); const btn = form.querySelector('button[type="submit"]');
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登入中...'; msg.textContent = '';
+    const form = e.target;
+    const msg = document.getElementById('loginMsg');
+    const btn = form.querySelector('button[type="submit"]');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登入中...';
+    msg.textContent = '';
+    msg.style.color = 'var(--accent)';
+
     try {
-        const response = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: form.username.value.trim(), password: form.password.value }) });
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: form.username.value.trim(),
+                password: form.password.value
+            })
+        });
         const result = await response.json();
-        if (response.ok) { msg.textContent = '✅ 登入成功！正在刷新...'; msg.style.color = 'green'; setTimeout(() => { closeLoginModal(); window.location.reload(); }, 1200); }
-        else { msg.textContent = '❌ ' + (result.message || '用戶名或密碼錯誤'); msg.style.color = 'var(--accent)'; form.querySelector('input[name="password"]').classList.add('shake'); setTimeout(() => { form.querySelector('input[name="password"]').classList.remove('shake'); }, 500); }
-    } catch (error) { msg.textContent = '❌ 網絡錯誤，請檢查連接'; msg.style.color = 'var(--accent)'; }
-    finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 立即登入'; }
+
+        if (response.ok) {
+            msg.textContent = '✅ 登入成功！正在刷新...';
+            msg.style.color = 'green';
+            setTimeout(() => { closeLoginModal(); window.location.reload(); }, 1200);
+        } else {
+            // 根據後端返回的標識顯示精確錯誤
+            let errorMsg = result.message || '用戶名或密碼錯誤';
+
+            if (errorMsg.startsWith('USER_NOT_FOUND:')) {
+                errorMsg = '❌ 該用戶名不存在';
+                // 讓用戶名輸入框抖動
+                form.querySelector('input[name="username"]').classList.add('shake');
+                setTimeout(() => form.querySelector('input[name="username"]').classList.remove('shake'), 500);
+            } else if (errorMsg.startsWith('INVALID_PASSWORD:')) {
+                errorMsg = '❌ 輸入密碼不正確';
+                // 讓密碼輸入框抖動
+                form.querySelector('input[name="password"]').classList.add('shake');
+                setTimeout(() => form.querySelector('input[name="password"]').classList.remove('shake'), 500);
+            } else {
+                errorMsg = '❌ ' + errorMsg;
+            }
+
+            msg.textContent = errorMsg;
+        }
+    } catch (error) {
+        msg.textContent = '❌ 網絡錯誤，請檢查連接';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 立即登入';
+    }
 }
 
+// 显示登出确认弹窗
+function showLogoutModal() {
+    const modal = document.getElementById('logoutModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // 禁止背景滚动
+    }
+}
+
+// 关闭登出确认弹窗
+function closeLogoutModal() {
+    const modal = document.getElementById('logoutModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = ''; // 恢复背景滚动
+    }
+}
+
+// 执行登出操作
+async function performLogout() {
+    closeLogoutModal();
+    try {
+        await fetch('/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        window.location.href = '/';
+    } catch (error) {
+        console.error('登出失败:', error);
+        window.location.href = '/';
+    }
+}
+
+// 修改原来的 handleLogout 函数
 async function handleLogout() {
-    if (!confirm('確定要登出嗎？')) return;
-    try { await fetch('/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } }); window.location.href = '/'; }
-    catch (error) { console.error('登出失败:', error); window.location.href = '/'; }
+    showLogoutModal(); // 显示自定义弹窗，而不是 confirm
 }
 
 // ===== 頁面跳轉登入攔截 =====
@@ -298,5 +434,22 @@ async function fetchUnreadNotifications() {
     }
 }
 
+// 点击遮罩层关闭登出弹窗
+document.addEventListener('click', function(e) {
+    const logoutModal = document.getElementById('logoutModal');
+    if (logoutModal && e.target === logoutModal) {
+        closeLogoutModal();
+    }
+});
+
+// ESC键关闭登出弹窗
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const logoutModal = document.getElementById('logoutModal');
+        if (logoutModal && logoutModal.style.display === 'flex') {
+            closeLogoutModal();
+        }
+    }
+});
 // 暴露全局函數，方便在其他頁面操作後手動刷新紅點
 window.refreshNotificationBadge = fetchUnreadNotifications;

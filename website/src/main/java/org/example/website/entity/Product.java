@@ -38,6 +38,11 @@ public class Product {
     @Column(name = "prod_brand", length = 50)
     private String brand;  // 新增：品牌字段
 
+    //  核心新增：是否在瀏覽商品頁面 (browse.html) 中顯示
+    // true: 顯示 (上架), false: 隱藏 (下架)
+    @Column(name = "is_visible", nullable = false)
+    private Boolean visible = true;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

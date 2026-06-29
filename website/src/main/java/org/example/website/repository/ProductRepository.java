@@ -18,6 +18,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     //  核心修改：加入 actualBrands, hasOthers, mainBrands 參數
     @Query("SELECT p FROM Product p WHERE " +
+            "p.visible = 1 AND " +  // <--- 這裡改成 1！
             "(:keyword IS NULL OR p.description LIKE %:keyword%) AND " +
             "(:categorySize = 0 OR p.category IN :category) AND " +
             // 品牌篩選邏輯：要麼匹配具體選擇的品牌，要麼在勾選了 others 時匹配非主流品牌
