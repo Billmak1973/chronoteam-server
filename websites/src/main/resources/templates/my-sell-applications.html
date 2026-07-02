@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的出售申請 - ChronoTeam</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+
+    <!--  1. 引入側邊欄專屬 CSS -->
+    <link rel="stylesheet" href="/css/sidebar.css">
+
+    <style>
+        /*  2. 佈局相關 (與 dashboard / password 頁面保持一致) */
+        .dashboard-container {
+            display: flex;
+            min-height: calc(100vh - 150px);
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            gap: 2rem;
+        }
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 2.5rem;
+        }
+        .page-title {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 1rem;
+        }
+        .page-title i { color: var(--gold); }
+        .page-subtitle { color: var(--gray); margin-bottom: 2rem; font-size: 0.95rem; }
+
+        /* 卡片與列表樣式 */
+        .card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s;
+        }
+        .card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.08); transform: translateY(-2px); }
+        .empty-state { text-align: center; padding: 4rem 2rem; }
+        .empty-state i { font-size: 4rem; color: #ddd; margin-bottom: 1rem; }
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .app-title { font-size: 1.2rem; font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+
+        /* 狀態標籤 (對應 SellApplication.ApplicationStatus 枚舉) */
+        .status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .status-PENDING { background: #fff3cd; color: #856404; }
+        .status-APPRAISING { background: #d1ecf1; color: #0c5460; }
+        .status-QUOTED { background: #cce5ff; color: #004085; }
+        .status-ACCEPTED { background: #d4edda; color: #155724; }
+        .status-REJECTED { background: #f8d7da; color: #721c24; }
+        .status-COMPLETED { background: #d4edda; color: #155724; }
+        .status-CANCELLED { background: #e2e3e5; color: #383d41; }
+
+        .app-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; color: var(--gray); font-size: 0.95rem; }
+        .app-details span { display: block; font-weight: 600; color: var(--primary); margin-top: 0.2rem; }
+
+        .footer { background: var(--primary); color: rgba(255, 255, 255, 0.7); padding: 2rem; text-align: center; margin-top: 3rem; }
+
+        /* 響應式 */
+        @media (max-width: 900px) { .dashboard-container { flex-direction: column; } }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/common :: navbar}"></div>
+
+<!-- 3. 使用 Flex 佈局容器取代原來的 page-hero -->
+<div class="dashboard-container">
+
+    <!--  4. 引入側邊欄 Fragment，傳入 activePage='sell-applications' 以高亮當前菜單 -->
+    <div th:replace="~{fragments/sidebar :: sidebar(activePage='sell-applications')}"></div>
+
+    <!--  5. 右側主內容 -->
+    <main class="main-content">
+        <h2 class="page-title"><i class="fas fa-list-alt"></i> 我的出售申請</h2>
+        <p class="page-subtitle">查看您提交的手錶出售申請進度與鑑定狀態</p>
+
+        <!--  注意：因為 Controller 返回的是 Page 對象，遍歷時必須使用 .content -->
+        <!-- 如果有申請記錄 -->
+        <div th:if="${applications != null and !applications.content.isEmpty()}">
+            <div class="card" th:each="app : ${applications.content}">
+                <div class="app-header">
+                    <div class="app-title">
+                        <i class="fas fa-clock" style="color: var(--gold);"></i>
+                        <span th:text="${app.brand}">Brand</span> - <span th:text="${app.series}">Series</span>
+                    </div>
+
+                    <!--  【修改處】：將狀態標籤與取消按鈕包裹在同一個 div 中，確保不破壞原有的左右佈局 -->
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <!-- 狀態標籤，根據 app.status 動態顯示顏色 -->
+                        <span class="status-badge"
+                              th:classappend="'status-' + ${app.status}"
+                              th:text="${app.status}">PENDING</span>
+
+                        <!--  【新增處】：取消按鈕（僅在 PENDING 狀態顯示） -->
+                        <button th:if="${app.status.name() == 'PENDING'}"
+                                th:onclick="|cancelApplication(${app.id})|"
+                                style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
+                                onmouseover="this.style.background='#f1aeb5'"
+                                onmouseout="this.style.background='#f8d7da'">
+                            <i class="fas fa-times"></i> 取消申請
+                        </button>
+                    </div>
+                </div>
+                <div class="app-details">
+                    <div>型號：<span th:text="${app.model} ?: '未填寫'">-</span></div>
+                    <div>購買年份：<span th:text="${app.purchaseYear}">-</span></div>
+                    <div>交易模式：
+                        <!--  因為只顯示 BUYOUT，直接顯示固定文字 -->
+                        <span style="color: var(--gold); font-weight: 600;">平台直接買斷</span>
+                    </div>
+                    <div>提交時間：<span th:text="${#temporals.format(app.createdAt, 'yyyy-MM-dd HH:mm')}">-</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 如果沒有申請記錄 -->
+        <div th:if="${applications == null or applications.content.isEmpty()}" class="card empty-state">
+            <i class="fas fa-inbox"></i>
+            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有提交過出售申請</h3>
+            <p style="color: var(--gray); margin-bottom: 1.5rem;">立即發佈您的愛錶，獲取專業免費估價！</p>
+            <a href="/sell" class="btn btn-gold"><i class="fas fa-plus-circle"></i> 發佈出售申請</a>
+        </div>
+    </main>
+</div>
+
+<footer class="footer">
+    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
+</footer>
+
+<div th:replace="~{fragments/common :: modals}"></div>
+<script th:inline="javascript">
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+</script>
+<script src="/js/common.js"></script>
+
+<!-- 【新增處】：取消申請的專屬 JS 函數 -->
+<script>
+    async function cancelApplication(applicationId) {
+        if (!confirm('⚠️ 確定要取消此出售申請嗎？\n\n取消後，該申請將被標記為已取消狀態。')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/sell/cancel/${applicationId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                showNotification('✅ 申請已取消');
+                // 刷新頁面以更新狀態
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('❌ ' + (result.message || '取消失敗'), true);
+            }
+        } catch (error) {
+            console.error('取消申请错误:', error);
+            showNotification('❌ 網絡錯誤，請稍後重試', true);
+        }
+    }
+</script>
+</body>
+</html>
