@@ -116,7 +116,7 @@
 
                         <!--  【新增處】：取消按鈕（僅在 PENDING 狀態顯示） -->
                         <button th:if="${app.status.name() == 'PENDING'}"
-                                th:onclick="|cancelApplication(${app.id})|"
+                                th:onclick="|cancelApplication(${app.applicationId})|"
                                 style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
                                 onmouseover="this.style.background='#f1aeb5'"
                                 onmouseout="this.style.background='#f8d7da'">

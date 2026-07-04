@@ -312,17 +312,18 @@
             <div class="security-card-header">
                 <div class="security-card-title"><i class="fas fa-link"></i> 綁定信息管理</div>
             </div>
+            <!-- 找到綁定信息管理區塊，修改如下 -->
             <div class="info-row">
                 <span class="info-label"><i class="fas fa-envelope"></i> 綁定郵箱</span>
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <span class="info-value" th:text="${customer.email}">user@example.com</span>
+                    <span class="info-value" th:text="${user.email}">user@example.com</span>
                     <button class="btn-sm btn-sm-primary" onclick="showNotification('❌ 修改郵箱需驗證原郵箱，功能開發中')">修改</button>
                 </div>
             </div>
             <div class="info-row">
                 <span class="info-label"><i class="fas fa-mobile-alt"></i> 綁定手機</span>
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <span class="info-value" th:text="${customer.phone}">+852 5222 2698</span>
+                    <span class="info-value" th:text="${user.phone}">+852 5222 2698</span>
                     <button class="btn-sm btn-sm-primary" onclick="showNotification('❌ 修改手機需短信驗證，功能開發中')">修改</button>
                 </div>
             </div>
@@ -536,7 +537,7 @@
 <div th:replace="~{fragments/common :: modals}"></div>
 <script th:inline="javascript">
     const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-    const username = [[${customer.username}]];
+        const username = [[${user.username}]];
 </script>
 <script src="/js/common.js"></script>
 
@@ -620,7 +621,7 @@
                         <div class="question-text">${q.question}</div>
                         <div class="question-answer-mask"><i class="fas fa-check-circle"></i> 已設置答案</div>
                     </div>
-                    <button class="btn-sm btn-sm-primary" onclick="editQuestion(${q.id}, '${q.question.replace(/'/g, "\\'")}')">修改</button>
+                    <button class="btn-sm btn-sm-primary" onclick="editQuestion(${q.questionId}, '${q.question.replace(/'/g, "\\'")}')">修改</button>
                 </div>
             `;
         });

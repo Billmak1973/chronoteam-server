@@ -7,6 +7,10 @@
         <i class="fas fa-user-circle"></i>
         <h3 th:text="${user.name}">用戶名</h3>
         <p th:text="${user.email}">email@example.com</p>
+        <p style="font-size: 0.75rem; color: var(--gray); margin-top: 0.3rem; font-family: monospace; letter-spacing: 0.5px; background: var(--light); padding: 0.2rem 0.5rem; border-radius: 4px; display: inline-block;">
+            <i class="fas fa-fingerprint" style="color: var(--gold); margin-right: 0.3rem;"></i>
+            <span th:text="${user.uid}">C26000</span>
+        </p>
     </div>
     <nav class="sidebar-menu">
         <!-- 帳戶管理 -->

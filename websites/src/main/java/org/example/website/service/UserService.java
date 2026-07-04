@@ -3,6 +3,7 @@ package org.example.website.service;
 import org.example.website.dto.RegisterRequest;
 import org.example.website.entity.User;
 import org.example.website.repository.UserRepository;
+import org.example.website.util.UidGenerator;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -11,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.concurrent.TimeUnit;
 
 @Service
-public class UserService { //  建議直接改名為 UserService，配合你的 User 實體遷移
+public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -44,8 +45,13 @@ public class UserService { //  建議直接改名為 UserService，配合你的 
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setPhone(request.getPhone());
 
-        //  核心修改 2：新的 User 實體中沒有 creditLimit 字段，已移除此行
-        // user.setCreditLimit(5000.00);
+        if (request.getAddress() != null && !request.getAddress().isEmpty()) {
+            user.setAddress(request.getAddress());
+        }
+
+        //  3. 生成并设置 UID (核心修改)
+        // 傳入當前數據庫的用戶總數，讓 UidGenerator 動態計算 UID 的數字位數
+        user.setUid(UidGenerator.nextUid(userRepository.count()));
 
         //  核心修改 3：設置默認角色為顧客 (對應 User.Role 枚舉)
         user.setRole(User.Role.CUSTOMER);

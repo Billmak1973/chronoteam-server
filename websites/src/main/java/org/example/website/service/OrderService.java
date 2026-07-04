@@ -35,14 +35,14 @@ public class OrderService {
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 🟢 核心修改 1：使用 UserRepository 獲取 User 實體
+        //  核心修改 1：使用 UserRepository 獲取 User 實體
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
         Order order = new Order();
         order.setOrderNo("ORD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
 
-        // 🟢 核心修改 2：設置 User 關聯，不再是 setCustomer
+        //  核心修改 2：設置 User 關聯，不再是 setCustomer
         order.setUser(user);
 
         order.setTotalAmount(totalAmount);
@@ -190,7 +190,7 @@ public class OrderService {
 
         Order order = item.getOrder();
 
-        // 🟢 核心修改：getCustomer() 改為 getUser()
+        //  核心修改：getCustomer() 改為 getUser()
         // 校验权限和订单状态（必须是未付款的订单才能改）
         if (!order.getUser().getUsername().equals(username)) {
             throw new RuntimeException("无权操作此订单");

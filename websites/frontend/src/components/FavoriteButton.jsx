@@ -10,26 +10,35 @@ const FavoriteButton = ({ productId, initialIsFavorite }) => {
       const response = await fetch(`/api/favorites/toggle/${productId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin' // 携带 Session Cookie
+        credentials: 'same-origin'
       })
-      
+
       const result = await response.json()
-      
+
       if (response.ok && result.success) {
-        setIsFavorite(!isFavorite)
+        const newState = !isFavorite
+        setIsFavorite(newState)
+        // 統一使用全局通知，替換掉原生 alert
+        if (typeof window.showNotification === 'function') {
+          window.showNotification(newState ? '💔 已取消收藏' : '❤️ 已加入收藏')
+        }
       } else {
-        alert(result.message || '操作失敗')
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('❌ ' + (result.message || '操作失敗'), true)
+        }
       }
     } catch (error) {
       console.error('收藏失敗:', error)
-      alert('網絡錯誤')
+      if (typeof window.showNotification === 'function') {
+        window.showNotification('❌ 網絡錯誤', true)
+      }
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <button 
+    <button
       className={`favorite-btn ${isFavorite ? 'active' : ''}`}
       onClick={toggleFavorite}
       disabled={loading}
@@ -52,7 +61,7 @@ const FavoriteButton = ({ productId, initialIsFavorite }) => {
       {loading ? (
         <i className="fas fa-spinner fa-spin" style={{ color: '#999' }}></i>
       ) : (
-        <i className={isFavorite ? 'fas fa-heart' : 'far fa-heart'} 
+        <i className={isFavorite ? 'fas fa-heart' : 'far fa-heart'}
            style={{ color: isFavorite ? 'var(--accent)' : '#999', fontSize: '1.2rem' }}></i>
       )}
     </button>

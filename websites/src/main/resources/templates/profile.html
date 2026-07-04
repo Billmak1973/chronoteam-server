@@ -108,27 +108,21 @@
     <!--  6. 右側主內容 (取代原本的 page-container) -->
     <main class="main-content">
         <h2><i class="fas fa-id-card" style="color: var(--gold);"></i> 帳戶信息</h2>
-
         <div class="info-card">
             <div class="info-row">
                 <span class="info-label"><i class="fas fa-user"></i> 用戶名</span>
-                <span class="info-value" th:text="${customer.username}">username</span>
+                <span class="info-value" th:text="${user.username}">username</span>
             </div>
             <div class="info-row">
                 <span class="info-label"><i class="fas fa-envelope"></i> 電子郵件</span>
-                <span class="info-value" th:text="${customer.email}">user@example.com</span>
+                <span class="info-value" th:text="${user.email}">user@example.com</span>
             </div>
             <div class="info-row">
                 <span class="info-label"><i class="fas fa-phone"></i> 手機號碼</span>
-                <span class="info-value" th:text="${customer.phone}">+852 1234 5678</span>
+                <span class="info-value" th:text="${user.phone}">+852 1234 5678</span>
             </div>
-            <div class="info-row">
-                <span class="info-label"><i class="fas fa-credit-card"></i> 信用額度</span>
-                <span class="info-value" style="color: var(--gold); font-weight: 700;"
-                      th:text="'HK$ ' + ${#numbers.formatDecimal(customer.creditLimit, 1, 'COMMA', 2, 'POINT')}">HK$ 5,000.00</span>
-            </div>
-        </div>
 
+        </div>
         <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> 返回首頁</a>
     </main>
 </div>

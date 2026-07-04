@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
-const ReviewForm = ({ productId, orderNo, onSuccess }) => {
+// 核心修復：必須接收 currentUsername 作為 props，否則下方調用會報 ReferenceError
+const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername }) => {
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
     const [content, setContent] = useState('');

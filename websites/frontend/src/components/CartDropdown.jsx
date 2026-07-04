@@ -37,7 +37,7 @@ const CartDropdown = () => {
     const originalItems = [...cartItems]
     setCartItems(items =>
       items.map(item =>
-        item.id === cartId ? { ...item, quantity: newQuantity } : item
+        item.cartId === cartId ? { ...item, quantity: newQuantity } : item
       )
     )
 
@@ -75,7 +75,7 @@ const CartDropdown = () => {
 
     // 1. 立即從 UI 移除
     const originalItems = [...cartItems]
-    setCartItems(items => items.filter(item => item.product.id !== productId))
+    setCartItems(items => items.filter(item => item.product.productId !== productId))
 
     try {
       const response = await fetch(`/api/cart/remove/${productId}`, {
@@ -100,7 +100,7 @@ const CartDropdown = () => {
     // 1. 立即更新 UI (樂觀更新)
     const originalItems = [...cartItems]
     setCartItems(items => items.map(item =>
-        item.id === cartId ? { ...item, selected: newStatus } : item
+        item.cartId === cartId ? { ...item, selected: newStatus } : item
     ))
 
     try {
@@ -200,13 +200,13 @@ const CartDropdown = () => {
               <div className="cart-items">
                 {cartItems.map(item => (
                   <CartItem
-                    key={item.id}
+                    key={item.cartId}
                     item={item}
                     onUpdateQuantity={updateQuantity}
                     onRemove={removeItem}
-                    onToggleSelection={toggleSelection} // 🟢 傳遞切換函數
+                    onToggleSelection={toggleSelection} //  傳遞切換函數
                     formatPrice={formatPrice}
-                    isUpdating={optimisticUpdates[item.id]}
+                    isUpdating={optimisticUpdates[item.cartId]}
                   />
                 ))}
               </div>
@@ -234,11 +234,11 @@ const CartDropdown = () => {
 
 // 購物車商品項目組件
 const CartItem = ({ item, onUpdateQuantity, onRemove, onToggleSelection, formatPrice, isUpdating }) => {
-  const { product, quantity, id: cartId, price, selected } = item // 🟢 解構 selected
+  const { product, quantity, cartId, price, selected } = item // 解構 selected
 
   return (
     <div className={`cart-item ${isUpdating ? 'updating' : ''}`}>
-      {/* 🟢 新增：Checkbox */}
+      {/*Checkbox */}
       <input
         type="checkbox"
         checked={selected !== false}
@@ -280,7 +280,7 @@ const CartItem = ({ item, onUpdateQuantity, onRemove, onToggleSelection, formatP
           </button>
           <i
             className="fas fa-trash-alt cart-item-remove"
-            onClick={() => onRemove(product.id)}
+            onClick={() => onRemove(product.productId)}
             title="移除商品"
           ></i>
         </div>

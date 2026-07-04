@@ -191,6 +191,7 @@ const ReviewsContainer = ({ productId, currentUsername, isAdmin, canReview, revi
                     productId={productId}
                     orderNo={reviewOrderNo}
                     onSuccess={handleNewReviewSubmitted}
+                    currentUsername={currentUsername}
                 />
             )}
             {loading ? (

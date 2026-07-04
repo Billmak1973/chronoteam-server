@@ -79,28 +79,28 @@
             return;
         }
         let html = '';
-        cartItems.forEach(item => {
-            html += `
-                <div class="cart-item" data-cart-id="${item.id}" data-product-id="${item.product.id}">
-                    <div class="cart-item-img">
-                        <img src="/images/products/${item.product.image}" alt="${item.product.description}"
-                             onerror="this.src='/images/placeholder.png'">
-                    </div>
-                    <div class="cart-item-info">
-                        <div class="cart-item-name">${item.product.description}</div>
-                        <div class="cart-item-price">HK$ ${formatPrice(item.price)}</div>
-                        <div class="cart-item-quantity">
-                            <button class="qty-btn" onclick="updateCartQuantity(${item.id}, ${item.quantity - 1})" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
-                            <span class="qty-value">${item.quantity}</span>
-                            <button class="qty-btn" onclick="updateCartQuantity(${item.id}, ${item.quantity + 1})" ${item.quantity >= item.product.stock ? 'disabled' : ''}>+</button>
-                        </div>
-                    </div>
-                    <div class="cart-item-remove" onclick="removeFromCart(${item.product.id})">
-                        <i class="fas fa-trash-alt"></i>
-                    </div>
+cartItems.forEach(item => {
+    html += `
+        <div class="cart-item" data-cart-id="${item.cartId}" data-product-id="${item.product.productId}">
+            <div class="cart-item-img">
+                <img src="/images/products/${item.product.image}" alt="${item.product.description}"
+                     onerror="this.src='/images/placeholder.png'">
+            </div>
+            <div class="cart-item-info">
+                <div class="cart-item-name">${item.product.description}</div>
+                <div class="cart-item-price">HK$ ${formatPrice(item.price)}</div>
+                <div class="cart-item-quantity">
+                    <button class="qty-btn" onclick="updateCartQuantity(${item.cartId}, ${item.quantity - 1})" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
+                    <span class="qty-value">${item.quantity}</span>
+                    <button class="qty-btn" onclick="updateCartQuantity(${item.cartId}, ${item.quantity + 1})" ${item.quantity >= item.product.stock ? 'disabled' : ''}>+</button>
                 </div>
-            `;
-        });
+            </div>
+            <div class="cart-item-remove" onclick="removeFromCart(${item.product.productId})">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+        </div>
+    `;
+});
         container.innerHTML = html;
         const totalEl = document.getElementById('cartTotalAmount');
         if(totalEl) totalEl.textContent = 'HK$ ' + formatPrice(totalAmount);

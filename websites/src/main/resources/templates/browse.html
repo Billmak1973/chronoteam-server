@@ -253,26 +253,14 @@
                 style="width: 100%; padding: 0.8rem;">
             <i class="fas fa-filter"></i> 套用篩選
         </button>
-
-        <!-- ========================================== -->
-        <!-- 管理員專屬：新增物品按鈕 (僅 admin 可見) -->
-        <!-- ========================================== -->
-        <button th:if="${#authentication.name == 'admin'}"
-                type="button"
-                class="btn btn-gold"
-                onclick="showNotification('🔒 新增物品功能開發中，敬請期待...')"
-                style="width: 100%; padding: 0.8rem; margin-top: 1rem; font-weight: 600; border: 2px solid var(--gold);">
-            <i class="fas fa-plus-circle"></i> 新增物品
-        </button>
-
     </aside>
 
     <!-- 商品區域 -->
     <section class="products-section">
         <div class="products-header">
-                <span class="products-count">
-                    共 <strong th:text="${totalElements}">0</strong> 件商品
-                </span>
+            <span class="products-count">
+                共 <strong th:text="${totalElements}">0</strong> 件商品
+            </span>
             <select class="sort-dropdown" onchange="changeSort(this.value)">
                 <option value="newest" th:selected="${currentSort == null || currentSort == 'newest'}">最新上架</option>
                 <option value="price-asc" th:selected="${currentSort == 'price-asc'}">價格：低到高</option>
@@ -289,11 +277,11 @@
 
                     <!--  新增：收藏按鈕 -->
                     <button class="favorite-btn"
-                            th:onclick="|toggleFavorite(${product.id}, this)|"
+                            th:onclick="|toggleFavorite(${product.productId}, this)|"
                             title="收藏商品">
                         <!-- 根據後端傳入的 favoriteProductIds 判斷初始狀態 -->
-                        <i th:class="${favoriteProductIds != null && favoriteProductIds.contains(product.id)} ? 'fas fa-heart' : 'far fa-heart'"
-                           th:style="${favoriteProductIds != null && favoriteProductIds.contains(product.id)} ? 'color: var(--accent);' : 'color: #999;'"></i>
+                        <i th:class="${favoriteProductIds != null && favoriteProductIds.contains(product.productId)} ? 'fas fa-heart' : 'far fa-heart'"
+                           th:style="${favoriteProductIds != null && favoriteProductIds.contains(product.productId)} ? 'color: var(--accent);' : 'color: #999;'"></i>
                     </button>
                 </div>
                 <div class="product-info">
@@ -309,13 +297,13 @@
                     </div>
 
                     <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                        <a th:href="@{/product/{id}(id=${product.id})}" class="btn btn-outline"
+                        <a th:href="@{/product/{id}(id=${product.productId})}" class="btn btn-outline"
                            style="flex: 1; text-align: center; padding: 0.5rem;">
                             <i class="fas fa-eye"></i> 詳情
                         </a>
                         <!-- 修改：加入按钮逻辑。如果库存为0，调用提示函数；否则调用 addToCart -->
                         <button type="button"
-                                th:onclick="${product.stock != null and product.stock == 0} ? 'showSoldOutHint()' : |addToCart(${product.id})|"
+                                th:onclick="${product.stock != null and product.stock == 0} ? 'showSoldOutHint()' : |addToCart(${product.productId})|"
                                 class="btn btn-primary"
                                 style="flex: 1; text-align: center; padding: 0.5rem;">
                             <i class="fas fa-cart-plus"></i> 加入

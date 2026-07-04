@@ -108,7 +108,7 @@
             </div>
         </div>
 
-        <!-- 🟢 寄售列表 -->
+        <!--  寄售列表 -->
         <div th:if="${!consignmentApps.isEmpty()}">
             <div class="consignment-card" th:each="app : ${consignmentApps}">
                 <div class="item-img">
@@ -161,7 +161,7 @@
 
                     <!-- 1. 取消申請 (僅限 PENDING 或 QUOTED 狀態) -->
                     <button th:if="${app.status.name() == 'PENDING' or app.status.name() == 'QUOTED'}"
-                            th:onclick="|cancelApplication(${app.id})|"
+                            th:onclick="|cancelApplication(${app.applicationId})|"
                             class="btn-sm btn-cancel-action">
                         <i class="fas fa-times"></i> 取消申請
                     </button>
@@ -171,8 +171,8 @@
                         <i class="fas fa-ban"></i> 申請下架
                     </button>
 
-                    <!-- 🟢 3. 徹底刪除記錄 (所有狀態皆可點擊，用於清理列表) -->
-                    <button th:onclick="|deleteApplication(${app.id})|"
+                    <!--  3. 徹底刪除記錄 (所有狀態皆可點擊，用於清理列表) -->
+                    <button th:onclick="|deleteApplication(${app.applicationId})|"
                             class="btn-sm btn-delete-action">
                         <i class="fas fa-trash-alt"></i> 刪除記錄
                     </button>
@@ -180,7 +180,7 @@
             </div>
         </div>
 
-        <!-- 🟢 空狀態 (已清理重複代碼) -->
+        <!--  空狀態 (已清理重複代碼) -->
         <div th:if="${consignmentApps.isEmpty()}" class="empty-state">
             <i class="fas fa-store-alt-slash"></i>
             <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有寄售中的商品</h3>

@@ -221,17 +221,17 @@
         <div th:if="${cartItems != null and !cartItems.isEmpty()}" class="cart-items-list">
             <div th:each="item : ${cartItems}"
                  class="cart-item"
-                 th:data-cart-id="${item.id}">
+                 th:data-cart-id="${item.cartId}">
 
                 <!--商品選擇復選框 -->
                 <div class="item-checkbox">
                     <input type="checkbox"
                            class="cart-item-checkbox"
-                           th:id="'checkbox-' + ${item.id}"
-                           th:data-cart-id="${item.id}"
+                           th:id="'checkbox-' + ${item.cartId}"
+                           th:data-cart-id="${item.cartId}"
                            onchange="toggleItemSelection(this)"
                            checked>
-                    <label th:for="'checkbox-' + ${item.id}" class="checkbox-label"></label>
+                    <label th:for="'checkbox-' + ${item.cartId}" class="checkbox-label"></label>
                 </div>
 
                 <div class="item-image">
@@ -246,14 +246,14 @@
                         HK$ <span th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span>
                     </div>
                     <div class="item-quantity">
-                        <!-- 絕對禁止使用 [[${item.id}]]，改用 th:onclick 拼接 -->
+                        <!-- 絕對禁止使用 [[${item.cartId}]]，改用 th:onclick 拼接 -->
                         <button class="qty-btn"
-                                th:onclick="'updateQuantity(' + ${item.id} + ', -1)'">
+                                th:onclick="'updateQuantity(' + ${item.cartId} + ', -1)'">
                             <i class="fas fa-minus"></i>
                         </button>
                         <span class="qty-value" th:text="${item.quantity}">1</span>
                         <button class="qty-btn"
-                                th:onclick="'updateQuantity(' + ${item.id} + ', 1)'">
+                                th:onclick="'updateQuantity(' + ${item.cartId} + ', 1)'">
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
@@ -265,7 +265,7 @@
                     </div>
                     <!-- 移除按鈕同樣使用安全拼接 -->
                     <button class="btn-remove"
-                            th:onclick="'removeItem(' + ${item.product.id} + ')'"
+                            th:onclick="'removeItem(' + ${item.product.productId} + ')'"
                             title="移除商品">
                         <i class="fas fa-trash-alt"></i>
                     </button>

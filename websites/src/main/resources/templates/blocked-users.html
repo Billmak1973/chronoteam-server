@@ -71,16 +71,15 @@
                         <i class="fas fa-user-slash"></i>
                     </div>
                     <div class="user-details">
-                        <h4 th:text="${block.blockedUsername}">被禁言的用戶名</h4>
+                        <h4 th:text="${block.blockedUser.username}">被禁言的用戶名</h4>
                         <p>
                             <i class="fas fa-clock"></i> 禁言時間：
                             <span th:text="${#temporals.format(block.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01 12:00</span>
                         </p>
                     </div>
                 </div>
-                <!--  修復：使用 data-* 屬性代替 th:onclick 中的字符串拼接 -->
                 <button class="action-btn"
-                        th:data-username="${block.blockedUsername}"
+                        th:data-username="${block.blockedUser.username}"
                         onclick="unblockUser(this)">
                     <i class="fas fa-unlock"></i> 解除禁言
                 </button>

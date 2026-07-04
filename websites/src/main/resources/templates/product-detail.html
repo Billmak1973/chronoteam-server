@@ -2380,6 +2380,286 @@
                 transform: translateY(0) scale(1);
             }
         }
+
+                /* ========================================== */
+/*  評價狀態提示區塊美化 */
+/* ========================================== */
+.already-reviewed {
+    max-width: 1200px;             /* 【新增】限制最大宽度 */
+    margin: 0 auto 2rem auto;      /* 【修改】居中，并保留底部 2rem 间距 */
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-left: 5px solid #28a745;
+    border-radius: 12px;
+    padding: 1.5rem 2rem;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.already-reviewed::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(40, 167, 69, 0.1) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.already-reviewed p {
+    margin: 0;
+    color: #155724;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+}
+
+.already-reviewed i {
+    font-size: 1.5rem;
+    color: #28a745;
+    animation: checkmarkPulse 2s ease-in-out infinite;
+}
+
+@keyframes checkmarkPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* ========================================== */
+/*  未購買提示區塊美化 */
+/* ========================================== */
+.no-purchase-prompt {
+    max-width: 1200px;             /* 【新增】限制最大宽度 */
+    margin: 0 auto 2rem auto;      /* 【修改】居中，并保留底部 2rem 间距 */
+    background: linear-gradient(135deg, #fff9f0 0%, #fff5e6 100%);
+    border: 2px dashed var(--gold);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.15);
+}
+
+.no-purchase-prompt::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(212, 175, 55, 0.03) 10px,
+        rgba(212, 175, 55, 0.03) 20px
+    );
+    pointer-events: none;
+}
+
+.no-purchase-prompt i {
+    font-size: 3.5rem;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+    display: block;
+    animation: cartBounce 2s ease-in-out infinite;
+    position: relative;
+    z-index: 1;
+}
+
+@keyframes cartBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.no-purchase-prompt p {
+    color: var(--primary);
+    margin-bottom: 1rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+}
+
+.no-purchase-prompt .btn-outline {
+    position: relative;
+    z-index: 1;
+    padding: 0.8rem 2rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.no-purchase-prompt .btn-outline:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+}
+
+/* ========================================== */
+/*  未登入提示區塊美化 */
+/* ========================================== */
+.login-required-prompt {
+    max-width: 1200px;             /* 【新增】限制最大宽度 */
+    margin: 0 auto 2rem auto;      /* 【修改】居中，并保留底部 2rem 间距 */
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.login-required-prompt::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(212, 175, 55, 0.05) 0%, transparent 70%);
+    animation: rotateBg 20s linear infinite;
+}
+
+@keyframes rotateBg {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.login-required-prompt i {
+    font-size: 3.5rem;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+    display: block;
+    position: relative;
+    z-index: 1;
+    animation: lockShake 3s ease-in-out infinite;
+}
+
+@keyframes lockShake {
+    0%, 100% { transform: rotate(0deg); }
+    10%, 30%, 50%, 70%, 90% { transform: rotate(-5deg); }
+    20%, 40%, 60%, 80% { transform: rotate(5deg); }
+}
+
+.login-required-prompt p {
+    color: var(--primary);
+    margin-bottom: 1.5rem;
+    font-size: 1.15rem;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+}
+
+.login-required-prompt .btn-primary {
+    position: relative;
+    z-index: 1;
+    padding: 0.9rem 2.5rem;
+    font-weight: 600;
+    font-size: 1.05rem;
+    transition: all 0.3s ease;
+}
+
+.login-required-prompt .btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(233, 69, 96, 0.4);
+}
+
+/* ========================================== */
+/*  無評論時的佔位提示美化 */
+/* ========================================== */
+.reviews-list .no-reviews {
+    max-width: 1200px;             /* 【新增】限制最大宽度 */
+    margin: 2rem auto;             /* 【修改】居中，并保留上下 2rem 间距 */
+    background: linear-gradient(135deg, #fff9f0 0%, #fff5e6 100%);
+    border: 3px dashed var(--gold);
+    border-radius: 20px;
+    padding: 4rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(212, 175, 55, 0.2);
+}
+
+.reviews-list .no-reviews::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        radial-gradient(circle at 20% 50%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(212, 175, 55, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.reviews-list .no-reviews i {
+    font-size: 5rem;
+    color: var(--gold);
+    margin-bottom: 2rem;
+    display: block;
+    position: relative;
+    z-index: 1;
+    animation: commentFloat 3s ease-in-out infinite;
+    filter: drop-shadow(0 4px 10px rgba(212, 175, 55, 0.3));
+}
+
+@keyframes commentFloat {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-15px) rotate(5deg);
+    }
+}
+
+.reviews-list .no-reviews p {
+    font-size: 1.2rem;
+    color: var(--primary);
+    margin: 0.8rem 0;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+}
+
+.reviews-list .no-reviews p:last-child {
+    font-size: 1rem;
+    color: var(--gray);
+    font-weight: 500;
+}
+
+/* 響應式優化 */
+@media (max-width: 768px) {
+    .already-reviewed,
+    .no-purchase-prompt,
+    .login-required-prompt,
+    .reviews-list .no-reviews {
+        padding: 2rem 1.5rem;
+    }
+
+    .no-purchase-prompt i,
+    .login-required-prompt i {
+        font-size: 2.5rem;
+    }
+
+    .reviews-list .no-reviews i {
+        font-size: 3.5rem;
+    }
+
+    .already-reviewed p,
+    .no-purchase-prompt p,
+    .login-required-prompt p,
+    .reviews-list .no-reviews p {
+        font-size: 1rem;
+    }
+}
     </style>
 </head>
 
@@ -2394,7 +2674,7 @@
                 onerror="this.src='/images/placeholder.png'">
 
             <!--  React 收藏按鈕掛載點 -->
-            <div id="favorite-react-root" th:data-product-id="${product.id}" th:data-is-favorite="${isFavorite}">
+            <div id="favorite-react-root" th:data-product-id="${product.productId}" th:data-is-favorite="${isFavorite}">
             </div>
         </div>
 
@@ -2439,7 +2719,7 @@
     <!--  全新的 React 評論區掛載點 -->
     <!-- ========================================== -->
     <div id="reviews-react-root" class="reviews-react-wrapper"
-        th:attr="data-product-id=${product.id},
+         th:attr="data-product-id=${product.productId},
               data-current-username=${#authentication.name},
               data-is-admin=${#authentication.name == 'admin'},
               data-can-review=${canReview},
@@ -2450,6 +2730,38 @@
         <div style="text-align:center; padding: 4rem; color: var(--gray);">
             <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
             <p>評論區載入中...</p>
+        </div>
+    </div>
+
+
+    <!-- 評價狀態提示區塊 -->
+    <div th:if="${userReview != null}" class="already-reviewed">
+        <p style="margin: 0; color: #155724; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
+            <i class="fas fa-check-circle"></i><strong>您已評價過該商品，感謝您的反饋！</strong>
+        </p>
+    </div>
+
+    <div th:if="${#authorization.expression('isAuthenticated()') and (canReview == null or !canReview) and userReview == null}"
+         class="no-purchase-prompt">
+        <i class="fas fa-shopping-cart" style="font-size: 2rem; color: var(--gold); margin-bottom: 1rem;"></i>
+        <p style="color: var(--gray); margin-bottom: 0.5rem; font-size: 1.1rem; font-weight: 500;">購買並完成付款後，即可在此發表評價</p>
+        <a href="/browse" class="btn btn-outline" style="margin-top: 0.5rem;"><i class="fas fa-search"></i> 去逛逛</a>
+    </div>
+
+    <div th:if="${#authorization.expression('!isAuthenticated()')}"
+         class="login-required-prompt">
+        <i class="fas fa-lock" style="font-size: 2rem; color: var(--gold); margin-bottom: 1rem;"></i>
+        <p style="color: var(--gray); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">請登入後購買商品並發表評價</p>
+        <button onclick="openLoginModal()" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> 立即登入</button>
+    </div>
+
+    <!-- 無評論時的佔位提示 (React 加載前顯示) -->
+    <div class="reviews-list" id="reviewsList"
+         th:if="${(#authorization.expression('isAuthenticated()') and canReview and (reviews == null || #lists.isEmpty(reviews)))}">
+        <div class="no-reviews">
+            <i class="fas fa-comment-slash" style="color: var(--gold);"></i>
+            <p style="font-size: 1.1rem; color: var(--gray); margin-top: 1rem;">該產品還沒有用戶發表評價！</p>
+            <p style="font-size: 0.9rem; color: var(--gray); margin-top: 0.5rem;">成為第一個留下評論的人吧</p>
         </div>
     </div>
 
@@ -2798,7 +3110,7 @@
     <!-- ========================================== -->
     <script th:inline="javascript">
         const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-        const currentProductId = [[${ product.id }]];
+        const currentProductId = [[${ product.productId }]];
         const currentUsername = [[${ #authentication.name }]];
         const isAdmin = [[${ #authentication.name == 'admin' }]];
         const currentStock = [[${ product.stock }]];
@@ -2866,7 +3178,7 @@
         };
 
         // ==========================================
-        //  新增：永久拉黑彈窗函數 (與全局禁言區分)
+        //  永久拉黑彈窗函數 (與全局禁言區分)
         // ==========================================
         window.showBlacklistedModal = function (reason) {
             const modal = document.getElementById('blacklistedModal');
@@ -2893,7 +3205,7 @@
         };
 
         // ==========================================
-        // 新增：永久拉黑確認彈窗邏輯 (管理員操作)
+        // 永久拉黑確認彈窗邏輯 (管理員操作)
         // ==========================================
         let blacklistTargetUser = '';
 
@@ -2941,7 +3253,7 @@
         };
 
         // ==========================================
-        // 🟢 新增：未登入提示彈窗邏輯 (整合自代碼2)
+        //  未登入提示彈窗邏輯 (整合自代碼2)
         // ==========================================
         window.showLoginRequiredModal = function () {
             const modal = document.getElementById('loginRequiredModal');
@@ -2985,7 +3297,7 @@
             const modal3 = document.getElementById('blacklistConfirmModal');
             if (modal3 && e.target === modal3) closeBlacklistConfirmModal();
 
-            // 🟢 4. 關閉未登入提示彈窗
+            //  4. 關閉未登入提示彈窗
             const modal4 = document.getElementById('loginRequiredModal');
             if (modal4 && e.target === modal4) closeLoginRequiredModal();
         });
@@ -3002,7 +3314,7 @@
                     return; // 關閉一個即可，避免同時觸發
                 }
 
-                // 🟢 關閉未登入提示彈窗
+                //  關閉未登入提示彈窗
                 const loginReqModal = document.getElementById('loginRequiredModal');
                 if (loginReqModal && loginReqModal.style.display === 'flex') {
                     closeLoginRequiredModal();

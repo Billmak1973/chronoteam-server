@@ -6,6 +6,8 @@ import org.example.website.entity.Order;
 import org.example.website.entity.OrderItem;
 import org.example.website.repository.OrderItemRepository;
 import org.example.website.service.OrderService;
+import org.example.website.entity.User;
+import org.example.website.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -23,7 +25,7 @@ public class CheckoutController {
 
     private final OrderService orderService;
     private final OrderItemRepository orderItemRepository;
-
+    private final UserRepository userRepository;
 
     /**
      * 渲染结账页面：现在查询的是 OrderItem，而不是 Cart！
@@ -31,6 +33,9 @@ public class CheckoutController {
     @GetMapping
     public String checkoutPage(@RequestParam String orderNo, Model model, Authentication authentication) {
         String username = authentication.getName();
+        User currentUser = userRepository.findByUsername(username).orElse(null);
+        model.addAttribute("user", currentUser);
+
         Order order = orderService.getOrderByOrderNoAndUsername(orderNo, username);
 
         // 获取订单明细 (OrderItem)

@@ -15,7 +15,7 @@
         .page-title i { color: var(--accent); } /* 愛心使用紅色/粉色系 */
         .page-subtitle { color: var(--gray); margin-bottom: 2rem; font-size: 0.95rem; }
 
-        /* 🟢 收藏網格佈局 */
+        /*  收藏網格佈局 */
         .favorites-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -79,14 +79,14 @@
 <div th:replace="~{fragments/common :: navbar}"></div>
 
 <div class="dashboard-container">
-    <!-- 🟢 引入側邊欄，高亮 'favorites' -->
+    <!--  引入側邊欄，高亮 'favorites' -->
     <div th:replace="~{fragments/sidebar :: sidebar(activePage='favorites')}"></div>
 
     <main class="main-content">
         <h2 class="page-title"><i class="fas fa-heart"></i> 我的收藏</h2>
         <p class="page-subtitle">您收藏的心儀手錶都在這裡，隨時可以查看詳情或取消收藏</p>
 
-        <!-- 🟢 收藏列表 -->
+        <!--  收藏列表 -->
         <div class="favorites-grid" th:if="${!favorites.isEmpty()}">
             <div class="favorite-card" th:each="fav : ${favorites}">
                 <div class="fav-img">
@@ -101,11 +101,11 @@
                         HK$ <span th:text="${#numbers.formatDecimal(fav.product.price, 1, 'COMMA', 0, 'POINT')}">0</span>
                     </div>
                     <div class="fav-actions">
-                        <a th:href="@{/product/{id}(id=${fav.product.id})}" class="btn-sm btn-view">
+                        <a th:href="@{/product/{id}(id=${fav.product.productId})}" class="btn-sm btn-view">
                             <i class="fas fa-eye"></i> 查看
                         </a>
-                        <!-- 🟢 取消收藏按鈕 -->
-                        <button class="btn-sm btn-remove" th:onclick="|removeFavorite(${fav.product.id}, this)|">
+                        <!--  取消收藏按鈕 -->
+                        <button class="btn-sm btn-remove" th:onclick="|removeFavorite(${fav.product.productId}, this)|">
                             <i class="fas fa-heart-broken"></i> 取消
                         </button>
                     </div>
@@ -113,7 +113,7 @@
             </div>
         </div>
 
-        <!-- 🟢 空狀態 -->
+        <!--  空狀態 -->
         <div th:if="${favorites.isEmpty()}" class="empty-state">
             <i class="fas fa-heart-broken"></i>
             <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有收藏任何商品</h3>
@@ -133,7 +133,7 @@
 </script>
 <script src="/js/common.js"></script>
 
-<!-- 🟢 取消收藏專屬 JS -->
+<!--  取消收藏專屬 JS -->
 <script>
     async function removeFavorite(productId, btn) {
         if (!confirm('💔 確定要取消收藏該商品嗎？')) return;
@@ -150,7 +150,7 @@
             if (response.ok && result.success) {
                 showNotification('💔 已取消收藏');
 
-                // 🟢 優雅的消失動畫
+                //  優雅的消失動畫
                 const card = btn.closest('.favorite-card');
                 card.style.transition = 'all 0.4s ease';
                 card.style.opacity = '0';

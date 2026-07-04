@@ -132,7 +132,7 @@
             <!-- ================== 全新 6 種狀態提示框 ================== -->
             <div style="margin-top: 1rem;">
               <!-- 情況 1：未申訴且仍在禁言期 (ACTIVE) -> 黃色警告框 + 申訴按鈕 -->
-              <div th:if="${notificationStatusMap[notif.id] == 'SHOW_APPEAL_BTN'}"
+              <div th:if="${notificationStatusMap[notif.notificationId] == 'SHOW_APPEAL_BTN'}"
                    style="display: flex; align-items: center; justify-content: space-between; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; padding: 0.8rem 1rem;">
                 <div style="color: #856404; font-size: 0.95rem;">
                   <i class="fas fa-exclamation-circle" style="margin-right: 0.5rem;"></i>
@@ -140,41 +140,41 @@
                 </div>
                 <button class="btn-sm"
                         style="background: var(--gold); color: var(--primary); border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;"
-                        th:onclick="|openAppealModal(${notif.id}, 'BAN')|">
+                        th:onclick="|openAppealModal(${notif.notificationId}, 'BAN')|">
                   <i class="fas fa-file-alt"></i> 提交申訴
                 </button>
               </div>
 
               <!-- 情況 2：申訴審核中 (PENDING) -> 灰色信息框 -->
-              <div th:if="${notificationStatusMap[notif.id] == 'APPEAL_PENDING'}"
+              <div th:if="${notificationStatusMap[notif.notificationId] == 'APPEAL_PENDING'}"
                    style="background: #e9ecef; border: 1px solid #ced4da; border-radius: 8px; padding: 0.8rem 1rem; color: #6c757d; font-size: 0.95rem;">
                 <i class="fas fa-hourglass-half" style="margin-right: 0.5rem;"></i>
                 您的申訴已提交，管理員正在審核中，請耐心等待。
               </div>
 
               <!-- 情況 3：申訴成功 (APPROVED) -> 綠色成功框 -->
-              <div th:if="${notificationStatusMap[notif.id] == 'APPEAL_APPROVED'}"
+              <div th:if="${notificationStatusMap[notif.notificationId] == 'APPEAL_APPROVED'}"
                    style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 0.8rem 1rem; color: #155724; font-size: 0.95rem; font-weight: 500;">
                 <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
                 <strong>申訴成功！</strong> 您的申訴已通過，禁言處罰已提前解除。
               </div>
 
               <!-- 情況 4：申訴失敗 (REJECTED) -> 紅色危險框 -->
-              <div th:if="${notificationStatusMap[notif.id] == 'APPEAL_REJECTED'}"
+              <div th:if="${notificationStatusMap[notif.notificationId] == 'APPEAL_REJECTED'}"
                    style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 0.8rem 1rem; color: #721c24; font-size: 0.95rem; font-weight: 500;">
                 <i class="fas fa-times-circle" style="margin-right: 0.5rem;"></i>
                 <strong>申訴被駁回。</strong> 管理員維持原判，請遵守社區規範。
               </div>
 
               <!-- 情況 5：禁言已過期且未申訴 (EXPIRED) -> 淺灰色中性框 -->
-              <div th:if="${notificationStatusMap[notif.id] == 'EXPIRED_NO_APPEAL'}"
+              <div th:if="${notificationStatusMap[notif.notificationId] == 'EXPIRED_NO_APPEAL'}"
                    style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 0.8rem 1rem; color: #6c757d; font-size: 0.95rem;">
                 <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
                 禁言期已滿，您的帳戶已自動恢復正常。
               </div>
 
               <!-- 情況 6：管理員手動解封 (REVOKED_NO_APPEAL) -> 藍色/青色提示框 -->
-              <div th:if="${notificationStatusMap[notif.id] == 'REVOKED_NO_APPEAL'}"
+              <div th:if="${notificationStatusMap[notif.notificationId] == 'REVOKED_NO_APPEAL'}"
                    style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 0.8rem 1rem; color: #0c5460; font-size: 0.95rem; font-weight: 500;">
                 <i class="fas fa-user-shield" style="margin-right: 0.5rem;"></i>
                 <strong>處罰已撤銷。</strong> 管理員已為您提前解除禁言。

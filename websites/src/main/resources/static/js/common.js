@@ -58,7 +58,6 @@ function renderCartItems(cartItems, totalAmount) {
     const container = document.getElementById('cartItemsContainer');
     if (!container) return;
 
-    //  核心修復：每次重新渲染時，清空並重新初始化選中狀態，防止狀態殘留
     selectedCartItems.clear();
 
     if (!cartItems || cartItems.length === 0) {
@@ -70,19 +69,17 @@ function renderCartItems(cartItems, totalAmount) {
 
     let html = '';
     cartItems.forEach(item => {
-        //  默認全部選中，或者根據後端返回的 item.selected 判斷 (若後端有返回該字段)
         const isChecked = item.selected !== false;
         if (isChecked) {
-            selectedCartItems.add(item.id); // 同步加入 Set
+            selectedCartItems.add(item.cartId);
         }
 
-        html += `<div class="cart-item" data-cart-id="${item.id}" data-product-id="${item.product.id}">
-            <!--  新增：复选框 -->
+        html += `<div class="cart-item" data-cart-id="${item.cartId}" data-product-id="${item.product.productId}">
             <div class="cart-item-checkbox">
                 <input type="checkbox"
                        class="cart-item-select"
-                       data-cart-id="${item.id}"
-                       onchange="toggleCartItemSelection(${item.id}, this.checked)"
+                       data-cart-id="${item.cartId}"
+                       onchange="toggleCartItemSelection(${item.cartId}, this.checked)"
                        ${isChecked ? 'checked' : ''}>
             </div>
 
@@ -91,17 +88,16 @@ function renderCartItems(cartItems, totalAmount) {
                 <div class="cart-item-name">${item.product.description}</div>
                 <div class="cart-item-price">HK$ ${formatPrice(item.price)}</div>
                 <div class="cart-item-quantity">
-                    <button class="qty-btn" onclick="updateCartQuantity(${item.id}, ${item.quantity - 1})" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
+                    <button class="qty-btn" onclick="updateCartQuantity(${item.cartId}, ${item.quantity - 1})" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
                     <span class="qty-value">${item.quantity}</span>
-                    <button class="qty-btn" onclick="updateCartQuantity(${item.id}, ${item.quantity + 1})" ${item.quantity >= item.product.stock ? 'disabled' : ''}>+</button>
+                    <button class="qty-btn" onclick="updateCartQuantity(${item.cartId}, ${item.quantity + 1})" ${item.quantity >= item.product.stock ? 'disabled' : ''}>+</button>
                 </div>
             </div>
-            <div class="cart-item-remove" onclick="removeFromCart(${item.product.id})"><i class="fas fa-trash-alt"></i></div>
+            <div class="cart-item-remove" onclick="removeFromCart(${item.product.productId})"><i class="fas fa-trash-alt"></i></div>
         </div>`;
     });
     container.innerHTML = html;
 
-    // 初始渲染時，直接顯示後端計算的總價（因為默認全選）
     const totalEl = document.getElementById('cartTotalAmount');
     if(totalEl) totalEl.textContent = 'HK$ ' + formatPrice(totalAmount);
 }
@@ -251,8 +247,7 @@ function closeLoginModal() { const modal = document.getElementById('loginModal')
 document.addEventListener('DOMContentLoaded', function () {
     const registerModal = document.getElementById('registerModal');
     const loginModal = document.getElementById('loginModal');
-    if (registerModal) registerModal.addEventListener('click', function (e) { if (e.target === this) closeRegisterModal(); });
-    if (loginModal) loginModal.addEventListener('click', function (e) { if (e.target === this) closeLoginModal(); });
+    if (loginModal) loginModal.addEventListener('click', function (e) { if (e.target === this) closeLoginModal(); });//← 点击遮罩层就关闭
     if (document.querySelector('.nav-dropdown')) loadCartItems(); // 初始化购物车
 });
 
@@ -273,7 +268,7 @@ async function handleRegister(e) {
     if (form.password.value !== form.confirmPassword.value) { msg.textContent = '❌ 兩次密碼輸入不一致'; msg.style.color = 'var(--accent)'; form.confirmPassword.focus(); return; }
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 註冊中...'; msg.textContent = '';
     try {
-        const formData = { username: form.username.value.trim(), name: form.name.value.trim(), email: form.email.value.trim(), password: form.password.value, phone: form.phone.value.trim() };
+        const formData = { username: form.username.value.trim(), name: form.name.value.trim(), email: form.email.value.trim(), password: form.password.value, phone: form.phone.value.trim(),address: form.address ? form.address.value.trim() : "" };
         const response = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
         const result = await response.json();
         if (response.ok) {

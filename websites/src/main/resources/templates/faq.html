@@ -55,7 +55,7 @@
 </head>
 <body>
 
-<!-- ✅ 3. 引入公共导航栏 (自动处理登录状态、购物车下拉等) -->
+<!--  3. 引入公共导航栏 (自动处理登录状态、购物车下拉等) -->
 <div th:replace="~{fragments/common :: navbar}"></div>
 
 <!-- === 页面主体 === -->
@@ -164,18 +164,18 @@
     <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
 </footer>
 
-<!-- ✅ 4. 引入公共弹窗 HTML (登录/注册) -->
+<!--  4. 引入公共弹窗 HTML (登录/注册) -->
 <div th:replace="~{fragments/common :: modals}"></div>
 
-<!-- ✅ 5. 注入登录状态变量 (必须在 common.js 之前) -->
+<!--  5. 注入登录状态变量 (必须在 common.js 之前) -->
 <script th:inline="javascript">
     const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
 </script>
 
-<!-- ✅ 6. 引入公共 JS (包含购物车、登录注册逻辑、登出等) -->
+<!--  6. 引入公共 JS (包含购物车、登录注册逻辑、登出等) -->
 <script src="/js/common.js"></script>
 
-<!-- ✅ 7. 页面特有 JS -->
+<!--  7. 页面特有 JS -->
 <script>
     // ===== FAQ 展开/收合 =====
     function toggleFaq(element) {

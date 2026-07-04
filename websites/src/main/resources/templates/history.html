@@ -14,7 +14,7 @@
         .page-title i { color: var(--gold); }
         .page-subtitle { color: var(--gray); margin-bottom: 2rem; font-size: 0.95rem; }
 
-        /* 🟢 清除按鈕區域 */
+        /*  清除按鈕區域 */
         .clear-actions {
             display: flex;
             gap: 1rem;
@@ -66,13 +66,13 @@
 <body>
 <div th:replace="~{fragments/common :: navbar}"></div>
 <div class="dashboard-container">
-    <!-- 🟢 引入側邊欄，高亮 'history' -->
+    <!--  引入側邊欄，高亮 'history' -->
     <div th:replace="~{fragments/sidebar :: sidebar(activePage='history')}"></div>
     <main class="main-content">
         <h2 class="page-title"><i class="fas fa-history"></i> 瀏覽歷史</h2>
         <p class="page-subtitle">您最近瀏覽過的商品都在這裡，系統最多保留 200 條記錄，並自動清理半年前的數據</p>
 
-        <!-- 🟢 清除按鈕區域 -->
+        <!--  清除按鈕區域 -->
         <div class="clear-actions" th:if="${!historyList.isEmpty()}">
             <span style="color: var(--gray); font-size: 0.9rem;">
                 <i class="fas fa-trash-alt"></i> 清除歷史：
@@ -91,7 +91,7 @@
             </button>
         </div>
 
-        <!-- 🟢 歷史列表 -->
+        <!--  歷史列表 -->
         <div class="history-grid" th:if="${!historyList.isEmpty()}">
             <div class="history-card" th:each="hist : ${historyList}">
                 <div class="hist-img">
@@ -114,7 +114,7 @@
                     </div>
                     <div class="hist-actions">
                         <!-- 顯示網址 (商品詳情頁連結) -->
-                        <a th:href="@{/product/{id}(id=${hist.product.id})}" class="btn-sm btn-view">
+                        <a th:href="@{/product/{id}(id=${hist.product.productId})}" class="btn-sm btn-view">
                             <i class="fas fa-eye"></i> 再次查看
                         </a>
                     </div>
@@ -122,7 +122,7 @@
             </div>
         </div>
 
-        <!-- 🟢 空狀態 -->
+        <!--  空狀態 -->
         <div th:if="${historyList.isEmpty()}" class="empty-state">
             <i class="fas fa-history"></i>
             <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有瀏覽記錄</h3>
@@ -140,7 +140,7 @@
 </script>
 <script src="/js/common.js"></script>
 
-<!-- 🟢 清除歷史的 JS 函數 -->
+<!--  清除歷史的 JS 函數 -->
 <script>
     async function clearHistory(period) {
         const periodText = {

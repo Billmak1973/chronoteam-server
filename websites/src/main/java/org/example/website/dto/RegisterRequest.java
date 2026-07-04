@@ -26,4 +26,7 @@ public class RegisterRequest {
 
     @NotBlank(message = "手機號不能為空")
     private String phone;
+
+    private String address;
+
 }
