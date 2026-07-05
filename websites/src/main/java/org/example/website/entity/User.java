@@ -49,6 +49,9 @@ public class User {
     @Column(name = "address", length = 255)
     private String address;
 
+    @Column(name = "backup_address", length = 255)
+    private String backupAddress;
+
     // 用戶角色 (默認為顧客)
     @Enumerated(EnumType.STRING)
     @Column(name = "user_type", length = 20, nullable = false)

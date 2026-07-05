@@ -1,6 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,11 +23,12 @@
             padding: 0 1rem;
             gap: 2rem;
         }
+
         .main-content {
             flex: 1;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             padding: 2.5rem;
         }
 
@@ -42,7 +43,9 @@
             margin-bottom: 1.5rem;
         }
 
-        .info-card { margin-top: 1.5rem; }
+        .info-card {
+            margin-top: 1.5rem;
+        }
 
         .info-row {
             display: flex;
@@ -84,59 +87,1402 @@
             transform: translateY(-2px);
         }
 
+        /* === 內聯編輯專屬樣式 (來自代碼 1) === */
+        .info-action-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+            justify-content: flex-end;
+        }
+
+        .view-mode,
+        .edit-mode {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        /* 默認隱藏編輯模式 */
+        .edit-mode {
+            display: none;
+        }
+
+        /* 輸入框樣式 */
+        .form-input {
+            padding: 0.5rem 0.8rem;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: var(--primary);
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            width: 250px;
+            max-width: 100%;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--gold);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        /* 圖標按鈕 (編輯/增加) */
+        .btn-icon {
+            background: none;
+            border: 1px solid transparent;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .btn-icon:hover {
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.08);
+            border-color: rgba(212, 175, 55, 0.2);
+        }
+
+        .btn-add {
+            color: var(--primary);
+            border: 1px dashed #adb5bd;
+        }
+
+        .btn-add:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        /* 操作按鈕 (保存/取消) */
+        .btn-action {
+            padding: 0.45rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .btn-save {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-save:hover {
+            background: var(--gold);
+            color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-cancel {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-cancel:hover {
+            background: #dee2e6;
+            color: #212529;
+        }
+
+        /* ========================================== */
+        /*  新增：地址級聯選擇器樣式 */
+        /* ========================================== */
+        .address-selector-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .address-select {
+            padding: 0.5rem 0.6rem;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .address-select:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        .address-select:disabled {
+            background: #f8f9fa;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .address-select option:disabled {
+            color: #6c757d;
+        }
+
+        .address-input-wrapper {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex: 1;
+        }
+
+        /* ========================================== */
+        /*  新增：自定義懸停提示 (Tooltip) 樣式 */
+        /* ========================================== */
+        .btn-icon[data-tooltip] {
+            position: relative;
+        }
+
+        /* 提示框主體 */
+        .btn-icon[data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            /* 顯示在按鈕上方 */
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
+            background: rgba(26, 26, 46, 0.9);
+            /* 深藍色背景 */
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 100;
+            pointer-events: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 提示框下方的小箭頭 */
+        .btn-icon[data-tooltip]::before {
+            content: '';
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: rgba(26, 26, 46, 0.9);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        /* 懸停時顯示 */
+        .btn-icon[data-tooltip]:hover::after,
+        .btn-icon[data-tooltip]:hover::before {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .btn-icon[data-tooltip]:hover::after {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ========================================== */
+        /*  新增：居中彈窗 (Toast) 樣式 */
+        /* ========================================== */
+        .center-toast-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(3px);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .center-toast-box {
+            background: white;
+            padding: 2rem 2.5rem;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 300px;
+            max-width: 400px;
+            border-top: 5px solid var(--gold);
+            /* 默認金色（提示） */
+        }
+
+        /* 錯誤狀態（紅色） */
+        .center-toast-box.toast-error {
+            border-top-color: #dc3545;
+        }
+
+        .center-toast-box.toast-error .center-toast-icon {
+            color: #dc3545;
+        }
+
+        /* 成功狀態（綠色） */
+        .center-toast-box.toast-success {
+            border-top-color: #28a745;
+        }
+
+        .center-toast-box.toast-success .center-toast-icon {
+            color: #28a745;
+        }
+
+        .center-toast-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--gold);
+        }
+
+        .center-toast-message {
+            font-size: 1.1rem;
+            color: var(--primary);
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
         /* 響應式優化 */
         @media (max-width: 900px) {
-            .dashboard-container { flex-direction: column; }
+            .dashboard-container {
+                flex-direction: column;
+            }
         }
+
         @media (max-width: 768px) {
-            .main-content { padding: 1.5rem; }
-            .info-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+            .main-content {
+                padding: 1.5rem;
+            }
+
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .info-action-group {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+                margin-top: 0.5rem;
+                width: 100%;
+            }
+
+            .form-input {
+                width: 100%;
+            }
+
+            .address-selector-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .address-select {
+                width: 100%;
+            }
+
+            .address-input-wrapper {
+                flex-direction: column;
+                width: 100%;
+            }
+        }
+
+        /* === 自定义互換弹窗基础样式 === */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            /* 深色遮罩 */
+            backdrop-filter: blur(4px);
+            /* 背景模糊效果 */
+            z-index: 9999;
+            /* 确保在最上层 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .swap-modal {
+            background: white;
+            padding: 2.5rem 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            /* 弹性弹出动画 */
+            border-top: 5px solid var(--gold);
+            /* 顶部金色装饰条 */
+        }
+
+        /* 地址预览框样式 */
+        .address-preview-box {
+            background: var(--light);
+            border: 1px dashed #ced4da;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: left;
+            margin-bottom: 1rem;
+        }
+
+        .preview-row {
+            margin-bottom: 0.8rem;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .preview-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .preview-label {
+            color: var(--gray);
+            font-weight: 500;
+            margin-bottom: 0.2rem;
+            font-size: 0.85rem;
+        }
+
+        .preview-value {
+            color: var(--primary);
+            font-weight: 600;
+            word-break: break-all;
+            /* 防止长地址溢出 */
+            line-height: 1.4;
+        }
+
+        /* 弹窗按钮样式 */
+        .btn-modal-primary {
+            background: var(--gold);
+            color: var(--primary);
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-modal-primary:hover {
+            background: #b8972b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-modal-secondary {
+            background: #e9ecef;
+            color: var(--primary);
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-modal-secondary:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        /* 动画定义 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* === 自定义備用地址刪除弹窗基础样式 (复用之前的) === */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .delete-modal {
+            background: white;
+            padding: 2.5rem 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid #dc3545;
+            /* 红色顶部装饰条 */
+        }
+
+        /* 弹窗按钮样式 */
+        .btn-modal-primary {
+            background: var(--gold);
+            color: var(--primary);
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-modal-primary:hover {
+            background: #b8972b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        /* 针对删除按钮的特殊 hover 效果 */
+        #confirmDeleteBackupBtn:hover {
+            background: #c82333 !important;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3) !important;
+        }
+
+        .btn-modal-secondary {
+            background: #e9ecef;
+            color: var(--primary);
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-modal-secondary:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        /* 动画定义 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
     </style>
 </head>
+
 <body>
 
-<!--  引入公共导航栏 -->
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <!--  引入公共导航栏 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<!--  4. 使用 Flex 佈局容器 -->
-<div class="dashboard-container">
+    <!--  4. 使用 Flex 佈局容器 -->
+    <div class="dashboard-container">
 
-    <!--  5. 引入側邊欄 Fragment，並傳入 activePage='profile' 以高亮「帳戶信息」菜單 -->
-    <div th:replace="~{fragments/sidebar :: sidebar(activePage='profile')}"></div>
+        <!--  5. 引入側邊欄 Fragment，並傳入 activePage='profile' 以高亮「帳戶信息」菜單 -->
+        <div th:replace="~{fragments/sidebar :: sidebar(activePage='profile')}"></div>
 
-    <!--  6. 右側主內容 (取代原本的 page-container) -->
-    <main class="main-content">
-        <h2><i class="fas fa-id-card" style="color: var(--gold);"></i> 帳戶信息</h2>
-        <div class="info-card">
-            <div class="info-row">
-                <span class="info-label"><i class="fas fa-user"></i> 用戶名</span>
-                <span class="info-value" th:text="${user.username}">username</span>
+        <!--  6. 右側主內容 (已替換為支援內聯編輯的版本) -->
+        <main class="main-content">
+            <h2><i class="fas fa-id-card" style="color: var(--gold);"></i> 帳戶信息</h2>
+            <div class="info-card">
+
+                <!-- 用戶名 (始終可編輯) -->
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-user"></i> 用戶名</span>
+                    <div class="info-action-group">
+                        <!-- 查看模式 -->
+                        <div class="view-mode" id="view-username">
+                            <span class="info-value" th:text="${user.username}">username</span>
+                            <button class="btn-icon btn-edit" th:attr="data-val=${user.username}"
+                                onclick="toggleEdit('username', this.dataset.val)" data-tooltip="編輯">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                        </div>
+                        <!-- 編輯模式 -->
+                        <div class="edit-mode" id="edit-username">
+                            <input type="text" id="input-username" class="form-input" th:value="${user.username}">
+                            <button class="btn-action btn-save" onclick="saveField('username')">保存</button>
+                            <button class="btn-action btn-cancel" onclick="cancelEdit('username')">取消</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 電子郵件 (僅展示，不可改) -->
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-envelope"></i> 電子郵件</span>
+                    <span class="info-value" th:text="${user.email}">user@example.com</span>
+                </div>
+
+                <!-- 手機號碼 (僅展示，不可改) -->
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-phone"></i> 手機號碼</span>
+                    <span class="info-value" th:text="${user.phone}">+852 1234 5678</span>
+                </div>
+
+                <!-- 地址 (為空顯示增加，不為空顯示編輯) -->
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-map-marker-alt"></i> 地址</span>
+                    <div class="info-action-group">
+                        <div class="view-mode" id="view-address">
+                            <span class="info-value" th:text="${user.address != null ? user.address : '未設置'}">未設置</span>
+                            <!-- 如果有值，顯示編輯按鈕 -->
+                            <button class="btn-icon btn-edit" th:if="${user.address != null}"
+                                th:attr="data-val=${user.address}" onclick="toggleEdit('address', this.dataset.val)"
+                                data-tooltip="編輯">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <!-- 如果為空，顯示增加按鈕 -->
+                            <button class="btn-icon btn-add" th:if="${user.address == null}"
+                                onclick="toggleEdit('address', '')" data-tooltip="增加地址">
+                                <i class="fas fa-plus"></i> 增加地址
+                            </button>
+                        </div>
+                        <div class="edit-mode" id="edit-address">
+                            <div class="address-selector-group">
+                                <!-- 第一级：大区域 -->
+                                <select id="addressRegionSelect" class="address-select">
+                                    <option value="">请选择区域</option>
+                                    <option value="港岛">港岛</option>
+                                    <option value="九龙">九龙</option>
+                                    <option value="新界">新界</option>
+                                </select>
+
+                                <!-- 第二级：行政区 (初始禁用) -->
+                                <select id="addressDistrictSelect" disabled class="address-select">
+                                    <option value="">请先选择区域</option>
+                                </select>
+
+                                <!-- 详细地址输入框 -->
+                                <div class="address-input-wrapper">
+                                    <input type="text" id="input-address" class="form-input" placeholder="请输入详细地址..."
+                                        style="flex: 1;">
+                                    <button class="btn-action btn-save" onclick="saveField('address')">保存</button>
+                                    <button class="btn-action btn-cancel" onclick="cancelEdit('address')">取消</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 備用地址 (為空顯示增加，不為空顯示編輯) -->
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-location-dot"></i> 備用地址</span>
+                    <div class="info-action-group">
+                        <div class="view-mode" id="view-backupAddress">
+                            <!-- 1. 顯示文本 -->
+                            <span class="info-value"
+                                th:text="${#strings.isEmpty(user.backupAddress) ? '未設置' : user.backupAddress}">未設置</span>
+
+                            <!-- 2. 編輯按鈕 -->
+                            <button class="btn-icon btn-edit" th:if="${!#strings.isEmpty(user.backupAddress)}"
+                                th:attr="data-val=${user.backupAddress}"
+                                onclick="toggleEdit('backupAddress', this.dataset.val)" data-tooltip="編輯">
+                                <i class="fas fa-pen"></i>
+                            </button>
+
+                            <!-- 3. 交換地址按鈕：只有當主地址和備用地址都不為空時才顯示 -->
+                            <button class="btn-icon btn-swap"
+                                th:if="${!#strings.isEmpty(user.backupAddress) && !#strings.isEmpty(user.address)}"
+                                onclick="openSwapModal()" data-tooltip="互換主地址和備用地址"
+                                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                                <i class="fas fa-exchange-alt"></i>
+                            </button>
+
+                            <!-- 4. 刪除按鈕：只有當備用地址不為空時才顯示 -->
+                            <button class="btn-icon btn-delete-backup" th:if="${!#strings.isEmpty(user.backupAddress)}"
+                                onclick="deleteBackupAddress()" data-tooltip="刪除備用地址"
+                                style="background: #dc3545; color: white; border: none;">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+
+                            <!-- 5. 增加按鈕 -->
+                            <button class="btn-icon btn-add" th:if="${#strings.isEmpty(user.backupAddress)}"
+                                onclick="toggleEdit('backupAddress', '')" data-tooltip="增加備用地址">
+                                <i class="fas fa-plus"></i> 增加備用地址
+                            </button>
+                        </div>
+                        <div class="edit-mode" id="edit-backupAddress">
+                            <div class="address-selector-group">
+                                <!-- 第一级：大区域 -->
+                                <select id="backupRegionSelect" class="address-select">
+                                    <option value="">请选择区域</option>
+                                    <option value="港岛">港岛</option>
+                                    <option value="九龙">九龙</option>
+                                    <option value="新界">新界</option>
+                                </select>
+
+                                <!-- 第二级：行政区 (初始禁用) -->
+                                <select id="backupDistrictSelect" disabled class="address-select">
+                                    <option value="">请先选择区域</option>
+                                </select>
+
+                                <!-- 详细地址输入框 -->
+                                <div class="address-input-wrapper">
+                                    <input type="text" id="input-backupAddress" class="form-input"
+                                        placeholder="请输入备用地址..." style="flex: 1;">
+                                    <button class="btn-action btn-save" onclick="saveField('backupAddress')">保存</button>
+                                    <button class="btn-action btn-cancel"
+                                        onclick="cancelEdit('backupAddress')">取消</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 互换地址确认弹窗 (自定义 Modal) -->
+                <div id="swapAddressModal" class="custom-modal-overlay" style="display: none;">
+                    <div class="custom-modal-box swap-modal">
+                        <div class="modal-icon" style="color: var(--gold); margin-bottom: 1rem;">
+                            <i class="fas fa-exchange-alt" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h3 class="modal-title" style="color: var(--primary); margin-bottom: 1rem;">确认交换地址？</h3>
+
+                        <p style="color: var(--gray); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                            确定要交换主地址和备用地址吗？
+                        </p>
+
+                        <!-- 地址预览区域 -->
+                        <div class="address-preview-box">
+                            <div class="preview-row">
+                                <span class="preview-label">主地址将变为：</span>
+                                <span class="preview-value" id="swapMainAddressPreview">...</span>
+                            </div>
+                            <div class="preview-row">
+                                <span class="preview-label">备用地址将变为：</span>
+                                <span class="preview-value" id="swapBackupAddressPreview">...</span>
+                            </div>
+                        </div>
+
+                        <!-- 按钮区域 -->
+                        <div class="modal-actions"
+                            style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                            <button class="btn-modal-secondary" onclick="closeSwapModal()">取消</button>
+                            <button class="btn-modal-primary" onclick="confirmSwapAddress()">
+                                <i class="fas fa-check"></i> 确定交换
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!--  删除备用地址确认弹窗 (自定义 Modal) -->
+                <div id="deleteBackupAddressModal" class="custom-modal-overlay" style="display: none;">
+                    <div class="custom-modal-box delete-modal">
+                        <div class="modal-icon" style="color: #dc3545; margin-bottom: 1rem;">
+                            <i class="fas fa-trash-alt" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h3 class="modal-title" style="color: var(--primary); margin-bottom: 1rem;">确认删除备用地址？</h3>
+
+                        <p style="color: var(--gray); margin-bottom: 1.5rem; font-size: 0.95rem;">
+                            此操作将清空备用地址字段，且无法撤销。
+                        </p>
+
+                        <!-- 按钮区域 -->
+                        <div class="modal-actions"
+                            style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                            <button class="btn-modal-secondary" onclick="closeDeleteBackupModal()">取消</button>
+                            <button class="btn-modal-primary" id="confirmDeleteBackupBtn"
+                                onclick="confirmDeleteBackupAction()" style="background: #dc3545; color: white;">
+                                <i class="fas fa-trash-alt"></i> 确定删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="info-row">
-                <span class="info-label"><i class="fas fa-envelope"></i> 電子郵件</span>
-                <span class="info-value" th:text="${user.email}">user@example.com</span>
+            <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> 返回首頁</a>
+        </main>
+    </div>
+
+    <!--  引入公共弹窗 HTML -->
+    <div th:replace="~{fragments/common :: modals}"></div>
+
+    <!--  注入登录状态变量與內聯編輯 JS 邏輯 -->
+    <script th:inline="javascript">
+        // 獲取 Spring Security 狀態
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+
+        // ==========================================
+        //  地址級聯選擇器數據
+        // ==========================================
+        const districtData = {
+            '港岛': ['中西区', '湾仔区', '东区', '南区'],
+            '九龙': ['油尖旺区', '深水埗区', '九龙城区', '黄大仙区', '观塘区'],
+            '新界': ['荃湾区', '屯门区', '元朗区', '北区', '大埔区', '西贡区', '沙田区', '葵青区', '离岛区']
+        };
+
+        // ==========================================
+        //  地址級聯選擇器邏輯 (主地址)
+        // ==========================================
+        const addressRegionSelect = document.getElementById('addressRegionSelect');
+        const addressDistrictSelect = document.getElementById('addressDistrictSelect');
+        const addressInput = document.getElementById('input-address');
+
+        if (addressRegionSelect && addressDistrictSelect && addressInput) {
+            // 监听第一级下拉框变化
+            addressRegionSelect.addEventListener('change', function () {
+                const selectedRegion = this.value;
+
+                // 清空并重置第二级下拉框
+                addressDistrictSelect.innerHTML = '<option value="">请选择行政区</option>';
+                addressDistrictSelect.disabled = true;
+                addressDistrictSelect.style.backgroundColor = '#f8f9fa';
+
+                // 清空输入框，并写入区域名称
+                if (selectedRegion) {
+                    addressInput.value = selectedRegion + ' ';
+                } else {
+                    addressInput.value = '';
+                }
+
+                if (selectedRegion && districtData[selectedRegion]) {
+                    addressDistrictSelect.disabled = false;
+                    addressDistrictSelect.style.backgroundColor = 'white';
+
+                    // 填充第二级选项
+                    districtData[selectedRegion].forEach(district => {
+                        const option = document.createElement('option');
+                        option.value = district;
+                        option.textContent = district;
+                        addressDistrictSelect.appendChild(option);
+                    });
+                }
+            });
+
+            // 监听第二级下拉框变化 -> 追加到地址栏
+            addressDistrictSelect.addEventListener('change', function () {
+                const region = addressRegionSelect.value;
+                const district = this.value;
+
+                if (region && district) {
+                    // 直接追加行政区到输入框
+                    addressInput.value = region + ' ' + district + ' ';
+                    addressInput.focus();
+                }
+            });
+        }
+
+        // ==========================================
+        //  地址級聯選擇器邏輯 (備用地址)
+        // ==========================================
+        const backupRegionSelect = document.getElementById('backupRegionSelect');
+        const backupDistrictSelect = document.getElementById('backupDistrictSelect');
+        const backupAddressInput = document.getElementById('input-backupAddress');
+
+        if (backupRegionSelect && backupDistrictSelect && backupAddressInput) {
+            // 监听第一级下拉框变化
+            backupRegionSelect.addEventListener('change', function () {
+                const selectedRegion = this.value;
+
+                // 清空并重置第二级下拉框
+                backupDistrictSelect.innerHTML = '<option value="">请选择行政区</option>';
+                backupDistrictSelect.disabled = true;
+                backupDistrictSelect.style.backgroundColor = '#f8f9fa';
+
+                // 清空输入框，并写入区域名称
+                if (selectedRegion) {
+                    backupAddressInput.value = selectedRegion + ' ';
+                } else {
+                    backupAddressInput.value = '';
+                }
+
+                if (selectedRegion && districtData[selectedRegion]) {
+                    backupDistrictSelect.disabled = false;
+                    backupDistrictSelect.style.backgroundColor = 'white';
+
+                    // 填充第二级选项
+                    districtData[selectedRegion].forEach(district => {
+                        const option = document.createElement('option');
+                        option.value = district;
+                        option.textContent = district;
+                        backupDistrictSelect.appendChild(option);
+                    });
+                }
+            });
+
+            // 监听第二级下拉框变化 -> 追加到地址栏
+            backupDistrictSelect.addEventListener('change', function () {
+                const region = backupRegionSelect.value;
+                const district = this.value;
+
+                if (region && district) {
+                    // 直接追加行政区到输入框
+                    backupAddressInput.value = region + ' ' + district + ' ';
+                    backupAddressInput.focus();
+                }
+            });
+        }
+
+        /**
+         * 切換到編輯模式
+         */
+        function toggleEdit(fieldName, originalValue) {
+            document.getElementById('view-' + fieldName).style.display = 'none';
+            document.getElementById('edit-' + fieldName).style.display = 'flex';
+
+            const input = document.getElementById('input-' + fieldName);
+            input.value = originalValue || '';
+            input.focus();
+
+            input.onkeydown = function (e) {
+                if (e.key === 'Enter') saveField(fieldName);
+                if (e.key === 'Escape') cancelEdit(fieldName);
+            };
+        }
+
+        /**
+         * 取消編輯，恢復查看模式
+         */
+        function cancelEdit(fieldName) {
+            document.getElementById('edit-' + fieldName).style.display = 'none';
+            document.getElementById('view-' + fieldName).style.display = 'flex';
+            resetAddressSelector(fieldName);
+        }
+
+        /**
+         * 重置地址选择器
+         */
+        function resetAddressSelector(fieldName) {
+            const regionSelect = document.getElementById(fieldName + 'RegionSelect');
+            const districtSelect = document.getElementById(fieldName + 'DistrictSelect');
+            const input = document.getElementById('input-' + fieldName);
+
+            if (regionSelect && districtSelect && input) {
+                regionSelect.value = '';
+                districtSelect.innerHTML = '<option value="">请先选择区域</option>';
+                districtSelect.disabled = true;
+                districtSelect.style.backgroundColor = '#f8f9fa';
+                input.value = '';
+            }
+        }
+
+        /**
+         * 顯示居中彈窗 (幾秒後自動消失)
+         * @param {string} message - 提示文字
+         * @param {string} type - 類型: 'info'(金色), 'error'(紅色), 'success'(綠色)
+         */
+        function showCenterToast(message, type = 'info') {
+            // 移除可能已存在的彈窗
+            const existing = document.querySelector('.center-toast-overlay');
+            if (existing) existing.remove();
+
+            let iconClass = 'fas fa-info-circle';
+            let boxClass = '';
+
+            if (type === 'error') {
+                iconClass = 'fas fa-exclamation-circle';
+                boxClass = 'toast-error';
+            } else if (type === 'success') {
+                iconClass = 'fas fa-check-circle';
+                boxClass = 'toast-success';
+            }
+
+            // 創建彈窗 DOM
+            const overlay = document.createElement('div');
+            overlay.className = 'center-toast-overlay';
+            overlay.innerHTML = `
+            <div class="center-toast-box ${boxClass}">
+                <div class="center-toast-icon"><i class="${iconClass}"></i></div>
+                <div class="center-toast-message">${message}</div>
             </div>
-            <div class="info-row">
-                <span class="info-label"><i class="fas fa-phone"></i> 手機號碼</span>
-                <span class="info-value" th:text="${user.phone}">+852 1234 5678</span>
-            </div>
+        `;
 
-        </div>
-        <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> 返回首頁</a>
-    </main>
-</div>
+            document.body.appendChild(overlay);
 
-<!--  引入公共弹窗 HTML -->
-<div th:replace="~{fragments/common :: modals}"></div>
+            overlay.addEventListener('click', function (e) {
+                // 只有點擊 overlay 本身（不是內部的 toast-box）才關閉
+                if (e.target === overlay) {
+                    closeToast(overlay);
+                }
+            });
 
-<!--  注入登录状态变量 -->
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
+            // 3秒後自動淡出並移除
+            setTimeout(() => {
+                overlay.style.transition = 'opacity 0.3s ease';
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 300);
+            }, 3000);
+        }
 
-<!--  引入公共 JS -->
-<script src="/js/common.js"></script>
+        // 統一的關閉彈窗函數
+        function closeToast(overlay) {
+            if (overlay && !overlay.classList.contains('closing')) {
+                overlay.classList.add('closing');
+                overlay.style.transition = 'opacity 0.3s ease';
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 300);
+            }
+        }
+
+        /**
+         * 保存字段並發送 AJAX 請求
+         */
+        function saveField(fieldName) {
+            const input = document.getElementById('input-' + fieldName);
+            const newValue = input.value.trim();
+
+            if (fieldName === 'username' && !newValue) {
+                showCenterToast('❌ 用戶名不能為空！', 'error');
+                return;
+            }
+
+            // 地址校驗邏輯保持不變...
+            if (fieldName === 'address' || fieldName === 'backupAddress') {
+                const regionSelect = document.getElementById(fieldName + 'RegionSelect');
+                const region = regionSelect ? regionSelect.value : '';
+                const currentAddress = document.querySelector('#view-address .info-value')?.textContent?.trim() || '';
+                const currentBackupAddress = document.querySelector('#view-backupAddress .info-value')?.textContent?.trim() || '';
+
+                if (region && (!newValue || !newValue.includes(region))) {
+                    showCenterToast('❌ 詳細地址必須包含所選區域！', 'error');
+                    input.focus();
+                    return;
+                }
+                // 验证1：新地址与现有地址相同
+                if (fieldName === 'address' && newValue === currentAddress) {
+                    showCenterToast('💡 新地址和原地址一樣，無需修改', 'info');
+                    cancelEdit(fieldName);
+                    return;
+                }
+
+                // 验证2：新备用地址与现有备用地址相同
+                if (fieldName === 'backupAddress' && newValue === currentBackupAddress) {
+                    showCenterToast('💡 新備用地址和原備用地址一樣，無需修改', 'info');
+                    cancelEdit(fieldName);
+                    return;
+                }
+
+                // 验证3：主地址和备用地址不能相同
+                if (fieldName === 'address' && newValue === currentBackupAddress && currentBackupAddress !== '未設置') {
+                    showCenterToast('❌ 主地址和備用地址不能相同！', 'error');
+                    return;
+                }
+
+                if (fieldName === 'backupAddress' && newValue === currentAddress && currentAddress !== '未設置') {
+                    showCenterToast('❌ 備用地址和主地址不能相同！', 'error');
+                    return;
+                }
+            }
+
+            const data = {};
+            data[fieldName] = newValue;
+
+            // 顯示 Loading 狀態 (可選)
+            const btn = input.parentElement.querySelector('.btn-save');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中'; }
+
+            fetch('/api/user/update-profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '保存'; } // 恢復按鈕
+
+                    if (result.success) {
+                        // 1. 更新頁面上的顯示文本
+                        const valueSpan = document.querySelector('#view-' + fieldName + ' .info-value');
+                        valueSpan.textContent = newValue || '未設置';
+
+                        // 2. 動態切換按鈕顯示狀態
+                        const editBtn = document.querySelector('#view-' + fieldName + ' .btn-edit');
+                        const addBtn = document.querySelector('#view-' + fieldName + ' .btn-add');
+
+                        if (newValue) {
+                            if (editBtn) { editBtn.style.display = 'inline-flex'; editBtn.dataset.val = newValue; }
+                            if (addBtn) addBtn.style.display = 'none';
+                        } else {
+                            if (editBtn) editBtn.style.display = 'none';
+                            if (addBtn) addBtn.style.display = 'inline-flex';
+                        }
+
+                        cancelEdit(fieldName);
+
+                        //  根據字段顯示不同的成功提示
+                        if (fieldName === 'username') {
+                            // 1. 顯示提示文案，告知需要重新登入
+                            showCenterToast('✅ 改名已成功！請使用新用戶名重新登入', 'success');
+
+                            // 2. 延遲 3 秒後強制登出並跳轉回首頁 (與彈窗消失時間同步)
+                            setTimeout(() => {
+                                fetch('/logout', { method: 'POST' })
+                                    .then(() => {
+                                        window.location.href = '/'; // 登出成功，跳轉首頁
+                                    })
+                                    .catch(() => {
+                                        window.location.href = '/'; // 即使接口報錯也強制跳轉
+                                    });
+                            }, 3000);
+                        } else {
+                            showCenterToast('✅ 保存成功！', 'success');
+                        }
+                    } else {
+                        //  核心修复：失败时关闭编辑模式，恢复查看模式
+                        cancelEdit(fieldName);
+
+                        //  根據後端返回的特定 message 顯示不同的居中彈窗
+                        if (result.message === 'SAME_USERNAME') {
+                            showCenterToast('💡 新用戶名和原來一樣，無需修改', 'info');
+                        } else if (result.message === 'USERNAME_EXISTS') {
+                            showCenterToast('❌ 該用戶名已被註冊，請選擇別的用戶名吧', 'error');
+                        } else {
+                            showCenterToast('❌ ' + (result.message || '保存失敗'), 'error');
+                        }
+                    }
+                })
+                .catch(error => {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '保存'; }
+                    console.error('Error:', error);
+                    //  网络错误也要关闭编辑模式
+                    cancelEdit(fieldName);
+                    showCenterToast('❌ 網絡錯誤，請稍後再試！', 'error');
+                });
+        }
+
+        // ==========================================
+        //   交換主地址和備用地址
+        // ==========================================
+        async function swapAddresses() {
+            const address = document.querySelector('#view-address .info-value').textContent;
+            const backupAddress = document.querySelector('#view-backupAddress .info-value').textContent;
+
+            if (address === '未設置' || backupAddress === '未設置') {
+                showNotification('❌ 主地址和備用地址都必須有值才能交換！', true);
+                return;
+            }
+
+            if (!confirm('確定要交換主地址和備用地址嗎？\n\n主地址將變為：' + backupAddress + '\n備用地址將變為：' + address)) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user/update-profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        address: backupAddress,
+                        backupAddress: address
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 更新頁面上的顯示
+                    document.querySelector('#view-address .info-value').textContent = backupAddress;
+                    document.querySelector('#view-backupAddress .info-value').textContent = address;
+
+                    // 更新編輯按鈕的 data-val
+                    const addressEditBtn = document.querySelector('#view-address .btn-edit');
+                    const backupEditBtn = document.querySelector('#view-backupAddress .btn-edit');
+
+                    if (addressEditBtn) addressEditBtn.dataset.val = backupAddress;
+                    if (backupEditBtn) backupEditBtn.dataset.val = address;
+
+                    showNotification('✅ 地址交換成功！');
+                } else {
+                    showNotification('❌ ' + (result.message || '交換失敗'), true);
+                }
+            } catch (error) {
+                console.error('交換地址錯誤:', error);
+                showNotification('❌ 網絡錯誤，請稍後重試', true);
+            }
+        }
+
+        // 1. 打开删除确认弹窗
+        function openDeleteBackupModal() {
+            document.getElementById('deleteBackupAddressModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 禁止背景滚动
+        }
+
+        // 2. 关闭删除确认弹窗
+        function closeDeleteBackupModal() {
+            document.getElementById('deleteBackupAddressModal').style.display = 'none';
+            document.body.style.overflow = ''; // 恢复背景滚动
+        }
+
+        // 3. 核心：删除备用地址函数 (修改版)
+        async function deleteBackupAddress() {
+            //  打开自定义弹窗，而不是使用 confirm()
+            openDeleteBackupModal();
+        }
+
+        // 4. 确认删除操作 (点击弹窗中的“确定删除”按钮时调用)
+        async function confirmDeleteBackupAction() {
+            // 先关闭弹窗
+            closeDeleteBackupModal();
+
+            // 获取按钮并设置 Loading 状态
+            const btn = document.getElementById('confirmDeleteBackupBtn');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+
+            try {
+                const response = await fetch('/api/user/update-profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ backupAddress: '' }) // 清空备用地址
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 更新页面上的显示
+                    document.querySelector('#view-backupAddress .info-value').textContent = '未設置';
+
+                    // 隐藏编辑按钮、交换按钮和删除按钮，显示增加按钮
+                    const viewMode = document.getElementById('view-backupAddress');
+                    const editBtn = viewMode.querySelector('.btn-edit');
+                    const swapBtn = viewMode.querySelector('.btn-swap');
+                    const deleteBtn = viewMode.querySelector('.btn-delete-backup');
+                    const addBtn = viewMode.querySelector('.btn-add');
+
+                    if (editBtn) editBtn.style.display = 'none';
+                    if (swapBtn) swapBtn.style.display = 'none';
+                    if (deleteBtn) deleteBtn.style.display = 'none';
+                    if (addBtn) addBtn.style.display = 'inline-flex';
+
+                    // 显示成功提示 (使用你之前的 showNotification 或 showCenterToast)
+                    if (typeof showNotification === 'function') {
+                        showNotification('✅ 備用地址已刪除！');
+                    } else {
+                        alert('✅ 備用地址已刪除！');
+                    }
+                } else {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + (result.message || '刪除失敗'), true);
+                    } else {
+                        alert('❌ ' + (result.message || '刪除失敗'));
+                    }
+                }
+            } catch (error) {
+                console.error('刪除備用地址錯誤:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                } else {
+                    alert(' 網絡錯誤，請稍後重試');
+                }
+            } finally {
+                // 恢复按钮状态
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        // 5. 点击遮罩层关闭弹窗
+        document.getElementById('deleteBackupAddressModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeDeleteBackupModal();
+            }
+        });
+
+        // 6. ESC 键关闭弹窗
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('deleteBackupAddressModal');
+                if (modal && modal.style.display === 'flex') {
+                    closeDeleteBackupModal();
+                }
+            }
+        });
+
+        // ==========================================
+        //   交換主地址和備用地址 (自定義彈窗版)
+        // ==========================================
+
+        // 1. 打开互换弹窗
+        function openSwapModal() {
+            // 统一从 .info-value 获取当前地址文本
+            const currentMainAddress = document.querySelector('#view-address .info-value')?.innerText.trim() || '';
+            const currentBackupAddress = document.querySelector('#view-backupAddress .info-value')?.innerText.trim() || '';
+
+            // 校验：如果有一个地址为空或为"未設置"，提示用户
+            if (!currentMainAddress || !currentBackupAddress || currentMainAddress === '未設置' || currentBackupAddress === '未設置') {
+                if (typeof showCenterToast === 'function') {
+                    showCenterToast('❌ 主地址和備用地址都必須有值才能交換！', 'error');
+                } else if (typeof showNotification === 'function') {
+                    showNotification('❌ 主地址和備用地址都必須有值才能交換！', true);
+                }
+                return;
+            }
+
+            // 填入弹窗预览（注意：交换后，主地址变成原来的备用，备用变成原来的主）
+            document.getElementById('swapMainAddressPreview').innerText = currentBackupAddress;
+            document.getElementById('swapBackupAddressPreview').innerText = currentMainAddress;
+
+            // 显示弹窗
+            document.getElementById('swapAddressModal').style.display = 'flex';
+        }
+
+        // 2. 关闭弹窗
+        function closeSwapModal() {
+            document.getElementById('swapAddressModal').style.display = 'none';
+        }
+
+        // 3. 确认交换逻辑
+        async function confirmSwapAddress() {
+            const btn = document.querySelector('.btn-modal-primary');
+            const originalHtml = btn.innerHTML;
+
+            // 按钮变为 Loading 状态
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
+            // 直接从预览框获取交换后的新值
+            const newMainAddress = document.getElementById('swapMainAddressPreview').innerText.trim();
+            const newBackupAddress = document.getElementById('swapBackupAddressPreview').innerText.trim();
+
+            try {
+                // 调用后端更新接口
+                const response = await fetch('/api/user/update-profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        address: newMainAddress,
+                        backupAddress: newBackupAddress
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 1. 更新页面上的显示文本 (无需刷新页面)
+                    document.querySelector('#view-address .info-value').textContent = newMainAddress;
+                    document.querySelector('#view-backupAddress .info-value').textContent = newBackupAddress;
+
+                    // 2. 更新编辑按钮的 data-val 属性
+                    const addressEditBtn = document.querySelector('#view-address .btn-edit');
+                    const backupEditBtn = document.querySelector('#view-backupAddress .btn-edit');
+                    if (addressEditBtn) addressEditBtn.dataset.val = newMainAddress;
+                    if (backupEditBtn) backupEditBtn.dataset.val = newBackupAddress;
+
+                    // 3. 显示成功提示
+                    if (typeof showCenterToast === 'function') {
+                        showCenterToast('✅ 地址交換成功！', 'success');
+                    } else if (typeof showNotification === 'function') {
+                        showNotification('✅ 地址交換成功！');
+                    }
+
+                    // 4. 关闭弹窗
+                    closeSwapModal();
+                } else {
+                    // 处理后端返回的错误
+                    if (typeof showCenterToast === 'function') {
+                        showCenterToast('❌ ' + (result.message || '交換失敗'), 'error');
+                    } else if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + (result.message || '交換失敗'), true);
+                    }
+                    // 恢复按钮
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                }
+            } catch (error) {
+                console.error('交換失敗:', error);
+                if (typeof showCenterToast === 'function') {
+                    showCenterToast('❌ 網絡錯誤，請稍後重試', 'error');
+                } else if (typeof showNotification === 'function') {
+                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                }
+                // 恢复按钮
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        // 点击遮罩层也可以关闭弹窗
+        document.getElementById('swapAddressModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeSwapModal();
+            }
+        });
+    </script>
+
+    <!--  引入公共 JS -->
+    <script src="/js/common.js"></script>
 
 </body>
+
 </html>

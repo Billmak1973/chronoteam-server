@@ -26,22 +26,18 @@
                     <div class="username" sec:authentication="name">用戶名</div>
                 </div>
 
-                <!--  修改：將「帳戶信息」和「我的訂單」合併為「個人中心」 -->
                 <a href="/account/dashboard"><i class="fas fa-user-cog"></i> 個人中心</a>
 
-                <!--  管理中心（僅 admin 可見） -->
                 <a href="/admin/dashboard" th:if="${#authorization.expression('isAuthenticated()') and #authentication.name == 'admin'}"
                    style="background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%); color: var(--primary); font-weight: 600;">
                     <i class="fas fa-shield-alt"></i> 管理中心
                 </a>
 
-                <!--  新增：消息通知和系统通知 (暂时不跳转，点击提示) -->
                 <a href="/account/reviews" style="text-decoration: none; color: inherit; position: relative;">
                     <i class="fas fa-envelope"></i> 消息通知
                     <span id="notificationBadge" class="cart-badge" style="display:none; position: absolute; top: -5px; right: -5px; font-size: 10px; padding: 2px 5px; background: #dc3545;">0</span>
                 </a>
 
-                <!--  系统通知 → 系统通知页面（评论被删除等） -->
                 <a href="/account/notifications" style="text-decoration: none; color: inherit; position: relative;">
                     <i class="fas fa-bell"></i> 系统通知
                     <span id="systemNotificationBadge" class="cart-badge" style="display:none; position: absolute; top: -5px; right: -5px; font-size: 10px; padding: 2px 5px; background: #ffc107; color: #212529;">0</span>
@@ -89,16 +85,41 @@
                 <div style="margin-bottom:0.8rem; position:relative;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">密碼 *</label><input type="password" name="password" id="regPassword" required minlength="6" placeholder="至少6位字符" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem; padding-right:2.5rem;"><i class="fas fa-eye password-toggle" id="toggleRegPassword" onclick="togglePassword('regPassword', this)" aria-label="切換密碼可見性"></i></div>
                 <div style="margin-bottom:0.8rem;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">確認密碼 *</label><input type="password" name="confirmPassword" id="confirmPassword" required minlength="6" placeholder="請再次輸入密碼" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem;"></div>
                 <div style="margin-bottom:1.2rem;"><label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">手機號碼 *</label><input type="tel" name="phone" required maxlength="20" placeholder="例如: +852 1234 5678" style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem;"></div>
-                <!-- 在“电子邮件”输入框之后，“密码”输入框之前插入以下代码 -->
+
+                <!-- ==================== 家庭地址與區域選擇 ==================== -->
                 <div style="margin-bottom:0.8rem;">
                     <label style="display:block; margin-bottom:0.25rem; font-weight:500; font-size:0.9rem;">家庭地址</label>
+
+                    <!-- 新增：区域选择容器 -->
+                    <div style="margin-bottom: 0.5rem;">
+                        <div style="display: flex; gap: 10px;">
+                            <!-- 第一级：大区域 -->
+                            <select id="regionSelect" style="flex: 1; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 0.9rem; background: white;">
+                                <option value="">请选择区域</option>
+                                <option value="港岛">港岛</option>
+                                <option value="九龙">九龙</option>
+                                <option value="新界">新界</option>
+                            </select>
+
+                            <!-- 第二级：行政区 (初始禁用) -->
+                            <select id="districtSelect" disabled style="flex: 2; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 0.9rem; background: #f8f9fa;">
+                                <option value="">请先选择区域</option>
+                            </select>
+                        </div>
+                        <small style="color: #6c757d; font-size: 0.75rem; margin-top: 0.2rem; display: block;">
+                            <i class="fas fa-info-circle"></i> 选择区域后，详细地址将自动填入下方
+                        </small>
+                    </div>
+
+                    <!-- 原有的详细地址输入框 -->
                     <input type="text" name="address" id="regAddress" placeholder="例如：九龙尖沙咀弥敦道..."
                            style="width:100%; padding:0.6rem; border:2px solid #e9ecef; border-radius:8px; font-size:0.9rem;">
-                    <!-- 提示信息 -->
                     <small style="color: var(--gray); font-size: 0.75rem; margin-top: 0.2rem; display: block;">
                         <i class="fas fa-info-circle"></i> 非必要填写，但会影响上门送货地址确认
                     </small>
                 </div>
+                <!-- ========================================================== -->
+
                 <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:0.7rem;"><i class="fas fa-user-check"></i> 立即註冊</button>
             </form>
             <div id="registerMsg" style="margin-top:0.8rem; text-align:center; font-size:0.85rem; min-height:1.2rem;"></div>

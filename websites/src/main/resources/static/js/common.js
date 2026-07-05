@@ -1,5 +1,5 @@
 /* ==========================================
-   ChronoTeam 公共脚本 (common.js)
+   ChronoTeam 公共脚本 (common.js) - 完整修復版
    ========================================== */
 
 // ===== 购物车功能 =====
@@ -268,7 +268,7 @@ async function handleRegister(e) {
     if (form.password.value !== form.confirmPassword.value) { msg.textContent = '❌ 兩次密碼輸入不一致'; msg.style.color = 'var(--accent)'; form.confirmPassword.focus(); return; }
     btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 註冊中...'; msg.textContent = '';
     try {
-        const formData = { username: form.username.value.trim(), name: form.name.value.trim(), email: form.email.value.trim(), password: form.password.value, phone: form.phone.value.trim(),address: form.address ? form.address.value.trim() : "" };
+        const formData = { username: form.username.value.trim(), name: form.name.value.trim(), email: form.email.value.trim(), password: form.password.value, phone: form.phone.value.trim(), address: form.address ? form.address.value.trim() : "" };
         const response = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
         const result = await response.json();
         if (response.ok) {
@@ -311,12 +311,10 @@ async function handleLogin(e) {
 
             if (errorMsg.startsWith('USER_NOT_FOUND:')) {
                 errorMsg = '❌ 該用戶名不存在';
-                // 讓用戶名輸入框抖動
                 form.querySelector('input[name="username"]').classList.add('shake');
                 setTimeout(() => form.querySelector('input[name="username"]').classList.remove('shake'), 500);
             } else if (errorMsg.startsWith('INVALID_PASSWORD:')) {
                 errorMsg = '❌ 輸入密碼不正確';
-                // 讓密碼輸入框抖動
                 form.querySelector('input[name="password"]').classList.add('shake');
                 setTimeout(() => form.querySelector('input[name="password"]').classList.remove('shake'), 500);
             } else {
@@ -338,7 +336,7 @@ function showLogoutModal() {
     const modal = document.getElementById('logoutModal');
     if (modal) {
         modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden'; // 禁止背景滚动
+        document.body.style.overflow = 'hidden';
     }
 }
 
@@ -347,7 +345,7 @@ function closeLogoutModal() {
     const modal = document.getElementById('logoutModal');
     if (modal) {
         modal.style.display = 'none';
-        document.body.style.overflow = ''; // 恢复背景滚动
+        document.body.style.overflow = '';
     }
 }
 
@@ -365,45 +363,36 @@ async function performLogout() {
 
 // 修改原来的 handleLogout 函数
 async function handleLogout() {
-    showLogoutModal(); // 显示自定义弹窗，而不是 confirm
+    showLogoutModal();
 }
 
 // ===== 頁面跳轉登入攔截 =====
 function requireLogin(url, message) {
-    // 判斷是否未登入
     if (typeof isLoggedIn === 'undefined' || !isLoggedIn) {
-        // 1. 彈出右上角提示
         showNotification(message || '❌ 請先登入！', true);
-
-        // 2. 延遲 0.5 秒後自動彈出登入彈窗，讓用戶先看到提示
         setTimeout(() => {
             if (typeof openLoginModal === 'function') {
                 openLoginModal();
             }
         }, 500);
-
-        return false; // 阻止 <a> 標籤的默認跳轉行為
+        return false;
     }
-
-    // 已登入則正常跳轉
     window.location.href = url;
     return true;
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof isLoggedIn !== 'undefined' && isLoggedIn) {
-        //  只在頁面加載時請求一次，拒絕定時輪詢以節省伺服器資源
         fetchUnreadNotifications();
     }
 });
 
-//  獲取未讀通知數量 (修復版：區分系統通知與消息通知)
+//  獲取未讀通知數量
 async function fetchUnreadNotifications() {
     try {
         const response = await fetch('/api/notifications/unread-count');
         const data = await response.json();
 
-        // 1. 消息通知 (信封圖標，對應 /account/reviews 互動中心)
         const msgBadge = document.getElementById('notificationBadge');
         if (msgBadge) {
             if (data.messageCount > 0) {
@@ -414,7 +403,6 @@ async function fetchUnreadNotifications() {
             }
         }
 
-        //  2. 系統通知 (鈴鐺圖標，對應 /account/notifications，如管理員刪評)
         const sysBadge = document.getElementById('systemNotificationBadge');
         if (sysBadge) {
             if (data.systemCount > 0) {
@@ -446,5 +434,91 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
 // 暴露全局函數，方便在其他頁面操作後手動刷新紅點
 window.refreshNotificationBadge = fetchUnreadNotifications;
+
+
+// ==========================================
+//  新增：註冊表單 - 區域級聯選擇與自動填充邏輯 (完整修復版)
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    const regionSelect = document.getElementById('regionSelect');
+    const districtSelect = document.getElementById('districtSelect');
+    const addressInput = document.getElementById('regAddress'); //  修正 ID，與 HTML 中的 id="regAddress" 保持一致
+
+    // 核心修復 1：安全護欄！
+    // 因為 common.js 是全局加載的，在首頁、商品頁等沒有註冊彈窗的頁面，這三個元素是 null。
+    // 如果不加判斷直接 addEventListener，會導致 JS 報錯崩潰，阻斷後續所有功能！
+    if (!regionSelect || !districtSelect || !addressInput) return;
+
+    // 定义区域和行政区的映射关系
+    const districtData = {
+        '港岛': ['中西区', '湾仔区', '东区', '南区'],
+        '九龙': ['油尖旺区', '深水埗区', '九龙城区', '黄大仙区', '观塘区'],
+        '新界': ['荃湾区', '屯门区', '元朗区', '北区', '大埔区', '西贡区', '沙田区', '葵青区', '离岛区']
+    };
+
+    // 1. 监听第一级下拉框变化
+    regionSelect.addEventListener('change', function() {
+        const selectedRegion = this.value;
+
+        // 清空并重置第二级下拉框
+        districtSelect.innerHTML = '<option value="">请选择行政区</option>';
+        districtSelect.disabled = true;
+        districtSelect.style.backgroundColor = '#f8f9fa'; // 恢復禁用時的灰色背景
+
+        if (selectedRegion && districtData[selectedRegion]) {
+            districtSelect.disabled = false;
+            districtSelect.style.backgroundColor = 'white'; // 啟用時變為白色
+
+            // 填充第二级选项
+            districtData[selectedRegion].forEach(district => {
+                const option = document.createElement('option');
+                option.value = district;
+                option.textContent = district;
+                districtSelect.appendChild(option);
+            });
+        }
+    });
+
+    // 2. 监听第二级下拉框变化 -> 自动填入地址栏
+    districtSelect.addEventListener('change', function() {
+        const region = regionSelect.value;
+        const district = this.value;
+
+        if (region && district) {
+            // 核心逻辑：将区域和行政区填入地址框，并加一个空格，聚焦光标让用户继续输入
+            if (!addressInput.value.startsWith(region)) {
+                addressInput.value = region + ' ' + district + ' ';
+            } else {
+                if(addressInput.value.trim() === '') {
+                     addressInput.value = region + ' ' + district + ' ';
+                }
+            }
+
+            // 自动聚焦到地址框，方便用户接着输入街道
+            addressInput.focus();
+            addressInput.classList.remove('is-invalid');
+        }
+    });
+
+    //  核心修復 2：必須指定 registerForm！
+    // 原本使用 document.querySelector('form') 會抓到頁面上的第一個表單（通常是登入表單），導致驗證綁定錯誤。
+    const registerForm = document.getElementById('registerForm');
+    if(registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+            const region = regionSelect.value;
+            const address = addressInput.value.trim();
+
+            // 如果选了区域，但地址栏被删空了，或者地址栏里没有包含选中的区域
+            if (region && (!address || !address.includes(region))) {
+                e.preventDefault(); // 阻止提交
+                //  核心修復 3：使用項目統一的 showNotification 代替醜陋的 alert
+                showNotification('❌ 既然選擇了區域，詳細地址不能為空，且必須包含所選區域！', true);
+                addressInput.focus();
+                addressInput.style.borderColor = '#e94560';
+            }
+        });
+    }
+});

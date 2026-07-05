@@ -1978,23 +1978,25 @@ async function setQuantityToOne() {
         closeStockExceedModal();
         return;
     }
-
     const card = document.querySelector(`.cart-item-card[data-order-item-id="${pendingOrderItemId}"]`);
     if (!card) {
         showNotification('❌ 找不到該商品', true);
         closeStockExceedModal();
         return;
     }
-
     const qtyElement = card.querySelector('.qty-value');
     const maxStock = parseInt(card.getAttribute('data-stock'));
 
-    // 【關鍵修復】先關閉彈窗，然後執行更新
+    //  關鍵修復：在關閉彈窗前，先把值保存到局部變量！
+    const targetOrderId = pendingOrderItemId;
+    const targetQty = 1;
+
+    // 先關閉彈窗
     closeStockExceedModal();
 
     // 延遲一點點確保彈窗完全關閉
     setTimeout(async () => {
-        await performQuantityUpdate(pendingOrderItemId, 1, card, qtyElement, maxStock);
+        await performQuantityUpdate(targetOrderId, targetQty, card, qtyElement, maxStock);
     }, 100);
 }
 
@@ -2006,28 +2008,29 @@ async function setQuantityToMax() {
         closeStockExceedModal();
         return;
     }
-
     if (!pendingMaxStock || isNaN(pendingMaxStock)) {
         showNotification('❌ 庫存數據無效', true);
         closeStockExceedModal();
         return;
     }
-
     const card = document.querySelector(`.cart-item-card[data-order-item-id="${pendingOrderItemId}"]`);
     if (!card) {
         showNotification('❌ 找不到該商品', true);
         closeStockExceedModal();
         return;
     }
-
     const qtyElement = card.querySelector('.qty-value');
 
-    // 【關鍵修復】先關閉彈窗，然後執行更新
+    //  關鍵修復：在關閉彈窗前，先把值保存到局部變量！
+    const targetOrderId = pendingOrderItemId;
+    const targetMaxStock = pendingMaxStock;
+
+    // 先關閉彈窗
     closeStockExceedModal();
 
     // 延遲一點點確保彈窗完全關閉
     setTimeout(async () => {
-        await performQuantityUpdate(pendingOrderItemId, pendingMaxStock, card, qtyElement, pendingMaxStock);
+        await performQuantityUpdate(targetOrderId, targetMaxStock, card, qtyElement, targetMaxStock);
     }, 100);
 }
 
