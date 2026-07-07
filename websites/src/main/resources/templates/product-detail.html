@@ -2660,1230 +2660,1404 @@
         font-size: 1rem;
     }
 }
+        /* 成色按钮样式 */
+.condition-btn {
+    padding: 0.6rem 1.2rem;
+    border: 2px solid #e9ecef;
+    background: white;
+    color: var(--primary);
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.condition-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
+}
+
+/* 当前选中的成色高亮 */
+.condition-btn.active {
+    background: var(--gold);
+    color: white;
+    border-color: var(--gold);
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+}
+
+.condition-btn.active::after {
+    content: '✔';
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    font-size: 0.7rem;
+}
+
     </style>
 </head>
 
 <body>
 
-    <div th:replace="~{fragments/common :: navbar}"></div>
+<div th:replace="~{fragments/common :: navbar}"></div>
 
-    <!-- === 商品詳情 === -->
-    <div class="detail-container">
-        <div class="detail-img">
-            <img th:src="@{/images/products/{img}(img=${product.image})}" th:alt="${product.description}"
-                onerror="this.src='/images/placeholder.png'">
+<!-- === 商品詳情 === -->
+<div class="detail-container">
+    <div class="detail-img">
+        <img th:src="@{/images/products/{img}(img=${product.image})}" th:alt="${product.description}"
+             onerror="this.src='/images/placeholder.png'">
 
-            <!--  React 收藏按鈕掛載點 -->
-            <div id="favorite-react-root" th:data-product-id="${product.productId}" th:data-is-favorite="${isFavorite}">
-            </div>
-        </div>
-
-        <div class="detail-info">
-            <h1 th:text="${product.description}">手錶名稱</h1>
-            <p style="color: var(--gray); margin: 0.5rem 0;">
-                分類：<span th:text="${product.category}" style="font-weight: 600;">Watch</span> |
-                庫存：<span th:text="${product.stock}" style="font-weight: 600;">0</span> 隻
-            </p>
-            <div class="price" th:text="'HK$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 0, 'POINT')}">HK$ 0
-            </div>
-
-            <h3 style="margin-top: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fas fa-file-alt" style="color: var(--gold);"></i> 來源與詳細介紹
-            </h3>
-            <p class="details-text" th:text="${product.details} ?: '暫無詳細介紹'">這裡是手錶的來源...</p>
-
-            <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-                <!-- 原代码: onclick="addToCart(currentProductId)" -->
-                <button type="button" onclick="handleAddToCartClick()" class="btn btn-primary"
-                    style="padding: 0.8rem 2rem; font-size: 1rem;">
-                    <i class="fas fa-cart-plus"></i> 加入購物車
-                </button>
-
-                <button type="button" id="notifyBtn" onclick="handleNotifyClick()" class="btn btn-gold"
-                    style="padding: 0.8rem 2rem; font-size: 1rem;">
-                    <i class="fas fa-bell"></i> 到貨通知
-                </button>
-
-                <a href="/browse" class="btn btn-outline" style="padding: 0.8rem 2rem; font-size: 1rem;">
-                    <i class="fas fa-arrow-left"></i> 返回瀏覽
-                </a>
-                <button th:if="${#authentication.name == 'admin'}" type="button" class="btn-stock"
-                    onclick="openEditModal()">
-                    <i class="fas fa-edit"></i> 编辑商品
-                </button>
-            </div>
+        <!--  React 收藏按鈕掛載點 -->
+        <div id="favorite-react-root" th:data-product-id="${product.productId}" th:data-is-favorite="${isFavorite}">
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!--  全新的 React 評論區掛載點 -->
-    <!-- ========================================== -->
-    <div id="reviews-react-root" class="reviews-react-wrapper"
-         th:attr="data-product-id=${product.productId},
+    <div class="detail-info">
+        <h1 th:text="${product.description}">手錶名稱</h1>
+        <p style="color: var(--gray); margin: 0.5rem 0;">
+            分類：<span th:text="${product.category}" style="font-weight: 600;">Watch</span> |
+            庫存：<span th:text="${product.stock}" style="font-weight: 600;">0</span> 隻
+        </p>
+        <div class="price" th:text="'HK$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 0, 'POINT')}">HK$ 0
+        </div>
+
+        <h3 style="margin-top: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-file-alt" style="color: var(--gold);"></i> 來源與詳細介紹
+        </h3>
+        <p class="details-text" th:text="${product.details} ?: '暫無詳細介紹'">這裡是手錶的來源...</p>
+
+        <!--  新增：成色选择区域 (由 JS 自動生成按鈕) -->
+        <div class="condition-selector" style="margin: 1.5rem 0;">
+            <label style="display: block; margin-bottom: 0.8rem; font-weight: 600; color: var(--primary);">
+                <i class="fas fa-gem" style="color: var(--gold); margin-right: 0.5rem;"></i> 選擇成色
+            </label>
+            <!-- 这里留空，由 JS 自动生成按钮 -->
+            <div id="conditionButtons" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <span style="color: #999; font-size: 0.9rem;">正在加载成色选项...</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+            <!-- 原代码: onclick="addToCart(currentProductId)" -->
+            <button type="button" onclick="handleAddToCartClick()" class="btn btn-primary"
+                    style="padding: 0.8rem 2rem; font-size: 1rem;">
+                <i class="fas fa-cart-plus"></i> 加入購物車
+            </button>
+
+            <button type="button" id="notifyBtn" onclick="handleNotifyClick()" class="btn btn-gold"
+                    style="padding: 0.8rem 2rem; font-size: 1rem;">
+                <i class="fas fa-bell"></i> 到貨通知
+            </button>
+
+            <a href="/browse" class="btn btn-outline" style="padding: 0.8rem 2rem; font-size: 1rem;">
+                <i class="fas fa-arrow-left"></i> 返回瀏覽
+            </a>
+            <button th:if="${#authentication.name == 'admin'}" type="button" class="btn-stock"
+                    onclick="openEditModal()">
+                <i class="fas fa-edit"></i> 编辑商品
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!--  全新的 React 評論區掛載點 -->
+<!-- ========================================== -->
+<div id="reviews-react-root" class="reviews-react-wrapper"
+     th:attr="data-product-id=${product.productId},
               data-current-username=${#authentication.name},
               data-is-admin=${#authentication.name == 'admin'},
               data-can-review=${canReview},
               data-review-order-no=${reviewOrderNo},
               data-total-review-count=${product.totalReviewCount != null ? product.totalReviewCount : 0},
               data-initial-avg-rating=${product.totalReviewCount != null && product.totalReviewCount > 0 ? (product.totalScore / product.totalReviewCount) : 0.0}">
-        <!-- 載入佔位符 -->
-        <div style="text-align:center; padding: 4rem; color: var(--gray);">
-            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
-            <p>評論區載入中...</p>
-        </div>
+    <!-- 載入佔位符 -->
+    <div style="text-align:center; padding: 4rem; color: var(--gray);">
+        <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+        <p>評論區載入中...</p>
     </div>
+</div>
 
 
-    <!-- 評價狀態提示區塊 -->
-    <div th:if="${userReview != null}" class="already-reviewed">
-        <p style="margin: 0; color: #155724; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
-            <i class="fas fa-check-circle"></i><strong>您已評價過該商品，感謝您的反饋！</strong>
+<!-- 評價狀態提示區塊 -->
+<div th:if="${userReview != null}" class="already-reviewed">
+    <p style="margin: 0; color: #155724; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
+        <i class="fas fa-check-circle"></i><strong>您已評價過該商品，感謝您的反饋！</strong>
+    </p>
+</div>
+
+<div th:if="${#authorization.expression('isAuthenticated()') and (canReview == null or !canReview) and userReview == null}"
+     class="no-purchase-prompt">
+    <i class="fas fa-shopping-cart" style="font-size: 2rem; color: var(--gold); margin-bottom: 1rem;"></i>
+    <p style="color: var(--gray); margin-bottom: 0.5rem; font-size: 1.1rem; font-weight: 500;">購買並完成付款後，即可在此發表評價</p>
+    <a href="/browse" class="btn btn-outline" style="margin-top: 0.5rem;"><i class="fas fa-search"></i> 去逛逛</a>
+</div>
+
+<div th:if="${#authorization.expression('!isAuthenticated()')}"
+     class="login-required-prompt">
+    <i class="fas fa-lock" style="font-size: 2rem; color: var(--gold); margin-bottom: 1rem;"></i>
+    <p style="color: var(--gray); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">請登入後購買商品並發表評價</p>
+    <button onclick="openLoginModal()" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> 立即登入</button>
+</div>
+
+<!-- 無評論時的佔位提示 (React 加載前顯示) -->
+<div class="reviews-list" id="reviewsList"
+     th:if="${(#authorization.expression('isAuthenticated()') and canReview and (reviews == null || #lists.isEmpty(reviews)))}">
+    <div class="no-reviews">
+        <i class="fas fa-comment-slash" style="color: var(--gold);"></i>
+        <p style="font-size: 1.1rem; color: var(--gray); margin-top: 1rem;">該產品還沒有用戶發表評價！</p>
+        <p style="font-size: 0.9rem; color: var(--gray); margin-top: 0.5rem;">成為第一個留下評論的人吧</p>
+    </div>
+</div>
+
+<footer class="footer">
+    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+        Rights Reserved.</p>
+</footer>
+
+<div th:replace="~{fragments/common :: modals}"></div>
+
+<!-- ========================================== -->
+<!-- 管理員專屬：等待名單模態框 -->
+<!-- ========================================== -->
+<div id="waitlistModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <button class="modal-close" onclick="closeWaitlistModal()">&times;</button>
+        <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-users" style="color: var(--gold);"></i> 等待到貨用戶名單
+        </h3>
+        <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 1rem;">
+            共有 <strong id="waitlistCount" style="color: var(--accent);">0</strong> 位用戶正在等待此商品。
         </p>
-    </div>
 
-    <div th:if="${#authorization.expression('isAuthenticated()') and (canReview == null or !canReview) and userReview == null}"
-         class="no-purchase-prompt">
-        <i class="fas fa-shopping-cart" style="font-size: 2rem; color: var(--gold); margin-bottom: 1rem;"></i>
-        <p style="color: var(--gray); margin-bottom: 0.5rem; font-size: 1.1rem; font-weight: 500;">購買並完成付款後，即可在此發表評價</p>
-        <a href="/browse" class="btn btn-outline" style="margin-top: 0.5rem;"><i class="fas fa-search"></i> 去逛逛</a>
-    </div>
-
-    <div th:if="${#authorization.expression('!isAuthenticated()')}"
-         class="login-required-prompt">
-        <i class="fas fa-lock" style="font-size: 2rem; color: var(--gold); margin-bottom: 1rem;"></i>
-        <p style="color: var(--gray); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">請登入後購買商品並發表評價</p>
-        <button onclick="openLoginModal()" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> 立即登入</button>
-    </div>
-
-    <!-- 無評論時的佔位提示 (React 加載前顯示) -->
-    <div class="reviews-list" id="reviewsList"
-         th:if="${(#authorization.expression('isAuthenticated()') and canReview and (reviews == null || #lists.isEmpty(reviews)))}">
-        <div class="no-reviews">
-            <i class="fas fa-comment-slash" style="color: var(--gold);"></i>
-            <p style="font-size: 1.1rem; color: var(--gray); margin-top: 1rem;">該產品還沒有用戶發表評價！</p>
-            <p style="font-size: 0.9rem; color: var(--gray); margin-top: 0.5rem;">成為第一個留下評論的人吧</p>
-        </div>
-    </div>
-
-    <footer class="footer">
-        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
-            Rights Reserved.</p>
-    </footer>
-
-    <div th:replace="~{fragments/common :: modals}"></div>
-
-    <!-- ========================================== -->
-    <!-- 管理員專屬：等待名單模態框 -->
-    <!-- ========================================== -->
-    <div id="waitlistModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 500px;">
-            <button class="modal-close" onclick="closeWaitlistModal()">&times;</button>
-            <h3 style="margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fas fa-users" style="color: var(--gold);"></i> 等待到貨用戶名單
-            </h3>
-            <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 1rem;">
-                共有 <strong id="waitlistCount" style="color: var(--accent);">0</strong> 位用戶正在等待此商品。
-            </p>
-
-            <!-- 名單列表容器 -->
-            <div id="waitlistBody"
-                style="max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; border: 1px solid #e9ecef; border-radius: 8px;">
-                <div style="text-align: center; padding: 2rem; color: var(--gray);">
-                    <i class="fas fa-spinner fa-spin"></i> 加載中...
-                </div>
+        <!-- 名單列表容器 -->
+        <div id="waitlistBody"
+             style="max-height: 300px; overflow-y: auto; margin-bottom: 1.5rem; border: 1px solid #e9ecef; border-radius: 8px;">
+            <div style="text-align: center; padding: 2rem; color: var(--gray);">
+                <i class="fas fa-spinner fa-spin"></i> 加載中...
             </div>
+        </div>
 
-            <!-- 一鍵發送按鈕 -->
-            <button id="sendNotifyBtn" class="btn btn-gold"
+        <!-- 一鍵發送按鈕 -->
+        <button id="sendNotifyBtn" class="btn btn-gold"
                 style="width: 100%; justify-content: center; padding: 0.8rem;" onclick="sendStockNotification()">
-                <i class="fas fa-paper-plane"></i> 一鍵發送系統通知
-            </button>
-        </div>
+            <i class="fas fa-paper-plane"></i> 一鍵發送系統通知
+        </button>
     </div>
-    <!-- ========================================== -->
-    <!--  管理员专属：编辑商品模态框 -->
-    <!-- ========================================== -->
-    <div id="editProductModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
-            <button class="modal-close" onclick="closeEditModal()">&times;</button>
-            <h3 style="margin-bottom: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fas fa-edit" style="color: var(--gold);"></i> 编辑商品信息
-            </h3>
+</div>
+<!-- ========================================== -->
+<!--  管理员专属：编辑商品模态框 -->
+<!-- ========================================== -->
+<div id="editProductModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 700px; max-height: 90vh; overflow-y: auto;">
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        <h3 style="margin-bottom: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-edit" style="color: var(--gold);"></i> 编辑商品信息
+        </h3>
 
-            <form id="editProductForm" onsubmit="saveProduct(event)">
-                <!-- 价格 -->
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
-                        <i class="fas fa-tag" style="color: var(--gold); margin-right: 0.5rem;"></i> 价格 (HK$)
-                    </label>
-                    <input type="number" id="editPrice" step="0.01" min="0" required th:value="${product.price}"
+        <form id="editProductForm" onsubmit="saveProduct(event)">
+            <!-- 价格 -->
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <i class="fas fa-tag" style="color: var(--gold); margin-right: 0.5rem;"></i> 价格 (HK$)
+                </label>
+                <input type="number" id="editPrice" step="0.01" min="0" required th:value="${product.price}"
+                       style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+            </div>
+
+            <!-- 库存 -->
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <i class="fas fa-boxes" style="color: var(--gold); margin-right: 0.5rem;"></i> 库存数量
+                </label>
+                <input type="number" id="editStock" min="0" required th:value="${product.stock}"
+                       style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+            </div>
+
+            <!-- 分类 -->
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <i class="fas fa-th-large" style="color: var(--gold); margin-right: 0.5rem;"></i> 分类
+                </label>
+                <select id="editCategory" required
                         style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
-                </div>
+                    <option value="Watch" th:selected="${product.category == 'Watch'}">Watch</option>
+                    <option value="dive" th:selected="${product.category == 'dive'}">潜水表</option>
+                    <option value="dress" th:selected="${product.category == 'dress'}">正装表</option>
+                    <option value="chronograph" th:selected="${product.category == 'chronograph'}">计时码表</option>
+                    <option value="vintage" th:selected="${product.category == 'vintage'}">古董表</option>
+                </select>
+            </div>
 
-                <!-- 库存 -->
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
-                        <i class="fas fa-boxes" style="color: var(--gold); margin-right: 0.5rem;"></i> 库存数量
-                    </label>
-                    <input type="number" id="editStock" min="0" required th:value="${product.stock}"
-                        style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
-                </div>
+            <!-- 品牌 -->
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <i class="fas fa-crown" style="color: var(--gold); margin-right: 0.5rem;"></i> 品牌
+                </label>
+                <input type="text" id="editBrand" required th:value="${product.brand}"
+                       placeholder="例如：Rolex, Omega, AP..."
+                       style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+            </div>
 
-                <!-- 分类 -->
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
-                        <i class="fas fa-th-large" style="color: var(--gold); margin-right: 0.5rem;"></i> 分类
-                    </label>
-                    <select id="editCategory" required
-                        style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
-                        <option value="Watch" th:selected="${product.category == 'Watch'}">Watch</option>
-                        <option value="dive" th:selected="${product.category == 'dive'}">潜水表</option>
-                        <option value="dress" th:selected="${product.category == 'dress'}">正装表</option>
-                        <option value="chronograph" th:selected="${product.category == 'chronograph'}">计时码表</option>
-                        <option value="vintage" th:selected="${product.category == 'vintage'}">古董表</option>
-                    </select>
-                </div>
+            <!-- 商品描述（简介） -->
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <i class="fas fa-align-left" style="color: var(--gold); margin-right: 0.5rem;"></i> 商品简介
+                </label>
+                <textarea id="editDescription" rows="3" required th:text="${product.description}"
+                          placeholder="简短描述商品..."
+                          style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+            </div>
 
-                <!-- 品牌 -->
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
-                        <i class="fas fa-crown" style="color: var(--gold); margin-right: 0.5rem;"></i> 品牌
-                    </label>
-                    <input type="text" id="editBrand" required th:value="${product.brand}"
-                        placeholder="例如：Rolex, Omega, AP..."
-                        style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
-                </div>
+            <!-- 详细介绍 -->
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <i class="fas fa-file-alt" style="color: var(--gold); margin-right: 0.5rem;"></i> 详细介绍
+                </label>
+                <textarea id="editDetails" rows="5" th:text="${product.details}" placeholder="详细介绍商品的来源、特点、规格等..."
+                          style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+            </div>
 
-                <!-- 商品描述（简介） -->
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
-                        <i class="fas fa-align-left" style="color: var(--gold); margin-right: 0.5rem;"></i> 商品简介
-                    </label>
-                    <textarea id="editDescription" rows="3" required th:text="${product.description}"
-                        placeholder="简短描述商品..."
-                        style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
-                </div>
+            <!-- 图片 URL -->
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
+                    <i class="fas fa-image" style="color: var(--gold); margin-right: 0.5rem;"></i> 图片文件名
+                </label>
+                <input type="text" id="editImage" th:value="${product.image}" placeholder="例如：watch1.png"
+                       style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+                <small style="color: var(--gray); font-size: 0.85rem; margin-top: 0.3rem; display: block;">
+                    <i class="fas fa-info-circle"></i> 图片需先上传至 /images/products/ 目录
+                </small>
+            </div>
 
-                <!-- 详细介绍 -->
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
-                        <i class="fas fa-file-alt" style="color: var(--gold); margin-right: 0.5rem;"></i> 详细介绍
-                    </label>
-                    <textarea id="editDetails" rows="5" th:text="${product.details}" placeholder="详细介绍商品的来源、特点、规格等..."
-                        style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
-                </div>
-
-                <!-- 图片 URL -->
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">
-                        <i class="fas fa-image" style="color: var(--gold); margin-right: 0.5rem;"></i> 图片文件名
-                    </label>
-                    <input type="text" id="editImage" th:value="${product.image}" placeholder="例如：watch1.png"
-                        style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
-                    <small style="color: var(--gray); font-size: 0.85rem; margin-top: 0.3rem; display: block;">
-                        <i class="fas fa-info-circle"></i> 图片需先上传至 /images/products/ 目录
-                    </small>
-                </div>
-
-                <!-- 按钮 -->
-                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                    <button type="button" onclick="closeEditModal()"
+            <!-- 按钮 -->
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" onclick="closeEditModal()"
                         style="padding: 0.8rem 1.5rem; background: #e9ecef; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--primary);">
-                        <i class="fas fa-times"></i> 取消
-                    </button>
-                    <button type="submit"
-                        style="padding: 0.8rem 2rem; background: var(--gold); border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--primary);">
-                        <i class="fas fa-save"></i> 保存修改
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- ========================================== -->
-    <!--  禁言提示弹窗 (供 React 評論區全局調用) -->
-    <!-- ========================================== -->
-    <div id="blockedModal" class="modal" style="display: none; z-index: 9999;">
-        <div class="modal-content" style="max-width: 420px; text-align: center; padding: 2rem;">
-            <button class="modal-close" onclick="closeBlockedModal()">&times;</button>
-            <div style="font-size: 3.5rem; color: var(--accent); margin-bottom: 1rem;">
-                <i class="fas fa-ban"></i>
-            </div>
-            <h3 style="color: var(--primary); margin-bottom: 1rem; font-size: 1.3rem;">
-                <i class="fas fa-exclamation-triangle" style="color: var(--accent); margin-right: 0.5rem;"></i>
-                無法回復
-            </h3>
-            <p id="blockedModalMessage"
-                style="color: var(--gray); margin-bottom: 1.5rem; line-height: 1.6; font-size: 1rem;">
-                您已經被對方禁言，無法回復！！！
-            </p>
-            <button class="btn btn-primary" onclick="closeBlockedModal()"
-                style="width: 100%; justify-content: center; padding: 0.8rem;">
-                <i class="fas fa-check"></i> 我知道了
-            </button>
-        </div>
-    </div>
-
-    <!--  全局禁言提示彈窗 -->
-    <div id="globalBanModal" class="global-ban-modal" style="display: none;">
-        <div class="global-ban-content">
-            <div class="ban-icon"><i class="fas fa-ban"></i></div>
-            <h3>⚠️ 賬號受限</h3>
-            <p id="banMessageText">...</p>
-            <button class="ban-close-btn" onclick="closeGlobalBanModal()">我知道了</button>
-        </div>
-    </div>
-
-
-    <!-- 🚫 永久拉黑提示彈窗 -->
-    <div id="blacklistedModal" class="global-ban-modal" style="display: none;">
-        <div class="global-ban-content" style="border-top-color: #dc3545;">
-            <div class="ban-icon" style="color: #dc3545;"><i class="fas fa-user-slash"></i></div>
-            <h3>🚫 帳戶已被永久拉黑</h3>
-            <p id="blacklistMessageText">您因嚴重違反社區規範，已被管理員永久拉黑，無法進行任何互動操作（點贊、踩、評價、回復）。</p>
-            <button class="ban-close-btn" style="background: #dc3545;" onclick="closeBlacklistedModal()">我知道了</button>
-        </div>
-    </div>
-
-    <!-- 🚫 永久拉黑确认弹窗 -->
-    <div id="blacklistConfirmModal" class="custom-modal-overlay" style="display: none;">
-        <div class="custom-modal-content blacklist-modal">
-            <div class="modal-icon warning-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <h3 class="modal-title">确认永久拉黑用户？</h3>
-            <div class="modal-body">
-                <p class="modal-message">
-                    您确定要永久拉黑用户 <strong id="blacklistTargetUsername" class="username-highlight"></strong> 吗？
-                </p>
-                <div class="warning-box">
-                    <i class="fas fa-shield-alt"></i>
-                    <p>拉黑后该用户将<strong>永远无法</strong>进行以下操作：</p>
-                    <ul class="restriction-list">
-                        <li><i class="fas fa-times-circle"></i> 点赞 / 踩</li>
-                        <li><i class="fas fa-times-circle"></i> 发表评论</li>
-                        <li><i class="fas fa-times-circle"></i> 回复评论</li>
-                        <li><i class="fas fa-times-circle"></i> 任何互动操作</li>
-                    </ul>
-                </div>
-                <div class="reason-input-group">
-                    <label for="blacklistReason">
-                        <i class="fas fa-edit"></i> 拉黑原因（将发送通知给用户）：
-                    </label>
-                    <input type="text" id="blacklistReason" placeholder="请输入拉黑原因..." value="严重违反社区规范"
-                        class="reason-input">
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-cancel" onclick="closeBlacklistConfirmModal()">
                     <i class="fas fa-times"></i> 取消
                 </button>
-                <button class="btn btn-confirm" onclick="confirmBlacklistAction()">
-                    <i class="fas fa-user-slash"></i> 确认拉黑
+                <button type="submit"
+                        style="padding: 0.8rem 2rem; background: var(--gold); border: none; border-radius: 8px; cursor: pointer; font-weight: 600; color: var(--primary);">
+                    <i class="fas fa-save"></i> 保存修改
                 </button>
             </div>
-        </div>
+        </form>
     </div>
+</div>
 
-    <!-- ========================================== -->
-    <!--  🚨 舉報彈窗 (美化版 - 兩級選擇) -->
-    <!-- ========================================== -->
-    <div id="reportModal" class="modal" style="display: none; z-index: 9999;">
-        <div class="modal-overlay" onclick="closeReportModal()"></div>
-        <div class="modal-content report-modal-box">
-            <button class="modal-close" onclick="closeReportModal()">&times;</button>
-
-            <!-- 頂部提示 -->
-            <div class="report-header">
-                <h3 style="margin: 0; color: var(--primary); font-size: 1.2rem;">
-                    <i class="fas fa-exclamation-circle" style="color: var(--accent); margin-right: 0.5rem;"></i> 提交舉報
-                </h3>
-                <p style="margin: 0.5rem 0 0; color: var(--gray); font-size: 0.9rem;">
-                    您正在舉報用戶 <strong id="reportTargetUser" style="color: var(--primary);"></strong> 的 <span
-                        id="reportTargetType">評論</span>
-                </p>
-            </div>
-
-            <!-- 顯示被舉報的評論原文 -->
-            <div id="reportedContentSection"
-                style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 3px solid var(--gold);">
-                <div
-                    style="font-size: 0.8rem; color: var(--gray); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
-                    <i class="fas fa-quote-left"></i> 被舉報的評論內容：
-                </div>
-                <div id="reportedContentText"
-                    style="color: var(--primary); font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word;">
-                </div>
-            </div>
-
-            <form id="reportForm" onsubmit="submitReport(event)">
-                <input type="hidden" id="reportReviewId">
-                <input type="hidden" id="reportReportedUsername">
-                <input type="hidden" id="reportTargetTypeVal">
-
-                <!-- 第一級：選擇舉報分類 -->
-                <div class="report-section">
-                    <label class="section-title">請選擇你想要投訴的類型</label>
-                    <div class="category-grid" id="categoryGrid">
-                        <!-- JS 動態生成 -->
-                    </div>
-                </div>
-
-                <!-- 第二級：選擇具體原因 (初始隱藏) -->
-                <div class="report-section" id="reasonSection"
-                    style="display: none; opacity: 0; transition: opacity 0.3s;">
-                    <label class="section-title">請選擇具體原因</label>
-                    <div class="reason-grid" id="reasonGrid">
-                        <!-- JS 動態生成 -->
-                    </div>
-                </div>
-
-                <!-- 確認協議 -->
-                <div class="report-section" id="agreementSection" style="display: none; margin-top: 1.5rem;">
-                    <label class="checkbox-container">
-                        <input type="checkbox" id="reportAgreement">
-                        <span class="checkmark"></span>
-                        <span style="font-size: 0.85rem; color: var(--gray);">我已閱讀《舉報操作細則》，確認此內容屬於違規信息。</span>
-                    </label>
-                </div>
-
-                <!-- 提交按鈕 -->
-                <div class="report-actions">
-                    <button type="button" onclick="closeReportModal()" class="btn-cancel">取消</button>
-                    <button type="submit" id="submitReportBtn" class="btn-submit" disabled>
-                        <i class="fas fa-paper-plane"></i> 提交舉報
-                    </button>
-                </div>
-            </form>
+<!-- ========================================== -->
+<!--  禁言提示弹窗 (供 React 評論區全局調用) -->
+<!-- ========================================== -->
+<div id="blockedModal" class="modal" style="display: none; z-index: 9999;">
+    <div class="modal-content" style="max-width: 420px; text-align: center; padding: 2rem;">
+        <button class="modal-close" onclick="closeBlockedModal()">&times;</button>
+        <div style="font-size: 3.5rem; color: var(--accent); margin-bottom: 1rem;">
+            <i class="fas fa-ban"></i>
         </div>
+        <h3 style="color: var(--primary); margin-bottom: 1rem; font-size: 1.3rem;">
+            <i class="fas fa-exclamation-triangle" style="color: var(--accent); margin-right: 0.5rem;"></i>
+            無法回復
+        </h3>
+        <p id="blockedModalMessage"
+           style="color: var(--gray); margin-bottom: 1.5rem; line-height: 1.6; font-size: 1rem;">
+            您已經被對方禁言，無法回復！！！
+        </p>
+        <button class="btn btn-primary" onclick="closeBlockedModal()"
+                style="width: 100%; justify-content: center; padding: 0.8rem;">
+            <i class="fas fa-check"></i> 我知道了
+        </button>
     </div>
+</div>
 
-    <!-- ========================================== -->
-    <!--  🚨 舉報重複提示彈窗 (美化版) -->
-    <!-- ========================================== -->
-    <div id="duplicateReportModal" class="custom-modal" style="display: none;">
-        <div class="modal-backdrop" onclick="closeDuplicateReportModal()"></div>
-        <div class="modal-container">
-            <div class="modal-icon">
-                <i class="fas fa-exclamation-circle"></i>
-            </div>
-            <h3 class="modal-title">無法提交舉報</h3>
+<!--  全局禁言提示彈窗 -->
+<div id="globalBanModal" class="global-ban-modal" style="display: none;">
+    <div class="global-ban-content">
+        <div class="ban-icon"><i class="fas fa-ban"></i></div>
+        <h3>⚠️ 賬號受限</h3>
+        <p id="banMessageText">...</p>
+        <button class="ban-close-btn" onclick="closeGlobalBanModal()">我知道了</button>
+    </div>
+</div>
+
+
+<!-- 🚫 永久拉黑提示彈窗 -->
+<div id="blacklistedModal" class="global-ban-modal" style="display: none;">
+    <div class="global-ban-content" style="border-top-color: #dc3545;">
+        <div class="ban-icon" style="color: #dc3545;"><i class="fas fa-user-slash"></i></div>
+        <h3>🚫 帳戶已被永久拉黑</h3>
+        <p id="blacklistMessageText">您因嚴重違反社區規範，已被管理員永久拉黑，無法進行任何互動操作（點贊、踩、評價、回復）。</p>
+        <button class="ban-close-btn" style="background: #dc3545;" onclick="closeBlacklistedModal()">我知道了</button>
+    </div>
+</div>
+
+<!-- 🚫 永久拉黑确认弹窗 -->
+<div id="blacklistConfirmModal" class="custom-modal-overlay" style="display: none;">
+    <div class="custom-modal-content blacklist-modal">
+        <div class="modal-icon warning-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 class="modal-title">确认永久拉黑用户？</h3>
+        <div class="modal-body">
             <p class="modal-message">
-                您已經舉報過這條評論了，請勿重複提交！
+                您确定要永久拉黑用户 <strong id="blacklistTargetUsername" class="username-highlight"></strong> 吗？
             </p>
-            <div class="modal-divider"></div>
-            <button class="modal-btn" onclick="closeDuplicateReportModal()">
-                <i class="fas fa-check-circle"></i> 我知道了
+            <div class="warning-box">
+                <i class="fas fa-shield-alt"></i>
+                <p>拉黑后该用户将<strong>永远无法</strong>进行以下操作：</p>
+                <ul class="restriction-list">
+                    <li><i class="fas fa-times-circle"></i> 点赞 / 踩</li>
+                    <li><i class="fas fa-times-circle"></i> 发表评论</li>
+                    <li><i class="fas fa-times-circle"></i> 回复评论</li>
+                    <li><i class="fas fa-times-circle"></i> 任何互动操作</li>
+                </ul>
+            </div>
+            <div class="reason-input-group">
+                <label for="blacklistReason">
+                    <i class="fas fa-edit"></i> 拉黑原因（将发送通知给用户）：
+                </label>
+                <input type="text" id="blacklistReason" placeholder="请输入拉黑原因..." value="严重违反社区规范"
+                       class="reason-input">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeBlacklistConfirmModal()">
+                <i class="fas fa-times"></i> 取消
+            </button>
+            <button class="btn btn-confirm" onclick="confirmBlacklistAction()">
+                <i class="fas fa-user-slash"></i> 确认拉黑
             </button>
         </div>
     </div>
+</div>
 
-    <!-- ========================================== -->
-    <!--  🚫 未登入提示彈窗 (美化版) -->
-    <!-- ========================================== -->
-    <div id="loginRequiredModal" class="login-modal-overlay" style="display: none;">
-        <div class="login-modal-box">
-            <button class="login-modal-close" onclick="closeLoginRequiredModal()">&times;</button>
+<!-- ========================================== -->
+<!--  🚨 舉報彈窗 (美化版 - 兩級選擇) -->
+<!-- ========================================== -->
+<div id="reportModal" class="modal" style="display: none; z-index: 9999;">
+    <div class="modal-overlay" onclick="closeReportModal()"></div>
+    <div class="modal-content report-modal-box">
+        <button class="modal-close" onclick="closeReportModal()">&times;</button>
 
-            <div class="login-modal-icon">
-                <i class="fas fa-lock"></i>
-            </div>
-
-            <h3 class="login-modal-title">需要登入</h3>
-            <p class="login-modal-message">
-                您尚未登入，無法進行點贊、評論或回復操作。<br>
-                請先登入帳戶以繼續。
+        <!-- 頂部提示 -->
+        <div class="report-header">
+            <h3 style="margin: 0; color: var(--primary); font-size: 1.2rem;">
+                <i class="fas fa-exclamation-circle" style="color: var(--accent); margin-right: 0.5rem;"></i> 提交舉報
+            </h3>
+            <p style="margin: 0.5rem 0 0; color: var(--gray); font-size: 0.9rem;">
+                您正在舉報用戶 <strong id="reportTargetUser" style="color: var(--primary);"></strong> 的 <span
+                    id="reportTargetType">評論</span>
             </p>
+        </div>
 
-            <div class="login-modal-actions">
-                <button class="btn-modal-secondary" onclick="closeLoginRequiredModal()">
-                    取消
-                </button>
-                <button class="btn-modal-primary" onclick="handleLoginFromModal()">
-                    <i class="fas fa-sign-in-alt"></i> 立即登入
-                </button>
+        <!-- 顯示被舉報的評論原文 -->
+        <div id="reportedContentSection"
+             style="display: none; margin-bottom: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 3px solid var(--gold);">
+            <div
+                    style="font-size: 0.8rem; color: var(--gray); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.3rem;">
+                <i class="fas fa-quote-left"></i> 被舉報的評論內容：
+            </div>
+            <div id="reportedContentText"
+                 style="color: var(--primary); font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word;">
             </div>
         </div>
+
+        <form id="reportForm" onsubmit="submitReport(event)">
+            <input type="hidden" id="reportReviewId">
+            <input type="hidden" id="reportReportedUsername">
+            <input type="hidden" id="reportTargetTypeVal">
+
+            <!-- 第一級：選擇舉報分類 -->
+            <div class="report-section">
+                <label class="section-title">請選擇你想要投訴的類型</label>
+                <div class="category-grid" id="categoryGrid">
+                    <!-- JS 動態生成 -->
+                </div>
+            </div>
+
+            <!-- 第二級：選擇具體原因 (初始隱藏) -->
+            <div class="report-section" id="reasonSection"
+                 style="display: none; opacity: 0; transition: opacity 0.3s;">
+                <label class="section-title">請選擇具體原因</label>
+                <div class="reason-grid" id="reasonGrid">
+                    <!-- JS 動態生成 -->
+                </div>
+            </div>
+
+            <!-- 確認協議 -->
+            <div class="report-section" id="agreementSection" style="display: none; margin-top: 1.5rem;">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="reportAgreement">
+                    <span class="checkmark"></span>
+                    <span style="font-size: 0.85rem; color: var(--gray);">我已閱讀《舉報操作細則》，確認此內容屬於違規信息。</span>
+                </label>
+            </div>
+
+            <!-- 提交按鈕 -->
+            <div class="report-actions">
+                <button type="button" onclick="closeReportModal()" class="btn-cancel">取消</button>
+                <button type="submit" id="submitReportBtn" class="btn-submit" disabled>
+                    <i class="fas fa-paper-plane"></i> 提交舉報
+                </button>
+            </div>
+        </form>
     </div>
+</div>
+
+<!-- ========================================== -->
+<!--  🚨 舉報重複提示彈窗 (美化版) -->
+<!-- ========================================== -->
+<div id="duplicateReportModal" class="custom-modal" style="display: none;">
+    <div class="modal-backdrop" onclick="closeDuplicateReportModal()"></div>
+    <div class="modal-container">
+        <div class="modal-icon">
+            <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <h3 class="modal-title">無法提交舉報</h3>
+        <p class="modal-message">
+            您已經舉報過這條評論了，請勿重複提交！
+        </p>
+        <div class="modal-divider"></div>
+        <button class="modal-btn" onclick="closeDuplicateReportModal()">
+            <i class="fas fa-check-circle"></i> 我知道了
+        </button>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!--  🚫 未登入提示彈窗 (美化版) -->
+<!-- ========================================== -->
+<div id="loginRequiredModal" class="login-modal-overlay" style="display: none;">
+    <div class="login-modal-box">
+        <button class="login-modal-close" onclick="closeLoginRequiredModal()">&times;</button>
+
+        <div class="login-modal-icon">
+            <i class="fas fa-lock"></i>
+        </div>
+
+        <h3 class="login-modal-title">需要登入</h3>
+        <p class="login-modal-message">
+            您尚未登入，無法進行點贊、評論或回復操作。<br>
+            請先登入帳戶以繼續。
+        </p>
+
+        <div class="login-modal-actions">
+            <button class="btn-modal-secondary" onclick="closeLoginRequiredModal()">
+                取消
+            </button>
+            <button class="btn-modal-primary" onclick="handleLoginFromModal()">
+                <i class="fas fa-sign-in-alt"></i> 立即登入
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!--  🚫 互動阻止提示彈窗 (供 React 評論區調用) -->
+<!-- ========================================== -->
+<div id="interactionBlockModal" class="modal" style="display: none; z-index: 9999;">
+    <div class="modal-content" style="max-width: 450px; text-align: center; padding: 2.5rem 2rem;">
+        <button class="modal-close" onclick="closeInteractionBlockModal()">&times;</button>
+        <div style="font-size: 3.5rem; color: #ffc107; margin-bottom: 1rem;">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 style="color: var(--primary); margin-bottom: 1rem; font-size: 1.3rem;">
+            無法編輯此評論
+        </h3>
+        <p id="interactionBlockMessage"
+           style="color: var(--gray); margin-bottom: 1.5rem; line-height: 1.6; font-size: 1rem;">
+            該評論已有其他用戶的互動（如點贊、踩或回覆），為保障社區內容的真實性與完整性，**已產生互動的評論無法再進行編輯**。
+        </p>
+        <button class="btn btn-primary" onclick="closeInteractionBlockModal()"
+                style="width: 100%; justify-content: center; padding: 0.8rem;">
+            <i class="fas fa-check"></i> 我知道了
+        </button>
+    </div>
+</div>
     <!-- ========================================== -->
-    <!-- 1. 統一在這裡獲取所有 Thymeleaf 後端變量 -->
-    <!-- ========================================== -->
-    <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-        const currentProductId = [[${ product.productId }]];
-        const currentUsername = [[${ #authentication.name }]];
-        const isAdmin = [[${ #authentication.name == 'admin' }]];
-        const currentStock = [[${ product.stock }]];
-    </script>
+<!-- 1. 統一在這裡獲取所有 Thymeleaf 後端變量 -->
+<!-- ========================================== -->
+<script th:inline="javascript">
+    const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    const currentProductId = [[${ product.productId }]];
+    const currentUsername = [[${ #authentication.name }]];
+    const isAdmin = [[${ #authentication.name == 'admin' }]];
+    const currentStock = [[${ product.stock }]];
+</script>
 
-    <script src="/js/common.js"></script>
-    <script type="module" th:src="@{/react-assets/assets/index.js}"></script>
+<script src="/js/common.js"></script>
+<script type="module" th:src="@{/react-assets/assets/index.js}"></script>
 
-    <script>
-        // ==========================================
-        //  全局彈窗 JS (普通禁言 + 管理員全局禁言 + 拉黑確認 + 未登入提示)
-        // ==========================================
+<script>
+    // ==========================================
+    //  全局彈窗 JS (普通禁言 + 管理員全局禁言 + 拉黑確認 + 未登入提示)
+    // ==========================================
 
-        //  全局彈窗函數，供 React 評論區組件調用 (普通用戶互相禁言)
-        window.showBlockedModal = function (message) {
-            const modal = document.getElementById('blockedModal');
-            const msgEl = document.getElementById('blockedModalMessage');
-            if (msgEl) msgEl.textContent = message || '您已經被對方禁言，無法回復！！！';
-            if (modal) modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden'; // 禁止背景滾動
-        };
+    //  全局彈窗函數，供 React 評論區組件調用 (普通用戶互相禁言)
+    window.showBlockedModal = function (message) {
+        const modal = document.getElementById('blockedModal');
+        const msgEl = document.getElementById('blockedModalMessage');
+        if (msgEl) msgEl.textContent = message || '您已經被對方禁言，無法回復！！！';
+        if (modal) modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // 禁止背景滾動
+    };
 
-        window.closeBlockedModal = function () {
-            const modal = document.getElementById('blockedModal');
-            if (modal) modal.style.display = 'none';
-            document.body.style.overflow = '';
-        };
+    window.closeBlockedModal = function () {
+        const modal = document.getElementById('blockedModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+    };
 
-        //  新增：管理員全局禁言彈窗函數，供 React 評論區組件調用
-        window.showGlobalBanModal = function (username, expiresAtStr) {
-            const modal = document.getElementById('globalBanModal');
-            const msgEl = document.getElementById('banMessageText');
+    //  新增：管理員全局禁言彈窗函數，供 React 評論區組件調用
+    window.showGlobalBanModal = function (username, expiresAtStr) {
+        const modal = document.getElementById('globalBanModal');
+        const msgEl = document.getElementById('banMessageText');
 
-            // 格式化時間 (將 ISO 字符串轉為本地時間)
-            const date = new Date(expiresAtStr);
-            const dateStr = date.toLocaleString('zh-TW', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit'
-            });
-
-            // 設置消息
-            if (msgEl) {
-                msgEl.textContent = `${username}，你因之前的評論不當已被禁言至 ${dateStr}！`;
-            }
-
-            // 顯示彈窗
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden'; // 禁止背景滾動
-
-                // 4秒後自動消失
-                setTimeout(() => {
-                    closeGlobalBanModal();
-                }, 4000);
-            }
-        };
-
-        //  關閉全局禁言彈窗
-        window.closeGlobalBanModal = function () {
-            const modal = document.getElementById('globalBanModal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = '';
-            }
-        };
-
-        // ==========================================
-        //  永久拉黑彈窗函數 (與全局禁言區分)
-        // ==========================================
-        window.showBlacklistedModal = function (reason) {
-            const modal = document.getElementById('blacklistedModal');
-            const msgEl = document.getElementById('blacklistMessageText');
-
-            if (msgEl && reason) {
-                msgEl.textContent = `您因「${reason}」已被管理員永久拉黑，無法進行任何互動操作（點贊、踩、評價、回復）。`;
-            } else if (msgEl) {
-                msgEl.textContent = `您因嚴重違反社區規範，已被管理員永久拉黑，無法進行任何互動操作（點贊、踩、評價、回復）。`;
-            }
-
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
-        };
-
-        window.closeBlacklistedModal = function () {
-            const modal = document.getElementById('blacklistedModal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = '';
-            }
-        };
-
-        // ==========================================
-        // 永久拉黑確認彈窗邏輯 (管理員操作)
-        // ==========================================
-        let blacklistTargetUser = '';
-
-        window.openBlacklistConfirmModal = function (username) {
-            blacklistTargetUser = username;
-            document.getElementById('blacklistTargetUsername').textContent = username;
-            document.getElementById('blacklistReason').value = '严重违反社区规范';
-            document.getElementById('blacklistConfirmModal').style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        };
-
-        window.closeBlacklistConfirmModal = function () {
-            document.getElementById('blacklistConfirmModal').style.display = 'none';
-            document.body.style.overflow = '';
-            blacklistTargetUser = '';
-        };
-
-        window.confirmBlacklistAction = async function () {
-            const reason = document.getElementById('blacklistReason').value.trim();
-
-            if (!reason) {
-                alert('请输入拉黑原因');
-                return;
-            }
-
-            try {
-                const response = await fetch(
-                    `/api/admin/penalty/blacklist/${encodeURIComponent(blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`,
-                    { method: 'POST', credentials: 'same-origin' }
-                );
-
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    showNotification('✅ ' + result.message);
-                    closeBlacklistConfirmModal();
-                    setTimeout(() => { window.location.reload(); }, 1000);
-                } else {
-                    showNotification('❌ ' + (result.message || '操作失败'), true);
-                }
-            } catch (error) {
-                console.error('拉黑失败:', error);
-                showNotification('❌ 网络错误，请稍后重试', true);
-            }
-        };
-
-        // ==========================================
-        //  未登入提示彈窗邏輯 (整合自代碼2)
-        // ==========================================
-        window.showLoginRequiredModal = function () {
-            const modal = document.getElementById('loginRequiredModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden'; // 禁止背景滾動
-            }
-        };
-
-        window.closeLoginRequiredModal = function () {
-            const modal = document.getElementById('loginRequiredModal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = ''; // 恢復背景滾動
-            }
-        };
-
-        window.handleLoginFromModal = function () {
-            closeLoginRequiredModal();
-            // 調用 common.js 中的全局登入函數
-            if (typeof openLoginModal === 'function') {
-                setTimeout(openLoginModal, 300); // 延遲一點點，讓關閉動畫先開始
-            } else {
-                window.location.href = '/login';
-            }
-        };
-
-        // ==========================================
-        // 點擊遮罩層關閉 (整合所有彈窗，避免重複綁定)
-        // ==========================================
-        document.addEventListener('click', function (e) {
-            // 1. 關閉普通禁言彈窗
-            const modal1 = document.getElementById('blockedModal');
-            if (modal1 && e.target === modal1) closeBlockedModal();
-
-            // 2. 關閉全局禁言彈窗
-            const modal2 = document.getElementById('globalBanModal');
-            if (modal2 && e.target === modal2) closeGlobalBanModal();
-
-            // 3. 關閉永久拉黑確認彈窗
-            const modal3 = document.getElementById('blacklistConfirmModal');
-            if (modal3 && e.target === modal3) closeBlacklistConfirmModal();
-
-            //  4. 關閉未登入提示彈窗
-            const modal4 = document.getElementById('loginRequiredModal');
-            if (modal4 && e.target === modal4) closeLoginRequiredModal();
+        // 格式化時間 (將 ISO 字符串轉為本地時間)
+        const date = new Date(expiresAtStr);
+        const dateStr = date.toLocaleString('zh-TW', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit'
         });
 
-        // ==========================================
-        // ESC鍵關閉彈窗 (整合所有需要ESC關閉的彈窗)
-        // ==========================================
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                // 關閉拉黑確認彈窗
-                const confirmModal = document.getElementById('blacklistConfirmModal');
-                if (confirmModal && confirmModal.style.display === 'flex') {
-                    closeBlacklistConfirmModal();
-                    return; // 關閉一個即可，避免同時觸發
-                }
+        // 設置消息
+        if (msgEl) {
+            msgEl.textContent = `${username}，你因之前的評論不當已被禁言至 ${dateStr}！`;
+        }
 
-                //  關閉未登入提示彈窗
-                const loginReqModal = document.getElementById('loginRequiredModal');
-                if (loginReqModal && loginReqModal.style.display === 'flex') {
-                    closeLoginRequiredModal();
-                    return;
-                }
-            }
-        });
-    </script>
-
-    <script>
-        // ==========================================
-        //  🚨 舉報功能邏輯 (兩級選擇 + 紅點刷新 + 重複舉報美化彈窗)
-        // ==========================================
-
-        // 定義舉報分類與原因映射
-        const reportConfig = {
-            "ILLEGAL": { label: "違法信息", reasons: ["开盒挂人", "售卖个人信息", "涉枪爆刀", "毒品", "赌博", "假证假票", "售卖考试答案", "其他违禁品"] },
-            "PORNOGRAPHY": { label: "色情低俗", reasons: ["色情引流", "低俗信息", "招嫖信息", "色情图文", "头像昵称违规"] },
-            "HARMFUL": { label: "有害信息", reasons: ["邪教", "暴恐血腥", "虐杀动物", "其他有害信息"] },
-            "CYBERBULLYING_ME": { label: "網暴信息", reasons: ["網暴我", "網暴他人"] },
-            "PERSONAL_ATTACK": { label: "人身攻擊", reasons: ["不友善言论", "侮辱谩骂", "宣扬仇恨与歧视", "其他攻击行为"] },
-            "CYBER_VIOLENCE": { label: "网络暴力", reasons: ["恶意评价", "拉踩引战", "恶意P图", "侵犯隐私", "造谣爆料", "谩骂"] },
-            "MINOR": { label: "涉及未成年人", reasons: ["低俗软色情", "诱导不良行为", "伤害未成年人"] },
-            "FRAUD": { label: "詐騙信息", reasons: ["兼职诈骗", "票务诈骗", "仿冒他人诈骗", "仿冒我詐騙", "其他诈骗"] },
-            "SPAM": { label: "垃圾行爲或内容", reasons: ["骚扰信息", "虚假互动", "无意义评论", "违规招募", "违规导流", "其他垃圾信息"] },
-            "NOT_INTERESTED": { label: "不感興趣", reasons: ["不喜欢该内容", "观点与我不一致", "引起我的不适"] }
-        };
-
-        let selectedCategory = null;
-        let selectedReason = null;
-
-        //  打開舉報彈窗 (支持顯示被舉報的評論內容)
-        window.openReportModal = function (reviewId, reportedUsername, targetType, reportedContent) {
-            selectedCategory = null;
-            selectedReason = null;
-            document.getElementById('reportAgreement').checked = false;
-            document.getElementById('submitReportBtn').disabled = true;
-
-            document.getElementById('reportReviewId').value = reviewId || '';
-            document.getElementById('reportReportedUsername').value = reportedUsername;
-            document.getElementById('reportTargetTypeVal').value = targetType || 'REVIEW';
-
-            document.getElementById('reportTargetUser').textContent = reportedUsername;
-            document.getElementById('reportTargetType').textContent = targetType === 'USER' ? '用戶' : '評論';
-
-            const contentSection = document.getElementById('reportedContentSection');
-            const contentText = document.getElementById('reportedContentText');
-            if (reportedContent && reportedContent.trim()) {
-                contentText.textContent = reportedContent.trim();
-                contentSection.style.display = 'block';
-            } else {
-                contentSection.style.display = 'none';
-            }
-
-            renderCategories();
-
-            document.getElementById('reasonSection').style.display = 'none';
-            document.getElementById('reasonSection').style.opacity = '0';
-            document.getElementById('agreementSection').style.display = 'none';
-
-            const modal = document.getElementById('reportModal');
+        // 顯示彈窗
+        if (modal) {
             modal.style.display = 'flex';
-            modal.classList.add('modal-show');
-            document.body.style.overflow = 'hidden';
-        };
+            document.body.style.overflow = 'hidden'; // 禁止背景滾動
 
-        window.closeReportModal = function () {
-            const modal = document.getElementById('reportModal');
+            // 4秒後自動消失
+            setTimeout(() => {
+                closeGlobalBanModal();
+            }, 4000);
+        }
+    };
+
+    //  關閉全局禁言彈窗
+    window.closeGlobalBanModal = function () {
+        const modal = document.getElementById('globalBanModal');
+        if (modal) {
             modal.style.display = 'none';
-            modal.classList.remove('modal-show');
             document.body.style.overflow = '';
-        };
+        }
+    };
 
-        // ==========================================
-        //  新增：重複舉報美化彈窗控制
-        // ==========================================
-        function showDuplicateReportModal() {
-            const modal = document.getElementById('duplicateReportModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+    // ==========================================
+    //  永久拉黑彈窗函數 (與全局禁言區分)
+    // ==========================================
+    window.showBlacklistedModal = function (reason) {
+        const modal = document.getElementById('blacklistedModal');
+        const msgEl = document.getElementById('blacklistMessageText');
+
+        if (msgEl && reason) {
+            msgEl.textContent = `您因「${reason}」已被管理員永久拉黑，無法進行任何互動操作（點贊、踩、評價、回復）。`;
+        } else if (msgEl) {
+            msgEl.textContent = `您因嚴重違反社區規範，已被管理員永久拉黑，無法進行任何互動操作（點贊、踩、評價、回復）。`;
+        }
+
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+    };
+
+    window.closeBlacklistedModal = function () {
+        const modal = document.getElementById('blacklistedModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    };
+
+    // ==========================================
+    // 永久拉黑確認彈窗邏輯 (管理員操作)
+    // ==========================================
+    let blacklistTargetUser = '';
+
+    window.openBlacklistConfirmModal = function (username) {
+        blacklistTargetUser = username;
+        document.getElementById('blacklistTargetUsername').textContent = username;
+        document.getElementById('blacklistReason').value = '严重违反社区规范';
+        document.getElementById('blacklistConfirmModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    };
+
+    window.closeBlacklistConfirmModal = function () {
+        document.getElementById('blacklistConfirmModal').style.display = 'none';
+        document.body.style.overflow = '';
+        blacklistTargetUser = '';
+    };
+
+    window.confirmBlacklistAction = async function () {
+        const reason = document.getElementById('blacklistReason').value.trim();
+
+        if (!reason) {
+            alert('请输入拉黑原因');
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `/api/admin/penalty/blacklist/${encodeURIComponent(blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`,
+                { method: 'POST', credentials: 'same-origin' }
+            );
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                showNotification('✅ ' + result.message);
+                closeBlacklistConfirmModal();
+                setTimeout(() => { window.location.reload(); }, 1000);
+            } else {
+                showNotification('❌ ' + (result.message || '操作失败'), true);
             }
+        } catch (error) {
+            console.error('拉黑失败:', error);
+            showNotification('❌ 网络错误，请稍后重试', true);
         }
+    };
 
-        function closeDuplicateReportModal() {
-            const modal = document.getElementById('duplicateReportModal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = ''; // 恢復背景滾動
+    // ==========================================
+    //  未登入提示彈窗邏輯 (整合自代碼2)
+    // ==========================================
+    window.showLoginRequiredModal = function () {
+        const modal = document.getElementById('loginRequiredModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 禁止背景滾動
+        }
+    };
+
+    window.closeLoginRequiredModal = function () {
+        const modal = document.getElementById('loginRequiredModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = ''; // 恢復背景滾動
+        }
+    };
+
+    window.handleLoginFromModal = function () {
+        closeLoginRequiredModal();
+        // 調用 common.js 中的全局登入函數
+        if (typeof openLoginModal === 'function') {
+            setTimeout(openLoginModal, 300); // 延遲一點點，讓關閉動畫先開始
+        } else {
+            window.location.href = '/login';
+        }
+    };
+
+    // ==========================================
+    // 點擊遮罩層關閉 (整合所有彈窗，避免重複綁定)
+    // ==========================================
+    document.addEventListener('click', function (e) {
+        // 1. 關閉普通禁言彈窗
+        const modal1 = document.getElementById('blockedModal');
+        if (modal1 && e.target === modal1) closeBlockedModal();
+
+        // 2. 關閉全局禁言彈窗
+        const modal2 = document.getElementById('globalBanModal');
+        if (modal2 && e.target === modal2) closeGlobalBanModal();
+
+        // 3. 關閉永久拉黑確認彈窗
+        const modal3 = document.getElementById('blacklistConfirmModal');
+        if (modal3 && e.target === modal3) closeBlacklistConfirmModal();
+
+        //  4. 關閉未登入提示彈窗
+        const modal4 = document.getElementById('loginRequiredModal');
+        if (modal4 && e.target === modal4) closeLoginRequiredModal();
+    });
+
+    // ==========================================
+    // ESC鍵關閉彈窗 (整合所有需要ESC關閉的彈窗)
+    // ==========================================
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            // 關閉拉黑確認彈窗
+            const confirmModal = document.getElementById('blacklistConfirmModal');
+            if (confirmModal && confirmModal.style.display === 'flex') {
+                closeBlacklistConfirmModal();
+                return; // 關閉一個即可，避免同時觸發
             }
-        }
 
-        // ==========================================
-        // 渲染與選擇邏輯 (保持不變)
-        // ==========================================
-        function renderCategories() {
-            const grid = document.getElementById('categoryGrid');
-            grid.innerHTML = '';
-            for (const [key, value] of Object.entries(reportConfig)) {
-                const btn = document.createElement('div');
-                btn.className = 'report-option';
-                btn.textContent = value.label;
-                btn.onclick = () => selectCategory(key, btn);
-                grid.appendChild(btn);
-            }
-        }
-
-        function selectCategory(key, btnElement) {
-            document.querySelectorAll('#categoryGrid .report-option').forEach(b => b.classList.remove('selected'));
-            btnElement.classList.add('selected');
-            selectedCategory = key;
-            selectedReason = null;
-            renderReasons(reportConfig[key].reasons);
-
-            const reasonSection = document.getElementById('reasonSection');
-            reasonSection.style.display = 'block';
-            void reasonSection.offsetWidth;
-            reasonSection.style.opacity = '1';
-
-            document.getElementById('agreementSection').style.display = 'none';
-            document.getElementById('submitReportBtn').disabled = true;
-            reasonSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-
-        function renderReasons(reasons) {
-            const grid = document.getElementById('reasonGrid');
-            grid.innerHTML = '';
-            reasons.forEach(reason => {
-                const btn = document.createElement('div');
-                btn.className = 'report-option';
-                btn.textContent = reason;
-                btn.onclick = () => selectReason(reason, btn);
-                grid.appendChild(btn);
-            });
-        }
-
-        function selectReason(reasonText, btnElement) {
-            document.querySelectorAll('#reasonGrid .report-option').forEach(b => b.classList.remove('selected'));
-            btnElement.classList.add('selected');
-            selectedReason = reasonText;
-            document.getElementById('agreementSection').style.display = 'block';
-            document.getElementById('agreementSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-
-        document.getElementById('reportAgreement').addEventListener('change', function () {
-            const btn = document.getElementById('submitReportBtn');
-            btn.disabled = !(this.checked && selectedCategory && selectedReason);
-        });
-
-        // ==========================================
-        //  提交舉報 (核心修復：攔截重複舉報並彈出美化彈窗)
-        // ==========================================
-        async function submitReport(event) {
-            event.preventDefault();
-            if (!selectedCategory || !selectedReason) {
-                alert('請選擇舉報原因');
+            //  關閉未登入提示彈窗
+            const loginReqModal = document.getElementById('loginRequiredModal');
+            if (loginReqModal && loginReqModal.style.display === 'flex') {
+                closeLoginRequiredModal();
                 return;
             }
+        }
+    });
+</script>
 
-            const reviewId = document.getElementById('reportReviewId').value;
-            const reportedUsername = document.getElementById('reportReportedUsername').value;
-            const targetType = document.getElementById('reportTargetTypeVal').value;
+<script>
+    // ==========================================
+    //  🚨 舉報功能邏輯 (兩級選擇 + 紅點刷新 + 重複舉報美化彈窗)
+    // ==========================================
 
-            const submitBtn = document.getElementById('submitReportBtn');
-            const originalText = submitBtn.innerHTML;
+    // 定義舉報分類與原因映射
+    const reportConfig = {
+        "ILLEGAL": { label: "違法信息", reasons: ["开盒挂人", "售卖个人信息", "涉枪爆刀", "毒品", "赌博", "假证假票", "售卖考试答案", "其他违禁品"] },
+        "PORNOGRAPHY": { label: "色情低俗", reasons: ["色情引流", "低俗信息", "招嫖信息", "色情图文", "头像昵称违规"] },
+        "HARMFUL": { label: "有害信息", reasons: ["邪教", "暴恐血腥", "虐杀动物", "其他有害信息"] },
+        "CYBERBULLYING_ME": { label: "網暴信息", reasons: ["網暴我", "網暴他人"] },
+        "PERSONAL_ATTACK": { label: "人身攻擊", reasons: ["不友善言论", "侮辱谩骂", "宣扬仇恨与歧视", "其他攻击行为"] },
+        "CYBER_VIOLENCE": { label: "网络暴力", reasons: ["恶意评价", "拉踩引战", "恶意P图", "侵犯隐私", "造谣爆料", "谩骂"] },
+        "MINOR": { label: "涉及未成年人", reasons: ["低俗软色情", "诱导不良行为", "伤害未成年人"] },
+        "FRAUD": { label: "詐騙信息", reasons: ["兼职诈骗", "票务诈骗", "仿冒他人诈骗", "仿冒我詐騙", "其他诈骗"] },
+        "SPAM": { label: "垃圾行爲或内容", reasons: ["骚扰信息", "虚假互动", "无意义评论", "违规招募", "违规导流", "其他垃圾信息"] },
+        "NOT_INTERESTED": { label: "不感興趣", reasons: ["不喜欢该内容", "观点与我不一致", "引起我的不适"] }
+    };
 
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+    let selectedCategory = null;
+    let selectedReason = null;
 
-            try {
-                const response = await fetch('/api/report/submit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        reviewId: reviewId || null,
-                        reportedUsername: reportedUsername,
-                        targetType: targetType,
-                        category: selectedCategory,
-                        reason: selectedReason
-                    })
-                });
+    //  打開舉報彈窗 (支持顯示被舉報的評論內容)
+    window.openReportModal = function (reviewId, reportedUsername, targetType, reportedContent) {
+        selectedCategory = null;
+        selectedReason = null;
+        document.getElementById('reportAgreement').checked = false;
+        document.getElementById('submitReportBtn').disabled = true;
 
-                const result = await response.json();
+        document.getElementById('reportReviewId').value = reviewId || '';
+        document.getElementById('reportReportedUsername').value = reportedUsername;
+        document.getElementById('reportTargetTypeVal').value = targetType || 'REVIEW';
 
-                if (response.ok && result.success) {
-                    // 1. 成功提示並關閉彈窗
-                    if (typeof window.showNotification === 'function') {
-                        window.showNotification('✅ ' + result.message);
-                    } else {
-                        alert('✅ ' + result.message);
-                    }
-                    closeReportModal();
+        document.getElementById('reportTargetUser').textContent = reportedUsername;
+        document.getElementById('reportTargetType').textContent = targetType === 'USER' ? '用戶' : '評論';
 
-                    // 2. 更新系統通知紅點
-                    if (result.data && result.data.unreadCount !== undefined) {
-                        const sysBadge = document.getElementById('systemNotificationBadge');
-                        if (sysBadge) {
-                            const count = result.data.unreadCount;
-                            if (count > 0) {
-                                sysBadge.textContent = count > 99 ? '99+' : count;
-                                sysBadge.style.display = 'inline-flex';
-                            } else {
-                                sysBadge.style.display = 'none';
-                            }
-                        }
-                    }
+        const contentSection = document.getElementById('reportedContentSection');
+        const contentText = document.getElementById('reportedContentText');
+        if (reportedContent && reportedContent.trim()) {
+            contentText.textContent = reportedContent.trim();
+            contentSection.style.display = 'block';
+        } else {
+            contentSection.style.display = 'none';
+        }
+
+        renderCategories();
+
+        document.getElementById('reasonSection').style.display = 'none';
+        document.getElementById('reasonSection').style.opacity = '0';
+        document.getElementById('agreementSection').style.display = 'none';
+
+        const modal = document.getElementById('reportModal');
+        modal.style.display = 'flex';
+        modal.classList.add('modal-show');
+        document.body.style.overflow = 'hidden';
+    };
+
+    window.closeReportModal = function () {
+        const modal = document.getElementById('reportModal');
+        modal.style.display = 'none';
+        modal.classList.remove('modal-show');
+        document.body.style.overflow = '';
+    };
+
+    // ==========================================
+    //  新增：重複舉報美化彈窗控制
+    // ==========================================
+    function showDuplicateReportModal() {
+        const modal = document.getElementById('duplicateReportModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 禁止背景滾動
+        }
+    }
+
+    function closeDuplicateReportModal() {
+        const modal = document.getElementById('duplicateReportModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = ''; // 恢復背景滾動
+        }
+    }
+
+    // ==========================================
+    // 渲染與選擇邏輯 (保持不變)
+    // ==========================================
+    function renderCategories() {
+        const grid = document.getElementById('categoryGrid');
+        grid.innerHTML = '';
+        for (const [key, value] of Object.entries(reportConfig)) {
+            const btn = document.createElement('div');
+            btn.className = 'report-option';
+            btn.textContent = value.label;
+            btn.onclick = () => selectCategory(key, btn);
+            grid.appendChild(btn);
+        }
+    }
+
+    function selectCategory(key, btnElement) {
+        document.querySelectorAll('#categoryGrid .report-option').forEach(b => b.classList.remove('selected'));
+        btnElement.classList.add('selected');
+        selectedCategory = key;
+        selectedReason = null;
+        renderReasons(reportConfig[key].reasons);
+
+        const reasonSection = document.getElementById('reasonSection');
+        reasonSection.style.display = 'block';
+        void reasonSection.offsetWidth;
+        reasonSection.style.opacity = '1';
+
+        document.getElementById('agreementSection').style.display = 'none';
+        document.getElementById('submitReportBtn').disabled = true;
+        reasonSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function renderReasons(reasons) {
+        const grid = document.getElementById('reasonGrid');
+        grid.innerHTML = '';
+        reasons.forEach(reason => {
+            const btn = document.createElement('div');
+            btn.className = 'report-option';
+            btn.textContent = reason;
+            btn.onclick = () => selectReason(reason, btn);
+            grid.appendChild(btn);
+        });
+    }
+
+    function selectReason(reasonText, btnElement) {
+        document.querySelectorAll('#reasonGrid .report-option').forEach(b => b.classList.remove('selected'));
+        btnElement.classList.add('selected');
+        selectedReason = reasonText;
+        document.getElementById('agreementSection').style.display = 'block';
+        document.getElementById('agreementSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    document.getElementById('reportAgreement').addEventListener('change', function () {
+        const btn = document.getElementById('submitReportBtn');
+        btn.disabled = !(this.checked && selectedCategory && selectedReason);
+    });
+
+    // ==========================================
+    //  提交舉報 (核心修復：攔截重複舉報並彈出美化彈窗)
+    // ==========================================
+    async function submitReport(event) {
+        event.preventDefault();
+        if (!selectedCategory || !selectedReason) {
+            alert('請選擇舉報原因');
+            return;
+        }
+
+        const reviewId = document.getElementById('reportReviewId').value;
+        const reportedUsername = document.getElementById('reportReportedUsername').value;
+        const targetType = document.getElementById('reportTargetTypeVal').value;
+
+        const submitBtn = document.getElementById('submitReportBtn');
+        const originalText = submitBtn.innerHTML;
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
+
+        try {
+            const response = await fetch('/api/report/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    reviewId: reviewId || null,
+                    reportedUsername: reportedUsername,
+                    targetType: targetType,
+                    category: selectedCategory,
+                    reason: selectedReason
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // 1. 成功提示並關閉彈窗
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('✅ ' + result.message);
                 } else {
-                    //  【核心修改】：判斷是否為重複舉報，若是則彈出漂亮的自定義彈窗
-                    if (result.message && result.message.includes('已經舉報過')) {
-                        showDuplicateReportModal(); // 調用美化彈窗
-                    } else {
-                        // 普通錯誤提示
-                        if (typeof window.showNotification === 'function') {
-                            window.showNotification('❌ ' + (result.message || '提交失敗'), true);
+                    alert('✅ ' + result.message);
+                }
+                closeReportModal();
+
+                // 2. 更新系統通知紅點
+                if (result.data && result.data.unreadCount !== undefined) {
+                    const sysBadge = document.getElementById('systemNotificationBadge');
+                    if (sysBadge) {
+                        const count = result.data.unreadCount;
+                        if (count > 0) {
+                            sysBadge.textContent = count > 99 ? '99+' : count;
+                            sysBadge.style.display = 'inline-flex';
                         } else {
-                            alert('❌ ' + (result.message || '提交失敗'));
+                            sysBadge.style.display = 'none';
                         }
                     }
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
                 }
-            } catch (error) {
-                console.error('舉報錯誤:', error);
-                alert('❌ 網絡錯誤');
+            } else {
+                //  【核心修改】：判斷是否為重複舉報，若是則彈出漂亮的自定義彈窗
+                if (result.message && result.message.includes('已經舉報過')) {
+                    showDuplicateReportModal(); // 調用美化彈窗
+                } else {
+                    // 普通錯誤提示
+                    if (typeof window.showNotification === 'function') {
+                        window.showNotification('❌ ' + (result.message || '提交失敗'), true);
+                    } else {
+                        alert('❌ ' + (result.message || '提交失敗'));
+                    }
+                }
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
+        } catch (error) {
+            console.error('舉報錯誤:', error);
+            alert('❌ 網絡錯誤');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
         }
+    }
 
-        // ==========================================
-        //  全局事件監聽 (點擊遮罩層 + ESC 鍵關閉)
-        // ==========================================
-        document.addEventListener('click', function (e) {
-            // 1. 關閉舉報主彈窗
-            const reportModal = document.getElementById('reportModal');
-            if (reportModal && e.target === reportModal.querySelector('.modal-overlay')) {
-                closeReportModal();
-            }
-            // 2. 關閉重複舉報彈窗
-            const dupModal = document.getElementById('duplicateReportModal');
-            if (dupModal && e.target === dupModal.querySelector('.modal-backdrop')) {
-                closeDuplicateReportModal();
-            }
-        });
+    // ==========================================
+    //  全局事件監聽 (點擊遮罩層 + ESC 鍵關閉)
+    // ==========================================
+    document.addEventListener('click', function (e) {
+        // 1. 關閉舉報主彈窗
+        const reportModal = document.getElementById('reportModal');
+        if (reportModal && e.target === reportModal.querySelector('.modal-overlay')) {
+            closeReportModal();
+        }
+        // 2. 關閉重複舉報彈窗
+        const dupModal = document.getElementById('duplicateReportModal');
+        if (dupModal && e.target === dupModal.querySelector('.modal-backdrop')) {
+            closeDuplicateReportModal();
+        }
+    });
 
-        // 3. 按 ESC 鍵關閉所有舉報相關彈窗
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                closeReportModal();
-                closeDuplicateReportModal();
-            }
-        });
-    </script>
+    // 3. 按 ESC 鍵關閉所有舉報相關彈窗
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeReportModal();
+            closeDuplicateReportModal();
+        }
+    });
+</script>
 
-    <!-- ========================================== -->
-    <!-- 2. 純 JS 邏輯區 (直接復用上面的全局變量) -->
-    <!-- ========================================== -->
-    <script>
-        // 直接映射變量，避免命名混亂
-        const productId = currentProductId;
-        const productStock = currentStock;
+<!-- ========================================== -->
+<!-- 2. 純 JS 邏輯區 (直接復用上面的全局變量) -->
+<!-- ========================================== -->
+<script>
+    // 直接映射變量，避免命名混亂
+    const productId = currentProductId;
+    const productStock = currentStock;
 
-        let isSubscribed = false;
-        let subscriberCount = 0;
+    let isSubscribed = false;
+    let subscriberCount = 0;
 
-        //  頁面加載時：獲取訂閱狀態與人數
-        async function loadNotificationStatus() {
-            const btn = document.getElementById('notifyBtn');
-            if (!btn) return; // 安全護欄
+    //  頁面加載時：獲取訂閱狀態與人數
+    async function loadNotificationStatus() {
+        const btn = document.getElementById('notifyBtn');
+        if (!btn) return; // 安全護欄
 
-            // 如果未登入，直接顯示基礎 UI
-            if (!isLoggedIn) {
-                updateButtonUI();
-                return;
-            }
-
-            try {
-                const res = await fetch(`/api/stock-notification/status/${productId}`);
-                const data = await res.json();
-                if (data.success) {
-                    isSubscribed = data.data.isSubscribed;
-                    subscriberCount = data.data.totalSubscribers;
-                }
-            } catch (e) {
-                console.error('獲取訂閱狀態失敗:', e);
-            }
-
-            // 渲染最終 UI
+        // 如果未登入，直接顯示基礎 UI
+        if (!isLoggedIn) {
             updateButtonUI();
+            return;
         }
 
-        //  核心：根據「庫存」與「訂閱狀態」動態渲染按鈕 UI
-        function updateButtonUI() {
-            const btn = document.getElementById('notifyBtn');
-            if (!btn) return;
+        try {
+            const res = await fetch(`/api/stock-notification/status/${productId}`);
+            const data = await res.json();
+            if (data.success) {
+                isSubscribed = data.data.isSubscribed;
+                subscriberCount = data.data.totalSubscribers;
+            }
+        } catch (e) {
+            console.error('獲取訂閱狀態失敗:', e);
+        }
 
-            if (productStock > 0) {
-                // 【情況 A】：庫存 > 0 (現貨充足)
-                btn.innerHTML = '<i class="fas fa-bell"></i> 到貨通知';
-                btn.className = 'btn btn-gold';
-                btn.title = '點擊查看提示';
+        // 渲染最終 UI
+        updateButtonUI();
+    }
+
+    //  核心：根據「庫存」與「訂閱狀態」動態渲染按鈕 UI
+    function updateButtonUI() {
+        const btn = document.getElementById('notifyBtn');
+        if (!btn) return;
+
+        if (productStock > 0) {
+            // 【情況 A】：庫存 > 0 (現貨充足)
+            btn.innerHTML = '<i class="fas fa-bell"></i> 到貨通知';
+            btn.className = 'btn btn-gold';
+            btn.title = '點擊查看提示';
+        } else {
+            // 【情況 B】：庫存 = 0 (缺貨狀態)
+            if (isSubscribed) {
+                btn.innerHTML = `<i class="fas fa-check-circle"></i> 已訂閱 (${subscriberCount}人等待中)`;
+                btn.className = 'btn btn-outline';
+                btn.title = '點擊取消訂閱';
             } else {
-                // 【情況 B】：庫存 = 0 (缺貨狀態)
-                if (isSubscribed) {
-                    btn.innerHTML = `<i class="fas fa-check-circle"></i> 已訂閱 (${subscriberCount}人等待中)`;
-                    btn.className = 'btn btn-outline';
-                    btn.title = '點擊取消訂閱';
-                } else {
-                    btn.innerHTML = `<i class="fas fa-bell"></i> 到貨通知 (已有${subscriberCount}人訂閱)`;
-                    btn.className = 'btn btn-gold';
-                    btn.title = '點擊訂閱到貨通知';
-                }
+                btn.innerHTML = `<i class="fas fa-bell"></i> 到貨通知 (已有${subscriberCount}人訂閱)`;
+                btn.className = 'btn btn-gold';
+                btn.title = '點擊訂閱到貨通知';
             }
         }
+    }
 
-        //  核心重構：點擊事件處理 (區分管理員與顧客)
-        async function handleNotifyClick() {
-            if (!isLoggedIn) {
-                showNotification('❌ 請先登入後再使用到貨通知功能！', true);
-                setTimeout(() => openLoginModal(), 500);
+    //  核心重構：點擊事件處理 (區分管理員與顧客)
+    async function handleNotifyClick() {
+        if (!isLoggedIn) {
+            showNotification('❌ 請先登入後再使用到貨通知功能！', true);
+            setTimeout(() => openLoginModal(), 500);
+            return;
+        }
+
+        // ==============================
+        //  管理員視角邏輯
+        // ==============================
+        if (isAdmin) {
+            if (productStock <= 0) {
+                // 情況 A：庫存 = 0，攔截並提示
+                alert('⚠️ 當前庫存為 0，無法發送通知！\n請先修改庫存後再操作。');
+                return;
+            } else {
+                // 情況 B：庫存 > 0，彈出等待名單模態框
+                openWaitlistModal();
                 return;
             }
-
-            // ==============================
-            //  管理員視角邏輯
-            // ==============================
-            if (isAdmin) {
-                if (productStock <= 0) {
-                    // 情況 A：庫存 = 0，攔截並提示
-                    alert('⚠️ 當前庫存為 0，無法發送通知！\n請先修改庫存後再操作。');
-                    return;
-                } else {
-                    // 情況 B：庫存 > 0，彈出等待名單模態框
-                    openWaitlistModal();
-                    return;
-                }
-            }
-
-            // ==============================
-            //  顧客視角邏輯 (庫存 > 0 時)
-            // ==============================
-            if (productStock > 0) {
-                showNotification('🛒 該商品現貨充足，請直接加入購物車購買，無需訂閱到貨通知哦！');
-                const btn = document.getElementById('notifyBtn');
-                btn.style.animation = 'shake 0.5s ease';
-                setTimeout(() => btn.style.animation = '', 500);
-                return;
-            }
-
-            // ==============================
-            //  顧客視角邏輯 (庫存 = 0 時：訂閱/取消訂閱)
-            // ==============================
-            try {
-                let url, method, successMsg;
-
-                if (isSubscribed) {
-                    url = `/api/stock-notification/unsubscribe/${productId}`;
-                    method = 'DELETE';
-                    successMsg = '💔 已取消訂閱';
-                } else {
-                    url = `/api/stock-notification/subscribe/${productId}`;
-                    method = 'POST';
-                    successMsg = '✅ 訂閱成功！到貨後將第一時間通知您！';
-                }
-
-                const res = await fetch(url, { method: method });
-                const data = await res.json();
-
-                if (data.success) {
-                    isSubscribed = !isSubscribed;
-                    subscriberCount += isSubscribed ? 1 : -1;
-                    updateButtonUI();
-                    showNotification(successMsg);
-                } else {
-                    showNotification('❌ ' + data.message, true);
-                }
-            } catch (e) {
-                console.error('訂閱操作失敗:', e);
-                showNotification('❌ 網絡錯誤，請稍後重試', true);
-            }
         }
 
-        //  點擊事件處理：加入購物車 (包含缺貨攔截與滾動提示)
-        function handleAddToCartClick() {
-            // 1. 檢查庫存
-            if (currentStock <= 0) {
-                // 2. 彈出確認窗口
-                const isConfirmed = confirm("⚠️ 該產品已售罄！\n\n如果您非常想要這款手錶，請點擊「確定」，我們將為您定位到「到貨通知」按鈕。");
+        // ==============================
+        //  顧客視角邏輯 (庫存 > 0 時)
+        // ==============================
+        if (productStock > 0) {
+            showNotification('🛒 該商品現貨充足，請直接加入購物車購買，無需訂閱到貨通知哦！');
+            const btn = document.getElementById('notifyBtn');
+            btn.style.animation = 'shake 0.5s ease';
+            setTimeout(() => btn.style.animation = '', 500);
+            return;
+        }
 
-                // 3. 自動滾動並高亮提示
-                if (isConfirmed) {
-                    const notifyBtn = document.getElementById('notifyBtn'); // 修復：直接用 ID 獲取
-                    if (notifyBtn) {
-                        notifyBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        notifyBtn.style.boxShadow = "0 0 15px var(--accent)";
-                        notifyBtn.style.transition = "box-shadow 0.5s ease";
-                        setTimeout(() => {
-                            notifyBtn.style.boxShadow = "";
-                        }, 2000);
-                    }
-                }
-                return; // 停止執行，不加入購物車
+        // ==============================
+        //  顧客視角邏輯 (庫存 = 0 時：訂閱/取消訂閱)
+        // ==============================
+        try {
+            let url, method, successMsg;
+
+            if (isSubscribed) {
+                url = `/api/stock-notification/unsubscribe/${productId}`;
+                method = 'DELETE';
+                successMsg = '💔 已取消訂閱';
+            } else {
+                url = `/api/stock-notification/subscribe/${productId}`;
+                method = 'POST';
+                successMsg = '✅ 訂閱成功！到貨後將第一時間通知您！';
             }
 
-            // 4. 庫存充足，調用原本的加入購物車函數 (來自 common.js)
-            addToCart(currentProductId);
-        }
+            const res = await fetch(url, { method: method });
+            const data = await res.json();
 
-        // ==========================================
-        //  管理員專屬 JS 函數
-        // ==========================================
-
-        // 1. 打開等待名單模態框
-        async function openWaitlistModal() {
-            const modal = document.getElementById('waitlistModal');
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden'; // 禁止背景滾動
-
-            const body = document.getElementById('waitlistBody');
-            body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);"><i class="fas fa-spinner fa-spin"></i> 加載中...</div>';
-
-            try {
-                const res = await fetch(`/api/stock-notification/waitlist/${productId}`);
-                const data = await res.json();
-
-                if (data.success) {
-                    const list = data.data;
-                    document.getElementById('waitlistCount').textContent = list.length;
-
-                    if (list.length === 0) {
-                        body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);">暫無用戶訂閱此商品</div>';
-                        document.getElementById('sendNotifyBtn').disabled = true;
-                    } else {
-                        let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
-                        list.forEach(item => {
-                            html += `<li style="padding: 0.8rem 1rem; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center;">
-                                  <span><i class="fas fa-user" style="color: var(--gold); margin-right: 0.5rem;"></i> ${item.username}</span>
-                                  <span style="font-size: 0.8rem; color: var(--gray);">${item.createdAt}</span>
-                               </li>`;
-                        });
-                        html += '</ul>';
-                        body.innerHTML = html;
-                        document.getElementById('sendNotifyBtn').disabled = false;
-                    }
-                } else {
-                    body.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--accent);">${data.message}</div>`;
-                }
-            } catch (e) {
-                body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--accent);">網絡錯誤，請刷新重試</div>';
+            if (data.success) {
+                isSubscribed = !isSubscribed;
+                subscriberCount += isSubscribed ? 1 : -1;
+                updateButtonUI();
+                showNotification(successMsg);
+            } else {
+                showNotification('❌ ' + data.message, true);
             }
+        } catch (e) {
+            console.error('訂閱操作失敗:', e);
+            showNotification('❌ 網絡錯誤，請稍後重試', true);
         }
+    }
 
-        // 2. 關閉模態框
-        function closeWaitlistModal() {
-            document.getElementById('waitlistModal').style.display = 'none';
-            document.body.style.overflow = '';
-        }
+    //  點擊事件處理：加入購物車 (包含缺貨攔截與滾動提示)
+    function handleAddToCartClick() {
+        // 1. 檢查庫存
+        if (currentStock <= 0) {
+            // 2. 彈出確認窗口
+            const isConfirmed = confirm("⚠️ 該產品已售罄！\n\n如果您非常想要這款手錶，請點擊「確定」，我們將為您定位到「到貨通知」按鈕。");
 
-        // 3. 一鍵發送通知
-        async function sendStockNotification() {
-            const btn = document.getElementById('sendNotifyBtn');
-            const originalText = btn.innerHTML;
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
-
-            try {
-                const res = await fetch(`/api/stock-notification/notify/${productId}`, { method: 'POST' });
-                const data = await res.json();
-
-                if (data.success) {
-                    showNotification(`✅ ${data.message}`);
-                    closeWaitlistModal();
-                    // 刷新按鈕狀態 (因為已通知，人數會變為 0)
-                    loadNotificationStatus();
-                } else {
-                    showNotification('❌ ' + data.message, true);
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
+            // 3. 自動滾動並高亮提示
+            if (isConfirmed) {
+                const notifyBtn = document.getElementById('notifyBtn'); // 修復：直接用 ID 獲取
+                if (notifyBtn) {
+                    notifyBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    notifyBtn.style.boxShadow = "0 0 15px var(--accent)";
+                    notifyBtn.style.transition = "box-shadow 0.5s ease";
+                    setTimeout(() => {
+                        notifyBtn.style.boxShadow = "";
+                    }, 2000);
                 }
-            } catch (e) {
-                showNotification('❌ 網絡錯誤', true);
+            }
+            return; // 停止執行，不加入購物車
+        }
+
+        // 4. 庫存充足，調用原本的加入購物車函數 (來自 common.js)
+        addToCart(currentProductId);
+    }
+
+    // ==========================================
+    //  管理員專屬 JS 函數
+    // ==========================================
+
+    // 1. 打開等待名單模態框
+    async function openWaitlistModal() {
+        const modal = document.getElementById('waitlistModal');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // 禁止背景滾動
+
+        const body = document.getElementById('waitlistBody');
+        body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);"><i class="fas fa-spinner fa-spin"></i> 加載中...</div>';
+
+        try {
+            const res = await fetch(`/api/stock-notification/waitlist/${productId}`);
+            const data = await res.json();
+
+            if (data.success) {
+                const list = data.data;
+                document.getElementById('waitlistCount').textContent = list.length;
+
+                if (list.length === 0) {
+                    body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);">暫無用戶訂閱此商品</div>';
+                    document.getElementById('sendNotifyBtn').disabled = true;
+                } else {
+                    let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                    list.forEach(item => {
+                        html += `<li style="padding: 0.8rem 1rem; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center;">
+                              <span><i class="fas fa-user" style="color: var(--gold); margin-right: 0.5rem;"></i> ${item.username}</span>
+                              <span style="font-size: 0.8rem; color: var(--gray);">${item.createdAt}</span>
+                           </li>`;
+                    });
+                    html += '</ul>';
+                    body.innerHTML = html;
+                    document.getElementById('sendNotifyBtn').disabled = false;
+                }
+            } else {
+                body.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--accent);">${data.message}</div>`;
+            }
+        } catch (e) {
+            body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--accent);">網絡錯誤，請刷新重試</div>';
+        }
+    }
+
+    // 2. 關閉模態框
+    function closeWaitlistModal() {
+        document.getElementById('waitlistModal').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    // 3. 一鍵發送通知
+    async function sendStockNotification() {
+        const btn = document.getElementById('sendNotifyBtn');
+        const originalText = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
+
+        try {
+            const res = await fetch(`/api/stock-notification/notify/${productId}`, { method: 'POST' });
+            const data = await res.json();
+
+            if (data.success) {
+                showNotification(`✅ ${data.message}`);
+                closeWaitlistModal();
+                // 刷新按鈕狀態 (因為已通知，人數會變為 0)
+                loadNotificationStatus();
+            } else {
+                showNotification('❌ ' + data.message, true);
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
+        } catch (e) {
+            showNotification('❌ 網絡錯誤', true);
+            btn.disabled = false;
+            btn.innerHTML = originalText;
         }
+    }
 
-        // ==========================================
-        // 编辑商品功能
-        // ==========================================
+    // ==========================================
+    // 编辑商品功能
+    // ==========================================
 
-        // 打开编辑模态框
-        function openEditModal() {
-            const modal = document.getElementById('editProductModal');
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden'; // 禁止背景滚动
+    // 打开编辑模态框
+    function openEditModal() {
+        const modal = document.getElementById('editProductModal');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // 禁止背景滚动
 
-            // 因為 HTML 中的 th:value 和 th:text 已經在頁面渲染時自動填入了初始值，不需要 JS 再次賦值。
-        }
+        // 因為 HTML 中的 th:value 和 th:text 已經在頁面渲染時自動填入了初始值，不需要 JS 再次賦值。
+    }
 
-        // 关闭编辑模态框
-        function closeEditModal() {
-            document.getElementById('editProductModal').style.display = 'none';
-            document.body.style.overflow = '';
-        }
+    // 关闭编辑模态框
+    function closeEditModal() {
+        document.getElementById('editProductModal').style.display = 'none';
+        document.body.style.overflow = '';
+    }
 
-        // 保存商品修改 (這部分代碼沒問題，保持不變)
-        async function saveProduct(event) {
-            event.preventDefault();
+    // 保存商品修改 (這部分代碼沒問題，保持不變)
+    async function saveProduct(event) {
+        event.preventDefault();
 
-            const submitBtn = event.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
+        const submitBtn = event.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
 
-            // 显示加载状态
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+        // 显示加载状态
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
 
-            // 收集表单数据
-            const formData = {
-                price: parseFloat(document.getElementById('editPrice').value),
-                stock: parseInt(document.getElementById('editStock').value),
-                category: document.getElementById('editCategory').value,
-                brand: document.getElementById('editBrand').value,
-                description: document.getElementById('editDescription').value,
-                details: document.getElementById('editDetails').value,
-                image: document.getElementById('editImage').value
-            };
+        // 收集表单数据
+        const formData = {
+            price: parseFloat(document.getElementById('editPrice').value),
+            stock: parseInt(document.getElementById('editStock').value),
+            category: document.getElementById('editCategory').value,
+            brand: document.getElementById('editBrand').value,
+            description: document.getElementById('editDescription').value,
+            details: document.getElementById('editDetails').value,
+            image: document.getElementById('editImage').value
+        };
 
-            try {
-                const response = await fetch(`/api/admin/product/${productId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
+        try {
+            const response = await fetch(`/api/admin/product/${productId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
 
-                const result = await response.json();
+            const result = await response.json();
 
-                if (response.ok && result.success) {
-                    showNotification('✅ 商品信息修改成功！');
-                    closeEditModal();
-                    // 刷新页面以显示最新数据
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    showNotification('❌ ' + (result.message || '修改失败'), true);
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
-                }
-            } catch (error) {
-                console.error('保存失败:', error);
-                showNotification('❌ 网络错误，请稍后重试', true);
+            if (response.ok && result.success) {
+                showNotification('✅ 商品信息修改成功！');
+                closeEditModal();
+                // 刷新页面以显示最新数据
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification('❌ ' + (result.message || '修改失败'), true);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
+        } catch (error) {
+            console.error('保存失败:', error);
+            showNotification('❌ 网络错误，请稍后重试', true);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
         }
+    }
 
-        // 点击模态框背景关闭
-        document.getElementById('editProductModal')?.addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeEditModal();
-            }
-        });
+    // 点击模态框背景关闭
+    document.getElementById('editProductModal')?.addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeEditModal();
+        }
+    });
+
+    // ==========================================
+    //  成色選擇按鈕功能 (新增)
+    // ==========================================
+
+    // 获取并渲染成色按钮
+    async function fetchConditionButtons(groupCode, currentId) {
+        const container = document.getElementById('conditionButtons');
+
+        try {
+            // 调用你现有的后端接口 /variants/{groupCode}
+            const response = await fetch(`/variants/${groupCode}`);
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const variants = await response.json();
+
+            // 清空加载提示
+            container.innerHTML = '';
+
+            // 定义成色映射 (Enum -> 中文显示)
+            const conditionMap = {
+                'NEAR_MINT': '近全新 (98-100%)',
+                'EXCELLENT': '极佳 (95-97%)',
+                'GOOD': '良好 (90-94%)',
+                'FAIR': '正常使用痕跡 (85-89%)',
+                'HEAVILY_USED': '重度使用痕跡 (<85%)'
+            };
+
+            // 遍历生成按钮
+            variants.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = 'condition-btn';
+
+                // 设置显示文字
+                const conditionText = conditionMap[item.condition] || item.condition;
+                btn.textContent = conditionText;
+
+                // 如果是当前页面正在看的商品，添加 active 类
+                if (item.productId == currentId) {
+                    btn.classList.add('active');
+                }
+
+                // 点击事件：跳转到对应商品的详情页
+                btn.onclick = () => {
+                    // 如果点击的是当前商品，不做跳转（或者你可以选择刷新）
+                    if (item.productId != currentId) {
+                        window.location.href = `/product/${item.productId}`;
+                    }
+                };
+
+                container.appendChild(btn);
+            });
+
+        } catch (error) {
+            console.error('获取成色列表失败:', error);
+            container.innerHTML = '<span style="color:red">加载失败</span>';
+        }
+    }
 
         // 頁面加載完成後執行
-        document.addEventListener('DOMContentLoaded', loadNotificationStatus);
-    </script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. 原有的到貨通知功能
+        loadNotificationStatus();
+
+        // 2. 新增：获取当前商品的 groupCode 和 productId
+        const currentGroupCode = '[[${product.groupCode}]]';
+        const currentProductId = '[[${product.productId}]]';
+
+        // 3. 只有当有 groupCode 时才执行（如果是独立商品没有分组，则不显示）
+        if (currentGroupCode && currentGroupCode !== 'null') {
+            fetchConditionButtons(currentGroupCode, currentProductId);
+        } else {
+            // 如果没有 groupCode，隐藏选择区域
+            const selector = document.querySelector('.condition-selector');
+            if(selector) selector.style.display = 'none';
+        }
+    });
+
+        // ==========================================
+//  互動阻止彈窗函數 (供 React 評論區組件調用)
+// ==========================================
+window.showInteractionBlockModal = function (customMessage) {
+    const modal = document.getElementById('interactionBlockModal');
+    const msgEl = document.getElementById('interactionBlockMessage');
+
+    // 如果 React 端傳入了自定義消息，則替換默認消息
+    if (msgEl && customMessage) {
+        msgEl.textContent = customMessage;
+    }
+
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // 禁止背景滾動
+    }
+};
+
+window.closeInteractionBlockModal = function () {
+    const modal = document.getElementById('interactionBlockModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+};
+
+
+</script>
 
 </body>
 

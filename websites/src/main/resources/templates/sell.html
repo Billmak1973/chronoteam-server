@@ -51,8 +51,8 @@
     .upload-box.has-image img { display: block; }
     .upload-box.has-image i, .upload-box.has-image span { display: none; }
 
-    /* 交易模式選擇 */
-    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    /* 交易模式選擇 (改為單列佈局) */
+    .mode-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
     .mode-card { position: relative; border: 2px solid #e9ecef; border-radius: 12px; padding: 1.5rem; cursor: pointer; transition: all 0.3s; }
     .mode-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
     .mode-card input[type="radio"] { position: absolute; opacity: 0; }
@@ -78,7 +78,6 @@
 
     @media (max-width: 768px) {
         .sell-card { padding: 1.5rem; }
-        .mode-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -167,7 +166,7 @@
       </div>
     </div>
 
-    <!-- 3. 圖片上傳 (🟢 已修復點擊閃退問題：加入 onclick="event.stopPropagation()") -->
+    <!-- 3. 圖片上傳 -->
     <div class="sell-card">
       <h3 class="section-title"><i class="fas fa-camera"></i> 上傳手錶照片</h3>
       <p style="color:var(--gray); font-size:0.9rem; margin-bottom:1rem;">請確保光線充足、對焦清晰。建議拍攝：錶面、錶背、機芯、保卡/附件、瑕疵特寫。</p>
@@ -195,19 +194,14 @@
       </div>
     </div>
 
-    <!-- 4. 交易模式選擇 -->
+    <!-- 4. 交易模式選擇 ( 已移除寄售，僅保留直接買斷) -->
     <div class="sell-card">
       <h3 class="section-title"><i class="fas fa-handshake"></i> 選擇交易模式</h3>
       <div class="mode-grid">
-        <label class="mode-card" onclick="selectMode(this)">
-          <input type="radio" name="transactionMode" value="BUYOUT" required>
+        <label class="mode-card selected" onclick="selectMode(this)">
+          <input type="radio" name="transactionMode" value="BUYOUT" required checked>
           <h4>平台直接買斷 <span class="mode-badge">快速收款</span></h4>
           <p>鑑定確認後，平台直接報價收購。款項於您確認後 1 個工作日內全額打入指定帳戶，無需等待終端買家。</p>
-        </label>
-        <label class="mode-card" onclick="selectMode(this)">
-          <input type="radio" name="transactionMode" value="CONSIGNMENT">
-          <h4>平台代為寄售 <span class="mode-badge">價格更優</span></h4>
-          <p>手錶將上架至 ChronoTeam 平台展示。成交價通常高於買斷價，平台僅收取 5%-8% 服務費。適合不急售的賣家。</p>
         </label>
       </div>
     </div>
@@ -254,7 +248,6 @@
 <script src="/js/common.js"></script>
 
 <!-- 頁面專屬 JS -->
-<!-- 頁面專屬 JS -->
 <script>
   // 1. 圖片預覽邏輯
   function previewImage(input) {
@@ -273,7 +266,7 @@
       }
   }
 
-  // 2. 交易模式卡片選中效果
+  // 2. 交易模式卡片選中效果 (保留以維持 UI 互動感)
   function selectMode(card) {
       document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
@@ -286,16 +279,6 @@
 
       const btn = document.getElementById('submitBtn');
       const originalText = btn.innerHTML;
-
-      // 驗證交易模式
-      const modeInput = document.querySelector('input[name="transactionMode"]:checked');
-      if (!modeInput) {
-          showNotification('❌ 請選擇交易模式（買斷或寄售）', true);
-          return;
-      }
-
-      // 🟢 獲取選擇的交易模式，用於後續跳轉
-      const selectedMode = modeInput.value;
 
       // 準備 FormData（支持文件上傳）
       const formData = new FormData(this);
@@ -315,15 +298,9 @@
           if (response.ok && result.success) {
               showNotification('✅ ' + result.message);
 
-              // 🟢 【修改處】：根據選擇的交易模式決定跳轉頁面
+              //  統一跳轉到「我的出售申請」
               setTimeout(() => {
-                  if (selectedMode === 'BUYOUT') {
-                      // 平台直接買斷 -> 跳轉到「我的出售申請」
-                      window.location.href = '/sell/my-applications';
-                  } else if (selectedMode === 'CONSIGNMENT') {
-                      // 平台代為寄售 -> 跳轉到「我的寄售商品」
-                      window.location.href = '/account/consignment';
-                  }
+                  window.location.href = '/sell/my-applications';
               }, 2000);
 
           } else {

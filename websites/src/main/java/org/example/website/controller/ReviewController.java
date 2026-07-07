@@ -297,6 +297,18 @@ public class ReviewController {
                 return ResponseEntity.status(403).body(ApiResponse.error("無權修改此評論"));
             }
 
+            // 檢查是否已有互動（點贊、踩、回復）
+            if (review.getParentId() == null) { // 只檢查根評論
+                int likeCount = review.getLikeCount() != null ? review.getLikeCount() : 0;
+                int dislikeCount = review.getDislikeCount() != null ? review.getDislikeCount() : 0;
+                long replyCount = reviewRepository.countByParentId(review.getReviewId());
+
+                if (likeCount > 0 || dislikeCount > 0 || replyCount > 0) {
+                    return ResponseEntity.badRequest()
+                            .body( new ApiResponse(false,"INTERACTION_BLOCKED", "該評論已有互動，無法再進行編輯"));
+                }
+            }
+
             // 檢查當前用戶是否被管理員全局禁言
             var activeBan = adminPenaltyService.getActiveGlobalBan(username);
             if (activeBan.isPresent()) {

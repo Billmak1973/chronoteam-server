@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import ReplySection from './ReplySection';
 
 const ReviewCard = ({
@@ -44,9 +44,21 @@ const ReviewCard = ({
     // 檢查當前評論作者是否被禁言
     const isAuthorBlocked = blockedUsers && blockedUsers.includes(review.customer.username);
 
+    // 檢查評論是否有互動（點贊/踩/回覆）
+    const hasInteractions = useCallback((reviewData) => {
+        // 檢查點贊或踩
+        if (reviewData.likeCount > 0 || reviewData.dislikeCount > 0) {
+            return true;
+        }
+        // 檢查樓中樓回覆數量
+        if (reviewData.replyCount > 0) {
+            return true;
+        }
+        return false;
+    }, []);
+
     // --- 現有函數 ---
     const handleLike = async () => {
-
         if (!currentUsername || currentUsername === 'anonymousUser') {
             if (typeof window.showLoginRequiredModal === 'function') {
                 window.showLoginRequiredModal();
@@ -79,7 +91,6 @@ const ReviewCard = ({
     };
 
     const handleDislike = async () => {
-
         if (!currentUsername || currentUsername === 'anonymousUser') {
             if (typeof window.showLoginRequiredModal === 'function') {
                 window.showLoginRequiredModal();
@@ -181,37 +192,72 @@ const ReviewCard = ({
         handleDeleteAction(finalReason);
     };
 
-    const handleSaveEdit = async () => {
-        if (!editContent.trim()) {
-            alert('評論內容不能為空');
-            return;
-        }
-        try {
-            const res = await fetch(`/api/review/${review.id}/update`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: editContent })
-            });
-            const result = await res.json();
-            if (result.success) {
-                onReviewUpdated({ ...review, content: editContent });
-                setIsEditing(false);
-            } else {
-                // 新增：檢查是否為全局禁言
-                if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
-                    if (window.showGlobalBanModal) {
-                        // 這裡的 review.customer.username 是評論作者，如果是修改自己的評論，應該是 currentUsername
-                        window.showGlobalBanModal(currentUsername, result.data.expiresAt);
-                    }
-                    return;
-                }
-                alert(result.message || '修改失敗');
+    // 🔒 修改：編輯按鈕點擊處理（新增互動檢查）
+    const handleEditClick = (e) => {
+        if (e) e.preventDefault(); // 🛡️ 雙保險：阻止任何默認的表單提交或頁面刷新行為
+
+        // 先檢查是否有互動
+        if (hasInteractions(review)) {
+            // 調用全局函數顯示彈窗
+            if (typeof window.showInteractionBlockModal === 'function') {
+                window.showInteractionBlockModal("該評論已有其他用戶的互動（如點贊、踩或回覆），為保障社區內容的真實性與完整性，已產生互動的評論無法再進行編輯。");
             }
-        } catch (error) {
-            console.error('修改評論錯誤:', error);
-            alert('網絡錯誤');
+            return; // 阻止進入編輯模式
         }
+        // 沒有互動，允許編輯
+        setIsEditing(true);
     };
+
+
+const handleSaveEdit = async () => {
+    if (!editContent.trim()) {
+        alert('評論內容不能為空');
+        return;
+    }
+    try {
+        const res = await fetch(`/api/review/${review.id}/update`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: editContent })
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            onReviewUpdated({ ...review, content: editContent });
+            setIsEditing(false);
+        } else {
+            // 🚫 新增：攔截「互動阻止」錯誤，彈出專屬彈窗
+            if (result.message === "INTERACTION_BLOCKED") {
+                if (typeof window.showInteractionBlockModal === 'function') {
+                    window.showInteractionBlockModal("該評論已有其他用戶的互動（如點贊、踩或回覆），為保障社區內容的真實性與完整性，已產生互動的評論無法再進行編輯。");
+                }
+                return; // 攔截，不執行後續的普通 alert
+            }
+
+            // 檢查是否為全局禁言
+            if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
+                if (window.showGlobalBanModal) {
+                    window.showGlobalBanModal(currentUsername, result.data.expiresAt);
+                }
+                return;
+            }
+
+            // 檢查是否被永久拉黑
+            if (result.message === "BLACKLISTED") {
+                if (window.showBlacklistedModal) {
+                    window.showBlacklistedModal();
+                }
+                return;
+            }
+
+            // 普通錯誤提示
+            alert(result.message || '修改失敗');
+        }
+    } catch (error) {
+        console.error('修改評論錯誤:', error);
+        alert('網絡錯誤');
+    }
+};
 
     const handlePin = async () => {
         try {
@@ -239,11 +285,11 @@ const ReviewCard = ({
             // 管理員禁言邏輯保持不變
             let totalMinutes = 0;
             if (blockUnit === 'day') {
-                totalMinutes = durationMinutes * 24 * 60;  //  修正：1天 = 1440分钟
+                totalMinutes = durationMinutes * 24 * 60;  //  修正：1 天 = 1440 分钟
             } else if (blockUnit === 'week') {
-                totalMinutes = durationMinutes * 7 * 24 * 60;  //  正确：1周 = 7天
+                totalMinutes = durationMinutes * 7 * 24 * 60;  //  正确：1 周 = 7 天
             } else if (blockUnit === 'month') {
-                totalMinutes = durationMinutes * 30 * 24 * 60;  //  正确：1月 ≈ 30天
+                totalMinutes = durationMinutes * 30 * 24 * 60;  //  正确：1 月 ≈ 30 天
             }
             const params = new URLSearchParams();
             params.append('durationMinutes', totalMinutes);
@@ -314,7 +360,7 @@ const ReviewCard = ({
         }
     };
     // const handleBlacklist = async (targetUsername) => {
-    //if (!window.confirm(`⚠️ 確定要永久拉黑用戶 "${targetUsername}" 嗎？\n拉黑後該用戶將永遠無法點贊、踩、評價和回復！`)) return;
+    //if (!window.confirm(`⚠️ 確定要永久拉黑用戶 "${targetUsername}" 嗎？\n 拉黑後該用戶將永遠無法點贊、踩、評價和回復！`)) return;
 
     // const reason = prompt("請輸入拉黑原因（將發送系統通知給該用戶）：", "嚴重違反社區規範");
     // if (!reason) return;
@@ -434,9 +480,9 @@ const ReviewCard = ({
             )}
             {/* 底部操作區：修改、刪除 (置頂按鈕已移走) */}
             <div className="review-actions">
-                {/* 修改按鈕：僅作者可見，且僅當未置頂時可見 */}
+                {/* 🔒 修改按鈕：僅作者可見，且僅當未置頂時可見，點擊時檢查互動 */}
                 {review.customer.username === currentUsername && !review.pinned && (
-                    <button className="btn-edit" onClick={() => setIsEditing(true)}>
+                    <button className="btn-edit" onClick={handleEditClick}>
                         <i className="fas fa-edit"></i> 修改
                     </button>
                 )}
@@ -463,7 +509,7 @@ const ReviewCard = ({
                     )
                 )}
 
-                {/*  新增：舉報按鈕（僅其他登錄用戶可見，本人和admin不可見） */}
+                {/*  新增：舉報按鈕（僅其他登錄用戶可見，本人和 admin 不可見） */}
                 {currentUsername && currentUsername !== 'anonymousUser' &&
                     review.customer.username !== currentUsername &&
                     !isAdmin && (
@@ -484,7 +530,7 @@ const ReviewCard = ({
                 {isAdmin && (
                     <button
                         className="btn-blacklist"
-                        onClick={() => handleBlacklist(review.customer.username)} //調用真實函數
+                        onClick={() => handleBlacklist(review.customer.username)} // 調用真實函數
                         title="永久拉黑該用戶（加入黑名單）"
                     >
                         <i className="fas fa-user-slash"></i> 永久拉黑

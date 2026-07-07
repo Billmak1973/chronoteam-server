@@ -1,8 +1,8 @@
 package org.example.website.controller;
 
-import lombok.Data;
 import org.example.website.dto.ApiResponse;
 import org.example.website.dto.ProductUpdateRequest;
+import org.example.website.dto.ProductVariantDTO;
 import org.example.website.entity.Order;
 import org.example.website.entity.Product;
 import org.example.website.entity.Review;
@@ -22,12 +22,12 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 public class ProductController {
@@ -264,6 +264,45 @@ public String productDetail(@PathVariable Integer id,
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("修改失败: " + e.getMessage()));
         }
+    }
+    @GetMapping("/variants/{groupCode}")
+    public ResponseEntity<List<ProductVariantDTO>> getProductVariants(@PathVariable String groupCode) {
+        // 注意：這裡的方法名請確保與你 Repository 裡的一致 (Asc 或 Desc)
+        List<Product> products = productRepository.findByGroupCodeOrderByConditionAsc(groupCode);
+
+        List<ProductVariantDTO> variants = products.stream().map(p -> {
+            ProductVariantDTO dto = new ProductVariantDTO();
+            dto.setProductId(p.getProductId());
+            dto.setPrice(p.getPrice());
+            dto.setStock(p.getStock());
+
+            //  映射描述和詳情
+            dto.setDescription(p.getDescription());
+            dto.setDetails(p.getDetails());
+
+            // 映射評論總數和總評分
+            dto.setTotalReviewCount(p.getTotalReviewCount());
+            dto.setTotalScore(p.getTotalScore());
+
+            //  核心：動態計算平均分 (rating)
+            if (p.getTotalReviewCount() != null && p.getTotalReviewCount() > 0 && p.getTotalScore() != null) {
+                double avgRating = p.getTotalScore().doubleValue() / p.getTotalReviewCount();
+                dto.setRating(avgRating);
+            } else {
+                dto.setRating(0.0); // 如果沒有評論，默認為 0
+            }
+
+            // 映射成色
+            if (p.getCondition() != null) {
+                dto.setCondition(p.getCondition().name().toLowerCase());
+            } else {
+                dto.setCondition("good");
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(variants);
     }
 
 }

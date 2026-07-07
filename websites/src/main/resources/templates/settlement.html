@@ -41,12 +41,10 @@
         .item-text span { font-size: 0.8rem; color: var(--gray); }
 
         .text-revenue { color: var(--primary); font-weight: 600; }
-        .text-fee { color: var(--gray); }
         .text-profit { color: #28a745; font-weight: 700; font-size: 1.05rem; }
 
         .badge-mode { padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
         .mode-buyout { background: #e2e3e5; color: #383d41; }
-        .mode-consignment { background: #d1ecf1; color: #0c5460; }
 
         .empty-state { text-align: center; padding: 4rem 2rem; }
         .empty-state i { font-size: 4rem; color: #ddd; margin-bottom: 1rem; }
@@ -66,7 +64,7 @@
 
     <main class="main-content">
         <h2 class="page-title"><i class="fas fa-file-invoice-dollar"></i> 結算記錄</h2>
-        <p class="page-subtitle">查看您的商品成交明細、平台服務費扣除情況及實際到手收益</p>
+        <p class="page-subtitle">查看您的商品成交明細及實際到手收益</p>
 
         <!-- 1. 財務總覽卡片 -->
         <div class="finance-grid">
@@ -75,13 +73,6 @@
                 <div class="finance-info">
                     <h4 th:text="'HK$ ' + ${#numbers.formatDecimal(totalRevenue, 1, 'COMMA', 0, 'POINT')}">HK$ 0</h4>
                     <p>累計總成交額</p>
-                </div>
-            </div>
-            <div class="finance-card">
-                <i class="fas fa-percentage"></i>
-                <div class="finance-info">
-                    <h4 th:text="'- HK$ ' + ${#numbers.formatDecimal(totalServiceFee, 1, 'COMMA', 0, 'POINT')}">- HK$ 0</h4>
-                    <p>累計平台服務費 (5%)</p>
                 </div>
             </div>
             <div class="finance-card" style="background: linear-gradient(135deg, #155724 0%, #28a745 100%);">
@@ -109,9 +100,7 @@
                 <thead>
                 <tr>
                     <th>商品資訊</th>
-                    <th>交易模式</th>
                     <th>成交金額</th>
-                    <th>服務費 (5%)</th>
                     <th>實際收益</th>
                     <th>結算時間</th>
                 </tr>
@@ -127,13 +116,7 @@
                             </div>
                         </div>
                     </td>
-                    <td>
-                            <span class="badge-mode"
-                                  th:classappend="${app.transactionMode.name() == 'BUYOUT'} ? 'mode-buyout' : 'mode-consignment'"
-                                  th:text="${app.statusText}">平台買斷</span>
-                    </td>
                     <td class="text-revenue" th:text="'HK$ ' + ${#numbers.formatDecimal(app.displayPrice, 1, 'COMMA', 0, 'POINT')}">HK$ 0</td>
-                    <td class="text-fee" th:text="'- HK$ ' + ${#numbers.formatDecimal(app.serviceFee, 1, 'COMMA', 0, 'POINT')}">- HK$ 0</td>
                     <td class="text-profit" th:text="'HK$ ' + ${#numbers.formatDecimal(app.profit, 1, 'COMMA', 0, 'POINT')}">HK$ 0</td>
                     <td style="color: var(--gray); font-size: 0.9rem;" th:text="${#temporals.format(app.updatedAt, 'yyyy-MM-dd HH:mm')}">2026-06-01</td>
                 </tr>
@@ -145,7 +128,7 @@
         <div th:if="${settlements.isEmpty()}" class="empty-state">
             <i class="fas fa-receipt"></i>
             <h3 style="color: var(--primary); margin-bottom: 0.5rem;">暫無結算記錄</h3>
-            <p style="color: var(--gray); margin-bottom: 1.5rem;">當您的商品成功售出（買斷或寄售成交）後，資金結算明細將自動顯示在這裡。</p>
+            <p style="color: var(--gray); margin-bottom: 1.5rem;">當您的商品成功售出後，資金結算明細將自動顯示在這裡。</p>
             <a href="/sell" class="btn btn-gold"><i class="fas fa-plus-circle"></i> 去發佈出售</a>
         </div>
     </main>

@@ -104,4 +104,5 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
                 pageable
         );
     }
+    List<Product> findByGroupCodeOrderByConditionAsc(String groupCode);
 }

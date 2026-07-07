@@ -78,7 +78,7 @@ public class UserBlockController {
     }
 
     /**
-     *  检查能否回复某用户（前端调用）
+     *  检查能否回复某用户（前端调用）（先檢查後端，防止回復框出現后才告訴禁言）
      */
     @GetMapping("/can-reply/{targetUsername}")
     public ResponseEntity<Map<String, Object>> canReply(

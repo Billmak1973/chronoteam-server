@@ -239,69 +239,6 @@ public class PageController {
         return "admin-dashboard"; // 對應 templates/admin-dashboard.html
     }
 
-    //  6. 修改：我的寄售商品頁面路由
-    @GetMapping("/account/consignment")
-    public String myConsignment(Model model) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
-
-        // 【修改處 1】：使用 UserService 獲取 User 實體
-        User user = userService.findByUsername(username);
-
-        // 1. 查詢該用戶所有的出售申請，並過濾出 CONSIGNMENT (寄售) 模式
-        List<SellApplication> allApps = sellApplicationRepository.findByUser_UsernameOrderByCreatedAtDesc(username);
-        List<SellApplication> consignmentApps = allApps.stream()
-                .filter(app -> app.getTransactionMode() == SellApplication.TransactionMode.CONSIGNMENT)
-                .collect(Collectors.toList());
-
-        // 2. 預處理數據：直接設置到實體的 @Transient 字段中
-        BigDecimal totalProfit = BigDecimal.ZERO;
-        int onSaleCount = 0;
-        int soldCount = 0;
-
-        for (SellApplication app : consignmentApps) {
-            // 優先使用最終報價，如果沒有則使用預估價
-            BigDecimal price = app.getFinalPrice() != null ? app.getFinalPrice() : app.getEstimatedPrice();
-            app.setDisplayPrice(price);
-
-            if (price != null) {
-                // 計算 5% 服務費 (四捨五入到整數)
-                BigDecimal fee = price.multiply(new BigDecimal("0.05")).setScale(0, RoundingMode.HALF_UP);
-                // 賣家收益 = 總價 - 服務費
-                BigDecimal profit = price.subtract(fee);
-
-                app.setServiceFee(fee);
-                app.setProfit(profit);
-
-                // 如果已成交，累加到總收益
-                if (app.getStatus() == SellApplication.ApplicationStatus.COMPLETED) {
-                    totalProfit = totalProfit.add(profit);
-                }
-            }
-
-            // 狀態文本映射
-            String statusText = "";
-            String statusClass = "";
-            switch (app.getStatus()) {
-                case ACCEPTED: statusText = "寄售中"; statusClass = "status-ACCEPTED"; onSaleCount++; break;
-                case COMPLETED: statusText = "已售出"; statusClass = "status-COMPLETED"; soldCount++; break;
-                case CANCELLED: case REJECTED: statusText = "已取消"; statusClass = "status-CANCELLED"; break;
-                default: statusText = "鑑定/報價中"; statusClass = "status-PENDING"; break;
-            }
-            app.setStatusText(statusText);
-            app.setStatusClass(statusClass);
-        }
-
-        // 3. 將數據放入 Model (直接傳遞實體列表)
-        // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
-        model.addAttribute("user", user);
-        model.addAttribute("consignmentApps", consignmentApps);
-        model.addAttribute("onSaleCount", onSaleCount);
-        model.addAttribute("soldCount", soldCount);
-        model.addAttribute("totalProfit", totalProfit);
-
-        return "consignment";
-    }
 
     /**
      *  新增：我的收藏頁面路由

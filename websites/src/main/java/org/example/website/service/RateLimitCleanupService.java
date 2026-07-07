@@ -1,5 +1,6 @@
 package org.example.website.service;
 
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import org.example.website.entity.RateLimitLog;
 import org.example.website.entity.RateLimitLogHistory;
@@ -18,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 public class RateLimitCleanupService {
-
     private final RateLimitLogRepository rateLimitRepository;
     private final RateLimitLogHistoryRepository historyRepository;
 
@@ -26,17 +26,34 @@ public class RateLimitCleanupService {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
     /**
+     *  核心修復：在 Spring 容器關閉時，優雅地關閉線程池
+     * 防止應用關閉/重啟時，後台延遲任務仍在嘗試訪問已銷毀的數據庫 Session
+     */
+    @PreDestroy
+    public void shutdownScheduler() {
+        System.out.println(" [RateLimitCleanupService] 正在關閉延遲任務線程池...");
+        scheduler.shutdown(); // 停止接收新任務
+        try {
+            // 等待最多 5 秒讓現有任務執行完畢
+            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                System.out.println(" [RateLimitCleanupService] 線程池未在 5 秒內關閉，強制中斷...");
+                scheduler.shutdownNow(); // 強制中斷
+            }
+        } catch (InterruptedException e) {
+            scheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        System.out.println(" [RateLimitCleanupService] 線程池已安全關閉");
+    }
+
+    /**
      * 安排一個延遲任務，在封禁結束時轉移記錄
-     *
-     * @param recordId 記錄ID
-     * @param bannedUntil 封禁結束時間
      */
     public void scheduleUnbanTask(Long recordId, LocalDateTime bannedUntil) {
         LocalDateTime now = LocalDateTime.now();
         long delayMillis = Duration.between(now, bannedUntil).toMillis();
 
         if (delayMillis <= 0) {
-            // 如果已經過期，立即執行
             System.out.println("封禁已過期，立即執行轉移，記錄ID: " + recordId);
             moveRecordToHistory(recordId);
             return;
@@ -48,25 +65,20 @@ public class RateLimitCleanupService {
                 System.out.println("開始執行封禁記錄轉移，記錄ID: " + recordId);
                 moveRecordToHistory(recordId);
             } catch (Exception e) {
-                System.err.println("轉移封禁記錄失敗，記錄ID: " + recordId +
-                        "，錯誤: " + e.getMessage());
+                System.err.println("轉移封禁記錄失敗，記錄ID: " + recordId + "，錯誤: " + e.getMessage());
             }
         }, delayMillis, TimeUnit.MILLISECONDS);
 
         long delaySeconds = delayMillis / 1000;
-        System.out.println("✓ 已安排封禁記錄轉移任務，記錄ID: " + recordId +
-                "，將在 " + bannedUntil + " 執行（延遲 " + delaySeconds + " 秒）");
+        System.out.println("✓ 已安排封禁記錄轉移任務，記錄ID: " + recordId + "，將在 " + bannedUntil + " 執行（延遲 " + delaySeconds + " 秒）");
     }
 
     /**
      * 將指定記錄轉移到歷史表
-     *
-     * @param recordId 記錄ID
      */
     @Transactional
     public void moveRecordToHistory(Long recordId) {
         Optional<RateLimitLog> recordOpt = rateLimitRepository.findById(recordId);
-
         if (recordOpt.isEmpty()) {
             System.out.println("記錄 ID " + recordId + " 已不存在，可能已被轉移");
             return;
@@ -76,15 +88,12 @@ public class RateLimitCleanupService {
 
         // 創建歷史記錄
         RateLimitLogHistory history = new RateLimitLogHistory();
-
-        // 直接關聯 User 對象，不再是 setUsername
         history.setUser(record.getUser());
-
         history.setActionTime(record.getActionTime());
         history.setTimes(record.getTimes());
         history.setUpdatedAt(record.getUpdatedAt());
         history.setBannedUntil(record.getBannedUntil());
-        history.setUnbannedAt(LocalDateTime.now());  // 記錄實際解封時間
+        history.setUnbannedAt(LocalDateTime.now());
 
         // 保存到歷史表
         historyRepository.save(history);
@@ -92,8 +101,6 @@ public class RateLimitCleanupService {
         // 從原表刪除
         rateLimitRepository.delete(record);
 
-        // 日誌輸出時，透過 User 對象獲取 username
-        System.out.println("✓ 用戶 " + record.getUser().getUsername() +
-                " 的封禁記錄已轉移到歷史表（封禁結束時間: " + record.getBannedUntil() + "）");
+        System.out.println("✓ 用戶 " + record.getUser().getUsername() + " 的封禁記錄已轉移到歷史表（封禁結束時間: " + record.getBannedUntil() + "）");
     }
 }
