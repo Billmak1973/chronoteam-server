@@ -43,19 +43,20 @@ const ReviewCard = ({
     // 不再需要本地 isBlocked 狀態，改用 props 中的 blockedUsers
     // 檢查當前評論作者是否被禁言
     const isAuthorBlocked = blockedUsers && blockedUsers.includes(review.customer.username);
-
     // 檢查評論是否有互動（點贊/踩/回覆）
-    const hasInteractions = useCallback((reviewData) => {
-        // 檢查點贊或踩
-        if (reviewData.likeCount > 0 || reviewData.dislikeCount > 0) {
+    //  核心修復：必須使用局部的 likeCount 和 dislikeCount state！
+    // 因為點讚只會更新局部 state，不會更新 review prop！
+    const hasInteractions = useCallback(() => {
+        // 1. 檢查點贊或踩 (讀取實時的局部 state)
+        if (likeCount > 0 || dislikeCount > 0) {
             return true;
         }
-        // 檢查樓中樓回覆數量
-        if (reviewData.replyCount > 0) {
+        // 2. 檢查樓中樓回覆數量 (讀取 props，因為回覆會觸發父組件更新 props)
+        if (review.replyCount > 0) {
             return true;
         }
         return false;
-    }, []);
+    }, [likeCount, dislikeCount, review.replyCount]); //  依賴項必須包含這三個
 
     // --- 現有函數 ---
     const handleLike = async () => {
@@ -122,47 +123,77 @@ const ReviewCard = ({
         }
     };
 
-    // 修改：點擊刪除按鈕時，根據身份決定行為
-    const handleDeleteClick = () => {
-        if (isAdmin) {
-            // 管理員：打開模態框選擇原因
-            setShowDeleteModal(true);
-            setDeleteReason('inappropriate'); // 默認選項
-            setCustomReason('');
-        } else {
-            // 普通用戶：直接確認刪除
-            if (window.confirm('確定刪除這條評論嗎？')) {
-                handleDeleteAction();
-            }
+// 核心：執行實際刪除操作的函數 (支持發送原因)
+const handleDeleteAction = async (reasonText = null) => {
+    try {
+        const body = {};
+        // 如果是管理員且提供了原因，則放入請求體
+        if (isAdmin && reasonText) {
+            body.deleteReason = reasonText;
         }
-    };
+        const res = await fetch(`/api/review/${review.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+            setShowDeleteModal(false); // 關閉模態框
 
-    // 核心：執行實際刪除操作的函數 (支持發送原因)
-    const handleDeleteAction = async (reasonText = null) => {
-        try {
-            const body = {};
-            // 如果是管理員且提供了原因，則放入請求體
-            if (isAdmin && reasonText) {
-                body.deleteReason = reasonText;
+            //  核心修復：刪除後刷新頁面，避免出現訂單不存在錯誤
+            if (typeof window.showNotification === 'function') {
+                window.showNotification('✅ 評論已刪除，頁面將刷新...');
             }
-            const res = await fetch(`/api/review/${review.id}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin',
-                body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined
-            });
-            const result = await res.json();
-            if (res.ok && result.success) {
-                setShowDeleteModal(false); // 關閉模態框
-                onReviewDeleted(); // 通知父組件刷新
-            } else {
-                alert(result.message || '刪除失敗');
-            }
-        } catch (error) {
-            console.error('網絡錯誤:', error);
-            alert('網絡錯誤，請稍後重試');
+
+            // 延遲一點點讓用戶看到提示，然後刷新頁面
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+
+        } else {
+            alert(result.message || '刪除失敗');
         }
-    };
+    } catch (error) {
+        console.error('網絡錯誤:', error);
+        alert('網絡錯誤，請稍後重試');
+    }
+};
+
+// 修改：點擊刪除按鈕時，根據身份決定行為
+const handleDeleteClick = () => {
+    if (isAdmin) {
+        // 管理員：打開模態框選擇原因
+        setShowDeleteModal(true);
+        setDeleteReason('inappropriate'); // 默認選項
+        setCustomReason('');
+    } else {
+        // 普通用戶：調用漂亮的自定義彈窗
+        window.openDeleteModal('確定刪除這條評論嗎？此操作無法恢復！', async () => {
+            try {
+                const res = await fetch(`/api/review/${review.id}`, {
+                    method: 'DELETE',
+                    credentials: 'same-origin'
+                });
+                const result = await res.json();
+                if (result.success) {
+                    // 刪除成功後刷新頁面
+                    if(window.showNotification) {
+                        window.showNotification('✅ 評論已刪除，頁面將刷新...');
+                    }
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert(result.message || '刪除失敗');
+                }
+            } catch (error) {
+                console.error('刪除失敗:', error);
+                alert('網絡錯誤');
+            }
+        });
+    }
+};
 
     // 處理模態框中的提交邏輯
     const confirmDeleteWithReason = () => {
@@ -192,72 +223,55 @@ const ReviewCard = ({
         handleDeleteAction(finalReason);
     };
 
-    // 🔒 修改：編輯按鈕點擊處理（新增互動檢查）
-    const handleEditClick = (e) => {
-        if (e) e.preventDefault(); // 🛡️ 雙保險：阻止任何默認的表單提交或頁面刷新行為
-
-        // 先檢查是否有互動
-        if (hasInteractions(review)) {
-            // 調用全局函數顯示彈窗
-            if (typeof window.showInteractionBlockModal === 'function') {
-                window.showInteractionBlockModal("該評論已有其他用戶的互動（如點贊、踩或回覆），為保障社區內容的真實性與完整性，已產生互動的評論無法再進行編輯。");
-            }
-            return; // 阻止進入編輯模式
-        }
-        // 沒有互動，允許編輯
+    // 編輯按鈕點擊處理（已移除互動檢查，改為直接在按鈕上禁用）
+    const handleEditClick = () => {
+        // 直接進入編輯模式，不再檢查互動或彈窗
         setIsEditing(true);
     };
 
-
-const handleSaveEdit = async () => {
-    if (!editContent.trim()) {
-        alert('評論內容不能為空');
-        return;
-    }
-    try {
-        const res = await fetch(`/api/review/${review.id}/update`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: editContent })
-        });
-        const result = await res.json();
-
-        if (result.success) {
-            onReviewUpdated({ ...review, content: editContent });
-            setIsEditing(false);
-        } else {
-            // 🚫 新增：攔截「互動阻止」錯誤，彈出專屬彈窗
-            if (result.message === "INTERACTION_BLOCKED") {
-                if (typeof window.showInteractionBlockModal === 'function') {
-                    window.showInteractionBlockModal("該評論已有其他用戶的互動（如點贊、踩或回覆），為保障社區內容的真實性與完整性，已產生互動的評論無法再進行編輯。");
-                }
-                return; // 攔截，不執行後續的普通 alert
-            }
-
-            // 檢查是否為全局禁言
-            if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
-                if (window.showGlobalBanModal) {
-                    window.showGlobalBanModal(currentUsername, result.data.expiresAt);
-                }
-                return;
-            }
-
-            // 檢查是否被永久拉黑
-            if (result.message === "BLACKLISTED") {
-                if (window.showBlacklistedModal) {
-                    window.showBlacklistedModal();
-                }
-                return;
-            }
-
-            // 普通錯誤提示
-            alert(result.message || '修改失敗');
+    const handleSaveEdit = async () => {
+        if (!editContent.trim()) {
+            alert('評論內容不能為空');
+            return;
         }
-    } catch (error) {
-        console.error('修改評論錯誤:', error);
-        alert('網絡錯誤');
-    }
-};
+        try {
+            const res = await fetch(`/api/review/${review.id}/update`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: editContent })
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                onReviewUpdated({ ...review, content: editContent });
+                setIsEditing(false);
+            } else {
+                // 🚫 已刪除：攔截「互動阻止」錯誤及相關彈窗代碼
+
+                // 檢查是否為全局禁言
+                if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
+                    if (window.showGlobalBanModal) {
+                        window.showGlobalBanModal(currentUsername, result.data.expiresAt);
+                    }
+                    return;
+                }
+
+                // 檢查是否被永久拉黑
+                if (result.message === "BLACKLISTED") {
+                    if (window.showBlacklistedModal) {
+                        window.showBlacklistedModal();
+                    }
+                    return;
+                }
+
+                // 普通錯誤提示
+                alert(result.message || '修改失敗');
+            }
+        } catch (error) {
+            console.error('修改評論錯誤:', error);
+            alert('網絡錯誤');
+        }
+    };
 
     const handlePin = async () => {
         try {
@@ -480,9 +494,15 @@ const handleSaveEdit = async () => {
             )}
             {/* 底部操作區：修改、刪除 (置頂按鈕已移走) */}
             <div className="review-actions">
-                {/* 🔒 修改按鈕：僅作者可見，且僅當未置頂時可見，點擊時檢查互動 */}
+                {/* 🔒 修改按鈕：僅作者可見，且僅當未置頂時可見。如果有互動，直接禁用按鈕 */}
                 {review.customer.username === currentUsername && !review.pinned && (
-                    <button className="btn-edit" onClick={handleEditClick}>
+                    <button
+                        className="btn-edit"
+                        onClick={handleEditClick}
+                        disabled={hasInteractions()}
+                        title={hasInteractions() ? "已有互動（點贊/回覆），無法修改" : ""}
+                        style={hasInteractions() ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                    >
                         <i className="fas fa-edit"></i> 修改
                     </button>
                 )}

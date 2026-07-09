@@ -38,6 +38,14 @@ const ReplySection = ({
     const [blockValue, setBlockValue] = useState(1);
     const [blockUnit, setBlockUnit] = useState('day');
 
+    // ==========================================
+    // 新增：刪除回覆模態框相關狀態
+    // ==========================================
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteReason, setDeleteReason] = useState('inappropriate');
+    const [customReason, setCustomReason] = useState('');
+    const [deletingReplyId, setDeletingReplyId] = useState(null);
+
     // 不再需要本地 blockedUsers 狀態，改用 props
 
     // 【核心修復 1】當 showReplyForm 變成 true 時，根據是否有回覆決定是否展開，並修復 replyToUser 被覆蓋的問題
@@ -119,16 +127,103 @@ const ReplySection = ({
         } catch (error) { console.error('提交回覆失敗:', error); }
     };
 
+    // ==========================================
+    // 修改：刪除回覆邏輯 (區分管理員與普通用戶)
+    // ==========================================
     const handleDeleteReply = async (replyId) => {
-        if (!confirm('確定刪除這條回覆嗎？')) return;
+        if (isAdmin) {
+            // 管理員：打開模態框選擇原因
+            setDeletingReplyId(replyId);
+            setShowDeleteModal(true);
+            setDeleteReason('inappropriate');
+            setCustomReason('');
+        } else {
+            // 普通用戶：使用自定義確認彈窗
+            if (window.openDeleteModal) {
+                window.openDeleteModal('確定刪除這條回覆嗎？', async () => {
+                    await executeDeleteReply(replyId);
+                });
+            } else {
+                // 降級處理：如果沒有全局函數，使用原生 confirm
+                if (confirm('確定刪除這條回覆嗎？')) {
+                    await executeDeleteReply(replyId);
+                }
+            }
+        }
+    };
+
+    // 新增：執行刪除的輔助函數
+    const executeDeleteReply = async (replyId, reason = null) => {
         try {
-            const res = await fetch(`/api/review/${replyId}`, { method: 'DELETE', credentials: 'same-origin' });
+            const deleteBody = {};
+            if (isAdmin && reason) {
+                deleteBody.deleteReason = reason;
+            }
+
+            const res = await fetch(`/api/review/${replyId}`, {
+                method: 'DELETE',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: Object.keys(deleteBody).length > 0 ? JSON.stringify(deleteBody) : undefined
+            });
+
             const result = await res.json();
             if (result.success) {
                 setReplies(prev => prev.filter(r => r.id !== replyId));
                 if (onReplyCountChange) onReplyCountChange(reviewId, -1);
+                if (window.showNotification) {
+                    window.showNotification('✅ 回覆已刪除');
+                }
+            } else {
+                if (window.showNotification) {
+                    window.showNotification('❌ ' + (result.message || '刪除失敗'), true);
+                } else {
+                    alert(result.message || '刪除失敗');
+                }
             }
-        } catch (error) { console.error('刪除失敗:', error); }
+        } catch (error) {
+            console.error('刪除失敗:', error);
+            if (window.showNotification) {
+                window.showNotification('❌ 網絡錯誤', true);
+            } else {
+                alert('網絡錯誤');
+            }
+        }
+    };
+
+    // 管理員確認刪除（模態框中的按鈕調用）
+    const confirmDeleteReply = () => {
+        let finalReason = '';
+        if (deleteReason === 'custom') {
+            if (!customReason.trim()) {
+                if (window.showNotification) {
+                    window.showNotification('❌ 請輸入自定義原因', true);
+                } else {
+                    alert('請輸入自定義原因');
+                }
+                return;
+            }
+            finalReason = customReason;
+        } else {
+            // 根據選項映射為更委婉的文字
+            switch (deleteReason) {
+                case 'inappropriate':
+                    finalReason = '該內容不符合社區規範，因此被移除。';
+                    break;
+                case 'ads':
+                    finalReason = '檢測到廣告或推廣信息，因此被移除。';
+                    break;
+                case 'irrelevant':
+                    finalReason = '該評論與商品無關，因此被移除。';
+                    break;
+                default:
+                    finalReason = '該內容不符合社區規範，因此被移除。';
+            }
+        }
+
+        setShowDeleteModal(false);
+        executeDeleteReply(deletingReplyId, finalReason);
+        setDeletingReplyId(null);
     };
 
     const handleReaction = async (replyId, isDislike = false) => {
@@ -350,7 +445,6 @@ const ReplySection = ({
                                             {/* 【核心修復 3】：樓中樓回復按鈕，加入禁言攔截與全局彈窗 */}
                                             <button className="reply-action-btn" onClick={async () => {
                                                 // 1. 登錄檢查
-                                                // 1. 登錄檢查
                                                 if (!currentUsername || currentUsername === 'anonymousUser') {
                                                     //  【修改這裡】：替換掉原本的 alert
                                                     if (typeof window.showLoginRequiredModal === 'function') {
@@ -537,6 +631,141 @@ const ReplySection = ({
                                 style={{ padding: '0.5rem 1rem', background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                             >
                                 確認禁言
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================== */}
+            {/* 新增：管理員刪除回覆確認模態框 */}
+            {/* ========================================== */}
+            {showDeleteModal && (
+                <div
+                    className="modal-overlay"
+                    onClick={() => setShowDeleteModal(false)}
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999
+                    }}
+                >
+                    <div
+                        className="modal-box"
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            background: 'white',
+                            padding: '2rem',
+                            borderRadius: '12px',
+                            width: '90%',
+                            maxWidth: '500px',
+                            boxShadow: '0 10px 25px rgba(0,0,0,0.2)'
+                        }}
+                    >
+                        <h3 style={{ marginBottom: '1rem', color: 'var(--primary)' }}>
+                            <i className="fas fa-exclamation-triangle" style={{ color: 'var(--accent)', marginRight: '0.5rem' }}></i>
+                            刪除回覆確認
+                        </h3>
+                        <p style={{ marginBottom: '1rem', color: 'var(--gray)' }}>
+                            請選擇刪除原因，這將發送通知給用戶 <strong>{replies.find(r => r.id === deletingReplyId)?.customer?.username || '該用戶'}</strong>：
+                        </p>
+
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="deleteReason"
+                                    value="inappropriate"
+                                    checked={deleteReason === 'inappropriate'}
+                                    onChange={(e) => setDeleteReason(e.target.value)}
+                                    style={{ marginRight: '0.5rem' }}
+                                />
+                                內容不合規 (默認)
+                            </label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="deleteReason"
+                                    value="ads"
+                                    checked={deleteReason === 'ads'}
+                                    onChange={(e) => setDeleteReason(e.target.value)}
+                                    style={{ marginRight: '0.5rem' }}
+                                />
+                                廣告或推廣信息
+                            </label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="deleteReason"
+                                    value="irrelevant"
+                                    checked={deleteReason === 'irrelevant'}
+                                    onChange={(e) => setDeleteReason(e.target.value)}
+                                    style={{ marginRight: '0.5rem' }}
+                                />
+                                與商品無關
+                            </label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', cursor: 'pointer' }}>
+                                <input
+                                    type="radio"
+                                    name="deleteReason"
+                                    value="custom"
+                                    checked={deleteReason === 'custom'}
+                                    onChange={(e) => setDeleteReason(e.target.value)}
+                                    style={{ marginRight: '0.5rem' }}
+                                />
+                                自定義原因
+                            </label>
+                        </div>
+
+                        {deleteReason === 'custom' && (
+                            <textarea
+                                style={{
+                                    width: '100%',
+                                    minHeight: '80px',
+                                    padding: '0.5rem',
+                                    borderRadius: '4px',
+                                    border: '1px solid #ddd',
+                                    fontFamily: 'inherit',
+                                    marginBottom: '1rem'
+                                }}
+                                placeholder="請輸入具體的刪除原因..."
+                                value={customReason}
+                                onChange={(e) => setCustomReason(e.target.value)}
+                            />
+                        )}
+
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    background: '#e9ecef',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={confirmDeleteReply}
+                                style={{
+                                    padding: '0.5rem 1rem',
+                                    background: 'var(--accent)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                確認刪除
                             </button>
                         </div>
                     </div>

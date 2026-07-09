@@ -51,7 +51,7 @@ public class ReviewController {
                             UserBlockRepository userBlockRepository,
                             ReviewArchiveRepository reviewArchiveRepository,
                             AdminPenaltyService adminPenaltyService
-                           ) {
+    ) {
         this.reviewRepository = reviewRepository;
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
@@ -65,6 +65,136 @@ public class ReviewController {
         this.adminPenaltyService = adminPenaltyService;
     }
 
+
+//    @PostMapping("/submit")
+//    public ResponseEntity<ApiResponse> submitReview(@RequestBody Map<String, Object> request, Authentication authentication) {
+//        try {
+//            // 1. 先驗證認證狀態
+//            if (authentication == null || !authentication.isAuthenticated()
+//                    || "anonymousUser".equals(authentication.getPrincipal())) {
+//                return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+//            }
+//
+//            String username = authentication.getName();
+//
+//            // ================= 新增：檢查管理員全局禁言 =================
+//            var activeBan = adminPenaltyService.getActiveGlobalBan(username);
+//            if (activeBan.isPresent()) {
+//                // 構造包含過期時間的錯誤數據
+//                Map<String, Object> errorData = new HashMap<>();
+//                errorData.put("banned", true);
+//                errorData.put("expiresAt", activeBan.get().getEndTime()); // 發送 ISO 格式時間給前端
+//
+//                // 返回特定錯誤 "GLOBAL_BAN"，前端 React 會捕獲這個 message 並彈窗
+//                return ResponseEntity.badRequest()
+//                        .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
+//            }
+//            // ================= 檢查結束 =================
+//
+//            //檢查是否被管理員永久拉黑
+//            if (adminPenaltyService.isBlacklisted(username)) {
+//                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+//                        .body(new ApiResponse(false, "BLACKLISTED", "您已被管理員永久拉黑，無法發表評論或回復"));
+//            }
+//
+//            String replyToUser = (String) request.get("replyToUser");
+//            if (replyToUser != null && !replyToUser.trim().isEmpty()) {
+//                // 調用 UserBlockService 檢查 A→B 或 B→A 是否存在 (普通用戶互相禁言)
+//                if (userBlockService.isBlocked(username, replyToUser)) {
+//                    return ResponseEntity.badRequest()
+//                            .body(ApiResponse.error("您已禁言對方，因此無法回復"));
+//                }
+//            }
+//
+//            // 2. 驗證 productId
+//            if (request.get("productId") == null) {
+//                return ResponseEntity.badRequest().body(ApiResponse.error("商品ID不能為空"));
+//            }
+//            Integer productId = Integer.valueOf(request.get("productId").toString());
+//
+//            // 3. 驗證 content（關鍵修復！）
+//            String content = request.get("content") != null ? (String) request.get("content") : null;
+//            if (content == null || content.trim().isEmpty()) {
+//                return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
+//            }
+//            content = content.trim();
+//
+//            // 解析樓中樓參數 (parentId)
+//            // 注意：replyToUser 已在上方解析，此處直接使用即可
+//            Long parentId = request.get("parentId") != null ? Long.valueOf(request.get("parentId").toString()) : null;
+//
+//            Product product = productRepository.findById(productId)
+//                    .orElseThrow(() -> new RuntimeException("商品不存在"));
+//
+//            // 修改：使用 UserRepository 獲取 User 實體
+//            User user = userRepository.findByUsername(username)
+//                    .orElseThrow(() -> new RuntimeException("用戶不存在"));
+//
+//            Review review = new Review();
+//            review.setUser(user); // 修改：設置 User 關聯
+//            review.setProduct(product);
+//            review.setContent(content);  // 確保 content 不為 null
+//
+//            if (parentId != null) {
+//                // ================= 樓中樓回覆邏輯 =================
+//                review.setParentId(parentId);
+//                review.setReplyToUser(replyToUser);
+//                review.setOrderNo(null);
+//                review.setRating(null);
+//            } else {
+//                // ================= 根評論邏輯 =================
+//                String orderNo = (String) request.get("orderNo");
+//                boolean isAdmin = "admin".equals(username); // 【新增】判斷是否為管理員
+//
+//                Double rating = null;
+//                if (request.get("rating") != null && !"null".equals(request.get("rating").toString())) {
+//                    rating = Double.valueOf(request.get("rating").toString());
+//                }
+//
+//                if (!isAdmin) {
+//                    // 【普通用戶邏輯】：必須有評分、必須有訂單、必須更新統計
+//                    if (rating == null) {
+//                        return ResponseEntity.badRequest().body(ApiResponse.error("評分不能為空"));
+//                    }
+//
+//                    Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
+//                            .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
+//
+//                    if (reviewRepository.findByOrderNoAndProduct_ProductId(orderNo, productId) != null) {
+//                        return ResponseEntity.badRequest().body(ApiResponse.error("您已經評價過該商品"));
+//                    }
+//
+//                    review.setOrderNo(orderNo);
+//                    review.setRating(rating);
+//
+//                    // 更新商品統計數據 (僅普通用戶觸發)
+//                    Integer currentCount = product.getTotalReviewCount();
+//                    product.setTotalReviewCount(currentCount == null ? 1 : currentCount + 1);
+//                    BigDecimal currentScore = product.getTotalScore();
+//                    product.setTotalScore(currentScore == null ? BigDecimal.valueOf(rating) : currentScore.add(BigDecimal.valueOf(rating)));
+//                    productRepository.save(product);
+//                } else {
+//                    // 【管理員邏輯】：無需訂單、無需評分、不更新統計
+//                    review.setOrderNo("ADMIN_COMMENT"); // 使用特殊標識，避免唯一索引衝突
+//                    review.setRating(null);             // 評分為 null，前端不會顯示星星
+//                }
+//
+//                review.setParentId(null);
+//                review.setReplyToUser(null);
+//            }
+//
+//            // 保存評論到數據庫
+//            reviewRepository.save(review);
+//
+//            return ResponseEntity.ok(ApiResponse.ok("提交成功"));
+//
+//        } catch (Exception e) {
+//            System.err.println(" 提交評論/回覆失敗: " + e.getClass().getName() + " - " + e.getMessage());
+//            e.printStackTrace();
+//            return ResponseEntity.internalServerError()
+//                    .body(ApiResponse.error("提交失敗: " + (e.getMessage() != null ? e.getMessage() : "未知錯誤")));
+//        }
+//    }
 
     @PostMapping("/submit")
     public ResponseEntity<ApiResponse> submitReview(@RequestBody Map<String, Object> request, Authentication authentication) {
@@ -90,6 +220,7 @@ public class ReviewController {
                         .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
             }
             // ================= 檢查結束 =================
+
             //檢查是否被管理員永久拉黑
             if (adminPenaltyService.isBlacklisted(username)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -142,32 +273,45 @@ public class ReviewController {
                 review.setRating(null);
             } else {
                 // ================= 根評論邏輯 =================
-                String orderNo = (String) request.get("orderNo");
+                // 核心修復：精準判斷是否為管理員 (同時校驗 username 和 Role 枚舉)
+                boolean isAdmin = "admin".equals(username) ||
+                        (user.getRole() != null && user.getRole() == User.Role.ADMIN);
 
-                if (request.get("rating") == null) {
-                    return ResponseEntity.badRequest().body(ApiResponse.error("評分不能為空"));
+                if (isAdmin) {
+                    // 【管理員邏輯】：無需訂單、無需評分、絕對不更新統計數據
+                    review.setOrderNo("ADMIN_COMMENT"); // 特殊標識
+                    review.setRating(null);             // 評分為 null
+                } else {
+                    // 【普通用戶邏輯】：必須有評分、必須有訂單、必須更新統計
+                    String orderNo = (String) request.get("orderNo");
+
+                    // 普通用戶必須有評分
+                    if (request.get("rating") == null) {
+                        return ResponseEntity.badRequest().body(ApiResponse.error("評分不能為空"));
+                    }
+                    Double rating = Double.valueOf(request.get("rating").toString());
+
+                    // 校驗訂單
+                    Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
+                            .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
+
+                    if (reviewRepository.findByOrderNoAndProduct_ProductId(orderNo, productId) != null) {
+                        return ResponseEntity.badRequest().body(ApiResponse.error("您已經評價過該商品"));
+                    }
+
+                    review.setOrderNo(orderNo);
+                    review.setRating(rating);
+
+                    // 更新商品統計數據 (僅普通用戶觸發)
+                    Integer currentCount = product.getTotalReviewCount();
+                    product.setTotalReviewCount(currentCount == null ? 1 : currentCount + 1);
+                    BigDecimal currentScore = product.getTotalScore();
+                    product.setTotalScore(currentScore == null ? BigDecimal.valueOf(rating) : currentScore.add(BigDecimal.valueOf(rating)));
+                    productRepository.save(product);
                 }
 
-                Double rating = Double.valueOf(request.get("rating").toString());
-
-                Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
-                        .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
-
-                if (reviewRepository.findByOrderNoAndProduct_ProductId(orderNo, productId) != null) {
-                    return ResponseEntity.badRequest().body(ApiResponse.error("您已經評價過該商品"));
-                }
-
-                review.setOrderNo(orderNo);
-                review.setRating(rating);
                 review.setParentId(null);
                 review.setReplyToUser(null);
-
-                // 更新商品統計數據
-                Integer currentCount = product.getTotalReviewCount();
-                product.setTotalReviewCount(currentCount == null ? 1 : currentCount + 1);
-                BigDecimal currentScore = product.getTotalScore();
-                product.setTotalScore(currentScore == null ? BigDecimal.valueOf(rating) : currentScore.add(BigDecimal.valueOf(rating)));
-                productRepository.save(product);
             }
 
             // 保存評論到數據庫
@@ -297,17 +441,6 @@ public class ReviewController {
                 return ResponseEntity.status(403).body(ApiResponse.error("無權修改此評論"));
             }
 
-            // 檢查是否已有互動（點贊、踩、回復）
-            if (review.getParentId() == null) { // 只檢查根評論
-                int likeCount = review.getLikeCount() != null ? review.getLikeCount() : 0;
-                int dislikeCount = review.getDislikeCount() != null ? review.getDislikeCount() : 0;
-                long replyCount = reviewRepository.countByParentId(review.getReviewId());
-
-                if (likeCount > 0 || dislikeCount > 0 || replyCount > 0) {
-                    return ResponseEntity.badRequest()
-                            .body( new ApiResponse(false,"INTERACTION_BLOCKED", "該評論已有互動，無法再進行編輯"));
-                }
-            }
 
             // 檢查當前用戶是否被管理員全局禁言
             var activeBan = adminPenaltyService.getActiveGlobalBan(username);
@@ -408,8 +541,15 @@ public class ReviewController {
             // 1. 刪除評論記錄 (在歸檔之後執行)
             reviewRepository.delete(review);
 
-            // 2. 同步更新 Product 的統計數據 (僅針對根評論)
-            if (product != null && review.getParentId() == null) {
+            // ==========================================
+            // 2. 同步更新 Product 的統計數據 (僅針對 普通用戶 的根評論)
+            // ==========================================
+            // 核心修復：判斷被刪除的評論是否為管理員發表的
+            boolean isDeletedReviewByAdmin = "ADMIN_COMMENT".equals(review.getOrderNo()) ||
+                    (review.getUser().getRole() != null && review.getUser().getRole() == User.Role.ADMIN);
+
+            // 只有當它是根評論，且【不是】管理員發表的，才去扣除統計數據
+            if (product != null && review.getParentId() == null && !isDeletedReviewByAdmin) {
                 Integer currentCount = product.getTotalReviewCount();
                 if (currentCount != null && currentCount > 0) {
                     product.setTotalReviewCount(currentCount - 1);
@@ -424,8 +564,6 @@ public class ReviewController {
                         deductedScore = BigDecimal.ZERO;
                     }
                     product.setTotalScore(deductedScore);
-                } else {
-                    product.setTotalScore(BigDecimal.ZERO);
                 }
                 productRepository.save(product);
             }
@@ -768,12 +906,14 @@ public class ReviewController {
         // 核心修復：計算並返回平均分
         Product product = productRepository.findById(productId).orElse(null);
         if (product != null) {
-            long totalReviews = rootReviewsPage.getTotalElements();
+            // 【關鍵修復】：除數必須使用 product.getTotalReviewCount() (只包含普通用戶的評論數)
+            // 絕對不能用 rootReviewsPage.getTotalElements() (這會包含管理員的官方備註)
+            Integer validReviewCount = product.getTotalReviewCount();
             double avgRating = 0.0;
 
-            // 只有當評論數大於 0 且總分不為空時才計算
-            if (totalReviews > 0 && product.getTotalScore() != null) {
-                avgRating = product.getTotalScore().doubleValue() / totalReviews;
+            // 只有當普通用戶評論數大於 0 且總分不為空時才計算
+            if (validReviewCount != null && validReviewCount > 0 && product.getTotalScore() != null) {
+                avgRating = product.getTotalScore().doubleValue() / validReviewCount;
             }
 
             // 保留一位小數 (例如: 4.12 -> 4.1)

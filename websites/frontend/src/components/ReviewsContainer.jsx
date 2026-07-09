@@ -114,7 +114,13 @@ const ReviewsContainer = ({ productId, currentUsername, isAdmin, canReview, revi
     const handleNewReviewSubmitted = () => {
         // 1. 手動將 localCanReview 設為 false，徹底卸載 ReviewForm 組件
         setLocalCanReview(false);
-        // 2. 強制刷新第一頁，更新評論列表和統計數據
+
+        // 2. 調用全局函數更新 Thymeleaf 渲染的 UI 提示區塊 (隱藏未購買提示、顯示已評價提示等)
+        if (typeof window.handleReviewSubmitSuccess === 'function') {
+            window.handleReviewSubmitSuccess();
+        }
+
+        // 3. 強制刷新第一頁，更新評論列表和統計數據
         fetchReviews(0, sort);
     };
 
@@ -192,6 +198,7 @@ const ReviewsContainer = ({ productId, currentUsername, isAdmin, canReview, revi
                     orderNo={reviewOrderNo}
                     onSuccess={handleNewReviewSubmitted}
                     currentUsername={currentUsername}
+                    isAdmin={isAdmin}  // 【新增】傳遞 isAdmin 屬性
                 />
             )}
             {loading ? (

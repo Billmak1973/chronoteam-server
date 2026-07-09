@@ -40,7 +40,7 @@ public class Review {
     @Column(name = "rating")
     private Double rating;
 
-    @Column(name = "content", length = 1000, nullable = false)
+    @Column(name = "content", length = 4000, nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "parent_id")
@@ -57,6 +57,14 @@ public class Review {
 
     @Column(name = "pinned", nullable = false)
     private Boolean pinned = false;
+
+    // 存储富文本格式（HTML格式）
+    @Column(name = "formatted_content", length = 4000, columnDefinition = "TEXT")
+    private String formattedContent;
+
+    // 标记是否为富文本
+    @Column(name = "is_formatted", nullable = false)
+    private Boolean isFormatted = false;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
