@@ -57,3 +57,10 @@ ChronoTeam 是一個致力於提供安全、透明、專業的二奢名錶交易
 - **後端**：Spring Boot, Spring Security, Spring Data JPA
 - **數據庫與緩存**：MySQL, Redis
 - **其他**：RESTful API, 文件存儲服務, 異步任務調度
+- <img width="1918" height="988" alt="image" src="https://github.com/user-attachments/assets/9661f92d-9aba-4a78-9028-806ad1f8d341" />
+
+<img width="1885" height="822" alt="image" src="https://github.com/user-attachments/assets/584517e4-b075-4255-a38b-e2545278c859" />
+<img width="1761" height="857" alt="image" src="https://github.com/user-attachments/assets/1eca248e-b7d8-462d-8bd8-4fe4102b4260" />
+<img width="1913" height="906" alt="image" src="https://github.com/user-attachments/assets/c88ea245-bf38-4999-9424-8c01fb03396a" />
+
+
