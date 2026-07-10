@@ -490,7 +490,18 @@ const handleDeleteClick = () => {
                     </div>
                 </div>
             ) : (
-                <div className="review-content">{review.content}</div>
+                /*                <div className="review-content">{review.content}</div> */
+/*                <div className="review-content">{review.content}</div> */
+                <div className="review-content">
+                    {/* 核心修復：如果是富文本，渲染 HTML；否則渲染純文本（兼容舊數據） */}
+                    {review.isFormatted && review.formattedContent ? (
+                        // 情况 1: 富文本模式 (确保 formattedContent 存在)
+                        <span dangerouslySetInnerHTML={{ __html: review.formattedContent }} />
+                    ) : (
+                        // 情况 2: 普通文本模式 (兼容旧数据，防止 undefined 报错)
+                        <span>{review.content || ''}</span>
+                    )}
+                </div>
             )}
             {/* 底部操作區：修改、刪除 (置頂按鈕已移走) */}
             <div className="review-actions">

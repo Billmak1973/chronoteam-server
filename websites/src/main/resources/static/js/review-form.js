@@ -1,16 +1,19 @@
-import React, { useState, useRef } from 'react';
+// 從全局 React 對象中解構 Hooks (CDN 模式下不需要 import)
+const { useState, useRef, useEffect } = React;
 
+// ==========================================
+// 這裡放入您的 ReviewForm 組件代碼
+// ==========================================
 const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin }) => {
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
+    const [content, setContent] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
-
-    //  核心修復：移除 content state，改用獨立的 charCount 管理字數
-    const [charCount, setCharCount] = useState(0);
-
     const editorRef = useRef(null);
-    const isComposing = useRef(false); // 輸入法組合狀態
+
+    // 【新增】：用於追蹤輸入法(IME)是否正在組合拼音
+    const isComposing = useRef(false);
 
     const handleStarClick = (e, starIndex) => {
         const rect = e.currentTarget.getBoundingClientRect();
@@ -24,12 +27,12 @@ const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin })
         setHoverRating(isLeftHalf ? starIndex - 0.5 : starIndex);
     };
 
-    // 富文本編輯器格式化功能
     const formatText = (command, value = null) => {
+        document.execCommand(command, false, value);
         if (editorRef.current) {
-            editorRef.current.focus(); // 🟢 確保焦點在編輯器內，否則 execCommand 無效
-            document.execCommand(command, false, value);
+            setContent(editorRef.current.innerHTML);
         }
+        editorRef.current?.focus();
     };
 
     const insertLink = () => {
@@ -42,12 +45,13 @@ const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin })
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // 🟢 核心修復：直接從 DOM 讀取最終內容，不依賴 React State
-        const finalContent = editorRef.current ? editorRef.current.innerHTML.trim() : '';
-        const textContent = editorRef.current ? editorRef.current.innerText.trim() : '';
-
         if (!isAdmin && rating === 0) return alert('請先選擇評分');
-        if (!textContent) {
+        if (!content.trim() && !editorRef.current?.innerText.trim()) {
+            return alert('請輸入評價內容');
+        }
+
+        const finalContent = editorRef.current ? editorRef.current.innerHTML : content;
+        if (!finalContent.trim()) {
             return alert('請輸入評價內容');
         }
 
@@ -142,7 +146,7 @@ const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin })
                                 ></i>
                             ))}
                         </div>
-                        <div className="rating-hint">
+                        <div className="rating-hint" style={{fontSize: '0.8rem', color: '#6c757d', marginTop: '0.5rem'}}>
                             <i className="fas fa-info-circle"></i> 懸停並點擊星星的左半邊為 0.5 分，右半邊為整星
                         </div>
                     </div>
@@ -153,123 +157,60 @@ const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin })
 
                     {/* 富文本編輯器工具欄 */}
                     <div className="rich-editor-toolbar" style={{
-                        display: 'flex',
-                        gap: '4px',
-                        padding: '8px',
-                        background: '#f8f9fa',
-                        border: '1px solid #ddd',
-                        borderBottom: 'none',
-                        borderRadius: '8px 8px 0 0',
-                        flexWrap: 'wrap'
+                        display: 'flex', gap: '4px', padding: '8px', background: '#f8f9fa',
+                        border: '1px solid #ddd', borderBottom: 'none', borderRadius: '8px 8px 0 0', flexWrap: 'wrap'
                     }}>
-                        {/* 字體格式 */}
                         <div style={{display: 'flex', gap: '2px', borderRight: '1px solid #ddd', paddingRight: '8px'}}>
-                            <button type="button" onClick={() => formatText('bold')} title="粗體" style={{
-                                padding: '4px 8px', border: '1px solid transparent', background: 'transparent',
-                                cursor: 'pointer', borderRadius: '3px', fontWeight: 'bold'
-                            }}>B</button>
-                            <button type="button" onClick={() => formatText('italic')} title="斜體" style={{
-                                padding: '4px 8px', border: '1px solid transparent', background: 'transparent',
-                                cursor: 'pointer', borderRadius: '3px', fontStyle: 'italic'
-                            }}>I</button>
-                            <button type="button" onClick={() => formatText('underline')} title="下劃線" style={{
-                                padding: '4px 8px', border: '1px solid transparent', background: 'transparent',
-                                cursor: 'pointer', borderRadius: '3px', textDecoration: 'underline'
-                            }}>U</button>
+                            <button type="button" onClick={() => formatText('bold')} title="粗體" style={{padding: '4px 8px', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', borderRadius: '3px', fontWeight: 'bold'}}>B</button>
+                            <button type="button" onClick={() => formatText('italic')} title="斜體" style={{padding: '4px 8px', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', borderRadius: '3px', fontStyle: 'italic'}}>I</button>
+                            <button type="button" onClick={() => formatText('underline')} title="下劃線" style={{padding: '4px 8px', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', borderRadius: '3px', textDecoration: 'underline'}}>U</button>
                         </div>
-
-                        {/* 顏色 */}
                         <div style={{display: 'flex', gap: '2px', borderRight: '1px solid #ddd', paddingRight: '8px'}}>
-                            <button type="button" onClick={() => formatText('foreColor', '#e94560')} title="文字顏色" style={{
-                                padding: '4px 8px', border: '1px solid transparent', background: 'transparent',
-                                cursor: 'pointer', borderRadius: '3px'
-                            }}>
+                            <button type="button" onClick={() => formatText('foreColor', '#e94560')} title="文字顏色" style={{padding: '4px 8px', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', borderRadius: '3px'}}>
                                 <span style={{borderBottom: '3px solid #e94560'}}>A</span>
                             </button>
-                            <button type="button" onClick={() => formatText('hiliteColor', '#fff3cd')} title="背景色" style={{
-                                padding: '4px 8px', border: '1px solid transparent', background: 'transparent',
-                                cursor: 'pointer', borderRadius: '3px', background: '#fff3cd'
-                            }}>
-                                A
-                            </button>
+                            <button type="button" onClick={() => formatText('hiliteColor', '#fff3cd')} title="背景色" style={{padding: '4px 8px', border: '1px solid transparent', background: '#fff3cd', cursor: 'pointer', borderRadius: '3px'}}>A</button>
                         </div>
-
-                        {/* 列表和對齊 */}
                         <div style={{display: 'flex', gap: '2px', borderRight: '1px solid #ddd', paddingRight: '8px'}}>
-                            <button type="button" onClick={() => formatText('insertUnorderedList')} title="無序列表" style={{
-                                padding: '4px 8px', border: '1px solid transparent', background: 'transparent',
-                                cursor: 'pointer', borderRadius: '3px'
-                            }}>• List</button>
-                            <button type="button" onClick={() => formatText('justifyLeft')} title="左對齊" style={{
-                                padding: '4px 8px', border: '1px solid transparent', background: 'transparent',
-                                cursor: 'pointer', borderRadius: '3px'
-                            }}>⊞</button>
-
-                            {/* 🟢 修復 1：居中按鈕添加圖標 */}
-                            <button type="button" onClick={() => formatText('justifyCenter')} title="居中" style={{
-                                padding: '4px 8px', border: '1px solid transparent', background: 'transparent',
-                                cursor: 'pointer', borderRadius: '3px'
-                            }}>
-                                <i className="fas fa-align-center"></i>
-                            </button>
+                            <button type="button" onClick={() => formatText('insertUnorderedList')} title="無序列表" style={{padding: '4px 8px', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', borderRadius: '3px'}}>• List</button>
+                            <button type="button" onClick={() => formatText('justifyLeft')} title="左對齊" style={{padding: '4px 8px', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', borderRadius: '3px'}}>⊞</button>
+                            <button type="button" onClick={() => formatText('justifyCenter')} title="居中" style={{padding: '4px 8px', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', borderRadius: '3px'}}>⊟</button>
                         </div>
-
-                        {/* 插入 */}
                         <div style={{display: 'flex', gap: '2px'}}>
-                            <button type="button" onClick={insertLink} title="連結" style={{
-                                padding: '4px 8px', border: '1px solid transparent', background: 'transparent',
-                                cursor: 'pointer', borderRadius: '3px'
-                            }}>🔗</button>
+                            <button type="button" onClick={insertLink} title="連結" style={{padding: '4px 8px', border: '1px solid transparent', background: 'transparent', cursor: 'pointer', borderRadius: '3px'}}>🔗</button>
                         </div>
                     </div>
 
-                    {/* 🟢 修復 2：注入 CSS 處理無序列表溢出問題 */}
-                    <style>{`
-                        .review-editor ul, .review-editor ol {
-                            padding-left: 20px;
-                            margin: 8px 0;
-                        }
-                        .review-editor li {
-                            margin: 4px 0;
-                        }
-                    `}</style>
-
-                    {/* 🟢 核心修復 3：徹底移除 dangerouslySetInnerHTML，改為非受控組件！ */}
+                    {/* 富文本編輯區域 (已修復 IME 輸入法 Bug) */}
                     <div
                         ref={editorRef}
                         contentEditable
-                        className="review-textarea review-editor"
+                        className="review-textarea"
                         style={{
-                            minHeight: '150px',
-                            padding: '12px 12px 12px 30px',
-                            border: '2px solid #e9ecef',
-                            borderTop: 'none',
-                            borderRadius: '0 0 8px 8px',
-                            fontSize: '0.95rem',
-                            outline: 'none',
-                            background: 'white'
+                            minHeight: '150px', padding: '12px', border: '2px solid #e9ecef', borderTop: 'none',
+                            borderRadius: '0 0 8px 8px', fontSize: '0.95rem', outline: 'none', background: 'white'
                         }}
                         onCompositionStart={() => {
-                            isComposing.current = true;
+                            isComposing.current = true; // 開始輸入法組合
                         }}
                         onCompositionEnd={(e) => {
-                            isComposing.current = false;
-                            setCharCount(e.target.innerText.length); // 只更新字數，不觸發 DOM 重繪
+                            isComposing.current = false; // 結束輸入法組合
+                            setContent(e.target.innerHTML); // 選詞結束後再同步內容
                         }}
                         onInput={(e) => {
-                            if (!isComposing.current) {
-                                setCharCount(e.target.innerText.length); // 只更新字數，不觸發 DOM 重繪
-                            }
+                            // 【核心修復】：在輸入法拼寫期間，禁止更新 state，防止 React 重渲染打斷輸入法！
+                            if (isComposing.current) return;
+                            setContent(e.target.innerHTML);
                         }}
-                        // ⚠️ 絕對不要加 dangerouslySetInnerHTML={{ __html: content }}，否則光標必亂！
+                        dangerouslySetInnerHTML={{ __html: content }}
                     ></div>
 
                     <div className="char-count" style={{textAlign: 'right', color: '#6c757d', fontSize: '0.85rem', marginTop: '0.5rem'}}>
-                        {charCount}/1000
+                        {editorRef.current?.innerText.length || 0}/1000
                     </div>
                 </div>
 
-                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{padding: '0.8rem 2rem', fontSize: '1rem'}}>
                     {isSubmitting ? <><i className="fas fa-spinner fa-spin"></i> 提交中...</> : <><i className="fas fa-paper-plane"></i> 提交評價</>}
                 </button>
             </form>
@@ -277,4 +218,33 @@ const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin })
     );
 };
 
-export default ReviewForm;
+// ==========================================
+// 初始化 React 組件
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    const root = document.getElementById('review-form-root');
+    if (root) {
+        const productId = parseInt(root.dataset.productId);
+        const currentUsername = root.dataset.currentUsername;
+        const isAdmin = root.dataset.isAdmin === 'true';
+        const orderNo = root.dataset.orderNo || "";
+
+        const ReviewFormWithProps = () => (
+            <ReviewForm
+                productId={productId}
+                orderNo={orderNo}
+                onSuccess={() => {
+                    console.log('評價成功');
+                    if (window.handleReviewSubmitSuccess) {
+                        window.handleReviewSubmitSuccess();
+                    }
+                }}
+                currentUsername={currentUsername}
+                isAdmin={isAdmin}
+            />
+        );
+
+        const reactRoot = ReactDOM.createRoot(root);
+        reactRoot.render(<ReviewFormWithProps />);
+    }
+});

@@ -2841,7 +2841,58 @@
     70% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
     100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
 }
+        /* ========================================== */
+/*  富文本內容排版樣式 (適配 Review 和 Reply) */
+/* ========================================== */
+.review-content img,
+.reply-content img {
+    max-width: 100%;       /* 防止圖片撐破屏幕 */
+    height: auto;
+    border-radius: 8px;
+    margin: 0.5rem 0;
+    display: block;
+}
+
+.review-content ul,
+.reply-content ul,
+.review-content ol,
+.reply-content ol {
+    padding-left: 20px;    /* 讓列表有正常的縮進 */
+    margin: 0.5rem 0;
+}
+
+.review-content li,
+.reply-content li {
+    margin-bottom: 0.3rem;
+}
+
+.review-content a,
+.reply-content a {
+    color: var(--accent);  /* 連結顏色 */
+    text-decoration: underline;
+    word-break: break-all; /* 防止長連結撐破屏幕 */
+}
+
+.review-content span[style],
+.reply-content span[style] {
+    /* 確保前端編輯器設置的顏色/背景色能生效 */
+    display: inline;
+}
+
+/* 修復粗體、斜體、下劃線、刪除線的默認樣式 */
+.review-content b, .review-content strong { font-weight: 700; }
+.review-content i, .review-content em { font-style: italic; }
+.review-content u { text-decoration: underline; }
+.review-content s { text-decoration: line-through; }
+
     </style>
+
+    <!-- ========================================== -->
+    <!--  在這裡插入 React 和 Babel 的 CDN 腳本 -->
+    <!-- ========================================== -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 
 <body>
@@ -4258,6 +4309,12 @@
     });
 
 </script>
+
+
+<!-- ========================================== -->
+<!-- 引入外部的 React 評價表單組件 (彻底解决 Thymeleaf 解析报错) -->
+<!-- ========================================== -->
+<script type="text/babel" src="/js/review-form.js" th:inline="none"></script>
 
 </body>
 

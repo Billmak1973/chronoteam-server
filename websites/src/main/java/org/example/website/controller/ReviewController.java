@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.jsoup.Jsoup;
+import org.jsoup.safety.Safelist;
 
 import java.math.BigDecimal;
 import java.security.Principal;
@@ -66,266 +68,156 @@ public class ReviewController {
     }
 
 
-//    @PostMapping("/submit")
-//    public ResponseEntity<ApiResponse> submitReview(@RequestBody Map<String, Object> request, Authentication authentication) {
-//        try {
-//            // 1. 先驗證認證狀態
-//            if (authentication == null || !authentication.isAuthenticated()
-//                    || "anonymousUser".equals(authentication.getPrincipal())) {
-//                return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
-//            }
-//
-//            String username = authentication.getName();
-//
-//            // ================= 新增：檢查管理員全局禁言 =================
-//            var activeBan = adminPenaltyService.getActiveGlobalBan(username);
-//            if (activeBan.isPresent()) {
-//                // 構造包含過期時間的錯誤數據
-//                Map<String, Object> errorData = new HashMap<>();
-//                errorData.put("banned", true);
-//                errorData.put("expiresAt", activeBan.get().getEndTime()); // 發送 ISO 格式時間給前端
-//
-//                // 返回特定錯誤 "GLOBAL_BAN"，前端 React 會捕獲這個 message 並彈窗
-//                return ResponseEntity.badRequest()
-//                        .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
-//            }
-//            // ================= 檢查結束 =================
-//
-//            //檢查是否被管理員永久拉黑
-//            if (adminPenaltyService.isBlacklisted(username)) {
-//                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-//                        .body(new ApiResponse(false, "BLACKLISTED", "您已被管理員永久拉黑，無法發表評論或回復"));
-//            }
-//
-//            String replyToUser = (String) request.get("replyToUser");
-//            if (replyToUser != null && !replyToUser.trim().isEmpty()) {
-//                // 調用 UserBlockService 檢查 A→B 或 B→A 是否存在 (普通用戶互相禁言)
-//                if (userBlockService.isBlocked(username, replyToUser)) {
-//                    return ResponseEntity.badRequest()
-//                            .body(ApiResponse.error("您已禁言對方，因此無法回復"));
-//                }
-//            }
-//
-//            // 2. 驗證 productId
-//            if (request.get("productId") == null) {
-//                return ResponseEntity.badRequest().body(ApiResponse.error("商品ID不能為空"));
-//            }
-//            Integer productId = Integer.valueOf(request.get("productId").toString());
-//
-//            // 3. 驗證 content（關鍵修復！）
-//            String content = request.get("content") != null ? (String) request.get("content") : null;
-//            if (content == null || content.trim().isEmpty()) {
-//                return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
-//            }
-//            content = content.trim();
-//
-//            // 解析樓中樓參數 (parentId)
-//            // 注意：replyToUser 已在上方解析，此處直接使用即可
-//            Long parentId = request.get("parentId") != null ? Long.valueOf(request.get("parentId").toString()) : null;
-//
-//            Product product = productRepository.findById(productId)
-//                    .orElseThrow(() -> new RuntimeException("商品不存在"));
-//
-//            // 修改：使用 UserRepository 獲取 User 實體
-//            User user = userRepository.findByUsername(username)
-//                    .orElseThrow(() -> new RuntimeException("用戶不存在"));
-//
-//            Review review = new Review();
-//            review.setUser(user); // 修改：設置 User 關聯
-//            review.setProduct(product);
-//            review.setContent(content);  // 確保 content 不為 null
-//
-//            if (parentId != null) {
-//                // ================= 樓中樓回覆邏輯 =================
-//                review.setParentId(parentId);
-//                review.setReplyToUser(replyToUser);
-//                review.setOrderNo(null);
-//                review.setRating(null);
-//            } else {
-//                // ================= 根評論邏輯 =================
-//                String orderNo = (String) request.get("orderNo");
-//                boolean isAdmin = "admin".equals(username); // 【新增】判斷是否為管理員
-//
-//                Double rating = null;
-//                if (request.get("rating") != null && !"null".equals(request.get("rating").toString())) {
-//                    rating = Double.valueOf(request.get("rating").toString());
-//                }
-//
-//                if (!isAdmin) {
-//                    // 【普通用戶邏輯】：必須有評分、必須有訂單、必須更新統計
-//                    if (rating == null) {
-//                        return ResponseEntity.badRequest().body(ApiResponse.error("評分不能為空"));
-//                    }
-//
-//                    Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
-//                            .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
-//
-//                    if (reviewRepository.findByOrderNoAndProduct_ProductId(orderNo, productId) != null) {
-//                        return ResponseEntity.badRequest().body(ApiResponse.error("您已經評價過該商品"));
-//                    }
-//
-//                    review.setOrderNo(orderNo);
-//                    review.setRating(rating);
-//
-//                    // 更新商品統計數據 (僅普通用戶觸發)
-//                    Integer currentCount = product.getTotalReviewCount();
-//                    product.setTotalReviewCount(currentCount == null ? 1 : currentCount + 1);
-//                    BigDecimal currentScore = product.getTotalScore();
-//                    product.setTotalScore(currentScore == null ? BigDecimal.valueOf(rating) : currentScore.add(BigDecimal.valueOf(rating)));
-//                    productRepository.save(product);
-//                } else {
-//                    // 【管理員邏輯】：無需訂單、無需評分、不更新統計
-//                    review.setOrderNo("ADMIN_COMMENT"); // 使用特殊標識，避免唯一索引衝突
-//                    review.setRating(null);             // 評分為 null，前端不會顯示星星
-//                }
-//
-//                review.setParentId(null);
-//                review.setReplyToUser(null);
-//            }
-//
-//            // 保存評論到數據庫
-//            reviewRepository.save(review);
-//
-//            return ResponseEntity.ok(ApiResponse.ok("提交成功"));
-//
-//        } catch (Exception e) {
-//            System.err.println(" 提交評論/回覆失敗: " + e.getClass().getName() + " - " + e.getMessage());
-//            e.printStackTrace();
-//            return ResponseEntity.internalServerError()
-//                    .body(ApiResponse.error("提交失敗: " + (e.getMessage() != null ? e.getMessage() : "未知錯誤")));
-//        }
-//    }
 
     @PostMapping("/submit")
     public ResponseEntity<ApiResponse> submitReview(@RequestBody Map<String, Object> request, Authentication authentication) {
-        try {
-            // 1. 先驗證認證狀態
-            if (authentication == null || !authentication.isAuthenticated()
-                    || "anonymousUser".equals(authentication.getPrincipal())) {
-                return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
-            }
-
-            String username = authentication.getName();
-
-            // ================= 新增：檢查管理員全局禁言 =================
-            var activeBan = adminPenaltyService.getActiveGlobalBan(username);
-            if (activeBan.isPresent()) {
-                // 構造包含過期時間的錯誤數據
-                Map<String, Object> errorData = new HashMap<>();
-                errorData.put("banned", true);
-                errorData.put("expiresAt", activeBan.get().getEndTime()); // 發送 ISO 格式時間給前端
-
-                // 返回特定錯誤 "GLOBAL_BAN"，前端 React 會捕獲這個 message 並彈窗
-                return ResponseEntity.badRequest()
-                        .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
-            }
-            // ================= 檢查結束 =================
-
-            //檢查是否被管理員永久拉黑
-            if (adminPenaltyService.isBlacklisted(username)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(new ApiResponse(false, "BLACKLISTED", "您已被管理員永久拉黑，無法發表評論或回復"));
-            }
-
-            String replyToUser = (String) request.get("replyToUser");
-            if (replyToUser != null && !replyToUser.trim().isEmpty()) {
-                // 調用 UserBlockService 檢查 A→B 或 B→A 是否存在 (普通用戶互相禁言)
-                if (userBlockService.isBlocked(username, replyToUser)) {
-                    return ResponseEntity.badRequest()
-                            .body(ApiResponse.error("您已禁言對方，因此無法回復"));
-                }
-            }
-
-            // 2. 驗證 productId
-            if (request.get("productId") == null) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("商品ID不能為空"));
-            }
-            Integer productId = Integer.valueOf(request.get("productId").toString());
-
-            // 3. 驗證 content（關鍵修復！）
-            String content = request.get("content") != null ? (String) request.get("content") : null;
-            if (content == null || content.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
-            }
-            content = content.trim();
-
-            // 解析樓中樓參數 (parentId)
-            // 注意：replyToUser 已在上方解析，此處直接使用即可
-            Long parentId = request.get("parentId") != null ? Long.valueOf(request.get("parentId").toString()) : null;
-
-            Product product = productRepository.findById(productId)
-                    .orElseThrow(() -> new RuntimeException("商品不存在"));
-
-            // 修改：使用 UserRepository 獲取 User 實體
-            User user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("用戶不存在"));
-
-            Review review = new Review();
-            review.setUser(user); // 修改：設置 User 關聯
-            review.setProduct(product);
-            review.setContent(content);  // 確保 content 不為 null
-
-            if (parentId != null) {
-                // ================= 樓中樓回覆邏輯 =================
-                review.setParentId(parentId);
-                review.setReplyToUser(replyToUser);
-                review.setOrderNo(null);
-                review.setRating(null);
-            } else {
-                // ================= 根評論邏輯 =================
-                // 核心修復：精準判斷是否為管理員 (同時校驗 username 和 Role 枚舉)
-                boolean isAdmin = "admin".equals(username) ||
-                        (user.getRole() != null && user.getRole() == User.Role.ADMIN);
-
-                if (isAdmin) {
-                    // 【管理員邏輯】：無需訂單、無需評分、絕對不更新統計數據
-                    review.setOrderNo("ADMIN_COMMENT"); // 特殊標識
-                    review.setRating(null);             // 評分為 null
-                } else {
-                    // 【普通用戶邏輯】：必須有評分、必須有訂單、必須更新統計
-                    String orderNo = (String) request.get("orderNo");
-
-                    // 普通用戶必須有評分
-                    if (request.get("rating") == null) {
-                        return ResponseEntity.badRequest().body(ApiResponse.error("評分不能為空"));
-                    }
-                    Double rating = Double.valueOf(request.get("rating").toString());
-
-                    // 校驗訂單
-                    Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
-                            .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
-
-                    if (reviewRepository.findByOrderNoAndProduct_ProductId(orderNo, productId) != null) {
-                        return ResponseEntity.badRequest().body(ApiResponse.error("您已經評價過該商品"));
-                    }
-
-                    review.setOrderNo(orderNo);
-                    review.setRating(rating);
-
-                    // 更新商品統計數據 (僅普通用戶觸發)
-                    Integer currentCount = product.getTotalReviewCount();
-                    product.setTotalReviewCount(currentCount == null ? 1 : currentCount + 1);
-                    BigDecimal currentScore = product.getTotalScore();
-                    product.setTotalScore(currentScore == null ? BigDecimal.valueOf(rating) : currentScore.add(BigDecimal.valueOf(rating)));
-                    productRepository.save(product);
-                }
-
-                review.setParentId(null);
-                review.setReplyToUser(null);
-            }
-
-            // 保存評論到數據庫
-            reviewRepository.save(review);
-
-            return ResponseEntity.ok(ApiResponse.ok("提交成功"));
-
-        } catch (Exception e) {
-            System.err.println(" 提交評論/回覆失敗: " + e.getClass().getName() + " - " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("提交失敗: " + (e.getMessage() != null ? e.getMessage() : "未知錯誤")));
+    try {
+        // 1. 先驗證認證狀態
+        if (authentication == null || !authentication.isAuthenticated()
+                || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
         }
+
+        String username = authentication.getName();
+
+        // ================= 新增：檢查管理員全局禁言 =================
+        var activeBan = adminPenaltyService.getActiveGlobalBan(username);
+        if (activeBan.isPresent()) {
+            // 構造包含過期時間的錯誤數據
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("banned", true);
+            errorData.put("expiresAt", activeBan.get().getEndTime()); // 發送 ISO 格式時間給前端
+
+            // 返回特定錯誤 "GLOBAL_BAN"，前端 React 會捕獲這個 message 並彈窗
+            return ResponseEntity.badRequest()
+                    .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
+        }
+        // ================= 檢查結束 =================
+
+        //檢查是否被管理員永久拉黑
+        if (adminPenaltyService.isBlacklisted(username)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ApiResponse(false, "BLACKLISTED", "您已被管理員永久拉黑，無法發表評論或回復"));
+        }
+
+        String replyToUser = (String) request.get("replyToUser");
+        if (replyToUser != null && !replyToUser.trim().isEmpty()) {
+            // 調用 UserBlockService 檢查 A→B 或 B→A 是否存在 (普通用戶互相禁言)
+            if (userBlockService.isBlocked(username, replyToUser)) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("您已禁言對方，因此無法回復"));
+            }
+        }
+
+        // 2. 驗證 productId
+        if (request.get("productId") == null) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("商品ID不能為空"));
+        }
+        Integer productId = Integer.valueOf(request.get("productId").toString());
+
+        // 3. 驗證並處理 content（核心修改：區分純文本與富文本）
+        String rawContent = request.get("content") != null ? (String) request.get("content") : null;
+        if (rawContent == null || rawContent.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
+        }
+
+        // 【核心修復 1】：使用 Jsoup 清理 HTML，防止 XSS 攻擊
+        // 允許常見的富文本標籤以及 style 屬性（用於字體顏色、背景色等）
+        Safelist safelist = Safelist.relaxed()
+                .addTags("span", "div", "ul", "ol", "li", "u", "s")
+                .addAttributes("span", "style")
+                .addAttributes("div", "style")
+                .addAttributes(":all", "class");
+        String safeHtml = Jsoup.clean(rawContent, safelist);
+
+        // 【核心修復 2】：提取純文本，用於 content 字段 (方便後台搜索、發送系統通知時不帶 HTML 標籤)
+        String plainText = Jsoup.parse(safeHtml).text();
+
+        if (plainText.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
+        }
+
+        // 解析樓中樓參數 (parentId)
+        // 注意：replyToUser 已在上方解析，此處直接使用即可
+        Long parentId = request.get("parentId") != null ? Long.valueOf(request.get("parentId").toString()) : null;
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("商品不存在"));
+
+        // 修改：使用 UserRepository 獲取 User 實體
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用戶不存在"));
+
+        Review review = new Review();
+        review.setUser(user); // 修改：設置 User 關聯
+        review.setProduct(product);
+
+        // 【核心修復 3】：分別設置純文本和富文本字段
+        review.setContent(plainText);           // 存純文本 (用於通知、搜索)
+        review.setFormattedContent(safeHtml);   // 存安全的 HTML (用於前端渲染)
+        review.setIsFormatted(true);            // 標記為富文本
+
+        if (parentId != null) {
+            // ================= 樓中樓回覆邏輯 =================
+            review.setParentId(parentId);
+            review.setReplyToUser(replyToUser);
+            review.setOrderNo(null);
+            review.setRating(null);
+        } else {
+            // ================= 根評論邏輯 =================
+            // 核心修復：精準判斷是否為管理員 (同時校驗 username 和 Role 枚舉)
+            boolean isAdmin = "admin".equals(username) ||
+                    (user.getRole() != null && user.getRole() == User.Role.ADMIN);
+
+            if (isAdmin) {
+                // 【管理員邏輯】：無需訂單、無需評分、絕對不更新統計數據
+                review.setOrderNo("ADMIN_COMMENT"); // 特殊標識
+                review.setRating(null);             // 評分為 null
+            } else {
+                // 【普通用戶邏輯】：必須有評分、必須有訂單、必須更新統計
+                String orderNo = (String) request.get("orderNo");
+
+                // 普通用戶必須有評分
+                if (request.get("rating") == null) {
+                    return ResponseEntity.badRequest().body(ApiResponse.error("評分不能為空"));
+                }
+                Double rating = Double.valueOf(request.get("rating").toString());
+
+                // 校驗訂單
+                Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
+                        .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
+
+                if (reviewRepository.findByOrderNoAndProduct_ProductId(orderNo, productId) != null) {
+                    return ResponseEntity.badRequest().body(ApiResponse.error("您已經評價過該商品"));
+                }
+
+                review.setOrderNo(orderNo);
+                review.setRating(rating);
+
+                // 更新商品統計數據 (僅普通用戶觸發)
+                Integer currentCount = product.getTotalReviewCount();
+                product.setTotalReviewCount(currentCount == null ? 1 : currentCount + 1);
+                BigDecimal currentScore = product.getTotalScore();
+                product.setTotalScore(currentScore == null ? BigDecimal.valueOf(rating) : currentScore.add(BigDecimal.valueOf(rating)));
+                productRepository.save(product);
+            }
+
+            review.setParentId(null);
+            review.setReplyToUser(null);
+        }
+
+        // 保存評論到數據庫
+        reviewRepository.save(review);
+
+        return ResponseEntity.ok(ApiResponse.ok("提交成功"));
+
+    } catch (Exception e) {
+        System.err.println(" 提交評論/回覆失敗: " + e.getClass().getName() + " - " + e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity.internalServerError()
+                .body(ApiResponse.error("提交失敗: " + (e.getMessage() != null ? e.getMessage() : "未知錯誤")));
     }
+}
 
     @GetMapping("/{parentId}/replies")
     public ResponseEntity<?> getReplies(@PathVariable Long parentId,
@@ -866,6 +758,8 @@ public class ReviewController {
             map.put("pinned", r.getPinned());
             map.put("createdAt", r.getCreatedAt());
             map.put("replyCount", replyCounts.getOrDefault(r.getReviewId(), 0L));
+            map.put("formattedContent", r.getFormattedContent());
+            map.put("isFormatted", r.getIsFormatted());
 
             Map<String, Object> userMap = new HashMap<>();
             userMap.put("username", r.getUser().getUsername());

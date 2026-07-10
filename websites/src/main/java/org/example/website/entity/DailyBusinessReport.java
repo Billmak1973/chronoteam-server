@@ -54,13 +54,6 @@ public class DailyBusinessReport {
     @Column(name = "acquisition_cost", precision = 15, scale = 2)
     private BigDecimal acquisitionCost = BigDecimal.ZERO;
 
-    /**
-     * 淨利潤 = GMV - 收購成本 - 退款金額
-     * (因為已刪除寄售模式，所以不再有服務費收入)
-     */
-    @Column(name = "net_profit", precision = 15, scale = 2)
-    private BigDecimal netProfit = BigDecimal.ZERO;
-
     // ================= 平台活躍度指標 =================
 
     /** 當日新註冊用戶數 */
