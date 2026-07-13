@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -42,7 +41,7 @@
         .page-title i { color: var(--gold); }
         .page-subtitle { color: var(--gray); margin-bottom: 2rem; font-size: 0.95rem; }
 
-        /* 購物車列表樣式 */
+        /* 購物車列表樣式 (加上 .cart-items-list 限定，避免污染導航欄下拉菜單) */
         .cart-items-list {
             background: white;
             border-radius: 12px;
@@ -50,15 +49,16 @@
             overflow: hidden;
             margin-bottom: 2rem;
         }
-        .cart-item {
+        .cart-items-list .cart-item {
             display: flex;
             align-items: center;
             padding: 1.5rem;
             border-bottom: 1px solid var(--light);
             transition: background 0.3s;
         }
-        .cart-item:last-child { border-bottom: none; }
-        .cart-item:hover { background: #f8f9fa; }
+        .cart-items-list .cart-item:last-child { border-bottom: none; }
+        .cart-items-list .cart-item:hover { background: #f8f9fa; }
+
         .item-image {
             width: 120px; height: 120px; border-radius: 8px;
             overflow: hidden; margin-right: 1.5rem; flex-shrink: 0;
@@ -127,15 +127,15 @@
             align-items: center;
         }
 
-        /* 隐藏原生 checkbox */
-        .cart-item-checkbox {
+        /* 隐藏原生 checkbox - 僅限詳情頁列表 */
+        .cart-items-list .cart-item-checkbox {
             position: absolute;
             opacity: 0;
             cursor: pointer;
         }
 
-        /* 自定义复选框样式 */
-        .checkbox-label {
+        /* 自定义复选框样式 - 僅限詳情頁列表 */
+        .cart-items-list .checkbox-label {
             position: relative;
             display: block;
             width: 22px;
@@ -147,14 +147,14 @@
             transition: all 0.3s;
         }
 
-        /* 选中状态 */
-        .cart-item-checkbox:checked + .checkbox-label {
+        /* 选中状态 - 僅限詳情頁列表 */
+        .cart-items-list .cart-item-checkbox:checked + .checkbox-label {
             background: var(--gold);
             border-color: var(--gold);
         }
 
-        /* 选中后的对勾 */
-        .cart-item-checkbox:checked + .checkbox-label::after {
+        /* 选中后的对勾 - 僅限詳情頁列表 */
+        .cart-items-list .cart-item-checkbox:checked + .checkbox-label::after {
             content: '✓';
             position: absolute;
             top: 50%;
@@ -165,25 +165,42 @@
             font-weight: bold;
         }
 
-        /* 悬停效果 */
-        .checkbox-label:hover {
+        /* 悬停效果 - 僅限詳情頁列表 */
+        .cart-items-list .checkbox-label:hover {
             border-color: var(--gold);
             transform: scale(1.05);
         }
 
-        /* 商品未选中时的样式 */
-        .cart-item.not-selected {
-            opacity: 0.6;
+        /* ========================================== */
+        /*  ✅ 修復 2：選中/未選中 狀態樣式優化 */
+        /* ========================================== */
+
+        /* 商品未选中时的样式 - 僅限詳情頁列表 */
+        .cart-items-list .cart-item.not-selected {
+            opacity: 0.5;  /* 整體透明度降低 */
         }
 
-        .cart-item.not-selected .item-image img {
+        .cart-items-list .cart-item.not-selected .item-image img {
             filter: grayscale(100%);
+        }
+
+        /* ✅ 新增：未選中狀態的文字顏色強制變灰 */
+        .cart-items-list .cart-item.not-selected .item-name,
+        .cart-items-list .cart-item.not-selected .item-price,
+        .cart-items-list .cart-item.not-selected .item-subtotal {
+            color: var(--gray) !important;
+        }
+
+        /* ✅ 新增：選中狀態恢復正常顏色和不透明度 */
+        .cart-items-list .cart-item:not(.not-selected) {
+            opacity: 1;
         }
 
         /* 響應式 */
         @media (max-width: 900px) { .dashboard-container { flex-direction: column; } }
         @media (max-width: 768px) {
-            .cart-item { flex-direction: column; align-items: flex-start; }
+            /* 響應式也必須加上限定 */
+            .cart-items-list .cart-item { flex-direction: column; align-items: flex-start; }
             .item-image { width: 100%; height: 200px; margin-right: 0; margin-bottom: 1rem; }
             .item-actions { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; margin-top: 1rem; }
             .cart-summary { flex-direction: column; gap: 1.5rem; }
@@ -212,8 +229,10 @@
                 <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" checked>
                 <span style="font-weight: 600; color: var(--primary);">全選</span>
             </label>
+
+            <!-- ✅ 修復 1：移除 th:text="${cartCount}"，改由前端 JS 動態計算 -->
             <span style="color: var(--gray);">
-                已選擇 <strong id="selectedCount" th:text="${cartCount}">0</strong> 件商品
+                已選擇 <strong id="selectedCount">0</strong> 件商品
             </span>
         </div>
 
@@ -221,7 +240,8 @@
         <div th:if="${cartItems != null and !cartItems.isEmpty()}" class="cart-items-list">
             <div th:each="item : ${cartItems}"
                  class="cart-item"
-                 th:data-cart-id="${item.cartId}">
+                 th:data-cart-id="${item.cartId}"
+                 th:data-product-id="${item.product.productId}">
 
                 <!--商品選擇復選框 -->
                 <div class="item-checkbox">
@@ -230,7 +250,7 @@
                            th:id="'checkbox-' + ${item.cartId}"
                            th:data-cart-id="${item.cartId}"
                            onchange="toggleItemSelection(this)"
-                           checked>
+                           th:checked="${item.selected != false}">
                     <label th:for="'checkbox-' + ${item.cartId}" class="checkbox-label"></label>
                 </div>
 
@@ -310,41 +330,110 @@
 <script src="/js/common.js"></script>
 
 <script>
-    // 存儲選中的購物車 ID
-    let selectedCartItems = new Set();
-
-    // 初始化：默認全選
     document.addEventListener('DOMContentLoaded', function() {
+        //  修复 1：关键：先判断并清空全局变量，防止残留数据
+        if (!window.selectedCartItems) {
+            window.selectedCartItems = new Set();
+        } else {
+            window.selectedCartItems.clear();
+        }
+
+        //  从当前页面的 checkbox 重建全局变量
         const checkboxes = document.querySelectorAll('.cart-item-checkbox');
         checkboxes.forEach(checkbox => {
             if (checkbox.checked) {
-                selectedCartItems.add(checkbox.dataset.cartId);
+                window.selectedCartItems.add(checkbox.dataset.cartId);
+            } else {
+                // 未选中的商品加上 not-selected 类，触发 CSS 变灰
+                checkbox.closest('.cart-item').classList.add('not-selected');
             }
         });
+
+        //  确保调用更新函数，刷新前端显示的数量与总价
         updateCartTotal();
+        updateSelectedCount();
+
+        // 🟢 新增：頁面加載時同步一次全選框狀態
+        syncSelectAllCheckbox();
+
+        setupCartSync();
     });
 
-    // 切換商品選擇狀態
-    function toggleItemSelection(checkbox) {
+    //  新增：設置購物車同步機制
+    function setupCartSync() {
+        // 監聽數量變化按鈕（詳情頁）
+        document.querySelectorAll('.qty-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                // 等待0.5秒後同步下拉菜單
+                setTimeout(() => {
+                    if (typeof loadCartItems === 'function') {
+                        loadCartItems(); // 刷新下拉菜單
+                    }
+                }, 500);
+            });
+        });
+    }
+
+    // 切换商品选择状态（详情页）
+    async function toggleItemSelection(checkbox) {
         const cartId = checkbox.dataset.cartId;
+        const isChecked = checkbox.checked;
         const cartItem = checkbox.closest('.cart-item');
 
-        if (checkbox.checked) {
-            selectedCartItems.add(cartId);
-            cartItem.classList.remove('not-selected');
+        if (isChecked) {
+            window.selectedCartItems.add(cartId);
+            cartItem.classList.remove('not-selected'); // 移除灰色样式
         } else {
-            selectedCartItems.delete(cartId);
-            cartItem.classList.add('not-selected');
+            window.selectedCartItems.delete(cartId);
+            cartItem.classList.add('not-selected'); // 添加灰色样式
+        }
+
+        // 核心同步：调用后端 API 更新选中状态
+        try {
+            await fetch(`/api/cart/toggle-selection/${cartId}?isSelected=${isChecked}`, {
+                method: 'PUT'
+            });
+
+            //  新增：刷新导航栏下拉菜单
+            if (typeof loadCartItems === 'function') {
+                loadCartItems();
+            }
+        } catch (err) {
+            console.error('同步选中状态失败:', err);
         }
 
         updateCartTotal();
         updateSelectedCount();
+
+        // 🟢 核心修復：每次單選變化時，同步全選框狀態
+        syncSelectAllCheckbox();
+    }
+
+    // 🟢 新增：同步全選框狀態函數
+    function syncSelectAllCheckbox() {
+        const selectAllCheckbox = document.getElementById('selectAll');
+        if (!selectAllCheckbox) return; // 安全護欄
+
+        const checkboxes = document.querySelectorAll('.cart-item-checkbox');
+        const totalCheckboxes = checkboxes.length;
+
+        if (totalCheckboxes === 0) {
+            selectAllCheckbox.checked = false;
+            return;
+        }
+
+        let checkedCount = 0;
+        checkboxes.forEach(cb => {
+            if (cb.checked) checkedCount++;
+        });
+
+        // 邏輯：只有當「所有單選框都打勾」時，全選框才打勾；否則全選框取消打勾
+        selectAllCheckbox.checked = (checkedCount === totalCheckboxes);
     }
 
     // 更新購物車總價（只計算選中的商品）
     function updateCartTotal() {
         let total = 0;
-
         document.querySelectorAll('.cart-item').forEach(item => {
             const checkbox = item.querySelector('.cart-item-checkbox');
             if (checkbox && checkbox.checked) {
@@ -355,31 +444,32 @@
                 }
             }
         });
-
-        // 更新总价显示
         const totalElement = document.querySelector('.cart-total span:last-child');
         if (totalElement) {
             totalElement.textContent = 'HK$ ' + total.toLocaleString('zh-HK');
         }
     }
 
-    // 更新选中数量显示
+    // 更新選中數量顯示
     function updateSelectedCount() {
-        const count = selectedCartItems.size;
+        const count = window.selectedCartItems.size;
         const countElement = document.getElementById('selectedCount');
         if (countElement) {
             countElement.textContent = count;
         }
     }
 
-    // 全选/取消全选
+    // 全選/取消全選
     function toggleSelectAll() {
         const selectAllCheckbox = document.getElementById('selectAll');
         const checkboxes = document.querySelectorAll('.cart-item-checkbox');
 
         checkboxes.forEach(checkbox => {
-            checkbox.checked = selectAllCheckbox.checked;
-            toggleItemSelection(checkbox);
+            // 只有狀態發生變化時才觸發，避免重複調用 API
+            if (checkbox.checked !== selectAllCheckbox.checked) {
+                checkbox.checked = selectAllCheckbox.checked;
+                toggleItemSelection(checkbox);
+            }
         });
     }
 
@@ -393,15 +483,30 @@
 
         if (newQty < 1) {
             if (confirm('確定要移除此商品嗎？')) {
-                await removeCartItem(cartId);
+                const cartItem = document.querySelector(`[data-cart-id="${cartId}"]`);
+                const productId = cartItem ? cartItem.dataset.productId : null;
+                if (productId) {
+                    await removeItem(productId);
+                }
             }
             return;
         }
 
         try {
-            const response = await fetch(`/api/cart/update/${cartId}?quantity=${newQty}`, { method: 'PUT' });
-            if (response.ok) location.reload();
-            else showNotification('❌ ' + ((await response.json()).message || '更新失敗'), true);
+            const response = await fetch(`/api/cart/update/${cartId}?quantity=${newQty}`, {
+                method: 'PUT'
+            });
+
+            if (response.ok) {
+                // 關鍵：刷新下拉菜單
+                if (typeof loadCartItems === 'function') {
+                    loadCartItems();
+                }
+                // 300ms後刷新詳情頁（給API一點時間）
+                setTimeout(() => location.reload(), 300);
+            } else {
+                showNotification('❌ ' + ((await response.json()).message || '更新失敗'), true);
+            }
         } catch (error) {
             console.error('更新數量失敗:', error);
             showNotification('❌ 網絡錯誤', true);
@@ -421,20 +526,19 @@
         }
     }
 
-    // 結賬
+    // 結賬 (現在 window.selectedCartItems 是全局共享的，可以直接使用)
     async function checkout() {
-        if (selectedCartItems.size === 0) {
+        if (window.selectedCartItems.size === 0) {
             showNotification('❌ 请至少选择一件商品！', true);
             return;
         }
 
         try {
-            // 将选中的商品 ID 发送给后端
             const response = await fetch('/checkout/api/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    selectedCartIds: Array.from(selectedCartItems)
+                    selectedCartIds: Array.from(window.selectedCartItems)
                 })
             });
             const result = await response.json();

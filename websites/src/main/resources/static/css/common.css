@@ -328,6 +328,59 @@ body {
     box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
 }
 
+/* 購物車刪除彈窗樣式 - 優化版 */
+.delete-modal {
+  border-top: 4px solid var(--accent);
+}
+
+.delete-modal .modal-icon {
+  background: linear-gradient(135deg, #ffd89b 0%, #e94560 100%);
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 1rem;
+}
+
+.delete-modal .modal-icon i {
+  font-size: 1.8rem;
+  color: white;
+}
+
+.delete-modal .modal-title {
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.delete-modal .modal-message {
+  color: var(--gray);
+  margin-bottom: 1.5rem;
+}
+
+.delete-modal .modal-actions {
+  gap: 0.8rem;
+}
+
+.delete-modal .btn-cancel {
+  background: #e9ecef;
+  color: var(--primary);
+  padding: 0.6rem 1.2rem;
+}
+
+.delete-modal .btn-cancel:hover {
+  background: #dee2e6;
+}
+
+.delete-modal .btn-confirm-delete {
+  background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border: none;
+}
+
+.delete-modal .btn-confirm-delete:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+}
+
 /* 登出弹窗响应式 */
 @media (max-width: 480px) {
     .custom-modal-box {

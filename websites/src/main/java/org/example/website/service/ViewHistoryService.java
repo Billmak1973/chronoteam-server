@@ -104,6 +104,6 @@ public class ViewHistoryService {
     public void cleanOldHistory() {
         LocalDateTime cutoffDate = LocalDateTime.now().minusMonths(6);
         viewHistoryRepository.deleteOlderThan(cutoffDate);
-        System.out.println("✅ 已自動清理半年前的瀏覽歷史記錄");
+        System.out.println(" 已自動清理半年前的瀏覽歷史記錄");
     }
 }

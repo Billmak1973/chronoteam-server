@@ -1454,7 +1454,7 @@
             </div>
         </div>
 
-        <!--  3. 支付方式選擇 -->
+        <!-- 3. 支付方式選擇 -->
         <div class="payment-methods">
             <h3 style="margin-bottom: 1rem; color: var(--primary); font-size: 1.1rem;">
                 <i class="fas fa-wallet" style="color: var(--gold); margin-right: 0.5rem;"></i> 選擇支付方式
@@ -1463,7 +1463,7 @@
             <!-- 線上支付 -->
             <div class="payment-option">
                 <input type="radio" name="paymentMethod" value="ONLINE" id="pay-online" checked
-                    onchange="togglePaymentMethod()">
+                       onchange="togglePaymentMethod()">
                 <label for="pay-online">
                     <i class="fas fa-credit-card"></i>
                     <div>
@@ -1475,37 +1475,65 @@
 
             <!-- 配送方式 (僅線上支付時顯示) -->
             <div id="deliveryMethodSection"
-                style="display: none; margin-left: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 3px solid var(--gold); margin-bottom: 1rem;">
+                 style="display: none; margin-left: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 3px solid var(--gold); margin-bottom: 1rem;">
                 <label style="display: block; margin-bottom: 0.8rem; font-weight: 600; color: var(--primary);">
                     <i class="fas fa-truck" style="color: var(--gold); margin-right: 0.5rem;"></i> 選擇配送方式
                 </label>
 
-                <!-- 快遞配送 (如果沒有地址則禁用) -->
+                <!--  快遞配送 (已整合備用地址切換功能) -->
                 <div class="payment-option" style="margin-bottom: 0.5rem; background: white;">
                     <input type="radio" name="deliveryMethod" value="EXPRESS" id="delivery-express"
-                        onchange="toggleDeliveryMethod()"
-                        th:disabled="${user.address == null || user.address.isEmpty()}"
-                        th:checked="${user.address != null && !user.address.isEmpty()}">
+                           onchange="toggleDeliveryMethod()"
+                           th:disabled="${user.address == null || user.address.isEmpty()}"
+                           th:checked="${user.address != null && !user.address.isEmpty()}">
                     <label for="delivery-express" style="cursor: pointer;"
-                        th:classappend="${user.address == null || user.address.isEmpty()} ? 'text-muted' : ''">
+                           th:classappend="${user.address == null || user.address.isEmpty()} ? 'text-muted' : ''">
                         <i class="fas fa-shipping-fast"></i>
-                        <div>
+                        <div style="flex: 1;">
                             <div style="font-weight: 600;">快遞配送</div>
                             <div style="font-size: 0.85rem; color: var(--gray);">
-                                <span th:if="${user.address != null && !user.address.isEmpty()}">送至: <span
-                                        th:text="${user.address}">您的收貨地址</span></span>
-                                <span th:if="${user.address == null || user.address.isEmpty()}"
-                                    style="color: #dc3545; font-weight: 600;">請先在「帳戶信息」中填寫收貨地址</span>
+                <span id="expressDeliveryAddress">
+                    <span th:if="${user.address != null && !user.address.isEmpty()}">送至: <span
+                            th:text="${user.address}">您的收貨地址</span></span>
+                    <span th:if="${user.address == null || user.address.isEmpty()}"
+                          style="color: #dc3545; font-weight: 600;">請先在「帳戶信息」中填寫收貨地址</span>
+                </span>
+                            </div>
+
+                            <!-- 备用地址切换按钮 -->
+                            <div th:if="${user.backupAddress != null && !user.backupAddress.isEmpty()}"
+                                 style="margin-top: 0.5rem;">
+                                <button type="button" id="toggleAddressBtn" class="btn-sm"
+                                        style="background: transparent; color: var(--gold); border: 1px dashed var(--gold); padding: 0.3rem 0.8rem; font-size: 0.8rem; cursor: pointer; border-radius: 4px;"
+                                        onclick="showAddressToggleModal()">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    <span id="toggleAddressText">改用備用地址收貨</span>
+                                </button>
                             </div>
                         </div>
+
+                        <!-- 右侧倒计时区域（与左侧内容并排） -->
+                        <div style="flex-shrink: 0; margin-left: 1rem; text-align: right;">
+                            <div style="background: #fff9f0; border: 1px dashed var(--gold); border-radius: 6px; padding: 0.8rem; min-width: 200px;">
+                                <div style="font-size: 0.85rem; color: var(--primary); margin-bottom: 0.3rem;">
+                                    <i class="fas fa-clock" style="color: var(--gold);"></i>
+                                    截止時間還剩：<span id="cutoffCountdown" style="font-weight: 700; color: var(--accent);">計算中...</span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: var(--gray);">
+                                    <i class="fas fa-shipping-fast" style="color: var(--gold);"></i>
+                                    本週發貨：<span id="shippingDate" style="font-weight: 600;">計算中...</span>
+                                </div>
+                            </div>
+                        </div>
+
                     </label>
                 </div>
 
                 <!-- 門店自取 -->
                 <div class="payment-option" style="background: white;">
                     <input type="radio" name="deliveryMethod" value="STORE_PICKUP" id="delivery-pickup"
-                        onchange="toggleDeliveryMethod()"
-                        th:checked="${user.address == null || user.address.isEmpty()}">
+                           onchange="toggleDeliveryMethod()"
+                           th:checked="${user.address == null || user.address.isEmpty()}">
                     <label for="delivery-pickup">
                         <i class="fas fa-store-alt"></i>
                         <div>
@@ -1519,7 +1547,7 @@
             <!-- 線下支付 -->
             <div class="payment-option">
                 <input type="radio" name="paymentMethod" value="OFFLINE" id="pay-offline"
-                    onchange="togglePaymentMethod()">
+                       onchange="togglePaymentMethod()">
                 <label for="pay-offline">
                     <i class="fas fa-store"></i>
                     <div>
@@ -1548,6 +1576,36 @@
             </div>
         </div>
 
+        <!-- 地址切換確認彈窗 (放在 payment-methods 外部，確保 z-index 層級正確) -->
+        <div id="addressToggleModal" class="confirm-modal-overlay" style="display: none;">
+            <div class="confirm-modal-box">
+                <h3 class="confirm-modal-title">
+                    <i class="fas fa-map-marker-alt" style="color: var(--gold);"></i>
+                    <span id="modalTitle">確認切換收貨地址？</span>
+                </h3>
+                <div class="confirm-modal-message" style="text-align: left; background: var(--light); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                    <div style="margin-bottom: 0.8rem;">
+                        <div style="font-size: 0.85rem; color: var(--gray); margin-bottom: 0.3rem;">當前地址：</div>
+                        <div id="currentAddressDisplay" style="font-weight: 600; color: var(--primary);">-</div>
+                    </div>
+                    <div style="text-align: center; color: var(--gold); margin: 0.5rem 0;">
+                        <i class="fas fa-arrow-down"></i> 切換為
+                    </div>
+                    <div>
+                        <div style="font-size: 0.85rem; color: var(--gray); margin-bottom: 0.3rem;">新地址：</div>
+                        <div id="newAddressDisplay" style="font-weight: 600; color: var(--accent);">-</div>
+                    </div>
+                </div>
+                <div class="confirm-modal-actions">
+                    <button class="btn-confirm-cancel" onclick="closeAddressToggleModal()">
+                        取消
+                    </button>
+                    <button class="btn-confirm-yes" onclick="confirmAddressToggle()">
+                        <i class="fas fa-check"></i> 確認切換
+                    </button>
+                </div>
+            </div>
+        </div>
         <!-- 提示與支付按鈕 -->
         <div
             style="text-align: center; color: var(--gray); margin-bottom: 1rem; padding: 1rem; background: var(--light); border-radius: 8px;">
@@ -2640,6 +2698,206 @@ document.addEventListener('keydown', function(e) {
         closeStockExceedModal();
     }
 });
+
+// ==========================================
+// 9. 发货截止时间倒计时
+// ==========================================
+function updateCountdown() {
+    const now = new Date();
+    const currentDay = now.getDay(); // 0=周日, 1=周一, ..., 6=周六
+
+    // 计算下一个周六23:59:59
+    let nextSaturday = new Date(now);
+    const daysUntilSaturday = (6 - currentDay + 7) % 7; // 距离周六还有几天
+
+    if (daysUntilSaturday === 0 && currentDay === 6) {
+        // 如果今天是周六
+        if (now.getHours() >= 23 && now.getMinutes() >= 59) {
+            // 已经过了截止时间，显示下周
+            nextSaturday.setDate(nextSaturday.getDate() + 7);
+        }
+    } else {
+        nextSaturday.setDate(nextSaturday.getDate() + daysUntilSaturday);
+    }
+
+    nextSaturday.setHours(23, 59, 59, 0);
+
+    // 计算发货日期（周日）
+    let shippingDate = new Date(nextSaturday);
+    shippingDate.setDate(shippingDate.getDate() + 1); // 周六+1天=周日
+
+    // 更新倒计时
+    const countdownElement = document.getElementById('cutoffCountdown');
+    const shippingDateElement = document.getElementById('shippingDate');
+
+    if (countdownElement && shippingDateElement) {
+        const diff = nextSaturday - now;
+
+        if (diff > 0) {
+            // 计算天数、小时、分钟、秒
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            // 显示"x日x时x分x秒"格式
+            countdownElement.textContent = `${days}日${hours}時${minutes}分${seconds}秒`;
+
+            // 格式化发货日期
+            const options = { month: 'long', day: 'numeric', weekday: 'long' };
+            shippingDateElement.textContent = shippingDate.toLocaleDateString('zh-TW', options);
+        } else {
+            countdownElement.textContent = '已截止';
+            shippingDateElement.textContent = '下週日';
+        }
+    }
+}
+
+// 每秒更新倒计时
+setInterval(updateCountdown, 1000);
+// 页面加载时立即执行
+document.addEventListener('DOMContentLoaded', updateCountdown);
+
+        // ==========================================
+    //  2. 地址切換功能 (從這裡開始插入代碼 2)
+    // ==========================================
+    let isUsingBackupAddress = false; // 标记当前是否使用备用地址
+
+    // 显示地址切换确认弹窗
+    function showAddressToggleModal() {
+        const modal = document.getElementById('addressToggleModal');
+        const currentAddressDisplay = document.getElementById('currentAddressDisplay');
+        const newAddressDisplay = document.getElementById('newAddressDisplay');
+        const toggleText = document.getElementById('toggleAddressText');
+
+        // 获取 Thymeleaf 传递的地址数据
+        const mainAddress = /*[[${user.address}]]*/ '';
+        const backupAddress = /*[[${user.backupAddress}]]*/ '';
+
+        if (isUsingBackupAddress) {
+            currentAddressDisplay.textContent = backupAddress;
+            newAddressDisplay.textContent = mainAddress;
+        } else {
+            currentAddressDisplay.textContent = mainAddress;
+            newAddressDisplay.textContent = backupAddress;
+        }
+
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    // 关闭地址切换弹窗
+    function closeAddressToggleModal() {
+        const modal = document.getElementById('addressToggleModal');
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    }
+
+// 确认切换地址
+function confirmAddressToggle() {
+    const expressDeliveryAddress = document.getElementById('expressDeliveryAddress');
+    const toggleText = document.getElementById('toggleAddressText');
+
+    const mainAddress = /*[[${user.address}]]*/ '';
+    const backupAddress = /*[[${user.backupAddress}]]*/ '';
+
+    isUsingBackupAddress = !isUsingBackupAddress;
+
+    if (isUsingBackupAddress) {
+        expressDeliveryAddress.innerHTML = `送至: <span style="color: var(--accent);">${backupAddress}</span>`;
+        toggleText.textContent = '改用主地址發貨';
+    } else {
+        expressDeliveryAddress.innerHTML = `送至: <span>${mainAddress}</span>`;
+        toggleText.textContent = '改用備用地址收貨';
+    }
+
+    // 关闭弹窗
+    closeAddressToggleModal();
+
+    // 显示居中成功提示
+    showCenteredSuccessMessage('已成功切換！');
+}
+
+// 显示居中成功提示（2秒后自动消失）
+function showCenteredSuccessMessage(message) {
+    // 创建提示元素
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 1.5rem 3rem;
+        border-radius: 12px;
+        font-size: 1.2rem;
+        font-weight: 600;
+        box-shadow: 0 10px 40px rgba(40, 167, 69, 0.4);
+        z-index: 10004;
+        animation: slideUpFade 0.4s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    `;
+
+    toast.innerHTML = `
+        <i class="fas fa-check-circle" style="font-size: 1.5rem;"></i>
+        <span>${message}</span>
+    `;
+
+    // 添加动画样式
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideUpFade {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -40%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    document.body.appendChild(toast);
+
+    // 2秒后淡出并移除
+    setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translate(-50%, -60%)';
+
+        setTimeout(() => {
+            toast.remove();
+            style.remove();
+        }, 300);
+    }, 2000);
+}
+
+    // 点击遮罩层关闭弹窗
+    document.getElementById('addressToggleModal')?.addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeAddressToggleModal();
+        }
+    });
+
+    // ESC 键关闭弹窗
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            const addressModal = document.getElementById('addressToggleModal');
+            if (addressModal && addressModal.style.display === 'flex') {
+                closeAddressToggleModal();
+            }
+        }
+    });
+
     </script>
 </body>
 

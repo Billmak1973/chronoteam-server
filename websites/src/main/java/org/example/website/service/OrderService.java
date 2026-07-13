@@ -20,6 +20,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository; // 新增：直接獲取用戶實體
     private final OrderItemRepository orderItemRepository;
+    private final DailyBusinessReportService dailyBusinessReportService; // 新增
 
     /**
      * 1. 創建訂單 (移除庫存扣減，僅校驗庫存是否充足)
@@ -114,6 +115,7 @@ public class OrderService {
         //  【修改處 2】：線上支付成功，真正扣減庫存！
         deductStock(savedOrder);
 
+        dailyBusinessReportService.updateDailyReport(savedOrder);
         return savedOrder;
     }
 

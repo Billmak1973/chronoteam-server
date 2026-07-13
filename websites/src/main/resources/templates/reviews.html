@@ -85,6 +85,201 @@
         }
         .btn-view-detail:hover { background: var(--gold); color: var(--primary); }
 
+        /* 删除按钮样式 */
+        .btn-delete-review {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-left: 0.5rem;
+        }
+        .btn-delete-review:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .empty-state { text-align: center; padding: 3rem; color: var(--gray); }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; color: #ddd; }
+
+        /*  新增：分頁組件樣式 */
+        .pagination-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+        .page-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e9ecef;
+            background: white;
+            color: var(--primary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-weight: 500;
+        }
+        .page-btn:hover:not(.disabled):not(.active) {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+        }
+        .page-btn.active {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+            font-weight: 600;
+            cursor: default;
+        }
+        .page-btn.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+            background: #f8f9fa;
+            border-color: #e9ecef;
+        }
+        .page-ellipsis {
+            padding: 0 0.5rem;
+            color: var(--gray);
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        /* 删除确认弹窗样式 */
+        .delete-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .delete-modal-box {
+            background: white;
+            padding: 2.5rem 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid var(--accent);
+        }
+
+        .delete-modal-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #dc3545 100%);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
+            animation: iconPulse 2s infinite;
+        }
+
+        .delete-modal-icon i {
+            font-size: 2rem;
+            color: white;
+        }
+
+        .delete-modal-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .delete-modal-message {
+            color: var(--gray);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .delete-modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-cancel-delete {
+            padding: 0.7rem 1.5rem;
+            background: #e9ecef;
+            color: var(--primary);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-cancel-delete:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirm-delete {
+            padding: 0.7rem 1.5rem;
+            background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+        }
+
+        .btn-confirm-delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes iconPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
         .empty-state { text-align: center; padding: 3rem; color: var(--gray); }
         .empty-state i { font-size: 3rem; margin-bottom: 1rem; color: #ddd; }
 
@@ -175,6 +370,26 @@
     </main>
 </div>
 
+<!-- 删除确认弹窗 -->
+<div id="deleteModal" class="delete-modal-overlay">
+    <div class="delete-modal-box">
+        <div class="delete-modal-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 class="delete-modal-title">确认删除评论？</h3>
+        <p class="delete-modal-message">
+            您确定要删除这条评论吗？<br>
+            此操作无法撤销。
+        </p>
+        <div class="delete-modal-actions">
+            <button class="btn-cancel-delete" onclick="closeDeleteModal()">取消</button>
+            <button class="btn-confirm-delete" onclick="confirmDeleteAction()">
+                <i class="fas fa-trash-alt"></i> 确认删除
+            </button>
+        </div>
+    </div>
+</div>
+
 <script th:inline="javascript">
     const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     const currentUsername = [[${#authentication.name}]];
@@ -184,7 +399,8 @@
     let currentPage = 0; // 當前頁碼 (從 0 開始)
     let totalPages = 0;  // 總頁數
     let currentType = 'MY';
-    const pageSize = 30; // 🟢 每頁 30 條
+    const pageSize = 30; //  每頁 30 條
+    let deleteReviewId = null; // 存储待删除的评论ID
 
     //  新增：標記全部已讀並刷新導航欄紅點
     async function markAllNotificationsAsRead() {
@@ -213,7 +429,7 @@
     // 切換 Tab
     function switchTab(type, btnElement) {
         currentType = type;
-        currentPage = 0; // 🟢 切換 Tab 時重置到第一頁
+        currentPage = 0; //  切換 Tab 時重置到第一頁
 
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         btnElement.classList.add('active');
@@ -358,9 +574,14 @@
                         <span style="font-size:0.85rem; color:#6c757d;">
                             ${item.replyToUser ? '回復了 @' + item.replyToUser : '發表了評論'}
                         </span>
-                        <a href="/product/${item.product.id}" class="btn-view-detail">
-                            前往查看 <i class="fas fa-arrow-right"></i>
-                        </a>
+                        <div>
+                            <button class="btn-delete-review" onclick="openDeleteModal(${item.id})">
+                                <i class="fas fa-trash-alt"></i> 刪除
+                            </button>
+                            <a href="/product/${item.product.id}" class="btn-view-detail">
+                                前往查看 <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
                     </div>
                 </div>
             `;
@@ -375,6 +596,79 @@
         const date = new Date(dateStr);
         return date.toLocaleString('zh-TW', { hour12: false });
     }
+
+    // 删除评论功能
+    function openDeleteModal(reviewId) {
+        deleteReviewId = reviewId;
+        document.getElementById('deleteModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        document.body.style.overflow = '';
+        deleteReviewId = null;
+    }
+
+    async function confirmDeleteAction() {
+        if (!deleteReviewId) return;
+
+        const btn = document.querySelector('.btn-confirm-delete');
+        btn.disabled = true; // 僅禁用按鈕防止重複點擊，不改變文字
+
+        try {
+            const response = await fetch(`/api/review/${deleteReviewId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                // 删除成功，关闭弹窗
+                closeDeleteModal();
+
+                // 显示成功提示
+                if (typeof showNotification === 'function') {
+                    showNotification('✅ 评论已删除');
+                }
+
+                // 重新加载当前列表
+                loadData(currentType, currentPage);
+            } else {
+                // 删除失败
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ ' + (result.message || '删除失败'), true);
+                }
+                btn.disabled = false; // 失敗時恢復按鈕可點擊
+            }
+        } catch (error) {
+            console.error('删除评论错误:', error);
+            if (typeof showNotification === 'function') {
+                showNotification('❌ 网络错误，请稍后重试', true);
+            }
+            btn.disabled = false; // 報錯時恢復按鈕可點擊
+        }
+    }
+
+    // 点击遮罩层关闭弹窗
+    document.getElementById('deleteModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDeleteModal();
+        }
+    });
+
+    // ESC键关闭弹窗
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('deleteModal');
+            if (modal && modal.style.display === 'flex') {
+                closeDeleteModal();
+            }
+        }
+    });
 </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import ReplySection from './ReplySection';
 
 const ReviewCard = ({
@@ -26,6 +26,10 @@ const ReviewCard = ({
     const [dislikeCount, setDislikeCount] = useState(review.dislikeCount || 0);
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(review.content);
+    // 【新增】富文本編輯模式狀態：'text' 或 'rich'
+    const [editMode, setEditMode] = useState('text');
+    // 【新增】富文本編輯器的 ref
+    const editorRef = useRef(null);
     // 核心修復：使用後端傳來的初始狀態
     const [isLiked, setIsLiked] = useState(review.isLikedByMe || false);
     const [isDisliked, setIsDisliked] = useState(review.isDislikedByMe || false);
@@ -223,12 +227,22 @@ const handleDeleteClick = () => {
         handleDeleteAction(finalReason);
     };
 
-    // 編輯按鈕點擊處理（已移除互動檢查，改為直接在按鈕上禁用）
+    // 【修改】編輯按鈕點擊處理：管理員使用富文本編輯器，普通用戶使用純文本
     const handleEditClick = () => {
-        // 直接進入編輯模式，不再檢查互動或彈窗
-        setIsEditing(true);
+        if (isAdmin) {
+            // 【核心修改】管理員編輯：使用富文本編輯器
+            setEditMode('rich'); // 設置為富文本編輯模式
+            setEditContent(review.formattedContent || review.content); // 使用富文本內容
+            setIsEditing(true);
+        } else {
+            // 普通用戶：使用純文本編輯
+            setEditMode('text');
+            setEditContent(review.content);
+            setIsEditing(true);
+        }
     };
 
+    // 【修改】保存編輯：新增 isFormatted 欄位告知後端是否為富文本
     const handleSaveEdit = async () => {
         if (!editContent.trim()) {
             alert('評論內容不能為空');
@@ -238,13 +252,30 @@ const handleDeleteClick = () => {
             const res = await fetch(`/api/review/${review.id}/update`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: editContent })
+                credentials: 'same-origin', // 【新增】保持與 1 一致，帶上 cookie
+                body: JSON.stringify({
+                    content: editContent,
+                    isFormatted: editMode === 'rich' // 【新增】告訴後端這是富文本
+                })
             });
             const result = await res.json();
 
             if (result.success) {
-                onReviewUpdated({ ...review, content: editContent });
+                // 【修改】更新本地狀態並通知父組件
+                setLikeCount(review.likeCount);
+                setDislikeCount(review.dislikeCount);
+                onReviewUpdated({
+                    ...review,
+                    content: editContent,
+                    formattedContent: editMode === 'rich' ? editContent : null,
+                    isFormatted: editMode === 'rich'
+                });
                 setIsEditing(false);
+
+                // 刷新評論列表
+                if (typeof window.refreshReviews === 'function') {
+                    window.refreshReviews();
+                }
             } else {
                 // 🚫 已刪除：攔截「互動阻止」錯誤及相關彈窗代碼
 
@@ -410,6 +441,34 @@ const handleDeleteClick = () => {
         );
     };
 
+// 富文本格式化功能
+const formatText = (command, value = null) => {
+    document.execCommand(command, false, value);
+    if (editorRef.current) {
+        setEditContent(editorRef.current.innerHTML);
+    }
+    editorRef.current?.focus();
+};
+
+const insertLink = () => {
+    const url = prompt('請輸入連結地址：', 'https://');
+    if (url) {
+        formatText('createLink', url);
+    }
+};
+
+// 【新增】工具栏按钮样式
+const toolbarBtnStyle = {
+    padding: '0.4rem 0.8rem',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    backgroundColor: '#fff',
+    cursor: 'pointer',
+    fontSize: '0.9rem',
+    transition: 'all 0.2s',
+    minWidth: '40px'
+};
+
     return (
         <div className={`review-card ${review.pinned ? 'pinned' : ''}`}>
             {/* 頭部：左邊是用戶信息，右邊是點贊/踩/回復/置頂 */}
@@ -480,13 +539,113 @@ const handleDeleteClick = () => {
                     </div>
                 </div>
             </div>
-            {/* 評論內容 / 編輯框 */}
+
+            {/* 【修改】評論內容 / 編輯框：整合富文本編輯器 */}
             {isEditing ? (
-                <div className="edit-review-form active">
-                    <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} maxLength="1000"></textarea>
-                    <div className="form-actions">
-                        <button className="btn-cancel" onClick={() => setIsEditing(false)}>取消</button>
-                        <button className="btn-save" onClick={handleSaveEdit}>保存修改</button>
+                <div className="edit-container" style={{
+                    border: '2px solid var(--gold)',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    marginBottom: '1rem',
+                    backgroundColor: '#fff'
+                }}>
+                    {/* 【核心修改】管理員顯示富文本工具欄 */}
+                    {editMode === 'rich' && (
+                        <div className="editor-toolbar" style={{
+                            display: 'flex',
+                            gap: '0.5rem',
+                            marginBottom: '1rem',
+                            padding: '0.5rem',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '6px',
+                            flexWrap: 'wrap'
+                        }}>
+                            <button type="button" onClick={() => formatText('bold')}
+                                style={toolbarBtnStyle} title="粗體"><b>B</b></button>
+                            <button type="button" onClick={() => formatText('italic')}
+                                style={toolbarBtnStyle} title="斜體"><i>I</i></button>
+                            <button type="button" onClick={() => formatText('underline')}
+                                style={toolbarBtnStyle} title="下劃線"><u>U</u></button>
+
+                            <div style={{ width: '1px', backgroundColor: '#ddd', margin: '0 0.25rem' }}></div>
+
+                            <button type="button" onClick={() => formatText('foreColor', '#e94560')}
+                                style={{...toolbarBtnStyle, color: '#e94560'}} title="紅色字體">A</button>
+                            <button type="button" onClick={() => formatText('hiliteColor', '#fff3cd')}
+                                style={{...toolbarBtnStyle, backgroundColor: '#fff3cd'}} title="背景色">A</button>
+
+                            <div style={{ width: '1px', backgroundColor: '#ddd', margin: '0 0.25rem' }}></div>
+
+                            <button type="button" onClick={() => formatText('insertUnorderedList')}
+                                style={toolbarBtnStyle} title="列表">• List</button>
+                            <button type="button" onClick={insertLink}
+                                style={toolbarBtnStyle} title="插入連結">🔗</button>
+                        </div>
+                    )}
+
+                    {/* 編輯區域：根據 editMode 切換富文本 / 純文本 */}
+                    {editMode === 'rich' ? (
+                        <div
+                            ref={editorRef}
+                            contentEditable
+                            dangerouslySetInnerHTML={{ __html: editContent }}
+                            onInput={(e) => setEditContent(e.target.innerHTML)}
+                            style={{
+                                minHeight: '150px',
+                                padding: '1rem',
+                                border: '1px solid #ddd',
+                                borderRadius: '6px',
+                                outline: 'none',
+                                backgroundColor: '#fff'
+                            }}
+                        />
+                    ) : (
+                        <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            maxLength="1000"
+                            style={{
+                                width: '100%',
+                                minHeight: '150px',
+                                padding: '1rem',
+                                border: '1px solid #ddd',
+                                borderRadius: '6px',
+                                resize: 'vertical',
+                                fontFamily: 'inherit'
+                            }}
+                        />
+                    )}
+
+                    {/* 按鈕區域 */}
+                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                        <button
+                            onClick={() => setIsEditing(false)}
+                            style={{
+                                padding: '0.6rem 1.5rem',
+                                border: 'none',
+                                borderRadius: '6px',
+                                backgroundColor: '#e9ecef',
+                                color: '#495057',
+                                cursor: 'pointer',
+                                fontWeight: '500'
+                            }}
+                        >
+                            取消
+                        </button>
+                        <button
+                            onClick={handleSaveEdit}
+                            style={{
+                                padding: '0.6rem 1.5rem',
+                                border: 'none',
+                                borderRadius: '6px',
+                                backgroundColor: 'var(--gold)',
+                                color: 'var(--primary)',
+                                cursor: 'pointer',
+                                fontWeight: '600'
+                            }}
+                        >
+                            保存修改
+                        </button>
                     </div>
                 </div>
             ) : (
@@ -503,6 +662,7 @@ const handleDeleteClick = () => {
                     )}
                 </div>
             )}
+
             {/* 底部操作區：修改、刪除 (置頂按鈕已移走) */}
             <div className="review-actions">
                 {/* 🔒 修改按鈕：僅作者可見，且僅當未置頂時可見。如果有互動，直接禁用按鈕 */}

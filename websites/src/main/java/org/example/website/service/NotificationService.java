@@ -1,9 +1,13 @@
 package org.example.website.service;
 
+import org.example.website.entity.User;
 import org.example.website.entity.UserInteractionStats;
 import org.example.website.repository.ReviewRepository;
 import org.example.website.repository.UserInteractionStatsRepository;
+import org.example.website.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -12,11 +16,13 @@ public class NotificationService {
 
     private final UserInteractionStatsRepository statsRepository;
     private final ReviewRepository reviewRepository;
-
+    private final UserRepository userRepository;
     public NotificationService(UserInteractionStatsRepository statsRepository,
-                               ReviewRepository reviewRepository) {
+                               ReviewRepository reviewRepository,
+                               UserRepository userRepository) {
         this.statsRepository = statsRepository;
         this.reviewRepository = reviewRepository;
+        this.userRepository = userRepository;
     }
 
     public static final String TYPE_REVIEW_REPLY = "REVIEW_REPLY";
@@ -47,20 +53,36 @@ public class NotificationService {
         return 0;
     }
 
-    /**
-     * 標記已讀 (更新基準時間)
-     */
-    public void markAsRead(String username, String type) {
-        LocalDateTime now = LocalDateTime.now();
-        int updatedRows = statsRepository.updateLastViewedAt(username, type, now);
-        if (updatedRows == 0) {
-            statsRepository.insertInitialRecord(username, type, now);
-        }
-    }
+
 
     public long getTotalUnreadCount(String username) {
         // 這裡只會執行 2 次 SQL 查詢 (一次 Reply, 一次 Mention)，無論有多少條消息，都是 O(1) 複雜度
         return getUnreadCount(username, TYPE_REVIEW_REPLY) +
                 getUnreadCount(username, TYPE_REVIEW_MENTION);
+    }
+
+    @Transactional
+    public void markAsRead(String username, String type) {
+        LocalDateTime now = LocalDateTime.now();
+
+        // 1. 查詢是否已存在記錄
+        Optional<UserInteractionStats> statsOpt = statsRepository.findByUser_UsernameAndType(username, type);
+
+        if (statsOpt.isPresent()) {
+            // 存在 -> 直接更新時間並保存
+            UserInteractionStats stats = statsOpt.get();
+            stats.setLastViewedAt(now);
+            statsRepository.save(stats);
+        } else {
+            // 不存在 -> 創建新記錄
+            UserInteractionStats stats = new UserInteractionStats();
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("用戶不存在"));
+
+            stats.setUser(user);
+            stats.setType(type);
+            stats.setLastViewedAt(now);
+            statsRepository.save(stats);
+        }
     }
 }

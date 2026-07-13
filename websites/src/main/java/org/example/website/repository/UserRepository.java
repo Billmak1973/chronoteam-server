@@ -14,4 +14,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // 新增：根據角色查詢用戶 (可選)
     List<User> findByRole(User.Role role);
+    boolean existsByUid(String uid);
 }

@@ -237,11 +237,13 @@
 </footer>
 
 <div th:replace="~{fragments/common :: modals}"></div>
+<!-- 修改後：只傳遞布爾值，徹底解決 Hibernate 代理序列化報錯問題 -->
 <script th:inline="javascript">
   const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-  const stockNotifications = /*[[${stockNotifications}]]*/ [];
-  const adminNotifications = /*[[${adminNotifications}]]*/ [];
+  const hasStockNotif = [[${!stockNotifications.isEmpty()}]];
+  const hasAdminNotif = [[${!adminNotifications.isEmpty()}]];
 </script>
+
 <script src="/js/common.js"></script>
 
 <script>
@@ -255,11 +257,15 @@
   document.addEventListener('DOMContentLoaded', function() {
     const stockBtn = document.getElementById('tab-btn-stock');
     const adminBtn = document.getElementById('tab-btn-admin');
-    const hasStockNotif = stockNotifications && stockNotifications.length > 0;
-    const hasAdminNotif = adminNotifications && adminNotifications.length > 0;
-    if (hasStockNotif) switchTab('stock', stockBtn);
-    else if (hasAdminNotif) switchTab('admin', adminBtn);
-    else switchTab('stock', stockBtn);
+
+    // 直接使用 Thymeleaf 傳過來的布爾值，不再依賴 JS 判斷 length
+    if (hasStockNotif) {
+      switchTab('stock', stockBtn);
+    } else if (hasAdminNotif) {
+      switchTab('admin', adminBtn);
+    } else {
+      switchTab('stock', stockBtn);
+    }
   });
 
   function openAppealModal(notificationId, appealType) {

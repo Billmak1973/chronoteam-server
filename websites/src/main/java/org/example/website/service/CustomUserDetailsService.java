@@ -2,7 +2,7 @@ package org.example.website.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.website.entity.User;
-import org.example.website.repository.UserRepository; // 🟢 確保你已經創建了 UserRepository
+import org.example.website.repository.UserRepository;
 import org.example.website.security.CustomUserDetails;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

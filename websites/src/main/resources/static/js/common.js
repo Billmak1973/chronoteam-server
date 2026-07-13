@@ -40,25 +40,36 @@ if (cartNavContainer) {
     });
 }
 
+//  核心修复：確保 selectedCartItems 是真正的全局變量，避免頁面切換或重新渲染時丟失狀態
+window.selectedCartItems = window.selectedCartItems || new Set();
+
 async function loadCartItems() {
     try {
         const response = await fetch('/api/cart/list');
         const data = await response.json();
+
         if (data.success) {
             renderCartItems(data.cartItems, data.totalAmount);
             updateCartBadge(data.cartCount);
-        }
-    } catch (error) { console.error('加载购物车失败:', error); }
-}
 
-//  存储选中的购物车项ID (全局變量)
-let selectedCartItems = new Set();
+            //  關鍵：同步全局選中狀態，確保後端數據與前端狀態一致
+            window.selectedCartItems.clear();
+            data.cartItems.forEach(item => {
+                if (item.selected !== false) {
+                    window.selectedCartItems.add(item.cartId);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('加载购物车失败:', error);
+    }
+}
 
 function renderCartItems(cartItems, totalAmount) {
     const container = document.getElementById('cartItemsContainer');
     if (!container) return;
 
-    selectedCartItems.clear();
+    window.selectedCartItems.clear();
 
     if (!cartItems || cartItems.length === 0) {
         container.innerHTML = `<div class="cart-empty"><i class="fas fa-shopping-basket" style="font-size: 3rem; color: #ddd; margin-bottom: 1rem;"></i><p>購物車是空的</p></div>`;
@@ -71,7 +82,7 @@ function renderCartItems(cartItems, totalAmount) {
     cartItems.forEach(item => {
         const isChecked = item.selected !== false;
         if (isChecked) {
-            selectedCartItems.add(item.cartId);
+            window.selectedCartItems.add(item.cartId);
         }
 
         html += `<div class="cart-item" data-cart-id="${item.cartId}" data-product-id="${item.product.productId}">
@@ -103,12 +114,27 @@ function renderCartItems(cartItems, totalAmount) {
 }
 
 //  切换购物车项选择状态
-function toggleCartItemSelection(cartId, isChecked) {
+async function toggleCartItemSelection(cartId, isChecked) {
     if (isChecked) {
-        selectedCartItems.add(cartId);
+        window.selectedCartItems.add(cartId);
     } else {
-        selectedCartItems.delete(cartId);
+        window.selectedCartItems.delete(cartId);
     }
+
+    //  新增：调用后端 API 同步到数据库
+    try {
+        await fetch(`/api/cart/toggle-selection/${cartId}?isSelected=${isChecked}`, {
+            method: 'PUT'
+        });
+
+        //  新增：如果在详情页，刷新详情页
+        if (window.location.pathname === '/cart/view') {
+            setTimeout(() => location.reload(), 300);
+        }
+    } catch (error) {
+        console.error('同步选中状态失败:', error);
+    }
+
     // 重新计算总价（只计算选中的商品）
     calculateSelectedTotal();
 }
@@ -129,22 +155,85 @@ function calculateSelectedTotal() {
     if(totalEl) totalEl.textContent = 'HK$ ' + formatPrice(total);
 }
 
+//  核心修复：更新數量後，確保下拉菜單與購物車詳情頁雙向同步刷新
 async function updateCartQuantity(cartId, newQuantity) {
     try {
-        const response = await fetch(`/api/cart/update/${cartId}?quantity=${newQuantity}`, { method: 'PUT' });
+        const response = await fetch(`/api/cart/update/${cartId}?quantity=${newQuantity}`, {
+            method: 'PUT'
+        });
         const data = await response.json();
-        if (response.ok) loadCartItems();
-        else alert(data.message || '更新失敗');
-    } catch (error) { console.error('更新购物车失败:', error); alert('网络错误'); }
+
+        if (response.ok) {
+            //  關鍵：同時刷新下拉菜單
+            loadCartItems();
+
+            // 如果在購物車詳情頁，也刷新詳情頁以同步數據
+            if (window.location.pathname === '/cart/view') {
+                setTimeout(() => location.reload(), 300);
+            }
+        } else {
+            alert(data.message || '更新失敗');
+        }
+    } catch (error) {
+        console.error('更新购物车失败:', error);
+        alert('网络错误');
+    }
 }
 
-async function removeFromCart(productId) {
-    if (!confirm('確定要移除這個商品嗎？')) return;
-    try {
-        const response = await fetch(`/api/cart/remove/${productId}`, { method: 'DELETE' });
-        if (response.ok) loadCartItems();
-    } catch (error) { console.error('移除商品失败:', error); }
+// 全局变量存储待删除的商品ID
+let cartDeleteProductId = null;
+
+// 打开删除确认弹窗
+function removeFromCart(productId) {
+  cartDeleteProductId = productId;
+  document.getElementById('cartDeleteModal').style.display = 'flex';
+  document.body.style.overflow = 'hidden'; // 禁止背景滚动
 }
+
+// 关闭删除确认弹窗
+function closeCartDeleteModal() {
+  document.getElementById('cartDeleteModal').style.display = 'none';
+  document.body.style.overflow = '';
+  cartDeleteProductId = null;
+}
+
+// 确认删除
+async function confirmCartDelete() {
+  if (!cartDeleteProductId) return;
+
+  try {
+    const response = await fetch(`/api/cart/remove/${cartDeleteProductId}`, {
+      method: 'DELETE'
+    });
+
+    if (response.ok) {
+      closeCartDeleteModal();
+      loadCartItems(); // 重新加载购物车
+      showNotification('✅ 商品已移除');
+    }
+  } catch (error) {
+    console.error('移除商品失败:', error);
+    showNotification('❌ 网络错误', true);
+    closeCartDeleteModal();
+  }
+}
+
+// 点击遮罩层关闭
+document.getElementById('cartDeleteModal')?.addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeCartDeleteModal();
+  }
+});
+
+// ESC键关闭
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('cartDeleteModal');
+    if (modal && modal.style.display === 'flex') {
+      closeCartDeleteModal();
+    }
+  }
+});
 
 function updateCartBadge(count) {
     const badge = document.getElementById('cartCountBadge');
@@ -164,8 +253,8 @@ async function checkout() {
         return;
     }
 
-    // 检查是否有选中的商品
-    if (selectedCartItems.size === 0) {
+    // 检查是否有选中的商品 (使用全局變量)
+    if (window.selectedCartItems.size === 0) {
         showNotification('❌ 請至少選擇一件商品！', true);
         return;
     }
@@ -182,7 +271,7 @@ async function checkout() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                selectedCartIds: Array.from(selectedCartItems)
+                selectedCartIds: Array.from(window.selectedCartItems)
             })
         });
         const result = await response.json();
