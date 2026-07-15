@@ -1,0 +1,393 @@
+/* === 1. 全局與佈局變數 === */
+:root {
+    --admin-bg: #f4f6f9;
+    --sidebar-bg: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    --card-hover-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-layout {
+    display: flex;
+    min-height: calc(100vh - 70px);
+    background: var(--admin-bg);
+}
+
+/* === 2. 左側邊欄 (深色奢華風) === */
+.admin-sidebar {
+    width: 260px;
+    background: var(--sidebar-bg);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 70px;
+    height: calc(100vh - 70px);
+    overflow-y: auto;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 100;
+}
+
+/* 自定義側邊欄滾動條 */
+.admin-sidebar::-webkit-scrollbar { width: 4px; }
+.admin-sidebar::-webkit-scrollbar-track { background: transparent; }
+.admin-sidebar::-webkit-scrollbar-thumb { background: rgba(212, 175, 55, 0.3); border-radius: 10px; }
+
+.sidebar-header {
+    padding: 2rem 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+}
+
+.sidebar-header i {
+    font-size: 2.5rem;
+    margin-bottom: 0.8rem;
+    background: linear-gradient(135deg, var(--gold) 0%, #f3e5ab 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 4px 8px rgba(212, 175, 55, 0.3));
+}
+
+.sidebar-header h3 {
+    font-size: 1.2rem;
+    margin: 0;
+    color: white;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.sidebar-header p {
+    font-size: 0.75rem;
+    color: #6c7293;
+    margin-top: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* === 3. 菜單樣式 (精致交互) === */
+.admin-menu {
+    list-style: none;
+    padding: 1.5rem 0;
+    margin: 0;
+    flex: 1;
+}
+
+.menu-group {
+    margin-bottom: 0.5rem;
+}
+
+/* 總功能 (一級菜單) */
+.menu-group-title {
+    padding: 0.8rem 1.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6c7293;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition);
+    user-select: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.menu-group-title:hover {
+    color: #fff;
+    background: transparent;
+}
+
+.menu-group-title i {
+    font-size: 0.7rem;
+    transition: transform 0.3s;
+}
+
+.menu-group.active .menu-group-title i {
+    transform: rotate(90deg);
+    color: var(--gold);
+}
+
+.menu-group.active .menu-group-title {
+    color: var(--gold);
+}
+
+/* 分功能 (二級菜單) */
+.menu-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.menu-group.active .menu-items {
+    max-height: 500px;
+}
+
+.menu-items li a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.8rem 1.5rem 0.8rem 3rem;
+    color: #a2a5b9;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: var(--transition);
+    border-left: 3px solid transparent;
+}
+
+/* 左側金色指示條動畫 */
+.menu-items li a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--gold);
+    transform: scaleY(0);
+    transition: transform 0.3s ease;
+}
+
+.menu-items li a:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.menu-items li a:hover i {
+    color: var(--gold);
+}
+
+.menu-items li a.active {
+    color: #fff;
+    background: rgba(212, 175, 55, 0.08);
+}
+
+.menu-items li a.active::before {
+    transform: scaleY(1);
+}
+
+.menu-items li a.active i {
+    color: var(--gold);
+}
+
+.menu-items li a i {
+    width: 20px;
+    text-align: center;
+    font-size: 0.95rem;
+    color: #6c7293;
+    transition: var(--transition);
+}
+
+/* === 4. 右側內容區 (現代卡片風) === */
+.admin-main {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.content-header {
+    background: white;
+    padding: 1.5rem 2rem;
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    position: relative;
+    overflow: hidden;
+}
+
+/* 標題底部的金色漸變裝飾線 */
+.content-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+}
+
+.content-header h2 {
+    margin: 0;
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.content-header h2 i {
+    color: var(--gold);
+}
+
+.breadcrumb {
+    color: var(--gray);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.breadcrumb a {
+    color: var(--gold);
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.breadcrumb a:hover {
+    opacity: 0.8;
+}
+
+.content-body {
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+/* === 5. 統計卡片 (數據可視化) === */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    color: var(--primary);
+    padding: 1.5rem;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    box-shadow: var(--card-shadow);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--card-hover-shadow);
+}
+
+/* 右上角的金色光暈裝飾 */
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: -30px;
+    right: -30px;
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), transparent);
+    border-radius: 50%;
+}
+
+.stat-card i {
+    font-size: 1.2rem;
+    color: white;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(26, 26, 46, 0.2);
+    opacity: 1;
+}
+
+.stat-info h4 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--primary);
+}
+
+.stat-info p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--gray);
+    font-weight: 500;
+}
+
+/* === 6. 佔位符盒子 (優雅的空狀態) === */
+.placeholder-box {
+    background: white;
+    border: 2px dashed #e2e8f0;
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+    color: var(--gray);
+    transition: var(--transition);
+    margin-top: 1.5rem;
+}
+
+.placeholder-box:hover {
+    border-color: var(--gold);
+    background: rgba(212, 175, 55, 0.02);
+}
+
+.placeholder-box i {
+    font-size: 4rem;
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1.5rem;
+    display: block;
+}
+
+.placeholder-box h3 {
+    color: var(--primary);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.placeholder-box p {
+    font-size: 0.95rem;
+    max-width: 400px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* === 7. 響應式優化 === */
+@media (max-width: 992px) {
+    .admin-sidebar {
+        position: fixed;
+        left: -260px;
+        z-index: 1100;
+        transition: left 0.3s ease;
+    }
+    .admin-sidebar.open {
+        left: 0;
+    }
+    .admin-main {
+        padding: 1.5rem;
+    }
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    .content-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+}

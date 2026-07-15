@@ -48,6 +48,10 @@ public class Product {
     @Column(name = "is_visible", nullable = false)
     private Boolean visible = true;
 
+    // 控制成色选项是否可见
+    @Column(name = "condition_visible", nullable = false)
+    private Boolean conditionVisible = true;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

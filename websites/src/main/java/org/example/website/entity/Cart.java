@@ -50,9 +50,6 @@ public class Cart {
     @Column(name = "selected", nullable = false)
     private Boolean selected = true;
 
-    // 新增：是否選擇快遞 (true: 需要快遞配送, false: 線下門店自提)
-    @Column(name = "is_express_delivery", nullable = false)
-    private Boolean isExpressDelivery = true;
 
     @UpdateTimestamp
     @Column(name = "updated_at")

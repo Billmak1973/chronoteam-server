@@ -43,6 +43,29 @@ if (cartNavContainer) {
 //  核心修复：確保 selectedCartItems 是真正的全局變量，避免頁面切換或重新渲染時丟失狀態
 window.selectedCartItems = window.selectedCartItems || new Set();
 
+
+function calculateSelectedTotal() {
+    const checkboxes = document.querySelectorAll('.cart-item-select:checked'); // 只找被勾選的
+    let total = 0;
+
+    checkboxes.forEach(checkbox => {
+        const cartItem = checkbox.closest('.cart-item');
+        if (cartItem) {
+            const priceText = cartItem.querySelector('.cart-item-price').textContent.replace('HK$ ', '').replace(/,/g, '');
+            const quantity = parseInt(cartItem.querySelector('.qty-value').textContent);
+            total += parseFloat(priceText) * quantity;
+        }
+    });
+
+    const totalEl = document.getElementById('cartTotalAmount');
+    if(totalEl) totalEl.textContent = 'HK$ ' + formatPrice(total);
+}
+
+/**
+ * 【關鍵修改】：確保這個函數返回一個 Promise，並且在 DOM 渲染完成後才 resolve
+ */
+// loadCartItems 函數中，渲染 DOM 後調用 calculateSelectedTotal()
+// 這樣即使後端返回的 totalAmount 有延遲，前端也能立刻根據 DOM 狀態修正顯示
 async function loadCartItems() {
     try {
         const response = await fetch('/api/cart/list');
@@ -52,21 +75,34 @@ async function loadCartItems() {
             renderCartItems(data.cartItems, data.totalAmount);
             updateCartBadge(data.cartCount);
 
-            //  關鍵：同步全局選中狀態，確保後端數據與前端狀態一致
             window.selectedCartItems.clear();
             data.cartItems.forEach(item => {
                 if (item.selected !== false) {
                     window.selectedCartItems.add(item.cartId);
                 }
             });
+
+            // 【新增】渲染完 DOM 後，強制重新計算一次下拉菜單的總價
+            // 這能確保 UI 顯示與實際勾選狀態絕對一致
+            calculateSelectedTotal();
+
+            return Promise.resolve();
         }
     } catch (error) {
         console.error('加载购物车失败:', error);
+        return Promise.reject(error);
     }
 }
 
 function renderCartItems(cartItems, totalAmount) {
     const container = document.getElementById('cartItemsContainer');
+
+        // 🛡️ 終極防禦：如果找到的容器不在導航欄下拉菜單內，說明它是詳情頁的容器，立刻停止渲染，防止覆蓋！
+        if (!container || !container.closest('.cart-dropdown-menu')) {
+            console.warn('🛡️ [安全攔截] 阻止了 renderCartItems 覆蓋詳情頁 DOM！');
+            return;
+        }
+
     if (!container) return;
 
     window.selectedCartItems.clear();
@@ -115,27 +151,76 @@ function renderCartItems(cartItems, totalAmount) {
 
 //  切换购物车项选择状态
 async function toggleCartItemSelection(cartId, isChecked) {
+    // 1. 【樂觀更新】立即更新全局狀態，讓 UI 有響應
     if (isChecked) {
         window.selectedCartItems.add(cartId);
     } else {
         window.selectedCartItems.delete(cartId);
     }
 
-    //  新增：调用后端 API 同步到数据库
+    // 2. 调用后端 API 同步到数据库
     try {
         await fetch(`/api/cart/toggle-selection/${cartId}?isSelected=${isChecked}`, {
             method: 'PUT'
         });
 
-        //  新增：如果在详情页，刷新详情页
+        // 3. 【核心修改】如果在購物車詳情頁 (/cart/view)，直接更新 DOM，絕不刷新頁面
         if (window.location.pathname === '/cart/view') {
-            setTimeout(() => location.reload(), 300);
+            // 找到詳情頁對應的 checkbox (注意選擇器要精確)
+            const detailCheckbox = document.querySelector(`.cart-items-list input[data-cart-id="${cartId}"]`);
+
+            if (detailCheckbox) {
+                // A. 更新 checkbox 的勾選狀態
+                detailCheckbox.checked = isChecked;
+
+                // B. 更新父元素 .cart-item 的樣式 (灰顯/高亮)
+                const cartItem = detailCheckbox.closest('.cart-item');
+                if (isChecked) {
+                    cartItem.classList.remove('not-selected');
+                } else {
+                    cartItem.classList.add('not-selected');
+                }
+
+                // C. 調用詳情頁的全局函數，重新計算總價和數量
+                // (這些函數定義在 cart-view.html 的 <script> 中，屬於 window 對象)
+                if (typeof window.updateCartTotal === 'function') window.updateCartTotal();
+                if (typeof window.updateSelectedCount === 'function') window.updateSelectedCount();
+                if (typeof window.syncSelectAllCheckbox === 'function') window.syncSelectAllCheckbox();
+            }
         }
+
     } catch (error) {
         console.error('同步选中状态失败:', error);
+
+        // 【失敗回滾】如果網絡錯誤，要把剛才改動的狀態改回來
+        if (isChecked) {
+            window.selectedCartItems.delete(cartId);
+        } else {
+            window.selectedCartItems.add(cartId);
+        }
+
+        // 如果是在詳情頁，也要回滾 UI
+        if (window.location.pathname === '/cart/view') {
+            const detailCheckbox = document.querySelector(`.cart-items-list input[data-cart-id="${cartId}"]`);
+            if (detailCheckbox) {
+                detailCheckbox.checked = !isChecked; // 恢復原狀
+                const cartItem = detailCheckbox.closest('.cart-item');
+                if (isChecked) {
+                    cartItem.classList.add('not-selected');
+                } else {
+                    cartItem.classList.remove('not-selected');
+                }
+                if (typeof window.updateCartTotal === 'function') window.updateCartTotal();
+                if (typeof window.updateSelectedCount === 'function') window.updateSelectedCount();
+                if (typeof window.syncSelectAllCheckbox === 'function') window.syncSelectAllCheckbox();
+            }
+        }
+
+        showNotification('❌ 網絡錯誤，同步失敗', true);
+        return; // 失敗就不執行後續的計算
     }
 
-    // 重新计算总价（只计算选中的商品）
+    // 4. 重新計算導航欄下拉菜單的總價
     calculateSelectedTotal();
 }
 
@@ -155,8 +240,35 @@ function calculateSelectedTotal() {
     if(totalEl) totalEl.textContent = 'HK$ ' + formatPrice(total);
 }
 
-//  核心修复：更新數量後，確保下拉菜單與購物車詳情頁雙向同步刷新
+//  核心修复：更新數量後，確保下拉菜單與購物車詳情頁雙向同步刷新（無刷新）
 async function updateCartQuantity(cartId, newQuantity) {
+    if (newQuantity <= 0) return; // 防止非法數量
+
+    // 1. 【樂觀更新】立即更新導航欄和詳情頁的 UI，讓用戶看到即時反應
+    const navQtyElement = document.querySelector(`#cartItemsContainer [data-cart-id="${cartId}"] .qty-value`);
+    const originalNavQty = navQtyElement ? parseInt(navQtyElement.textContent) : newQuantity;
+
+    const detailQtyElement = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"] .qty-value`);
+    const originalDetailQty = detailQtyElement ? parseInt(detailQtyElement.textContent) : newQuantity;
+
+    // 臨時更新 UI 數字
+    if (navQtyElement) navQtyElement.textContent = newQuantity;
+    if (detailQtyElement) detailQtyElement.textContent = newQuantity;
+
+    // 更新詳情頁的小計和總價 (如果處於詳情頁)
+    if (detailQtyElement) {
+        const detailCartItem = detailQtyElement.closest('.cart-item');
+        const price = parseFloat(detailCartItem.dataset.price);
+        const subtotalSpan = detailCartItem.querySelector('.item-subtotal span');
+        if (subtotalSpan) {
+            subtotalSpan.textContent = (price * newQuantity).toLocaleString('zh-HK');
+        }
+        // 調用詳情頁的全局函數重新計算
+        if (typeof window.updateCartTotal === 'function') window.updateCartTotal();
+        if (typeof window.updateSelectedCount === 'function') window.updateSelectedCount();
+    }
+
+    // 2. 調用後端 API 同步到數據庫
     try {
         const response = await fetch(`/api/cart/update/${cartId}?quantity=${newQuantity}`, {
             method: 'PUT'
@@ -164,19 +276,43 @@ async function updateCartQuantity(cartId, newQuantity) {
         const data = await response.json();
 
         if (response.ok) {
-            //  關鍵：同時刷新下拉菜單
-            loadCartItems();
-
-            // 如果在購物車詳情頁，也刷新詳情頁以同步數據
-            if (window.location.pathname === '/cart/view') {
-                setTimeout(() => location.reload(), 300);
+            // 3. 成功：同步導航欄下拉菜單
+            if (typeof loadCartItems === 'function') {
+                await loadCartItems();
             }
+            showNotification('✅ 數量更新成功');
         } else {
-            alert(data.message || '更新失敗');
+            // 4. 【失敗回滾】恢復原狀
+            if (navQtyElement) navQtyElement.textContent = originalNavQty;
+            if (detailQtyElement) detailQtyElement.textContent = originalDetailQty;
+            if (detailQtyElement) {
+                const detailCartItem = detailQtyElement.closest('.cart-item');
+                const price = parseFloat(detailCartItem.dataset.price);
+                const subtotalSpan = detailCartItem.querySelector('.item-subtotal span');
+                if (subtotalSpan) {
+                    subtotalSpan.textContent = (price * originalDetailQty).toLocaleString('zh-HK');
+                }
+                if (typeof window.updateCartTotal === 'function') window.updateCartTotal();
+                if (typeof window.updateSelectedCount === 'function') window.updateSelectedCount();
+            }
+            showNotification('❌ ' + (data.message || '更新失敗'), true);
         }
     } catch (error) {
-        console.error('更新购物车失败:', error);
-        alert('网络错误');
+        console.error('更新購物車失敗:', error);
+        // 【網絡錯誤回滾】恢復原狀
+        if (navQtyElement) navQtyElement.textContent = originalNavQty;
+        if (detailQtyElement) detailQtyElement.textContent = originalDetailQty;
+        if (detailQtyElement) {
+            const detailCartItem = detailQtyElement.closest('.cart-item');
+            const price = parseFloat(detailCartItem.dataset.price);
+            const subtotalSpan = detailCartItem.querySelector('.item-subtotal span');
+            if (subtotalSpan) {
+                subtotalSpan.textContent = (price * originalDetailQty).toLocaleString('zh-HK');
+            }
+            if (typeof window.updateCartTotal === 'function') window.updateCartTotal();
+            if (typeof window.updateSelectedCount === 'function') window.updateSelectedCount();
+        }
+        showNotification('❌ 網絡錯誤，同步失敗', true);
     }
 }
 
@@ -196,10 +332,12 @@ function closeCartDeleteModal() {
   document.body.style.overflow = '';
   cartDeleteProductId = null;
 }
-
-// 确认删除
+// 确认删除 (支持双向无刷新同步)
 async function confirmCartDelete() {
   if (!cartDeleteProductId) return;
+
+  // 1. 【預先獲取】如果當前在購物車詳情頁，先抓取對應的 DOM 元素
+  const detailCartItem = document.querySelector(`.cart-items-list [data-product-id="${cartDeleteProductId}"]`);
 
   try {
     const response = await fetch(`/api/cart/remove/${cartDeleteProductId}`, {
@@ -208,12 +346,42 @@ async function confirmCartDelete() {
 
     if (response.ok) {
       closeCartDeleteModal();
-      loadCartItems(); // 重新加载购物车
       showNotification('✅ 商品已移除');
+
+      // 2. 成功：同步更新導航欄下拉菜單
+      if (typeof loadCartItems === 'function') {
+        await loadCartItems();
+      }
+
+      // 3. 【核心修改】如果在購物車詳情頁，直接操作 DOM 移除，絕不刷新頁面
+      if (window.location.pathname === '/cart/view' && detailCartItem) {
+        // 添加淡出動畫
+        detailCartItem.style.transition = 'all 0.3s ease';
+        detailCartItem.style.opacity = '0';
+        detailCartItem.style.transform = 'translateX(-20px)';
+
+        setTimeout(() => {
+          detailCartItem.remove();
+
+          // 檢查是否空了
+          const remainingItems = document.querySelectorAll('.cart-items-list .cart-item');
+          if (remainingItems.length === 0) {
+            location.reload(); // 只有當列表為空時才刷新以顯示空狀態
+          } else {
+            // 調用詳情頁的全局函數重新計算總價和數量
+            if (typeof window.updateCartTotal === 'function') window.updateCartTotal();
+            if (typeof window.updateSelectedCount === 'function') window.updateSelectedCount();
+            if (typeof window.syncSelectAllCheckbox === 'function') window.syncSelectAllCheckbox();
+          }
+        }, 300);
+      }
+    } else {
+      const data = await response.json();
+      showNotification('❌ ' + (data.message || '移除失敗'), true);
     }
   } catch (error) {
-    console.error('移除商品失败:', error);
-    showNotification('❌ 网络错误', true);
+    console.error('移除商品失敗:', error);
+    showNotification('❌ 網絡錯誤，同步失敗', true);
     closeCartDeleteModal();
   }
 }
@@ -308,11 +476,42 @@ async function addToCart(productId) {
 
 function showNotification(message, isError = false) {
     const notification = document.createElement('div');
-    notification.style.cssText = `position: fixed; top: 100px; right: 20px; background: ${isError ? 'var(--accent)' : 'var(--gold)'}; color: ${isError ? 'white' : 'var(--primary)'}; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 9999; opacity: 0; transform: translateX(50px); transition: opacity 0.3s ease, transform 0.3s ease;`;
-    notification.textContent = message;
+
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -60%);
+        background: ${isError ? '#dc3545' : 'var(--gold)'};
+        color: ${isError ? 'white' : 'var(--primary)'};
+        padding: 1.2rem 2.5rem;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+        z-index: 99999;
+        opacity: 0;
+        font-weight: 600;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    `;
+
+    // 删除了图标，只显示文字
+    notification.innerHTML = `<span>${message}</span>`;
+
     document.body.appendChild(notification);
-    setTimeout(() => { notification.style.opacity = '1'; notification.style.transform = 'translateX(0)'; }, 10);
-    setTimeout(() => { notification.style.opacity = '0'; notification.style.transform = 'translateX(50px)'; setTimeout(() => notification.remove(), 300); }, 2500);
+
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translate(-50%, -50%)';
+    }, 10);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -70%)';
+        setTimeout(() => notification.remove(), 400);
+    }, 1500);
 }
 
 // ===== 登录/注册弹窗控制 =====
@@ -610,4 +809,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-});
+})

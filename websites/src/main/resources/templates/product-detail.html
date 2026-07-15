@@ -3079,11 +3079,12 @@
                 </label>
                 <select id="editCategory" required
                         style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
-                    <option value="Watch" th:selected="${product.category == 'Watch'}">Watch</option>
+                    <option value="pilot" th:selected="${product.category == 'pilot'}">飞行表</option>
                     <option value="dive" th:selected="${product.category == 'dive'}">潜水表</option>
                     <option value="dress" th:selected="${product.category == 'dress'}">正装表</option>
                     <option value="chronograph" th:selected="${product.category == 'chronograph'}">计时码表</option>
                     <option value="vintage" th:selected="${product.category == 'vintage'}">古董表</option>
+                    <option value="others" th:selected="${product.category == 'others'}">其它类型手表</option>
                 </select>
             </div>
 
@@ -4188,63 +4189,66 @@
         }
     });
 
-    // ==========================================
-    //  成色選擇按鈕功能 (新增)
-    // ==========================================
+// 获取并渲染成色按钮
+async function fetchConditionButtons(groupCode, currentId) {
+    const container = document.getElementById('conditionButtons');
 
-    // 获取并渲染成色按钮
-    async function fetchConditionButtons(groupCode, currentId) {
-        const container = document.getElementById('conditionButtons');
+    try {
+        const response = await fetch(`/variants/${groupCode}`);
+        if (!response.ok) throw new Error('Network response was not ok');
 
-        try {
-            // 调用你现有的后端接口 /variants/{groupCode}
-            const response = await fetch(`/variants/${groupCode}`);
-            if (!response.ok) throw new Error('Network response was not ok');
+        const variants = await response.json();
 
-            const variants = await response.json();
+        //  核心修改：如果没有符合条件的产品，隐藏整个选择区域
+        if (!variants || variants.length === 0) {
+            const selector = document.querySelector('.condition-selector');
+            if (selector) {
+                selector.style.display = 'none';
+            }
+            return;
+        }
 
-            // 清空加载提示
-            container.innerHTML = '';
+        // 清空加载提示
+        container.innerHTML = '';
 
-            // 定义成色映射 (Enum -> 中文显示)
-            const conditionMap = {
-                'near_mint': '近全新 (98-100%)',
-                'excellent': '極佳 (95-97%)',
-                'good': '良好 (90-94%)',
-                'fair': '正常使用痕跡 (85-89%)',
-                'heavily_used': '重度使用痕跡/需保養'
+        // 定义成色映射 (Enum -> 中文显示)
+        const conditionMap = {
+            'near_mint': '近全新 (98-100%)',
+            'excellent': '極佳 (95-97%)',
+            'good': '良好 (90-94%)',
+            'fair': '正常使用痕跡 (85-89%)',
+            'heavily_used': '重度使用痕跡/需保養'
+        };
+
+        // 遍历生成按钮
+        variants.forEach(item => {
+            const btn = document.createElement('button');
+            btn.className = 'condition-btn';
+
+            // 设置显示文字
+            const conditionText = conditionMap[item.condition] || item.condition;
+            btn.textContent = conditionText;
+
+            // 如果是当前页面正在看的商品，添加 active 类
+            if (item.productId == currentId) {
+                btn.classList.add('active');
+            }
+
+            // 点击事件：跳转到对应商品的详情页
+            btn.onclick = () => {
+                if (item.productId != currentId) {
+                    window.location.href = `/product/${item.productId}`;
+                }
             };
 
-            // 遍历生成按钮
-            variants.forEach(item => {
-                const btn = document.createElement('button');
-                btn.className = 'condition-btn';
+            container.appendChild(btn);
+        });
 
-                // 设置显示文字
-                const conditionText = conditionMap[item.condition] || item.condition;
-                btn.textContent = conditionText;
-
-                // 如果是当前页面正在看的商品，添加 active 类
-                if (item.productId == currentId) {
-                    btn.classList.add('active');
-                }
-
-                // 点击事件：跳转到对应商品的详情页
-                btn.onclick = () => {
-                    // 如果点击的是当前商品，不做跳转（或者你可以选择刷新）
-                    if (item.productId != currentId) {
-                        window.location.href = `/product/${item.productId}`;
-                    }
-                };
-
-                container.appendChild(btn);
-            });
-
-        } catch (error) {
-            console.error('获取成色列表失败:', error);
-            container.innerHTML = '<span style="color:red">加载失败</span>';
-        }
+    } catch (error) {
+        console.error('获取成色列表失败:', error);
+        container.innerHTML = '<span style="color:red">加载失败</span>';
     }
+}
 
     // ==========================================
     //  評價提交成功後的回調函數 (供 React 評論區調用)

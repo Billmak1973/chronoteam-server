@@ -100,6 +100,7 @@ public class CartController {
 
         // 计算总价
         double totalAmount = cartItems.stream()
+                .filter(Cart::getSelected)
                 .mapToDouble(item -> item.getPrice().doubleValue() * item.getQuantity())
                 .sum();
 

@@ -276,11 +276,13 @@ public class ProductController {
 
     @GetMapping("/variants/{groupCode}")
     public ResponseEntity<List<ProductVariantDTO>> getProductVariants(@PathVariable String groupCode) {
-        // 注意：這裡的方法名請確保與你 Repository 裡的一致 (Asc 或 Desc)
-//        List<Product> products = productRepository.findByGroupCodeOrderByConditionAsc(groupCode);
-
         List<Product> products = productRepository.findByGroupCode(groupCode);
-        products.sort(Comparator.comparing(Product::getCondition));
+
+        //  核心修改：过滤出 conditionVisible = true 的产品
+        products = products.stream()
+                .filter(p -> p.getConditionVisible() != null && p.getConditionVisible())
+                .sorted(Comparator.comparing(Product::getCondition))
+                .collect(Collectors.toList());
 
         List<ProductVariantDTO> variants = products.stream().map(p -> {
             ProductVariantDTO dto = new ProductVariantDTO();
@@ -288,7 +290,7 @@ public class ProductController {
             dto.setPrice(p.getPrice());
             dto.setStock(p.getStock());
 
-            //  映射描述和詳情
+            // 映射描述和詳情
             dto.setDescription(p.getDescription());
             dto.setDetails(p.getDetails());
 
@@ -296,12 +298,12 @@ public class ProductController {
             dto.setTotalReviewCount(p.getTotalReviewCount());
             dto.setTotalScore(p.getTotalScore());
 
-            //  核心：動態計算平均分 (rating)
+            // 核心：動態計算平均分 (rating)
             if (p.getTotalReviewCount() != null && p.getTotalReviewCount() > 0 && p.getTotalScore() != null) {
                 double avgRating = p.getTotalScore().doubleValue() / p.getTotalReviewCount();
                 dto.setRating(avgRating);
             } else {
-                dto.setRating(0.0); // 如果沒有評論，默認為 0
+                dto.setRating(0.0);
             }
 
             // 映射成色
@@ -316,5 +318,4 @@ public class ProductController {
 
         return ResponseEntity.ok(variants);
     }
-
 }

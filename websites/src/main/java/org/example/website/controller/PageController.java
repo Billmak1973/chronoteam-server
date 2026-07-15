@@ -24,12 +24,10 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller  // 關鍵：返回視圖名稱，不是 JSON
@@ -497,12 +495,7 @@ public class PageController {
         }
 
         String username = authentication.getName();
-
-        // 【修改處 1】：使用 UserService 獲取 User 實體，而不是 Customer
-        // 假設你已經注入了 userService
         User user = userService.findByUsername(username);
-
-        // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
         model.addAttribute("user", user);
 
         // 獲取購物車數據
@@ -511,13 +504,44 @@ public class PageController {
 
         // 計算總價
         double totalAmount = cartItems.stream()
+                .filter(Cart::getSelected)
                 .mapToDouble(item -> item.getPrice().doubleValue() * item.getQuantity())
                 .sum();
+
+        // ================= 核心修正：按日期分組並倒序排列 =================
+        Map<String, List<Cart>> groupedCartItems = cartItems.stream()
+                .collect(Collectors.groupingBy(
+                        // 1. 分組鍵：根據日期遠近格式化為不同字符串
+                        item -> {
+                            LocalDate date = item.getCreatedAt().toLocalDate();
+                            LocalDate today = LocalDate.now();
+
+                            if (date.getYear() == today.getYear() && date.getMonth() == today.getMonth()) {
+                                return date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")); // 本月：完整日期
+                            } else if (date.getYear() == today.getYear()) {
+                                return date.format(DateTimeFormatter.ofPattern("yyyy-MM"));   // 本年非本月：年月
+                            } else {
+                                return String.valueOf(date.getYear());                        // 非本年：年份
+                            }
+                        },
+                        // 2. Map 工廠：【關鍵修復】明確指定泛型 <String, List<Cart>>，解決推斷衝突
+                        () -> new TreeMap<String, List<Cart>>(Comparator.reverseOrder()),
+                        // 3. 組內排序：【關鍵修復】明確聲明 (List<Cart> list)，並使用 Comparator 簡化代碼
+                        Collectors.collectingAndThen(
+                                Collectors.toList(),
+                                (List<Cart> list) -> {
+                                    list.sort(Comparator.comparing(Cart::getCreatedAt).reversed());
+                                    return list;
+                                }
+                        )
+                ));
+        // ================================================================
 
         model.addAttribute("cartItems", cartItems);
         model.addAttribute("totalAmount", totalAmount);
         model.addAttribute("cartCount", cartCount);
+        model.addAttribute("groupedCartItems", groupedCartItems);
 
-        return "cart-detail";
+        return "cart-detail"; // 或者你的視圖名稱
     }
 }

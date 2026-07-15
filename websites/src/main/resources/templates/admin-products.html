@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品管理 - ChronoTeam 管理中心</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+
+    <style>
+        /* === 商品管理專屬表格樣式 === */
+        .table-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .table-container::-webkit-scrollbar {
+            height: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f3f5;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #b8972b;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 1400px;
+            /* 稍微增加最小寬度 */
+        }
+
+        .data-table thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .data-table th {
+            padding: 1.3rem 1.5rem;
+            /* 增加 padding */
+            font-size: 0.95rem;
+            /* 增加字體 */
+            font-weight: 700;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 1.3rem 1.5rem;
+            /* 增加 padding */
+            border-bottom: 1px solid #f1f3f5;
+            color: var(--primary);
+            font-size: 1rem;
+            /* 增加字體 */
+            vertical-align: middle;
+        }
+
+        .data-table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: rgba(212, 175, 55, 0.03);
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .product-thumb {
+            width: 70px;
+            /* 增加圖片尺寸 */
+            height: 70px;
+            /* 增加圖片尺寸 */
+            border-radius: 10px;
+            /* 稍微增加圓角 */
+            object-fit: cover;
+            border: 2px solid #e9ecef;
+            /* 增加邊框 */
+            background: #f8f9fa;
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: var(--primary);
+            display: block;
+            margin-bottom: 0.3rem;
+            font-size: 1.05rem;
+            /* 增加字體 */
+            max-width: 280px;
+            /* 增加寬度 */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .product-meta {
+            font-size: 0.9rem;
+            /* 增加字體 */
+            color: var(--gray);
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .product-brand {
+            font-size: 0.95rem;
+            /* 增加字體 */
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            /* 增加 padding */
+            border-radius: 20px;
+            font-size: 0.9rem;
+            /* 增加字體 */
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+        }
+
+        .status-visible {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+
+        .status-hidden {
+            background: rgba(108, 117, 125, 0.1);
+            color: #6c757d;
+        }
+
+        .condition-badge {
+            background: #e9ecef;
+            color: #495057;
+            padding: 0.35rem 0.7rem;
+            /* 增加 padding */
+            border-radius: 6px;
+            /* 增加圓角 */
+            font-size: 0.9rem;
+            /* 增加字體 */
+            font-weight: 600;
+            /* 增加字重 */
+        }
+
+        .btn-edit-product {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            /* 增加 padding */
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            /* 增加圓角 */
+            font-size: 0.95rem;
+            /* 增加字體 */
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            box-shadow: 0 3px 8px rgba(212, 175, 55, 0.3);
+            /* 增加陰影 */
+            white-space: nowrap;
+        }
+
+        .btn-edit-product:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.5);
+            filter: brightness(1.1);
+        }
+
+        .btn-edit-product:active {
+            transform: translateY(0);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 5rem 2rem;
+            /* 增加 padding */
+            color: var(--gray);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            /* 增加圖標尺寸 */
+            color: #e9ecef;
+            margin-bottom: 1.5rem;
+        }
+
+        .empty-state h3 {
+            font-size: 1.3rem;
+            /* 增加字體 */
+            margin-bottom: 0.8rem;
+        }
+
+        .empty-state p {
+            font-size: 1.05rem;
+            /* 增加字體 */
+        }
+
+        /* === 新增：篩選與排序區域樣式 === */
+        .filter-sort-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            min-width: 180px;
+        }
+
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 0.6rem 0.8rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .filter-group select:hover,
+        .filter-group input:hover {
+            border-color: var(--gold);
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        .sort-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            min-width: 200px;
+        }
+
+        .sort-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .sort-btn {
+            flex: 1;
+            padding: 0.6rem;
+            border: 2px solid #e9ecef;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+        }
+
+        .sort-btn:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .sort-btn.active {
+            background: var(--gold);
+            border-color: var(--gold);
+            color: white;
+        }
+
+        .btn-apply-filters {
+            padding: 0.6rem 1.5rem;
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            height: fit-content;
+        }
+
+        .btn-apply-filters:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-reset-filters {
+            padding: 0.6rem 1.5rem;
+            background: #e9ecef;
+            color: var(--primary);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            height: fit-content;
+        }
+
+        .btn-reset-filters:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .filter-sort-bar {
+                flex-direction: column;
+            }
+
+            .filter-group,
+            .sort-group {
+                width: 100%;
+            }
+
+            .sort-buttons {
+                flex-direction: column;
+            }
+        }
+
+        /* === 編輯商品 Modal 專屬樣式 === */
+        .edit-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: none;
+            /* 默認隱藏 */
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .edit-modal-box {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 750px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid var(--gold);
+        }
+
+        .edit-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f1f3f5;
+        }
+
+        .edit-modal-header h3 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .edit-modal-header h3 i {
+            color: var(--gold);
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gray);
+            cursor: pointer;
+            transition: color 0.3s;
+            padding: 0.5rem;
+        }
+
+        .modal-close-btn:hover {
+            color: var(--accent);
+        }
+
+        /* 表單網格佈局 (兩列) */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.2rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .form-group label i {
+            color: var(--gold);
+            width: 16px;
+            text-align: center;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 0.4rem;
+            color: var(--gray);
+            font-size: 0.8rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid #f1f3f5;
+        }
+
+        .btn-modal-cancel {
+            padding: 0.8rem 1.5rem;
+            background: #e9ecef;
+            color: var(--primary);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-modal-cancel:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-modal-save {
+            padding: 0.8rem 2rem;
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-modal-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-modal-save:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 響應式：小螢幕改為單列 */
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .edit-modal-box {
+                padding: 1.5rem;
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div th:replace="~{fragments/common :: navbar}"></div>
+
+    <div class="admin-layout">
+        <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='products')}"></div>
+
+        <main class="admin-main">
+            <div class="content-header">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div>
+                        <h2><i class="fas fa-box"></i> <span>商品管理</span></h2>
+                        <div class="breadcrumb">
+                            <a href="/admin/dashboard">管理中心</a> / <span>核心業務管理 / 商品列表</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openAddProductModal()" style="white-space: nowrap;">
+                        <i class="fas fa-plus-circle"></i> 新建商品
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-body">
+                <!-- 篩選與排序區域 -->
+                <div class="filter-sort-bar">
+
+                    <!-- ID 排序 -->
+                    <div class="sort-group">
+                        <label><i class="fas fa-hashtag" style="color: var(--gold); margin-right: 0.3rem;"></i>ID
+                            排序</label>
+                        <div class="sort-buttons">
+                            <button class="sort-btn" onclick="setSort('id', 'asc')" id="sortIdAsc">
+                                <i class="fas fa-sort-numeric-down"></i> 升序
+                            </button>
+                            <button class="sort-btn" onclick="setSort('id', 'desc')" id="sortIdDesc">
+                                <i class="fas fa-sort-numeric-up"></i> 降序
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label><i class="fas fa-crown"
+                                style="color: var(--gold); margin-right: 0.3rem;"></i>品牌篩選</label>
+                        <select id="brandFilter">
+                            <option value="">全部品牌</option>
+                            <option value="rolex" th:selected="${currentBrand == 'rolex'}">rolex</option>
+                            <option value="omega" th:selected="${currentBrand == 'omega'}">omega</option>
+                            <option value="patek" th:selected="${currentBrand == 'patek'}">patek</option>
+                            <option value="ap" th:selected="${currentBrand == 'ap'}">ap</option>
+                            <option value="cartier" th:selected="${currentBrand == 'cartier'}">cartier</option>
+                            <!-- 動態生成其他品牌 -->
+                            <option th:each="brand : ${allBrands}"
+                                th:if="${not #lists.contains({'rolex','omega','patek','ap','cartier'}, brand)}"
+                                th:value="${brand}" th:selected="${currentBrand == brand}" th:text="${brand}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- 分類篩選 (新增) -->
+                    <div class="filter-group">
+                        <label><i class="fas fa-th-large"
+                                style="color: var(--gold); margin-right: 0.3rem;"></i>分類篩選</label>
+                        <select id="categoryFilter">
+                            <option value="">全部類型</option>
+                            <option value="pilot" th:selected="${currentCategory == 'pilot'}">飞行表</option>
+                            <option value="dive" th:selected="${currentCategory == 'dive'}">潜水表</option>
+                            <option value="dress" th:selected="${currentCategory == 'dress'}">正装表</option>
+                            <option value="chronograph" th:selected="${currentCategory == 'chronograph'}">计时码表</option>
+                            <option value="vintage" th:selected="${currentCategory == 'vintage'}">古董表</option>
+                            <option value="others" th:selected="${currentCategory == 'others'}">其它类型手表</option>
+                        </select>
+                    </div>
+
+                    <!-- 成色篩選 -->
+                    <div class="filter-group">
+                        <label><i class="fas fa-gem" style="color: var(--gold); margin-right: 0.3rem;"></i>成色篩選</label>
+                        <select id="conditionFilter">
+                            <option value="">全部成色</option>
+                            <option value="NEAR_MINT">近全新 (98-100%)</option>
+                            <option value="EXCELLENT">極佳 (95-97%)</option>
+                            <option value="GOOD">良好 (90-94%)</option>
+                            <option value="FAIR">正常使用痕跡 (85-89%)</option>
+                            <option value="HEAVILY_USED">重度使用痕跡</option>
+                        </select>
+                    </div>
+
+                    <!-- 狀態篩選 -->
+                    <div class="filter-group">
+                        <label><i class="fas fa-eye" style="color: var(--gold); margin-right: 0.3rem;"></i>顯示狀態</label>
+                        <select id="statusFilter">
+                            <option value="">全部狀態</option>
+                            <option value="visible">顯示中</option>
+                            <option value="hidden">已隱藏</option>
+                        </select>
+                    </div>
+
+                    <!-- 成色顯示篩選 -->
+                    <div class="filter-group">
+                        <label><i class="fas fa-gem" style="color: var(--gold); margin-right: 0.3rem;"></i>成色顯示</label>
+                        <select id="conditionVisibleFilter">
+                            <option value="">全部</option>
+                            <option value="visible">顯示中</option>
+                            <option value="hidden">已隱藏</option>
+                        </select>
+                    </div>
+
+                    <!-- 價格排序 -->
+                    <div class="sort-group">
+                        <label><i class="fas fa-tag" style="color: var(--gold); margin-right: 0.3rem;"></i>價格排序</label>
+                        <div class="sort-buttons">
+                            <button class="sort-btn" onclick="setSort('price', 'asc')" id="sortPriceAsc">
+                                <i class="fas fa-arrow-down"></i> 低到高
+                            </button>
+                            <button class="sort-btn" onclick="setSort('price', 'desc')" id="sortPriceDesc">
+                                <i class="fas fa-arrow-up"></i> 高到低
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 庫存排序 -->
+                    <div class="sort-group">
+                        <label><i class="fas fa-boxes"
+                                style="color: var(--gold); margin-right: 0.3rem;"></i>庫存排序</label>
+                        <div class="sort-buttons">
+                            <button class="sort-btn" onclick="setSort('stock', 'asc')" id="sortStockAsc">
+                                <i class="fas fa-arrow-down"></i> 少到多
+                            </button>
+                            <button class="sort-btn" onclick="setSort('stock', 'desc')" id="sortStockDesc">
+                                <i class="fas fa-arrow-up"></i> 多到少
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 評價排序 -->
+                    <div class="sort-group">
+                        <label><i class="fas fa-star" style="color: var(--gold); margin-right: 0.3rem;"></i>評價排序</label>
+                        <div class="sort-buttons">
+                            <button class="sort-btn" onclick="setSort('rating', 'asc')" id="sortRatingAsc">
+                                <i class="fas fa-arrow-down"></i> 低到高
+                            </button>
+                            <button class="sort-btn" onclick="setSort('rating', 'desc')" id="sortRatingDesc">
+                                <i class="fas fa-arrow-up"></i> 高到低
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 應用篩選按鈕 -->
+                    <button class="btn-apply-filters" onclick="applyFilters()">
+                        <i class="fas fa-filter"></i> 應用篩選
+                    </button>
+                    <button class="btn-reset-filters" onclick="resetFilters()">
+                        <i class="fas fa-undo"></i> 重置
+                    </button>
+                </div>
+
+                <!-- 表格區域 -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">ID</th>
+                                <th style="width: 70px;">圖片</th>
+                                <th style="min-width: 220px;">商品資訊</th>
+                                <th style="width: 100px;">分類</th>
+                                <th style="width: 100px;">成色</th>
+                                <th style="width: 110px;">價格</th>
+                                <th style="width: 80px;">庫存</th>
+                                <th style="width: 100px;">評價</th>
+                                <th style="width: 100px;">狀態</th>
+                                <th style="width: 100px;">成色顯示</th>
+                                <th style="width: 110px;">創建時間</th>
+                                <th style="width: 120px; text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="product : ${products}">
+                                <td style="color: var(--gray); font-family: monospace;" th:text="${product.productId}">1
+                                </td>
+                                <td>
+                                    <img th:src="@{'/images/products/' + ${product.image}}"
+                                        th:alt="${product.description}" class="product-thumb"
+                                        onerror="this.src='/images/placeholder.png'">
+                                </td>
+                                <td>
+                                    <span class="product-brand" th:text="${product.brand} ?: 'ChronoTeam'">Brand</span>
+                                    <span class="product-name" th:text="${product.description}"
+                                        th:title="${product.description}">Product Name</span>
+                                    <div class="product-meta">
+                                        <span th:if="${product.groupCode != null and product.groupCode != ''}">
+                                            <i class="fas fa-link" style="font-size: 0.7rem;"></i> 分組: <span
+                                                th:text="${product.groupCode}">G001</span>
+                                        </span>
+                                        <div
+                                            style="color: #6c757d; font-size: 0.8rem; line-height: 1.4; margin-top: 0.2rem;">
+                                            <span style="font-weight: 600; color: #495057;">簡介：</span>
+                                            <span
+                                                th:text="${product.details != null and product.details != '' ? product.details : '暫無簡介'}"></span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span
+                                        style="background: #f1f3f5; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;"
+                                        th:text="${product.category}">Watch</span>
+                                </td>
+                                <td>
+                                    <span class="condition-badge"
+                                        th:text="${product.condition != null ? product.condition : '未設定'}">EXCELLENT</span>
+                                </td>
+                                <td style="font-weight: 700; color: var(--accent);">
+                                    HK$ <span
+                                        th:text="${#numbers.formatDecimal(product.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                                </td>
+                                <td>
+                                    <span th:text="${product.stock}"
+                                        th:style="${product.stock != null and product.stock <= 10} ? 'color: var(--accent); font-weight: 700;' : ''">100</span>
+                                </td>
+                                <td>
+                                    <span th:if="${product.totalReviewCount != null and product.totalReviewCount > 0}">
+                                        <i class="fas fa-star" style="color: var(--gold); font-size: 0.8rem;"></i>
+                                        <span
+                                            th:text="${#numbers.formatDecimal(product.totalScore / product.totalReviewCount, 1, 'POINT', 1, 'POINT')}">4.5</span>
+                                        <span style="color: var(--gray); font-size: 0.8rem;">(<span
+                                                th:text="${product.totalReviewCount}">20</span>)</span>
+                                    </span>
+                                    <span
+                                        th:unless="${product.totalReviewCount != null and product.totalReviewCount > 0}"
+                                        style="color: #adb5bd; font-size: 0.85rem;">暫無</span>
+                                </td>
+                                <td>
+                                    <span th:if="${product.visible}" class="status-badge status-visible">
+                                        <i class="fas fa-eye"></i> 顯示中
+                                    </span>
+                                    <span th:unless="${product.visible}" class="status-badge status-hidden">
+                                        <i class="fas fa-eye-slash"></i> 已隱藏
+                                    </span>
+                                </td>
+                                <!-- 在 狀態 badge 和 創建時間 中間插入 -->
+                                <td>
+                                    <span th:if="${product.conditionVisible}" style="color: #28a745; font-weight: 600;">
+                                        <i class="fas fa-check"></i> 顯示
+                                    </span>
+                                    <span th:unless="${product.conditionVisible}" style="color: #6c757d;">
+                                        <i class="fas fa-times"></i> 隱藏
+                                    </span>
+                                </td>
+                                <td style="color: var(--gray); font-size: 0.85rem; white-space: nowrap;"
+                                    th:text="${#temporals.format(product.createdAt, 'yyyy-MM-dd')}">2024-01-01</td>
+                                <td style="text-align: center;">
+                                    <button class="btn-edit-product" onclick="openEditModal(this)"
+                                        th:data-id="${product.productId}" th:data-brand="${product.brand}"
+                                        th:data-category="${product.category}" th:data-condition="${product.condition}"
+                                        th:data-description="${product.description}"
+                                        th:data-details="${product.details}" th:data-image="${product.image}"
+                                        th:data-price="${product.price}" th:data-stock="${product.stock}"
+                                        th:data-visible="${product.visible}"
+                                        th:data-condition-visible="${product.conditionVisible}"
+                                        th:data-group-code="${product.groupCode}">
+                                        <i class="fas fa-edit"></i> 修改
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(products)}">
+                                <td colspan="11">
+                                    <div class="empty-state">
+                                        <i class="fas fa-box-open"></i>
+                                        <h3>暫無商品數據</h3>
+                                        <p>數據庫中目前沒有找到任何商品記錄。</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== 編輯商品 Modal ==================== -->
+    <div id="editProductModal" class="edit-modal-overlay">
+        <div class="edit-modal-box">
+            <div class="edit-modal-header">
+                <h3><i class="fas fa-edit"></i> 編輯商品資訊</h3>
+                <button class="modal-close-btn" onclick="closeEditModal()">&times;</button>
+            </div>
+
+            <form id="editProductForm" onsubmit="saveProduct(event)">
+                <input type="hidden" id="editProductId">
+
+                <!-- 第一行：品牌與分類 -->
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-crown"></i> 品牌</label>
+                        <input type="text" id="editBrand" required placeholder="例如：Rolex, Omega">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-th-large"></i> 分類</label>
+                        <select id="editCategory" required>
+                            <option value="pilot">飛行錶</option>
+                            <option value="dive">潛水錶</option>
+                            <option value="dress">正裝錶</option>
+                            <option value="chronograph">計時碼錶</option>
+                            <option value="vintage">古董錶</option>
+                            <option value="others">其它類型手錶</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-gem"></i> 成色 (Watch Condition)</label>
+                    <select id="editCondition">
+                        <option value="">請選擇成色 (選填)</option>
+                        <option value="NEAR_MINT">近全新 (98-100%)</option>
+                        <option value="EXCELLENT">極佳 (95-97%)</option>
+                        <option value="GOOD">良好 (90-94%)</option>
+                        <option value="FAIR">正常使用痕跡 (85-89%)</option>
+                        <option value="HEAVILY_USED">重度使用痕跡</option>
+                    </select>
+                </div>
+
+                <!-- 第二行：價格與庫存 -->
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-tag"></i> 價格 (HK$)</label>
+                        <input type="number" id="editPrice" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-boxes"></i> 庫存數量</label>
+                        <input type="number" id="editStock" min="0" required>
+                    </div>
+                </div>
+
+                <!-- 第三行：狀態與成色顯示 -->
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-eye"></i> 商品顯示狀態</label>
+                        <select id="editVisible" required>
+                            <option value="true">顯示中</option>
+                            <option value="false">已隱藏</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-gem"></i> 成色顯示狀態</label>
+                        <select id="editConditionVisible" required>
+                            <option value="true">顯示中</option>
+                            <option value="false">已隱藏</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 第四行：分組碼與圖片 -->
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-link"></i> 同款分組碼</label>
+                        <input type="text" id="editGroupCode" placeholder="例如：G001 (選填)">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-image"></i> 圖片文件名</label>
+                        <input type="text" id="editImage" required placeholder="例如：watch1.png">
+                        <small><i class="fas fa-info-circle"></i> 圖片需先上傳至 /images/products/ 目錄</small>
+                    </div>
+                </div>
+
+                <!-- 第五行：簡介與詳細介紹 -->
+                <div class="form-group">
+                    <label><i class="fas fa-align-left"></i> 商品簡介</label>
+                    <textarea id="editDescription" rows="2" required placeholder="簡短描述商品..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-file-alt"></i> 詳細介紹</label>
+                    <textarea id="editDetails" rows="4" placeholder="詳細介紹商品的來源、特點、規格等..."></textarea>
+                </div>
+
+                <!-- 按鈕區 -->
+                <div class="modal-actions">
+                    <button type="button" class="btn-modal-cancel" onclick="closeEditModal()">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                    <button type="submit" class="btn-modal-save" id="saveProductBtn">
+                        <i class="fas fa-save"></i> 保存修改
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/common :: modals}"></div>
+
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+
+        // 當前排序狀態
+        let currentSort = { field: null, direction: null };
+
+        function openAddProductModal() {
+            alert('新建商品功能開發中...');
+        }
+
+        // 打開編輯 Modal 並填充數據
+        function openEditModal(button) {
+            // 1. 讀取按鈕上的 data-* 屬性
+            const id = button.getAttribute('data-id');
+            const brand = button.getAttribute('data-brand') || '';
+            const category = button.getAttribute('data-category') || 'others';
+            const condition = button.getAttribute('data-condition') || '';
+            const description = button.getAttribute('data-description') || '';
+            const details = button.getAttribute('data-details') || '';
+            const image = button.getAttribute('data-image') || '';
+            const price = button.getAttribute('data-price') || 0;
+            const stock = button.getAttribute('data-stock') || 0;
+            const visible = button.getAttribute('data-visible') === 'true';
+            const conditionVisible = button.getAttribute('data-condition-visible') === 'true';
+            const groupCode = button.getAttribute('data-group-code') || '';
+
+            // 2. 填充到表單中
+            document.getElementById('editProductId').value = id;
+            document.getElementById('editBrand').value = brand;
+            document.getElementById('editCategory').value = category;
+            document.getElementById('editCondition').value = condition;
+            document.getElementById('editDescription').value = description;
+            document.getElementById('editDetails').value = details;
+            document.getElementById('editImage').value = image;
+            document.getElementById('editPrice').value = price;
+            document.getElementById('editStock').value = stock;
+            document.getElementById('editVisible').value = visible.toString();
+            document.getElementById('editConditionVisible').value = conditionVisible.toString();
+            document.getElementById('editGroupCode').value = groupCode;
+
+            // 3. 顯示 Modal
+            document.getElementById('editProductModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 禁止背景滾動
+        }
+
+        // 關閉編輯 Modal
+        function closeEditModal() {
+            document.getElementById('editProductModal').style.display = 'none';
+            document.body.style.overflow = ''; // 恢復背景滾動
+            document.getElementById('editProductForm').reset(); // 清空表單
+        }
+
+        // 保存商品修改
+        async function saveProduct(event) {
+            event.preventDefault(); // 阻止表單默認提交
+
+            const productId = document.getElementById('editProductId').value;
+            const saveBtn = document.getElementById('saveProductBtn');
+            const originalBtnText = saveBtn.innerHTML;
+
+            // 顯示 Loading 狀態
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+
+            // 收集表單數據
+            const formData = {
+                brand: document.getElementById('editBrand').value,
+                category: document.getElementById('editCategory').value,
+                condition: document.getElementById('editCondition').value || null,
+                description: document.getElementById('editDescription').value,
+                details: document.getElementById('editDetails').value,
+                image: document.getElementById('editImage').value,
+                price: parseFloat(document.getElementById('editPrice').value),
+                stock: parseInt(document.getElementById('editStock').value),
+                visible: document.getElementById('editVisible').value === 'true',
+                conditionVisible: document.getElementById('editConditionVisible').value === 'true',
+                groupCode: document.getElementById('editGroupCode').value || null
+            };
+
+            try {
+                // 調用後端 API (您的 ProductController 中已有 @PutMapping("/api/admin/product/{id}"))
+                const response = await fetch(`/api/admin/product/${productId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('✅ 商品資訊修改成功！');
+                    } else {
+                        alert('✅ 商品資訊修改成功！');
+                    }
+                    closeEditModal();
+                    // 延遲 1 秒後刷新頁面以顯示最新數據
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + (result.message || '修改失敗'), true);
+                    } else {
+                        alert('❌ ' + (result.message || '修改失敗'));
+                    }
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalBtnText;
+                }
+            } catch (error) {
+                console.error('保存失敗:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                } else {
+                    alert('❌ 網絡錯誤，請稍後重試');
+                }
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalBtnText;
+            }
+        }
+
+        // 點擊遮罩層關閉 Modal
+        document.getElementById('editProductModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeEditModal();
+            }
+        });
+
+        // ESC 鍵關閉 Modal
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('editProductModal');
+                if (modal && modal.style.display === 'flex') {
+                    closeEditModal();
+                }
+            }
+        });
+
+        // 設置排序
+        function setSort(field, direction) {
+            currentSort = { field, direction };
+
+            // 移除所有排序按鈕的 active 類
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // 添加 active 類到當前按鈕
+            const buttonId = 'sort' + field.charAt(0).toUpperCase() + field.slice(1) + (direction === 'asc' ? 'Asc' : 'Desc');
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.classList.add('active');
+            }
+
+            console.log('排序:', field, direction);
+            // 這裡將來會調用後端 API 進行排序
+        }
+
+        // 應用篩選
+        function applyFilters() {
+            const brand = document.getElementById('brandFilter').value;
+            const category = document.getElementById('categoryFilter').value;
+            const condition = document.getElementById('conditionFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const conditionVisible = document.getElementById('conditionVisibleFilter').value;
+
+            // 構建查詢參數
+            const params = new URLSearchParams();
+            if (brand) params.append('currentBrand', brand);
+            if (category) params.append('currentCategory', category);
+            if (condition) params.append('condition', condition);
+            if (status) params.append('status', status);
+            if (currentSort.field) {
+                params.append('sortField', currentSort.field);
+                params.append('sortDirection', currentSort.direction);
+            }
+            if (conditionVisible) params.append('conditionVisible', conditionVisible);
+            // 跳轉到帶參數的頁面
+            window.location.href = '/admin/products?' + params.toString();
+        }
+
+        // 重置篩選
+        function resetFilters() {
+            document.getElementById('brandFilter').value = '';
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('conditionFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('conditionVisibleFilter').value = '';
+            currentSort = { field: null, direction: null };
+
+            document.querySelectorAll('.sort-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // 跳轉到無參數的頁面
+            window.location.href = '/admin/products';
+        }
+    </script>
+    <script src="/js/common.js"></script>
+    <script src="/js/admin.js"></script>
+</body>
+
+</html>
