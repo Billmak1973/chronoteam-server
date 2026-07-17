@@ -1,94 +1,95 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <body>
-<!-- ==================== 左側側邊欄 Fragment ==================== -->
-<aside th:fragment="sidebar(activePage)" class="sidebar">
-    <div class="sidebar-header">
-        <i class="fas fa-user-circle"></i>
-        <h3 th:text="${user.name}">用戶名</h3>
-        <p th:text="${user.email}">email@example.com</p>
-        <p style="font-size: 0.75rem; color: var(--gray); margin-top: 0.3rem; font-family: monospace; letter-spacing: 0.5px; background: var(--light); padding: 0.2rem 0.5rem; border-radius: 4px; display: inline-block;">
-            <i class="fas fa-fingerprint" style="color: var(--gold); margin-right: 0.3rem;"></i>
-            <span th:text="${user.uid}">C26000</span>
-        </p>
-    </div>
-    <nav class="sidebar-menu">
-        <!-- 帳戶管理 -->
-        <div class="menu-category">
-            <div class="menu-category-title">帳戶管理</div>
-            <a href="/account/profile" class="menu-item"
-               th:classappend="${activePage == 'profile'} ? 'active' : ''">
-                <i class="fas fa-id-card"></i> 帳戶信息
-            </a>
-            <a href="/account/password" class="menu-item"
-               th:classappend="${activePage == 'password'} ? 'active' : ''">
-                <i class="fas fa-key"></i> 修改密碼
-            </a>
-            <a href="/account/security" class="menu-item"
-               th:classappend="${activePage == 'security'} ? 'active' : ''">
-                <i class="fas fa-shield-alt"></i> 安全設置
-            </a>
+    <!-- ==================== 左側側邊欄 Fragment ==================== -->
+    <aside th:fragment="sidebar(activePage)" class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-user-circle"></i>
+            <h3 th:text="${user.name}">用戶名</h3>
+            <p th:text="${user.email}">email@example.com</p>
+            <p
+                style="font-size: 0.75rem; color: var(--gray); margin-top: 0.3rem; font-family: monospace; letter-spacing: 0.5px; background: var(--light); padding: 0.2rem 0.5rem; border-radius: 4px; display: inline-block;">
+                <i class="fas fa-fingerprint" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                <span th:text="${user.uid}">C26000</span>
+            </p>
         </div>
+        <nav class="sidebar-menu">
+            <!-- 帳戶管理 -->
+            <div class="menu-category">
+                <div class="menu-category-title">帳戶管理</div>
+                <a href="/account/profile" class="menu-item"
+                    th:classappend="${activePage == 'profile'} ? 'active' : ''">
+                    <i class="fas fa-id-card"></i> 帳戶信息
+                </a>
+                <a href="/account/password" class="menu-item"
+                    th:classappend="${activePage == 'password'} ? 'active' : ''">
+                    <i class="fas fa-key"></i> 修改密碼
+                </a>
+                <a href="/account/security" class="menu-item"
+                    th:classappend="${activePage == 'security'} ? 'active' : ''">
+                    <i class="fas fa-shield-alt"></i> 安全設置
+                </a>
+            </div>
 
-        <!-- 賣家中心 -->
-        <div class="menu-category">
-            <div class="menu-category-title">賣家中心</div>
-            <a href="/sell/my-applications" class="menu-item"
-               th:classappend="${activePage == 'sell-applications'} ? 'active' : ''">
-                <i class="fas fa-hand-holding-usd"></i> 我的出售申請
-            </a>
-            <a href="/account/settlement" class="menu-item"
-               th:classappend="${activePage == 'settlement'} ? 'active' : ''">
-                <i class="fas fa-file-invoice-dollar"></i> 結算記錄
-            </a>
-        </div>
+            <!-- 賣家中心 -->
+            <div class="menu-category">
+                <div class="menu-category-title">賣家中心</div>
+                <a href="/sell/my-applications" class="menu-item"
+                    th:classappend="${activePage == 'sell-applications'} ? 'active' : ''">
+                    <i class="fas fa-hand-holding-usd"></i> 我的出售申請
+                </a>
+                <a href="/account/settlement" class="menu-item"
+                    th:classappend="${activePage == 'settlement'} ? 'active' : ''">
+                    <i class="fas fa-file-invoice-dollar"></i> 結算記錄
+                </a>
+            </div>
 
-        <!-- 買家中心 -->
-        <div class="menu-category">
-            <div class="menu-category-title">買家中心</div>
-            <a href="/account/orders" class="menu-item"
-               th:classappend="${activePage == 'orders'} ? 'active' : ''">
-                <i class="fas fa-box"></i> 我的訂單
-            </a>
-            <!-- ：購物車菜單項 -->
-            <a href="/cart/view" class="menu-item"
-               th:classappend="${activePage == 'cart'} ? 'active' : ''">
-                <i class="fas fa-shopping-cart"></i> 購物車
-            </a>
-            <a href="/account/favorites" class="menu-item"
-               th:classappend="${activePage == 'favorites'} ? 'active' : ''">
-                <i class="fas fa-heart"></i> 我的收藏
-            </a>
+            <!-- 買家中心 -->
+            <div class="menu-category">
+                <div class="menu-category-title">買家中心</div>
+                <a href="/account/orders" class="menu-item" th:classappend="${activePage == 'orders'} ? 'active' : ''">
+                    <i class="fas fa-box"></i> 我的訂單
+                </a>
+                <!-- ：購物車菜單項 -->
+                <a href="/cart/view" class="menu-item" th:classappend="${activePage == 'cart'} ? 'active' : ''">
+                    <i class="fas fa-shopping-cart"></i> 購物車
+                </a>
+                <a href="/account/favorites" class="menu-item"
+                    th:classappend="${activePage == 'favorites'} ? 'active' : ''">
+                    <i class="fas fa-heart"></i> 我的收藏
+                </a>
 
-            <a href="/account/stock-notifications" class="menu-item"
-               th:classappend="${activePage == 'stock-notifications'} ? 'active' : ''">
-                <i class="fas fa-bell"></i> 到貨通知
-            </a>
+                <a href="/account/stock-notifications" class="menu-item"
+                    th:classappend="${activePage == 'stock-notifications'} ? 'active' : ''">
+                    <i class="fas fa-bell"></i> 到貨通知
+                </a>
 
-            <a href="/account/history" class="menu-item"
-               th:classappend="${activePage == 'history'} ? 'active' : ''">
-                <i class="fas fa-history"></i> 瀏覽歷史
-            </a>
-        </div>
+                <a href="/account/history" class="menu-item"
+                    th:classappend="${activePage == 'history'} ? 'active' : ''">
+                    <i class="fas fa-history"></i> 瀏覽歷史
+                </a>
+            </div>
 
-        <!-- 互動中心 -->
-        <div class="menu-category">
-            <div class="menu-category-title">互動中心</div>
-            <a href="/account/reviews" class="menu-item"
-               th:classappend="${activePage == 'reviews'} ? 'active' : ''">
-                <i class="fas fa-comments"></i> 我的評價
-            </a>
-            <a href="/account/notifications" class="menu-item"
-               th:classappend="${activePage == 'notifications'} ? 'active' : ''">
-                <i class="fas fa-bell"></i> 系統通知
-            </a>
-            <a href="/account/blocked-users" class="menu-item"
-               th:classappend="${activePage == 'blocked-users'} ? 'active' : ''">
-                <i class="fas fa-ban"></i> 禁言名單
-            </a>
-        </div>
+            <!-- 互動中心 -->
+            <div class="menu-category">
+                <div class="menu-category-title">互動中心</div>
+                <a href="/account/reviews" class="menu-item"
+                    th:classappend="${activePage == 'reviews'} ? 'active' : ''">
+                    <i class="fas fa-comments"></i> 我的評價
+                </a>
+                <a href="/account/notifications" class="menu-item"
+                    th:classappend="${activePage == 'notifications'} ? 'active' : ''">
+                    <i class="fas fa-bell"></i> 系統通知
+                </a>
+                <a href="/account/blocked-users" class="menu-item"
+                    th:classappend="${activePage == 'blocked-users'} ? 'active' : ''">
+                    <i class="fas fa-ban"></i> 禁言名單
+                </a>
+            </div>
 
-    </nav>
-</aside>
+        </nav>
+    </aside>
 </body>
+
 </html>

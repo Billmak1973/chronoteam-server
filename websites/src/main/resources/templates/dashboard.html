@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <title>個人中心 - ChronoTeam</title>
@@ -9,40 +10,43 @@
     <style>
         /* 頁面專屬樣式 */
         .dashboard-container {
-          display: flex;
-          min-height: calc(100vh - 150px);
-          max-width: 1400px;
-          margin: 2rem auto;
-          padding: 0 1rem;
-          gap: 2rem;
+            display: flex;
+            min-height: calc(100vh - 150px);
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            gap: 2rem;
         }
+
         .main-content {
-          flex: 1;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-          padding: 2rem;
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
         }
     </style>
 </head>
+
 <body>
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="dashboard-container">
-    <!--  引入側邊欄 Fragment，傳入當前頁面標識 -->
-    <div th:replace="~{fragments/sidebar :: sidebar(activePage='dashboard')}"></div>
+    <div class="dashboard-container">
+        <!--  引入側邊欄 Fragment，傳入當前頁面標識 -->
+        <div th:replace="~{fragments/sidebar :: sidebar(activePage='dashboard')}"></div>
 
-    <!-- 右側主內容 -->
-    <main class="main-content">
-        <h1>歡迎來到個人中心</h1>
-        <!-- 你的內容 -->
-    </main>
-</div>
+        <!-- 右側主內容 -->
+        <main class="main-content">
+            <h1>歡迎來到個人中心</h1>
+            <!-- 你的內容 -->
+        </main>
+    </div>
 
-<div th:replace="~{fragments/common :: modals}"></div>
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-<script src="/js/common.js"></script>
+    <div th:replace="~{fragments/common :: modals}"></div>
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    </script>
+    <script src="/js/common.js"></script>
 </body>
+
 </html>

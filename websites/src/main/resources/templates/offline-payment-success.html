@@ -1,63 +1,117 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <title>訂單已創建 - ChronoTeam</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
     <style>
-        .success-container { max-width: 600px; margin: 5rem auto; text-align: center; padding: 3rem; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
-        .success-icon { font-size: 5rem; color: var(--gold); margin-bottom: 1.5rem; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
-        .order-no { background: var(--light); padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 1.2rem; color: var(--primary); margin: 1.5rem 0; }
-        .store-info { text-align: left; background: #fff3cd; padding: 1.5rem; border-radius: 8px; margin: 1.5rem 0; color: #856404; }
-        .store-info p { margin-bottom: 0.5rem; }
-        .action-btns { display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; }
+        .success-container {
+            max-width: 600px;
+            margin: 5rem auto;
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .success-icon {
+            font-size: 5rem;
+            color: var(--gold);
+            margin-bottom: 1.5rem;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0);
+            }
+
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .order-no {
+            background: var(--light);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin: 1.5rem 0;
+        }
+
+        .store-info {
+            text-align: left;
+            background: #fff3cd;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+            color: #856404;
+        }
+
+        .store-info p {
+            margin-bottom: 0.5rem;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
     </style>
 </head>
+
 <body>
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="success-container">
-    <div class="success-icon"><i class="fas fa-store"></i></div>
-    <h2 style="color: var(--primary); margin-bottom: 0.5rem;">訂單已創建！</h2>
-    <p style="color: var(--gray);">請在 7 天內前往選定店鋪完成支付，逾期訂單將自動取消。</p>
+    <div class="success-container">
+        <div class="success-icon"><i class="fas fa-store"></i></div>
+        <h2 style="color: var(--primary); margin-bottom: 0.5rem;">訂單已創建！</h2>
+        <p style="color: var(--gray);">請在 7 天內前往選定店鋪完成支付，逾期訂單將自動取消。</p>
 
-    <div class="order-no">
-        訂單編號：<span th:text="${data.orderNo}">ORD-XXX</span>
+        <div class="order-no">
+            訂單編號：<span th:text="${data.orderNo}">ORD-XXX</span>
+        </div>
+
+        <div class="store-info">
+            <h4 style="margin-bottom: 1rem; color: #856404;"><i class="fas fa-map-marker-alt"></i> 店鋪信息</h4>
+            <p><strong>店鋪名稱：</strong><span th:text="${data.storeName}">中環店</span></p>
+            <p><strong>店鋪地址：</strong><span th:text="${data.storeAddress}">中環皇后大道中 99 號</span></p>
+            <p><strong>聯繫電話：</strong><span th:text="${data.storePhone}">+852 2123 4567</span></p>
+            <p><strong>營業時間：</strong><span th:text="${data.storeHours}">10:00 AM - 8:00 PM</span></p>
+        </div>
+
+        <div
+            style="background: #e2e3e5; padding: 1rem; border-radius: 8px; color: #383d41; font-size: 0.9rem; text-align: left;">
+            <strong><i class="fas fa-info-circle"></i> 到店支付須知：</strong>
+            <ul style="margin: 0.5rem 0 0 1.5rem;">
+                <li>請向店員出示您的訂單編號。</li>
+                <li>支持現金、信用卡、銀行轉帳等多種支付方式。</li>
+                <li>支付完成後，店員會即時更新訂單狀態。</li>
+            </ul>
+        </div>
+
+        <div class="action-btns">
+            <a href="/account/orders" class="btn btn-outline"><i class="fas fa-box"></i> 查看我的訂單</a>
+            <a href="/" class="btn btn-primary"><i class="fas fa-home"></i> 返回首頁</a>
+        </div>
     </div>
 
-    <div class="store-info">
-        <h4 style="margin-bottom: 1rem; color: #856404;"><i class="fas fa-map-marker-alt"></i> 店鋪信息</h4>
-        <p><strong>店鋪名稱：</strong><span th:text="${data.storeName}">中環店</span></p>
-        <p><strong>店鋪地址：</strong><span th:text="${data.storeAddress}">中環皇后大道中 99 號</span></p>
-        <p><strong>聯繫電話：</strong><span th:text="${data.storePhone}">+852 2123 4567</span></p>
-        <p><strong>營業時間：</strong><span th:text="${data.storeHours}">10:00 AM - 8:00 PM</span></p>
-    </div>
+    <footer class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.</p>
+    </footer>
 
-    <div style="background: #e2e3e5; padding: 1rem; border-radius: 8px; color: #383d41; font-size: 0.9rem; text-align: left;">
-        <strong><i class="fas fa-info-circle"></i> 到店支付須知：</strong>
-        <ul style="margin: 0.5rem 0 0 1.5rem;">
-            <li>請向店員出示您的訂單編號。</li>
-            <li>支持現金、信用卡、銀行轉帳等多種支付方式。</li>
-            <li>支付完成後，店員會即時更新訂單狀態。</li>
-        </ul>
-    </div>
-
-    <div class="action-btns">
-        <a href="/account/orders" class="btn btn-outline"><i class="fas fa-box"></i> 查看我的訂單</a>
-        <a href="/" class="btn btn-primary"><i class="fas fa-home"></i> 返回首頁</a>
-    </div>
-</div>
-
-<footer class="footer">
-    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
-</footer>
-
-<div th:replace="~{fragments/common :: modals}"></div>
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-<script src="/js/common.js"></script>
+    <div th:replace="~{fragments/common :: modals}"></div>
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    </script>
+    <script src="/js/common.js"></script>
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <title>管理中心 - ChronoTeam</title>
@@ -10,52 +11,74 @@
         /* 頁面專屬樣式可以放在這裡 */
     </style>
 </head>
+
 <body>
-<!-- 引入公共導航欄 -->
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <!-- 引入公共導航欄 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="admin-layout">
-    <!-- ==================== 左側邊欄 ==================== -->
-    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='dashboard')}"></div>
+    <div class="admin-layout">
+        <!-- ==================== 左側邊欄 ==================== -->
+        <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='dashboard')}"></div>
 
-    <!-- ==================== 右側內容區 ==================== -->
-    <main class="admin-main">
-        <!-- 頂部標題與麵包屑 -->
-        <div class="content-header">
-            <h2><i class="fas fa-tachometer-alt"></i> <span id="pageTitle">總覽</span></h2>
-            <div class="breadcrumb">
-                <a href="/admin/dashboard">管理中心</a> / <span id="pageBreadcrumb">數據儀表板</span>
-            </div>
-        </div>
-
-        <!-- 動態內容容器 -->
-        <div class="content-body" id="contentBody">
-            <!-- 默認顯示：總覽頁 -->
-            <div id="page-dashboard">
-                <h3 style="margin-bottom: 1.5rem; color: var(--primary);">核心數據概覽</h3>
-                <div class="stats-grid">
-                    <div class="stat-card"><i class="fas fa-clipboard-list"></i><div class="stat-info"><h4>12</h4><p>今日新增出售申請</p></div></div>
-                    <div class="stat-card"><i class="fas fa-search"></i><div class="stat-info"><h4>8</h4><p>待鑑定數量</p></div></div>
-                    <div class="stat-card"><i class="fas fa-dollar-sign"></i><div class="stat-info"><h4>HK$ 245K</h4><p>本月成交總額</p></div></div>
-                    <div class="stat-card"><i class="fas fa-coins"></i><div class="stat-info"><h4>HK$ 18.5K</h4><p>平台淨收入</p></div></div>
-                </div>
-                <div class="placeholder-box">
-                    <i class="fas fa-chart-pie"></i>
-                    <h3>圖表區域佔位</h3>
-                    <p>此處將展示熱銷分析、財務報表等圖表數據（需對接後端 API）</p>
+        <!-- ==================== 右側內容區 ==================== -->
+        <main class="admin-main">
+            <!-- 頂部標題與麵包屑 -->
+            <div class="content-header">
+                <h2><i class="fas fa-tachometer-alt"></i> <span id="pageTitle">總覽</span></h2>
+                <div class="breadcrumb">
+                    <a href="/admin/dashboard">管理中心</a> / <span id="pageBreadcrumb">數據儀表板</span>
                 </div>
             </div>
-        </div>
-    </main>
-</div>
 
-<!-- 引入公共彈窗 -->
-<div th:replace="~{fragments/common :: modals}"></div>
+            <!-- 動態內容容器 -->
+            <div class="content-body" id="contentBody">
+                <!-- 默認顯示：總覽頁 -->
+                <div id="page-dashboard">
+                    <h3 style="margin-bottom: 1.5rem; color: var(--primary);">核心數據概覽</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card"><i class="fas fa-clipboard-list"></i>
+                            <div class="stat-info">
+                                <h4>12</h4>
+                                <p>今日新增出售申請</p>
+                            </div>
+                        </div>
+                        <div class="stat-card"><i class="fas fa-search"></i>
+                            <div class="stat-info">
+                                <h4>8</h4>
+                                <p>待鑑定數量</p>
+                            </div>
+                        </div>
+                        <div class="stat-card"><i class="fas fa-dollar-sign"></i>
+                            <div class="stat-info">
+                                <h4>HK$ 245K</h4>
+                                <p>本月成交總額</p>
+                            </div>
+                        </div>
+                        <div class="stat-card"><i class="fas fa-coins"></i>
+                            <div class="stat-info">
+                                <h4>HK$ 18.5K</h4>
+                                <p>平台淨收入</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="placeholder-box">
+                        <i class="fas fa-chart-pie"></i>
+                        <h3>圖表區域佔位</h3>
+                        <p>此處將展示熱銷分析、財務報表等圖表數據（需對接後端 API）</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-<script src="/js/common.js"></script>
-<script src="/js/admin.js"></script> <!-- 新建 admin.js -->
+    <!-- 引入公共彈窗 -->
+    <div th:replace="~{fragments/common :: modals}"></div>
+
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    </script>
+    <script src="/js/common.js"></script>
+    <script src="/js/admin.js"></script> <!-- 新建 admin.js -->
 </body>
+
 </html>

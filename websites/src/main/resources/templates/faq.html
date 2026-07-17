@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,197 +13,352 @@
     <!--  2. 页面特有 CSS (只保留 FAQ 页面专属的样式) -->
     <style>
         /* 页面专属样式 */
-        .page-hero { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; padding: 4rem 2rem; text-align: center; }
-        .page-hero h1 { font-size: 2.5rem; margin-bottom: 1rem; color: var(--gold); }
-        .page-hero p { font-size: 1.1rem; opacity: 0.9; max-width: 700px; margin: 0 auto; }
+        .page-hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
 
-        .container { max-width: 900px; margin: 0 auto; padding: 3rem 2rem; }
+        .page-hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--gold);
+        }
+
+        .page-hero p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
 
         /* 分类标签 */
-        .category-tabs { display: flex; justify-content: center; gap: 1rem; margin-bottom: 3rem; flex-wrap: wrap; }
-        .tab-btn { padding: 0.6rem 1.5rem; border: 2px solid var(--primary); border-radius: 30px; background: transparent; color: var(--primary); font-weight: 600; cursor: pointer; transition: all 0.3s; font-family: inherit; }
-        .tab-btn:hover, .tab-btn.active { background: var(--primary); color: var(--gold); border-color: var(--primary); }
+        .category-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 0.6rem 1.5rem;
+            border: 2px solid var(--primary);
+            border-radius: 30px;
+            background: transparent;
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .tab-btn:hover,
+        .tab-btn.active {
+            background: var(--primary);
+            color: var(--gold);
+            border-color: var(--primary);
+        }
 
         /* FAQ 列表样式 */
-        .faq-section { margin-bottom: 3rem; }
-        .faq-category-title { font-size: 1.5rem; color: var(--primary); margin-bottom: 1.5rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--gold); display: flex; align-items: center; gap: 0.5rem; }
-        .faq-category-title i { color: var(--gold); }
+        .faq-section {
+            margin-bottom: 3rem;
+        }
 
-        .faq-item { background: white; border-radius: 8px; margin-bottom: 1rem; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); border-left: 4px solid transparent; transition: border-color 0.3s; }
-        .faq-item:hover { border-left-color: var(--gold); }
-        .faq-question { padding: 1.2rem 1.5rem; font-weight: 600; color: var(--primary); cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
-        .faq-question:hover { background: #f8f9fa; }
-        .faq-question i { color: var(--gold); transition: transform 0.3s; flex-shrink: 0; margin-left: 1rem; }
-        .faq-answer { padding: 0 1.5rem 1.5rem; color: var(--gray); line-height: 1.8; display: none; }
-        .faq-item.active .faq-answer { display: block; animation: fadeIn 0.3s ease; }
-        .faq-item.active .faq-question i { transform: rotate(180deg); }
-        .faq-item.active { border-left-color: var(--accent); }
+        .faq-category-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .faq-category-title i {
+            color: var(--gold);
+        }
+
+        .faq-item {
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid transparent;
+            transition: border-color 0.3s;
+        }
+
+        .faq-item:hover {
+            border-left-color: var(--gold);
+        }
+
+        .faq-question {
+            padding: 1.2rem 1.5rem;
+            font-weight: 600;
+            color: var(--primary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+
+        .faq-question:hover {
+            background: #f8f9fa;
+        }
+
+        .faq-question i {
+            color: var(--gold);
+            transition: transform 0.3s;
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem 1.5rem;
+            color: var(--gray);
+            line-height: 1.8;
+            display: none;
+        }
+
+        .faq-item.active .faq-answer {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .faq-item.active .faq-question i {
+            transform: rotate(180deg);
+        }
+
+        .faq-item.active {
+            border-left-color: var(--accent);
+        }
 
         /* CTA 区域 */
-        .cta-section { background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%); color: white; padding: 3rem 2rem; border-radius: 16px; text-align: center; margin-top: 3rem; }
-        .cta-section h2 { font-size: 1.8rem; margin-bottom: 1rem; color: var(--gold); }
-        .cta-section p { font-size: 1.05rem; opacity: 0.9; max-width: 600px; margin: 0 auto 1.5rem; }
+        .cta-section {
+            background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .cta-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: var(--gold);
+        }
+
+        .cta-section p {
+            font-size: 1.05rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 1.5rem;
+        }
 
         /* 页脚 */
-        .footer { background: var(--primary); color: rgba(255, 255, 255, 0.7); padding: 2rem; text-align: center; margin-top: 3rem; }
+        .footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
 
         /* 响应式 */
         @media (max-width: 768px) {
-            .category-tabs { gap: 0.5rem; }
-            .tab-btn { padding: 0.5rem 1rem; font-size: 0.9rem; }
+            .category-tabs {
+                gap: 0.5rem;
+            }
+
+            .tab-btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
+
 <body>
 
-<!--  3. 引入公共导航栏 (自动处理登录状态、购物车下拉等) -->
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <!--  3. 引入公共导航栏 (自动处理登录状态、购物车下拉等) -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<!-- === 页面主体 === -->
-<section class="page-hero">
-    <h1><i class="fas fa-question-circle"></i> 常見問題 (FAQ)</h1>
-    <p>快速找到您關於購買、出售、鑑定及帳戶管理的疑問解答</p>
-</section>
+    <!-- === 页面主体 === -->
+    <section class="page-hero">
+        <h1><i class="fas fa-question-circle"></i> 常見問題 (FAQ)</h1>
+        <p>快速找到您關於購買、出售、鑑定及帳戶管理的疑問解答</p>
+    </section>
 
-<div class="container">
-    <!-- 分类快速跳转 -->
-    <div class="category-tabs">
-        <button class="tab-btn active" onclick="scrollToCategory('buyer')"><i class="fas fa-shopping-bag"></i> 買家常見問題</button>
-        <button class="tab-btn" onclick="scrollToCategory('seller')"><i class="fas fa-hand-holding-usd"></i> 賣家常見問題</button>
-        <button class="tab-btn" onclick="scrollToCategory('auth')"><i class="fas fa-certificate"></i> 鑑定與交易</button>
-        <button class="tab-btn" onclick="scrollToCategory('account')"><i class="fas fa-user-cog"></i> 帳戶與支付</button>
+    <div class="container">
+        <!-- 分类快速跳转 -->
+        <div class="category-tabs">
+            <button class="tab-btn active" onclick="scrollToCategory('buyer')"><i class="fas fa-shopping-bag"></i>
+                買家常見問題</button>
+            <button class="tab-btn" onclick="scrollToCategory('seller')"><i class="fas fa-hand-holding-usd"></i>
+                賣家常見問題</button>
+            <button class="tab-btn" onclick="scrollToCategory('auth')"><i class="fas fa-certificate"></i> 鑑定與交易</button>
+            <button class="tab-btn" onclick="scrollToCategory('account')"><i class="fas fa-user-cog"></i> 帳戶與支付</button>
+        </div>
+
+        <!-- 買家常見問題 -->
+        <div id="buyer" class="faq-section">
+            <h2 class="faq-category-title"><i class="fas fa-shopping-bag"></i> 買家常見問題</h2>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 如何確保在平台上購買的手錶是正品？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: ChronoTeam
+                    實行嚴格的「先鑑定，後交易」機制。所有賣家帶來的手錶，都必須先送至我們的門店鑑定中心，由國際認證鐘錶師進行五重嚴格檢驗（外觀、機芯、配件、文件、防偽特徵）。只有 100%
+                    確認正品後，才會附上專屬鑑定報告並允許上架銷售。我們承諾「假一賠三」。</div>
+            </div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 我可以線上購買然後到門店取貨嗎？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A:
+                    可以的！我們支持「線上預訂，線下取貨」模式。您可以在網站上瀏覽並預訂喜歡的手錶，然後到我們的實體門店進行實物檢視、支付並取貨。這樣您可以親眼確認手錶狀況，更安心放心。</div>
+            </div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 收到手錶後，如果不滿意可以退貨嗎？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: 可以的。我們提供 7
+                    天無理由退貨服務。只要手錶未經佩戴使用、無新增劃痕或損壞，且平台專屬防偽標籤及一次性扎帶未被剪斷或損壞，原廠包裝及所有附件齊全，您可以在簽收後 7 天內申請退貨退款。</div>
+            </div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 平台的付款方式有哪些？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: 我們提供多種付款方式：<br><strong>1. 線上支付：</strong>支持信用卡、PayPal 及銀行轉帳<br><strong>2.
+                        線下支付：</strong>可到我们門店使用現金、信用卡或轉帳付款<br>所有交易均採用平台第三方擔保模式，確保資金安全。</div>
+            </div>
+        </div>
+
+        <!-- 賣家常見問題 -->
+        <div id="seller" class="faq-section">
+            <h2 class="faq-category-title"><i class="fas fa-hand-holding-usd"></i> 賣家常見問題</h2>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 我想出售手錶，具體流程是怎樣的？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: 流程非常簡單：<br>1. 線上填寫手錶資訊並獲取初步估價<br>2. 滿意後，請攜帶手錶及相關配件到我們門店<br>3.
+                    專業鐘錶師現場進行免費專業檢驗鑑定<br>4. 出具最終報價，您可選擇「直接買斷」或「平台代售」<br>5. 確認後快速收款（直接買斷可當場收款）</div>
+            </div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 我需要預約才能到門店出售手錶嗎？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: 建議提前預約，以確保我們的專業鐘錶師能為您提供專屬服務。您可以透過網站線上預約或直接致電我們。當然，您也可以直接walk-in到訪，但可能需要等候。
+                </div>
+            </div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 如果鑑定後的最終報價我不滿意，可以取消交易嗎？</span><i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">A: 絕對可以。我們尊重您的決定。若最終報價未達您的預期，您可以選擇取消交易並帶回您的手錶，不會收取任何鑑定費或服務費。</div>
+            </div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 平台代售的服務費是多少？多久能收到款？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: 平台代售僅在成功成交後收取服務費（通常為成交價的 5%-8%，具體依錶款而定，無隱藏費用）。商品成交且買家確認收貨後，扣除服務費的款項將在 1-3
+                    個工作日內安全匯入您指定的銀行帳戶，或您可以到門店領取支票。</div>
+            </div>
+        </div>
+
+        <!-- 鑑定與交易 -->
+        <div id="auth" class="faq-section">
+            <h2 class="faq-category-title"><i class="fas fa-certificate"></i> 鑑定與交易</h2>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 鑑定過程大約需要多長時間？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: <strong>現場初步鑑定：</strong>約 15-30 分鐘<br><strong>詳細鑑定報告：</strong>通常需要 1-3
+                    個工作日。對於複雜功能錶款或需要向品牌方核實的特殊錶款，時間可能會略微延長，我們會及時透過電子郵件或短信通知您進度。</div>
+            </div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 我可以線上預訂然後到門店支付和取貨嗎？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: 完全可以！這是我們推薦的交易方式：<br>1. 在網站上瀏覽並預訂您喜歡的手錶<br>2. 我們會為您保留該手錶（保留期通常為 3-5 天）<br>3.
+                    您到門店親眼檢視手錶實物<br>4. 確認無誤後在門店完成支付<br>5. 當場取貨並獲得鑑定報告及保固卡</div>
+            </div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 門店的地址和營業時間是什麼？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: <strong>地址：</strong>[請填寫您的門店地址]<br><strong>營業時間：</strong><br>週一至週六：上午 10:00 -
+                    晚上 7:00<br>週日及公眾假期：休息<br>建議提前預約以獲得更好的服務體驗。</div>
+            </div>
+        </div>
+
+        <!-- 帳戶與支付 -->
+        <div id="account" class="faq-section">
+            <h2 class="faq-category-title"><i class="fas fa-user-cog"></i> 帳戶與支付</h2>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 我忘記了登入密碼，應該怎麼辦？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: 您可以在登入頁面點擊「忘記密碼」，然後輸入您的用戶名和註冊時的手機號碼進行驗證。驗證成功後，您就可以設定新密碼。若遇到問題，請聯繫我們的客服協助。
+                </div>
+            </div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 如何修改我的登入密碼？</span><i class="fas fa-chevron-down"></i></div>
+                <div class="faq-answer">A: 修改密碼需要驗證身份：<br>1. 登入您的帳戶<br>2. 進入「帳戶信息」頁面<br>3. 點擊「修改密碼」<br>4.
+                    輸入您的用戶名和註冊手機號進行驗證<br>5. 驗證成功後，輸入新密碼並確認<br>6. 完成修改</div>
+            </div>
+            <div class="faq-item" onclick="toggleFaq(this)">
+                <div class="faq-question"><span>Q: 如何修改我的帳戶資料（如手機號碼、收件地址）？</span><i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="faq-answer">A: 登入您的帳戶後，點擊右上角的「我的帳戶」，選擇「帳戶信息」即可檢視和修改您的基本資料。為了保障帳戶安全，修改敏感資訊（如綁定手機號）可能需要進行身份驗證。
+                </div>
+            </div>
+        </div>
+
+        <!-- 行動呼籲 CTA -->
+        <div class="cta-section">
+            <h2><i class="fas fa-headset"></i> 沒有找到您需要的答案？</h2>
+            <p>我們的專業客服團隊隨時準備為您提供一對一的協助。無論是商品諮詢還是訂單問題，歡迎隨時聯繫我們或直接到訪門店。</p>
+            <a href="/contact" class="btn btn-gold" style="font-size: 1.1rem; padding: 0.8rem 2.5rem;">
+                <i class="fas fa-envelope"></i> 聯繫我們
+            </a>
+        </div>
     </div>
 
-    <!-- 買家常見問題 -->
-    <div id="buyer" class="faq-section">
-        <h2 class="faq-category-title"><i class="fas fa-shopping-bag"></i> 買家常見問題</h2>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 如何確保在平台上購買的手錶是正品？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: ChronoTeam 實行嚴格的「先鑑定，後交易」機制。所有賣家帶來的手錶，都必須先送至我們的門店鑑定中心，由國際認證鐘錶師進行五重嚴格檢驗（外觀、機芯、配件、文件、防偽特徵）。只有 100% 確認正品後，才會附上專屬鑑定報告並允許上架銷售。我們承諾「假一賠三」。</div>
-        </div>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 我可以線上購買然後到門店取貨嗎？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 可以的！我們支持「線上預訂，線下取貨」模式。您可以在網站上瀏覽並預訂喜歡的手錶，然後到我們的實體門店進行實物檢視、支付並取貨。這樣您可以親眼確認手錶狀況，更安心放心。</div>
-        </div>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 收到手錶後，如果不滿意可以退貨嗎？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 可以的。我們提供 7 天無理由退貨服務。只要手錶未經佩戴使用、無新增劃痕或損壞，且平台專屬防偽標籤及一次性扎帶未被剪斷或損壞，原廠包裝及所有附件齊全，您可以在簽收後 7 天內申請退貨退款。</div>
-        </div>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 平台的付款方式有哪些？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 我們提供多種付款方式：<br><strong>1. 線上支付：</strong>支持信用卡、PayPal 及銀行轉帳<br><strong>2. 線下支付：</strong>可到我们門店使用現金、信用卡或轉帳付款<br>所有交易均採用平台第三方擔保模式，確保資金安全。</div>
-        </div>
-    </div>
+    <!-- === 页脚 === -->
+    <footer class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.</p>
+    </footer>
 
-    <!-- 賣家常見問題 -->
-    <div id="seller" class="faq-section">
-        <h2 class="faq-category-title"><i class="fas fa-hand-holding-usd"></i> 賣家常見問題</h2>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 我想出售手錶，具體流程是怎樣的？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 流程非常簡單：<br>1. 線上填寫手錶資訊並獲取初步估價<br>2. 滿意後，請攜帶手錶及相關配件到我們門店<br>3. 專業鐘錶師現場進行免費專業檢驗鑑定<br>4. 出具最終報價，您可選擇「直接買斷」或「平台代售」<br>5. 確認後快速收款（直接買斷可當場收款）</div>
-        </div>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 我需要預約才能到門店出售手錶嗎？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 建議提前預約，以確保我們的專業鐘錶師能為您提供專屬服務。您可以透過網站線上預約或直接致電我們。當然，您也可以直接walk-in到訪，但可能需要等候。</div>
-        </div>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 如果鑑定後的最終報價我不滿意，可以取消交易嗎？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 絕對可以。我們尊重您的決定。若最終報價未達您的預期，您可以選擇取消交易並帶回您的手錶，不會收取任何鑑定費或服務費。</div>
-        </div>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 平台代售的服務費是多少？多久能收到款？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 平台代售僅在成功成交後收取服務費（通常為成交價的 5%-8%，具體依錶款而定，無隱藏費用）。商品成交且買家確認收貨後，扣除服務費的款項將在 1-3 個工作日內安全匯入您指定的銀行帳戶，或您可以到門店領取支票。</div>
-        </div>
-    </div>
+    <!--  4. 引入公共弹窗 HTML (登录/注册) -->
+    <div th:replace="~{fragments/common :: modals}"></div>
 
-    <!-- 鑑定與交易 -->
-    <div id="auth" class="faq-section">
-        <h2 class="faq-category-title"><i class="fas fa-certificate"></i> 鑑定與交易</h2>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 鑑定過程大約需要多長時間？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: <strong>現場初步鑑定：</strong>約 15-30 分鐘<br><strong>詳細鑑定報告：</strong>通常需要 1-3 個工作日。對於複雜功能錶款或需要向品牌方核實的特殊錶款，時間可能會略微延長，我們會及時透過電子郵件或短信通知您進度。</div>
-        </div>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 我可以線上預訂然後到門店支付和取貨嗎？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 完全可以！這是我們推薦的交易方式：<br>1. 在網站上瀏覽並預訂您喜歡的手錶<br>2. 我們會為您保留該手錶（保留期通常為 3-5 天）<br>3. 您到門店親眼檢視手錶實物<br>4. 確認無誤後在門店完成支付<br>5. 當場取貨並獲得鑑定報告及保固卡</div>
-        </div>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 門店的地址和營業時間是什麼？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: <strong>地址：</strong>[請填寫您的門店地址]<br><strong>營業時間：</strong><br>週一至週六：上午 10:00 - 晚上 7:00<br>週日及公眾假期：休息<br>建議提前預約以獲得更好的服務體驗。</div>
-        </div>
-    </div>
+    <!--  5. 注入登录状态变量 (必须在 common.js 之前) -->
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    </script>
 
-    <!-- 帳戶與支付 -->
-    <div id="account" class="faq-section">
-        <h2 class="faq-category-title"><i class="fas fa-user-cog"></i> 帳戶與支付</h2>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 我忘記了登入密碼，應該怎麼辦？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 您可以在登入頁面點擊「忘記密碼」，然後輸入您的用戶名和註冊時的手機號碼進行驗證。驗證成功後，您就可以設定新密碼。若遇到問題，請聯繫我們的客服協助。</div>
-        </div>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 如何修改我的登入密碼？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 修改密碼需要驗證身份：<br>1. 登入您的帳戶<br>2. 進入「帳戶信息」頁面<br>3. 點擊「修改密碼」<br>4. 輸入您的用戶名和註冊手機號進行驗證<br>5. 驗證成功後，輸入新密碼並確認<br>6. 完成修改</div>
-        </div>
-        <div class="faq-item" onclick="toggleFaq(this)">
-            <div class="faq-question"><span>Q: 如何修改我的帳戶資料（如手機號碼、收件地址）？</span><i class="fas fa-chevron-down"></i></div>
-            <div class="faq-answer">A: 登入您的帳戶後，點擊右上角的「我的帳戶」，選擇「帳戶信息」即可檢視和修改您的基本資料。為了保障帳戶安全，修改敏感資訊（如綁定手機號）可能需要進行身份驗證。</div>
-        </div>
-    </div>
+    <!--  6. 引入公共 JS (包含购物车、登录注册逻辑、登出等) -->
+    <script src="/js/common.js"></script>
 
-    <!-- 行動呼籲 CTA -->
-    <div class="cta-section">
-        <h2><i class="fas fa-headset"></i> 沒有找到您需要的答案？</h2>
-        <p>我們的專業客服團隊隨時準備為您提供一對一的協助。無論是商品諮詢還是訂單問題，歡迎隨時聯繫我們或直接到訪門店。</p>
-        <a href="/contact" class="btn btn-gold" style="font-size: 1.1rem; padding: 0.8rem 2.5rem;">
-            <i class="fas fa-envelope"></i> 聯繫我們
-        </a>
-    </div>
-</div>
-
-<!-- === 页脚 === -->
-<footer class="footer">
-    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
-</footer>
-
-<!--  4. 引入公共弹窗 HTML (登录/注册) -->
-<div th:replace="~{fragments/common :: modals}"></div>
-
-<!--  5. 注入登录状态变量 (必须在 common.js 之前) -->
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-
-<!--  6. 引入公共 JS (包含购物车、登录注册逻辑、登出等) -->
-<script src="/js/common.js"></script>
-
-<!--  7. 页面特有 JS -->
-<script>
-    // ===== FAQ 展开/收合 =====
-    function toggleFaq(element) {
-        document.querySelectorAll('.faq-item').forEach(item => {
-            if (item !== element) {
-                item.classList.remove('active');
-            }
-        });
-        element.classList.toggle('active');
-    }
-
-    // ===== 平滑滚动到指定分类 =====
-    function scrollToCategory(categoryId) {
-        const element = document.getElementById(categoryId);
-        if (element) {
-            const offset = 100;
-            const elementPosition = element.getBoundingClientRect().top;
-            const offsetPosition = elementPosition + window.pageYOffset - offset;
-            window.scrollTo({
-                top: offsetPosition,
-                behavior: "smooth"
+    <!--  7. 页面特有 JS -->
+    <script>
+        // ===== FAQ 展开/收合 =====
+        function toggleFaq(element) {
+            document.querySelectorAll('.faq-item').forEach(item => {
+                if (item !== element) {
+                    item.classList.remove('active');
+                }
             });
+            element.classList.toggle('active');
         }
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.closest('.tab-btn').classList.add('active');
-    }
-</script>
+
+        // ===== 平滑滚动到指定分类 =====
+        function scrollToCategory(categoryId) {
+            const element = document.getElementById(categoryId);
+            if (element) {
+                const offset = 100;
+                const elementPosition = element.getBoundingClientRect().top;
+                const offsetPosition = elementPosition + window.pageYOffset - offset;
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: "smooth"
+                });
+            }
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.closest('.tab-btn').classList.add('active');
+        }
+    </script>
 
 </body>
+
 </html>

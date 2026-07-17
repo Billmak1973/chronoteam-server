@@ -1,82 +1,86 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
 </head>
+
 <body>
 
-<!-- ==================== 公共导航栏 Fragment ==================== -->
-<nav th:fragment="navbar" class="navbar">
-    <a href="/" class="logo">
-        <i class="fas fa-stopwatch"></i>
-        ChronoTeam
-    </a>
-    <div class="nav-links">
-        <a href="/browse"><i class="fas fa-search"></i> 瀏覽商品</a>
-        <a href="/sell" class="btn btn-gold"><i class="fas fa-plus-circle"></i> 發佈出售</a>
-
-        <!-- 未登录状态 -->
-        <a href="javascript:void(0)" th:if="${#authorization.expression('!isAuthenticated()')}"
-           onclick="openLoginModal()">
-            <i class="fas fa-sign-in-alt"></i> 登入
+    <!-- ==================== 公共导航栏 Fragment ==================== -->
+    <nav th:fragment="navbar" class="navbar">
+        <a href="/" class="logo">
+            <i class="fas fa-stopwatch"></i>
+            ChronoTeam
         </a>
-        <a href="javascript:void(0)" th:if="${#authorization.expression('!isAuthenticated()')}"
-           onclick="openRegisterModal()">
-            <i class="fas fa-user-plus"></i> 註冊
-        </a>
+        <div class="nav-links">
+            <a href="/browse"><i class="fas fa-search"></i> 瀏覽商品</a>
+            <a href="/sell" class="btn btn-gold"><i class="fas fa-plus-circle"></i> 發佈出售</a>
 
-        <!-- 已登录状态：用户下拉菜单 -->
-        <div th:if="${#authorization.expression('isAuthenticated()')}" class="nav-dropdown">
-            <a href="javascript:void(0)" class="nav-dropdown-trigger">
-                <i class="fas fa-user-circle"></i> 我的帳戶
-                <i class="fas fa-caret-down" style="font-size: 0.8rem;"></i>
+            <!-- 未登录状态 -->
+            <a href="javascript:void(0)" th:if="${#authorization.expression('!isAuthenticated()')}"
+                onclick="openLoginModal()">
+                <i class="fas fa-sign-in-alt"></i> 登入
             </a>
-            <div class="nav-dropdown-menu">
-                <div class="user-header">
-                    <i class="fas fa-user-circle" style="font-size: 1.5rem;"></i>
-                    <div class="username" sec:authentication="name">用戶名</div>
-                </div>
-                <a href="/account/profile"><i class="fas fa-id-card"></i> 帳戶信息</a>
-                <a href="/account/orders"><i class="fas fa-box"></i> 我的訂單</a>
-                <button type="button" class="logout-btn" onclick="handleLogout()">
-                    <i class="fas fa-sign-out-alt"></i> 登出
-                </button>
-                <button type="button" class="delete-account-btn" onclick="return false;">
-                    <i class="fas fa-user-slash"></i> 註銷賬戶
-                </button>
-            </div>
-        </div>
+            <a href="javascript:void(0)" th:if="${#authorization.expression('!isAuthenticated()')}"
+                onclick="openRegisterModal()">
+                <i class="fas fa-user-plus"></i> 註冊
+            </a>
 
-        <!-- 购物车下拉菜单（始终显示） -->
-        <div class="nav-dropdown">
-            <a href="javascript:void(0)" class="nav-dropdown-trigger" onclick="toggleCartDropdown(event)">
-                <i class="fas fa-shopping-cart"></i> 購物車
-                <span id="cartCountBadge" class="cart-badge" style="display:none;">0</span>
-            </a>
-            <div class="nav-dropdown-menu cart-dropdown-menu" id="cartDropdown">
-                <div class="cart-header">
-                    <h3><i class="fas fa-shopping-cart"></i> 購物車</h3>
-                </div>
-                <div class="cart-items-container" id="cartItemsContainer">
-                    <div class="cart-empty">
-                        <i class="fas fa-shopping-basket" style="font-size: 3rem; color: #ddd; margin-bottom: 1rem;"></i>
-                        <p>購物車是空的</p>
+            <!-- 已登录状态：用户下拉菜单 -->
+            <div th:if="${#authorization.expression('isAuthenticated()')}" class="nav-dropdown">
+                <a href="javascript:void(0)" class="nav-dropdown-trigger">
+                    <i class="fas fa-user-circle"></i> 我的帳戶
+                    <i class="fas fa-caret-down" style="font-size: 0.8rem;"></i>
+                </a>
+                <div class="nav-dropdown-menu">
+                    <div class="user-header">
+                        <i class="fas fa-user-circle" style="font-size: 1.5rem;"></i>
+                        <div class="username" sec:authentication="name">用戶名</div>
                     </div>
-                </div>
-                <div class="cart-footer">
-                    <div class="cart-total">
-                        <span>總計：</span>
-                        <span id="cartTotalAmount"
-                              style="color: var(--accent); font-weight: 700; font-size: 1.2rem;">HK$ 0</span>
-                    </div>
-                    <button class="btn btn-primary checkout-btn" onclick="checkout()">
-                        <i class="fas fa-credit-card"></i> 結賬
+                    <a href="/account/profile"><i class="fas fa-id-card"></i> 帳戶信息</a>
+                    <a href="/account/orders"><i class="fas fa-box"></i> 我的訂單</a>
+                    <button type="button" class="logout-btn" onclick="handleLogout()">
+                        <i class="fas fa-sign-out-alt"></i> 登出
+                    </button>
+                    <button type="button" class="delete-account-btn" onclick="return false;">
+                        <i class="fas fa-user-slash"></i> 註銷賬戶
                     </button>
                 </div>
             </div>
+
+            <!-- 购物车下拉菜单（始终显示） -->
+            <div class="nav-dropdown">
+                <a href="javascript:void(0)" class="nav-dropdown-trigger" onclick="toggleCartDropdown(event)">
+                    <i class="fas fa-shopping-cart"></i> 購物車
+                    <span id="cartCountBadge" class="cart-badge" style="display:none;">0</span>
+                </a>
+                <div class="nav-dropdown-menu cart-dropdown-menu" id="cartDropdown">
+                    <div class="cart-header">
+                        <h3><i class="fas fa-shopping-cart"></i> 購物車</h3>
+                    </div>
+                    <div class="cart-items-container" id="cartItemsContainer">
+                        <div class="cart-empty">
+                            <i class="fas fa-shopping-basket"
+                                style="font-size: 3rem; color: #ddd; margin-bottom: 1rem;"></i>
+                            <p>購物車是空的</p>
+                        </div>
+                    </div>
+                    <div class="cart-footer">
+                        <div class="cart-total">
+                            <span>總計：</span>
+                            <span id="cartTotalAmount"
+                                style="color: var(--accent); font-weight: 700; font-size: 1.2rem;">HK$ 0</span>
+                        </div>
+                        <button class="btn btn-primary checkout-btn" onclick="checkout()">
+                            <i class="fas fa-credit-card"></i> 結賬
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-</nav>
+    </nav>
 
 </body>
+
 </html>

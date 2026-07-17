@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,19 +18,23 @@
             padding: 4rem 2rem;
             text-align: center;
         }
+
         .page-hero h1 {
             font-size: 2.5rem;
             margin-bottom: 1rem;
             color: var(--gold);
         }
+
         .container {
             max-width: 1000px;
             margin: 0 auto;
             padding: 3rem 2rem;
         }
+
         .section {
             margin-bottom: 3rem;
         }
+
         .section h2 {
             font-size: 1.8rem;
             color: var(--primary);
@@ -37,18 +42,21 @@
             border-left: 4px solid var(--gold);
             padding-left: 1rem;
         }
+
         .section p {
             color: var(--gray);
             font-size: 1.05rem;
             line-height: 1.8;
             margin-bottom: 1rem;
         }
+
         .values-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 2rem;
             margin-top: 2rem;
         }
+
         .value-card {
             background: white;
             padding: 2rem;
@@ -57,22 +65,27 @@
             text-align: center;
             transition: transform 0.3s;
         }
+
         .value-card:hover {
             transform: translateY(-5px);
         }
+
         .value-card i {
             font-size: 2.5rem;
             color: var(--gold);
             margin-bottom: 1rem;
         }
+
         .value-card h3 {
             margin-bottom: 0.5rem;
             color: var(--primary);
         }
+
         .value-card p {
             font-size: 0.95rem;
             color: var(--gray);
         }
+
         .footer {
             background: var(--primary);
             color: rgba(255, 255, 255, 0.7);
@@ -82,70 +95,75 @@
         }
     </style>
 </head>
+
 <body>
 
-<!--  3. 引入公共導航欄 (自動包含購物車下拉菜單、登入狀態判斷等) -->
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <!--  3. 引入公共導航欄 (自動包含購物車下拉菜單、登入狀態判斷等) -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<!-- === 頁面主體 === -->
-<section class="page-hero">
-    <h1><i class="fas fa-users"></i> 關於 ChronoTeam</h1>
-    <p>致力於打造大中華區最專業、最透明的二手名錶交易生態圈</p>
-</section>
+    <!-- === 頁面主體 === -->
+    <section class="page-hero">
+        <h1><i class="fas fa-users"></i> 關於 ChronoTeam</h1>
+        <p>致力於打造大中華區最專業、最透明的二手名錶交易生態圈</p>
+    </section>
 
-<div class="container">
-    <div class="section">
-        <h2>我們的使命</h2>
-        <p>ChronoTeam 成立於 2024 年，源於對鐘錶文化的深厚熱愛。我們發現傳統二手名錶市場存在價格不透明、真偽難辨、交易缺乏保障等痛點。因此，我們創立了這個平台，旨在透過專業的鑑定技術、嚴格的賣家審核機制以及平台擔保交易，為每一位鐘錶愛好者提供安全、便捷、高價值的交易體驗。</p>
-        <p>無論是尋找夢寐以求的稀缺款，還是讓珍藏的手錶發揮剩餘價值，ChronoTeam 都是您最值得信賴的夥伴。</p>
-    </div>
+    <div class="container">
+        <div class="section">
+            <h2>我們的使命</h2>
+            <p>ChronoTeam 成立於 2024
+                年，源於對鐘錶文化的深厚熱愛。我們發現傳統二手名錶市場存在價格不透明、真偽難辨、交易缺乏保障等痛點。因此，我們創立了這個平台，旨在透過專業的鑑定技術、嚴格的賣家審核機制以及平台擔保交易，為每一位鐘錶愛好者提供安全、便捷、高價值的交易體驗。
+            </p>
+            <p>無論是尋找夢寐以求的稀缺款，還是讓珍藏的手錶發揮剩餘價值，ChronoTeam 都是您最值得信賴的夥伴。</p>
+        </div>
 
-    <div class="section">
-        <h2>核心價值</h2>
-        <div class="values-grid">
-            <div class="value-card">
-                <i class="fas fa-shield-alt"></i>
-                <h3>絕對真實</h3>
-                <p>每一件上架商品均經過國際認證鐘錶師的嚴格檢驗，並出具專屬鑑定報告，杜絕贗品。</p>
+        <div class="section">
+            <h2>核心價值</h2>
+            <div class="values-grid">
+                <div class="value-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>絕對真實</h3>
+                    <p>每一件上架商品均經過國際認證鐘錶師的嚴格檢驗，並出具專屬鑑定報告，杜絕贗品。</p>
+                </div>
+                <div class="value-card">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <h3>公平透明</h3>
+                    <p>基於大數據的市場定價參考，拒絕惡意壓價或虛高標價，讓買賣雙方都能獲得公平的交易。</p>
+                </div>
+                <div class="value-card">
+                    <i class="fas fa-lock"></i>
+                    <h3>資金安全</h3>
+                    <p>採用平台第三方擔保支付模式。買家確認收貨且無異議後，款項才會釋放給賣家，徹底消除詐騙風險。</p>
+                </div>
             </div>
-            <div class="value-card">
-                <i class="fas fa-hand-holding-usd"></i>
-                <h3>公平透明</h3>
-                <p>基於大數據的市場定價參考，拒絕惡意壓價或虛高標價，讓買賣雙方都能獲得公平的交易。</p>
-            </div>
-            <div class="value-card">
-                <i class="fas fa-lock"></i>
-                <h3>資金安全</h3>
-                <p>採用平台第三方擔保支付模式。買家確認收貨且無異議後，款項才會釋放給賣家，徹底消除詐騙風險。</p>
+        </div>
+
+        <div class="section" style="text-align: center; margin-top: 4rem;">
+            <h2 style="border: none; padding: 0;">準備好開始您的鐘錶之旅了嗎？</h2>
+            <p style="margin-bottom: 2rem;">立即探索我們的精選庫存，或將您的愛錶委託給我們。</p>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <a href="/browse" class="btn btn-primary"><i class="fas fa-search"></i> 瀏覽名錶</a>
+                <a href="/sell" class="btn btn-outline"><i class="fas fa-tag"></i> 賣出手錶</a>
             </div>
         </div>
     </div>
 
-    <div class="section" style="text-align: center; margin-top: 4rem;">
-        <h2 style="border: none; padding: 0;">準備好開始您的鐘錶之旅了嗎？</h2>
-        <p style="margin-bottom: 2rem;">立即探索我們的精選庫存，或將您的愛錶委託給我們。</p>
-        <div style="display: flex; gap: 1rem; justify-content: center;">
-            <a href="/browse" class="btn btn-primary"><i class="fas fa-search"></i> 瀏覽名錶</a>
-            <a href="/sell" class="btn btn-outline"><i class="fas fa-tag"></i> 賣出手錶</a>
-        </div>
-    </div>
-</div>
+    <!-- === 頁腳 === -->
+    <footer class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.</p>
+    </footer>
 
-<!-- === 頁腳 === -->
-<footer class="footer">
-    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
-</footer>
+    <!--  4. 引入公共登入/註冊彈窗 HTML -->
+    <div th:replace="~{fragments/common :: modals}"></div>
 
-<!--  4. 引入公共登入/註冊彈窗 HTML -->
-<div th:replace="~{fragments/common :: modals}"></div>
+    <!--  5. 注入登入狀態變量 (必須在 common.js 之前) -->
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    </script>
 
-<!--  5. 注入登入狀態變量 (必須在 common.js 之前) -->
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-
-<!--  6. 引入公共 JS (包含購物車邏輯、彈窗控制、登出等) -->
-<script src="/js/common.js"></script>
+    <!--  6. 引入公共 JS (包含購物車邏輯、彈窗控制、登出等) -->
+    <script src="/js/common.js"></script>
 
 </body>
+
 </html>

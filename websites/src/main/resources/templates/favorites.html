@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,11 +10,44 @@
     <link rel="stylesheet" href="/css/sidebar.css">
     <style>
         /* 佈局相關 */
-        .dashboard-container { display: flex; min-height: calc(100vh - 150px); max-width: 1400px; margin: 2rem auto; padding: 0 1rem; gap: 2rem; }
-        .main-content { flex: 1; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 2.5rem; }
-        .page-title { font-size: 1.8rem; color: var(--primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.8rem; border-bottom: 2px solid var(--light); padding-bottom: 1rem; }
-        .page-title i { color: var(--accent); } /* 愛心使用紅色/粉色系 */
-        .page-subtitle { color: var(--gray); margin-bottom: 2rem; font-size: 0.95rem; }
+        .dashboard-container {
+            display: flex;
+            min-height: calc(100vh - 150px);
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            gap: 2rem;
+        }
+
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 2.5rem;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 1rem;
+        }
+
+        .page-title i {
+            color: var(--accent);
+        }
+
+        /* 愛心使用紅色/粉色系 */
+        .page-subtitle {
+            color: var(--gray);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
 
         /*  收藏網格佈局 */
         .favorites-grid {
@@ -21,6 +55,7 @@
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 1.5rem;
         }
+
         .favorite-card {
             background: white;
             border: 1px solid #e9ecef;
@@ -30,18 +65,29 @@
             display: flex;
             flex-direction: column;
         }
+
         .favorite-card:hover {
-            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
             transform: translateY(-5px);
         }
+
         .fav-img {
             height: 200px;
             background: var(--light);
             overflow: hidden;
             position: relative;
         }
-        .fav-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
-        .favorite-card:hover .fav-img img { transform: scale(1.08); }
+
+        .fav-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+
+        .favorite-card:hover .fav-img img {
+            transform: scale(1.08);
+        }
 
         .fav-info {
             padding: 1.2rem;
@@ -49,28 +95,98 @@
             display: flex;
             flex-direction: column;
         }
-        .fav-brand { color: var(--gold); font-weight: 600; font-size: 0.85rem; margin-bottom: 0.3rem; text-transform: uppercase;}
+
+        .fav-brand {
+            color: var(--gold);
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.3rem;
+            text-transform: uppercase;
+        }
+
         .fav-name {
-            font-weight: 600; color: var(--primary); margin-bottom: 0.8rem; font-size: 1rem;
-            line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-            overflow: hidden; min-height: 2.8em;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.8rem;
+            font-size: 1rem;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.8em;
         }
-        .fav-price { color: var(--accent); font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; margin-top: auto;}
 
-        .fav-actions { display: flex; gap: 0.5rem; }
+        .fav-price {
+            color: var(--accent);
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            margin-top: auto;
+        }
+
+        .fav-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
         .btn-sm {
-            padding: 0.5rem 0.8rem; font-size: 0.85rem; border-radius: 6px; text-decoration: none;
-            cursor: pointer; border: none; transition: 0.3s; display: inline-flex; align-items: center;
-            gap: 0.4rem; justify-content: center; flex: 1; font-weight: 500;
+            padding: 0.5rem 0.8rem;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            justify-content: center;
+            flex: 1;
+            font-weight: 500;
         }
-        .btn-view { background: var(--light); color: var(--primary); border: 1px solid #ddd; }
-        .btn-view:hover { background: var(--gold); color: white; border-color: var(--gold); }
-        .btn-remove { background: #fff5f5; color: var(--accent); border: 1px solid #f8d7da; }
-        .btn-remove:hover { background: var(--accent); color: white; }
 
-        .empty-state { text-align: center; padding: 4rem 2rem; }
-        .empty-state i { font-size: 4rem; color: #ddd; margin-bottom: 1rem; }
-        .footer { background: var(--primary); color: rgba(255, 255, 255, 0.7); padding: 2rem; text-align: center; margin-top: 3rem; }
+        .btn-view {
+            background: var(--light);
+            color: var(--primary);
+            border: 1px solid #ddd;
+        }
+
+        .btn-view:hover {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+        }
+
+        .btn-remove {
+            background: #fff5f5;
+            color: var(--accent);
+            border: 1px solid #f8d7da;
+        }
+
+        .btn-remove:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #ddd;
+            margin-bottom: 1rem;
+        }
+
+        .footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
 
         /* === 智能分页组件样式 === */
         .pagination-wrapper {
@@ -83,6 +199,7 @@
             padding-top: 1.5rem;
             border-top: 1px solid #f1f3f5;
         }
+
         .page-btn {
             padding: 0.6rem 1rem;
             border: 1px solid #e9ecef;
@@ -97,12 +214,14 @@
             align-items: center;
             gap: 0.3rem;
         }
+
         .page-btn:hover:not(.disabled) {
             border-color: var(--gold);
             color: var(--gold);
             background: rgba(212, 175, 55, 0.05);
             transform: translateY(-1px);
         }
+
         .page-btn.active {
             background: var(--gold);
             color: white;
@@ -111,12 +230,14 @@
             cursor: default;
             box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
         }
+
         .page-btn.disabled {
             color: #ccc;
             cursor: not-allowed;
             background: #f8f9fa;
             border-color: #e9ecef;
         }
+
         .page-ellipsis {
             padding: 0.6rem 0.5rem;
             color: var(--gray);
@@ -125,149 +246,155 @@
             user-select: none;
         }
 
-        @media (max-width: 900px) { .dashboard-container { flex-direction: column; } }
+        @media (max-width: 900px) {
+            .dashboard-container {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
+
 <body>
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="dashboard-container">
-    <!--  引入側邊欄，高亮 'favorites' -->
-    <div th:replace="~{fragments/sidebar :: sidebar(activePage='favorites')}"></div>
+    <div class="dashboard-container">
+        <!--  引入側邊欄，高亮 'favorites' -->
+        <div th:replace="~{fragments/sidebar :: sidebar(activePage='favorites')}"></div>
 
-    <main class="main-content">
-        <h2 class="page-title"><i class="fas fa-heart"></i> 我的收藏</h2>
-        <p class="page-subtitle">您收藏的心儀手錶都在這裡，隨時可以查看詳情或取消收藏</p>
+        <main class="main-content">
+            <h2 class="page-title"><i class="fas fa-heart"></i> 我的收藏</h2>
+            <p class="page-subtitle">您收藏的心儀手錶都在這裡，隨時可以查看詳情或取消收藏</p>
 
-        <!--  收藏列表 -->
-        <div class="favorites-grid" th:if="${!favorites.isEmpty()}">
-            <div class="favorite-card" th:each="fav : ${favorites}">
-                <div class="fav-img">
-                    <img th:src="@{/images/products/{img}(img=${fav.product.image})}"
-                         th:alt="${fav.product.description}"
-                         onerror="this.src='/images/placeholder.png'">
-                </div>
-                <div class="fav-info">
-                    <div class="fav-brand" th:text="${fav.product.brand} ?: 'ChronoTeam'">Brand</div>
-                    <div class="fav-name" th:text="${fav.product.description}">Product Name</div>
-                    <div class="fav-price">
-                        HK$ <span th:text="${#numbers.formatDecimal(fav.product.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+            <!--  收藏列表 -->
+            <div class="favorites-grid" th:if="${!favorites.isEmpty()}">
+                <div class="favorite-card" th:each="fav : ${favorites}">
+                    <div class="fav-img">
+                        <img th:src="@{/images/products/{img}(img=${fav.product.image})}"
+                            th:alt="${fav.product.description}" onerror="this.src='/images/placeholder.png'">
                     </div>
-                    <div class="fav-actions">
-                        <a th:href="@{/product/{id}(id=${fav.product.productId})}" class="btn-sm btn-view">
-                            <i class="fas fa-eye"></i> 查看
-                        </a>
-                        <!--  取消收藏按鈕 -->
-                        <button class="btn-sm btn-remove" th:onclick="|removeFavorite(${fav.product.productId}, this)|">
-                            <i class="fas fa-heart-broken"></i> 取消
-                        </button>
+                    <div class="fav-info">
+                        <div class="fav-brand" th:text="${fav.product.brand} ?: 'ChronoTeam'">Brand</div>
+                        <div class="fav-name" th:text="${fav.product.description}">Product Name</div>
+                        <div class="fav-price">
+                            HK$ <span
+                                th:text="${#numbers.formatDecimal(fav.product.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                        </div>
+                        <div class="fav-actions">
+                            <a th:href="@{/product/{id}(id=${fav.product.productId})}" class="btn-sm btn-view">
+                                <i class="fas fa-eye"></i> 查看
+                            </a>
+                            <!--  取消收藏按鈕 -->
+                            <button class="btn-sm btn-remove"
+                                th:onclick="|removeFavorite(${fav.product.productId}, this)|">
+                                <i class="fas fa-heart-broken"></i> 取消
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!--  空狀態 -->
-        <div th:if="${favorites.isEmpty()}" class="empty-state">
-            <i class="fas fa-heart-broken"></i>
-            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有收藏任何商品</h3>
-            <p style="color: var(--gray); margin-bottom: 1.5rem;">去瀏覽商品，把喜歡的手錶加入收藏夾吧！</p>
-            <a href="/browse" class="btn btn-gold"><i class="fas fa-search"></i> 瀏覽商品</a>
-        </div>
+            <!--  空狀態 -->
+            <div th:if="${favorites.isEmpty()}" class="empty-state">
+                <i class="fas fa-heart-broken"></i>
+                <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有收藏任何商品</h3>
+                <p style="color: var(--gray); margin-bottom: 1.5rem;">去瀏覽商品，把喜歡的手錶加入收藏夾吧！</p>
+                <a href="/browse" class="btn btn-gold"><i class="fas fa-search"></i> 瀏覽商品</a>
+            </div>
 
-        <!-- ==================== 智能分頁導航 ==================== -->
-        <!-- 只有当总页数大于1时才显示分页 -->
-        <div class="pagination-wrapper" th:if="${totalPages > 1}">
+            <!-- ==================== 智能分頁導航 ==================== -->
+            <!-- 只有当总页数大于1时才显示分页 -->
+            <div class="pagination-wrapper" th:if="${totalPages > 1}">
 
-            <!-- 上一頁按鈕 -->
-            <a th:href="@{/account/favorites(page=${currentPage - 1})}"
-               th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'"
-               th:if="${currentPage > 1}">
-                <i class="fas fa-chevron-left"></i> 上一頁
-            </a>
-            <span th:if="${currentPage == 1}" class="page-btn disabled">
-                <i class="fas fa-chevron-left"></i> 上一頁
-            </span>
+                <!-- 上一頁按鈕 -->
+                <a th:href="@{/account/favorites(page=${currentPage - 1})}"
+                    th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'" th:if="${currentPage > 1}">
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                </a>
+                <span th:if="${currentPage == 1}" class="page-btn disabled">
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                </span>
 
-            <!-- 智能頁碼遍歷 (核心邏輯) -->
-            <th:block th:each="item : ${smartPages}">
-                <!-- 如果是省略號 "..." -->
-                <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
+                <!-- 智能頁碼遍歷 (核心邏輯) -->
+                <th:block th:each="item : ${smartPages}">
+                    <!-- 如果是省略號 "..." -->
+                    <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
 
-                <!-- 如果是數字頁碼 -->
-                <a th:unless="${item.isEllipsis}"
-                   th:href="@{/account/favorites(page=${item.pageNumber})}"
-                   th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
-                   th:text="${item.pageNumber}">1</a>
-            </th:block>
+                    <!-- 如果是數字頁碼 -->
+                    <a th:unless="${item.isEllipsis}" th:href="@{/account/favorites(page=${item.pageNumber})}"
+                        th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
+                        th:text="${item.pageNumber}">1</a>
+                </th:block>
 
-            <!-- 下一頁按鈕 -->
-            <a th:href="@{/account/favorites(page=${currentPage + 1})}"
-               th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
-               th:if="${currentPage < totalPages}">
-                下一頁 <i class="fas fa-chevron-right"></i>
-            </a>
-            <span th:if="${currentPage == totalPages}" class="page-btn disabled">
-                下一頁 <i class="fas fa-chevron-right"></i>
-            </span>
+                <!-- 下一頁按鈕 -->
+                <a th:href="@{/account/favorites(page=${currentPage + 1})}"
+                    th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
+                    th:if="${currentPage < totalPages}">
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                </a>
+                <span th:if="${currentPage == totalPages}" class="page-btn disabled">
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                </span>
 
-        </div>
-        <!-- ==================== 智能分頁導航結束 ==================== -->
+            </div>
+            <!-- ==================== 智能分頁導航結束 ==================== -->
 
-    </main>
-</div>
+        </main>
+    </div>
 
-<footer class="footer">
-    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
-</footer>
+    <footer class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.</p>
+    </footer>
 
-<div th:replace="~{fragments/common :: modals}"></div>
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-<script src="/js/common.js"></script>
+    <div th:replace="~{fragments/common :: modals}"></div>
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    </script>
+    <script src="/js/common.js"></script>
 
-<!--  取消收藏專屬 JS -->
-<script>
-    async function removeFavorite(productId, btn) {
-        if (!confirm('💔 確定要取消收藏該商品嗎？')) return;
+    <!--  取消收藏專屬 JS -->
+    <script>
+        async function removeFavorite(productId, btn) {
+            if (!confirm('💔 確定要取消收藏該商品嗎？')) return;
 
-        try {
-            // 復用之前的 toggle API (因為當前狀態是已收藏，調用後會變為取消收藏)
-            const response = await fetch(`/api/favorites/toggle/${productId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
+            try {
+                // 復用之前的 toggle API (因為當前狀態是已收藏，調用後會變為取消收藏)
+                const response = await fetch(`/api/favorites/toggle/${productId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
 
-            const result = await response.json();
+                const result = await response.json();
 
-            if (response.ok && result.success) {
-                showNotification('💔 已取消收藏');
+                if (response.ok && result.success) {
+                    showNotification('💔 已取消收藏');
 
-                //  優雅的消失動畫
-                const card = btn.closest('.favorite-card');
-                card.style.transition = 'all 0.4s ease';
-                card.style.opacity = '0';
-                card.style.transform = 'scale(0.8)';
+                    //  優雅的消失動畫
+                    const card = btn.closest('.favorite-card');
+                    card.style.transition = 'all 0.4s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.8)';
 
-                setTimeout(() => {
-                    card.remove();
-                    // 如果全部刪除完畢，刷新頁面以顯示空狀態
-                    if (document.querySelectorAll('.favorite-card').length === 0) {
-                        setTimeout(() => location.reload(), 500);
-                    } else {
-                        // 如果還有其他卡片，建議刷新頁面以更新分頁總數
-                        // 或者你可以選擇不刷新，但分頁按鈕可能會顯示錯誤的總頁數
-                        setTimeout(() => location.reload(), 500);
-                    }
-                }, 400);
-            } else {
-                showNotification('❌ ' + (result.message || '操作失敗'), true);
+                    setTimeout(() => {
+                        card.remove();
+                        // 如果全部刪除完畢，刷新頁面以顯示空狀態
+                        if (document.querySelectorAll('.favorite-card').length === 0) {
+                            setTimeout(() => location.reload(), 500);
+                        } else {
+                            // 如果還有其他卡片，建議刷新頁面以更新分頁總數
+                            // 或者你可以選擇不刷新，但分頁按鈕可能會顯示錯誤的總頁數
+                            setTimeout(() => location.reload(), 500);
+                        }
+                    }, 400);
+                } else {
+                    showNotification('❌ ' + (result.message || '操作失敗'), true);
+                }
+            } catch (error) {
+                console.error('取消收藏錯誤:', error);
+                showNotification('❌ 網絡錯誤', true);
             }
-        } catch (error) {
-            console.error('取消收藏錯誤:', error);
-            showNotification('❌ 網絡錯誤', true);
         }
-    }
-</script>
+    </script>
 </body>
+
 </html>

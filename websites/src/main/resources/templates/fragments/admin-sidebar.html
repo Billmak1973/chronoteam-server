@@ -1,112 +1,107 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
+
 <body>
-<!-- ==================== 管理後台側邊欄 ==================== -->
-<aside th:fragment="adminSidebar(activePage)" class="admin-sidebar">
-    <div class="sidebar-header">
-        <i class="fas fa-shield-alt"></i>
-        <h3>ChronoTeam</h3>
-        <p>管理後台控制台</p>
-    </div>
-    <ul class="admin-menu">
-        <!-- 一、數據儀表板 -->
-        <li class="menu-group" th:classappend="${activePage == 'dashboard'} ? 'active' : ''">
-            <div class="menu-group-title">
-                <span><i class="fas fa-chart-line"></i> 數據儀表板</span>
-                <i class="fas fa-chevron-right"></i>
-            </div>
-            <ul class="menu-items">
-                <li><a href="/admin/dashboard"
-                       th:classappend="${activePage == 'dashboard'} ? 'active' : ''"
-                       data-page="dashboard">
-                    <i class="fas fa-tachometer-alt"></i> 總覽
-                </a></li>
-            </ul>
-        </li>
+    <!-- ==================== 管理後台側邊欄 ==================== -->
+    <aside th:fragment="adminSidebar(activePage)" class="admin-sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-shield-alt"></i>
+            <h3>ChronoTeam</h3>
+            <p>管理後台控制台</p>
+        </div>
+        <ul class="admin-menu">
+            <!-- 一、數據儀表板 -->
+            <li class="menu-group" th:classappend="${activePage == 'dashboard'} ? 'active' : ''">
+                <div class="menu-group-title">
+                    <span><i class="fas fa-chart-line"></i> 數據儀表板</span>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <ul class="menu-items">
+                    <li><a href="/admin/dashboard" th:classappend="${activePage == 'dashboard'} ? 'active' : ''"
+                            data-page="dashboard">
+                            <i class="fas fa-tachometer-alt"></i> 總覽
+                        </a></li>
+                </ul>
+            </li>
 
-        <!-- 二、核心業務管理 -->
-        <li class="menu-group" th:classappend="${#lists.contains({'products', 'orders', 'customers', 'reviews'}, activePage)} ? 'active' : ''">
-            <div class="menu-group-title">
-                <span><i class="fas fa-cube"></i> 核心業務管理</span>
-                <i class="fas fa-chevron-right"></i>
-            </div>
-            <ul class="menu-items">
-                <li><a href="/admin/products"
-                       th:classappend="${activePage == 'products'} ? 'active' : ''"
-                       data-page="products">
-                    <i class="fas fa-box"></i> 商品管理
-                </a></li>
-                <li><a href="/admin/orders"
-                       th:classappend="${activePage == 'orders'} ? 'active' : ''"
-                       data-page="orders">
-                    <i class="fas fa-shopping-cart"></i> 訂單管理
-                </a></li>
-                <li><a href="/admin/customers"
-                       th:classappend="${activePage == 'customers'} ? 'active' : ''"
-                       data-page="customers">
-                    <i class="fas fa-users"></i> 用戶管理
-                </a></li>
-                <li><a href="/admin/reviews"
-                       th:classappend="${activePage == 'reviews'} ? 'active' : ''"
-                       data-page="reviews">
-                    <i class="fas fa-comments"></i> 評論審核
-                </a></li>
-                <li><a href="/admin/config" th:classappend="${activePage == 'config'} ? 'active' : ''" data-page="config">
-                    <i class="fas fa-cogs"></i> 系統配置
-                </a></li>
-            </ul>
-        </li>
+            <!-- 二、核心業務管理 -->
+            <li class="menu-group"
+                th:classappend="${#lists.contains({'products', 'orders', 'customers', 'reviews'}, activePage)} ? 'active' : ''">
+                <div class="menu-group-title">
+                    <span><i class="fas fa-cube"></i> 核心業務管理</span>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <ul class="menu-items">
+                    <li><a href="/admin/products" th:classappend="${activePage == 'products'} ? 'active' : ''"
+                            data-page="products">
+                            <i class="fas fa-box"></i> 商品管理
+                        </a></li>
+                    <li><a href="/admin/orders" th:classappend="${activePage == 'orders'} ? 'active' : ''"
+                            data-page="orders">
+                            <i class="fas fa-shopping-cart"></i> 訂單管理
+                        </a></li>
+                    <li><a href="/admin/customers" th:classappend="${activePage == 'customers'} ? 'active' : ''"
+                            data-page="customers">
+                            <i class="fas fa-users"></i> 用戶管理
+                        </a></li>
+                    <li><a href="/admin/reviews" th:classappend="${activePage == 'reviews'} ? 'active' : ''"
+                            data-page="reviews">
+                            <i class="fas fa-comments"></i> 評論審核
+                        </a></li>
+                    <li><a href="/admin/config" th:classappend="${activePage == 'config'} ? 'active' : ''"
+                            data-page="config">
+                            <i class="fas fa-cogs"></i> 系統配置
+                        </a></li>
+                </ul>
+            </li>
 
-        <!-- 三、名錶平台特色 -->
-        <li class="menu-group" th:classappend="${#lists.contains({'sell-app', 'appraiser', 'settlement'}, activePage)} ? 'active' : ''">
-            <div class="menu-group-title">
-                <span><i class="fas fa-clock"></i> 名錶平台特色</span>
-                <i class="fas fa-chevron-right"></i>
-            </div>
-            <ul class="menu-items">
-                <li><a href="/admin/sell-applications"
-                       th:classappend="${activePage == 'sell-app'} ? 'active' : ''"
-                       data-page="sell-app">
-                    <i class="fas fa-hand-holding-usd"></i> 出售申請管理
-                </a></li>
-                <li><a href="/admin/appraiser"
-                       th:classappend="${activePage == 'appraiser'} ? 'active' : ''"
-                       data-page="appraiser">
-                    <i class="fas fa-search"></i> 鑑定師工作台
-                </a></li>
-                <li><a href="/admin/settlement"
-                       th:classappend="${activePage == 'settlement'} ? 'active' : ''"
-                       data-page="settlement">
-                    <i class="fas fa-file-invoice-dollar"></i> 財務與結算
-                </a></li>
-            </ul>
-        </li>
+            <!-- 三、名錶平台特色 -->
+            <li class="menu-group"
+                th:classappend="${#lists.contains({'sell-app', 'appraiser', 'settlement'}, activePage)} ? 'active' : ''">
+                <div class="menu-group-title">
+                    <span><i class="fas fa-clock"></i> 名錶平台特色</span>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <ul class="menu-items">
+                    <li><a href="/admin/sell-applications" th:classappend="${activePage == 'sell-app'} ? 'active' : ''"
+                            data-page="sell-app">
+                            <i class="fas fa-hand-holding-usd"></i> 出售申請管理
+                        </a></li>
+                    <li><a href="/admin/appraiser" th:classappend="${activePage == 'appraiser'} ? 'active' : ''"
+                            data-page="appraiser">
+                            <i class="fas fa-search"></i> 鑑定師工作台
+                        </a></li>
+                    <li><a href="/admin/settlement" th:classappend="${activePage == 'settlement'} ? 'active' : ''"
+                            data-page="settlement">
+                            <i class="fas fa-file-invoice-dollar"></i> 財務與結算
+                        </a></li>
+                </ul>
+            </li>
 
-        <!-- 四、系統與權限管理 -->
-        <li class="menu-group" th:classappend="${#lists.contains({'roles', 'audit', 'content'}, activePage)} ? 'active' : ''">
-            <div class="menu-group-title">
-                <span><i class="fas fa-cog"></i> 系統與權限管理</span>
-                <i class="fas fa-chevron-right"></i>
-            </div>
-            <ul class="menu-items">
-                <li><a href="/admin/roles"
-                       th:classappend="${activePage == 'roles'} ? 'active' : ''"
-                       data-page="roles">
-                    <i class="fas fa-user-shield"></i> 角色與權限
-                </a></li>
-                <li><a href="/admin/audit"
-                       th:classappend="${activePage == 'audit'} ? 'active' : ''"
-                       data-page="audit">
-                    <i class="fas fa-history"></i> 操作審計日誌
-                </a></li>
-                <li><a href="/admin/content"
-                       th:classappend="${activePage == 'content'} ? 'active' : ''"
-                       data-page="content">
-                    <i class="fas fa-edit"></i> 靜態內容管理
-                </a></li>
-            </ul>
-        </li>
-    </ul>
-</aside>
+            <!-- 四、系統與權限管理 -->
+            <li class="menu-group"
+                th:classappend="${#lists.contains({'roles', 'audit', 'content'}, activePage)} ? 'active' : ''">
+                <div class="menu-group-title">
+                    <span><i class="fas fa-cog"></i> 系統與權限管理</span>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <ul class="menu-items">
+                    <li><a href="/admin/roles" th:classappend="${activePage == 'roles'} ? 'active' : ''"
+                            data-page="roles">
+                            <i class="fas fa-user-shield"></i> 角色與權限
+                        </a></li>
+                    <li><a href="/admin/audit" th:classappend="${activePage == 'audit'} ? 'active' : ''"
+                            data-page="audit">
+                            <i class="fas fa-history"></i> 操作審計日誌
+                        </a></li>
+                    <li><a href="/admin/content" th:classappend="${activePage == 'content'} ? 'active' : ''"
+                            data-page="content">
+                            <i class="fas fa-edit"></i> 靜態內容管理
+                        </a></li>
+                </ul>
+            </li>
+        </ul>
+    </aside>
 </body>
+
 </html>

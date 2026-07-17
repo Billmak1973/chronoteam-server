@@ -1,49 +1,91 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <title>支付成功 - ChronoTeam</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
     <style>
-        .success-container { max-width: 600px; margin: 5rem auto; text-align: center; padding: 3rem; background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
-        .success-icon { font-size: 5rem; color: #28a745; margin-bottom: 1.5rem; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
-        .order-no { background: var(--light); padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 1.2rem; color: var(--primary); margin: 1.5rem 0; }
-        .action-btns { display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; }
+        .success-container {
+            max-width: 600px;
+            margin: 5rem auto;
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .success-icon {
+            font-size: 5rem;
+            color: #28a745;
+            margin-bottom: 1.5rem;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0);
+            }
+
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .order-no {
+            background: var(--light);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin: 1.5rem 0;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
     </style>
 </head>
+
 <body>
-<!-- 引入公共導航欄 -->
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <!-- 引入公共導航欄 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="success-container">
-    <div class="success-icon"><i class="fas fa-check-circle"></i></div>
-    <h2 style="color: var(--primary); margin-bottom: 0.5rem;">支付成功！</h2>
-    <p style="color: var(--gray);">感謝您的購買，我們已收到您的款項，將盡快為您安排發貨。</p>
+    <div class="success-container">
+        <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+        <h2 style="color: var(--primary); margin-bottom: 0.5rem;">支付成功！</h2>
+        <p style="color: var(--gray);">感謝您的購買，我們已收到您的款項，將盡快為您安排發貨。</p>
 
-    <div class="order-no">
-        訂單編號：<span th:text="${param.orderNo}">ORD-XXX</span>
+        <div class="order-no">
+            訂單編號：<span th:text="${param.orderNo}">ORD-XXX</span>
+        </div>
+
+        <div class="action-btns">
+            <a href="/account/orders" class="btn btn-outline"><i class="fas fa-box"></i> 查看我的訂單</a>
+            <a href="/browse" class="btn btn-primary"><i class="fas fa-shopping-bag"></i> 繼續購物</a>
+        </div> <!--  修復：補全閉合標籤 -->
     </div>
 
-    <div class="action-btns">
-        <a href="/account/orders" class="btn btn-outline"><i class="fas fa-box"></i> 查看我的訂單</a>
-        <a href="/browse" class="btn btn-primary"><i class="fas fa-shopping-bag"></i> 繼續購物</a>
-    </div> <!--  修復：補全閉合標籤 -->
-</div>
+    <!-- 頁腳 -->
+    <footer class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.</p>
+    </footer>
 
-<!-- 頁腳 -->
-<footer class="footer">
-    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
-</footer>
+    <!--  修復：引入公共登入/註冊彈窗 HTML -->
+    <div th:replace="~{fragments/common :: modals}"></div>
 
-<!--  修復：引入公共登入/註冊彈窗 HTML -->
-<div th:replace="~{fragments/common :: modals}"></div>
-
-<!--  修復：加入 sec 命名空間後，這裡的 #authorization 才能正常解析 -->
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-<script src="/js/common.js"></script>
+    <!--  修復：加入 sec 命名空間後，這裡的 #authorization 才能正常解析 -->
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    </script>
+    <script src="/js/common.js"></script>
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,10 +10,37 @@
     <link rel="stylesheet" href="/css/sidebar.css">
 
     <style>
-        .dashboard-container { display: flex; min-height: calc(100vh - 150px); max-width: 1400px; margin: 2rem auto; padding: 0 1rem; gap: 2rem; }
-        .main-content { flex: 1; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 2.5rem; }
-        .page-title { font-size: 1.8rem; color: var(--primary); margin-bottom: 2rem; display: flex; align-items: center; gap: 0.8rem; border-bottom: 2px solid var(--light); padding-bottom: 1rem; }
-        .page-title i { color: var(--gold); }
+        .dashboard-container {
+            display: flex;
+            min-height: calc(100vh - 150px);
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            gap: 2rem;
+        }
+
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 2.5rem;
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 1rem;
+        }
+
+        .page-title i {
+            color: var(--gold);
+        }
 
         /* 安全卡片通用樣式 */
         .security-card {
@@ -23,7 +51,11 @@
             margin-bottom: 1.5rem;
             transition: all 0.3s;
         }
-        .security-card:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+
+        .security-card:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
         .security-card-header {
             display: flex;
             justify-content: space-between;
@@ -32,6 +64,7 @@
             padding-bottom: 1rem;
             border-bottom: 1px dashed #e9ecef;
         }
+
         .security-card-title {
             font-size: 1.1rem;
             font-weight: 600;
@@ -40,53 +73,188 @@
             align-items: center;
             gap: 0.5rem;
         }
-        .security-card-title i { color: var(--gold); }
+
+        .security-card-title i {
+            color: var(--gold);
+        }
 
         /* 安全等級進度條 */
-        .security-level { margin-bottom: 2rem; }
-        .level-bar-bg { width: 100%; height: 10px; background: #e9ecef; border-radius: 5px; overflow: hidden; margin-top: 0.5rem; }
-        .level-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--gold)); border-radius: 5px; transition: width 0.5s; }
-        .level-text { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--gray); margin-top: 0.5rem; }
+        .security-level {
+            margin-bottom: 2rem;
+        }
+
+        .level-bar-bg {
+            width: 100%;
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .level-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--gold));
+            border-radius: 5px;
+            transition: width 0.5s;
+        }
+
+        .level-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 0.5rem;
+        }
 
         /* 信息行 */
-        .info-row { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; }
-        .info-label { color: var(--gray); font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; }
-        .info-value { font-weight: 500; color: var(--primary); }
-        .btn-sm { padding: 0.4rem 1rem; font-size: 0.85rem; border-radius: 6px; text-decoration: none; cursor: pointer; border: none; transition: 0.3s; }
-        .btn-sm-primary { background: var(--light); color: var(--primary); border: 1px solid #ddd; }
-        .btn-sm-primary:hover { background: var(--gold); color: white; border-color: var(--gold); }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 0;
+        }
+
+        .info-label {
+            color: var(--gray);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-value {
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .btn-sm {
+            padding: 0.4rem 1rem;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: 0.3s;
+        }
+
+        .btn-sm-primary {
+            background: var(--light);
+            color: var(--primary);
+            border: 1px solid #ddd;
+        }
+
+        .btn-sm-primary:hover {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+        }
 
         /* 登錄記錄列表 */
-        .login-log { list-style: none; padding: 0; margin: 0; }
-        .login-log li { display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 1px solid #f8f9fa; font-size: 0.9rem; }
-        .login-log li:last-child { border-bottom: none; }
-        .device-info { display: flex; align-items: center; gap: 0.8rem; color: var(--primary); }
-        .device-info i { font-size: 1.2rem; color: var(--gray); }
-        .current-badge { background: #d4edda; color: #155724; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-        .ip-info { color: var(--gray); font-size: 0.85rem; }
+        .login-log {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .login-log li {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid #f8f9fa;
+            font-size: 0.9rem;
+        }
+
+        .login-log li:last-child {
+            border-bottom: none;
+        }
+
+        .device-info {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            color: var(--primary);
+        }
+
+        .device-info i {
+            font-size: 1.2rem;
+            color: var(--gray);
+        }
+
+        .current-badge {
+            background: #d4edda;
+            color: #155724;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .ip-info {
+            color: var(--gray);
+            font-size: 0.85rem;
+        }
 
         /* 危險區域 */
-        .danger-zone { border: 2px solid #f8d7da; background: #fff5f5; }
-        .danger-zone .security-card-title { color: #721c24; }
-        .danger-zone .security-card-title i { color: var(--accent); }
-        .btn-danger { background: var(--accent); color: white; padding: 0.6rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s; }
-        .btn-danger:hover { background: #c73e54; transform: translateY(-2px); }
+        .danger-zone {
+            border: 2px solid #f8d7da;
+            background: #fff5f5;
+        }
+
+        .danger-zone .security-card-title {
+            color: #721c24;
+        }
+
+        .danger-zone .security-card-title i {
+            color: var(--accent);
+        }
+
+        .btn-danger {
+            background: var(--accent);
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-danger:hover {
+            background: #c73e54;
+            transform: translateY(-2px);
+        }
 
         /* 🔐 安全问答样式 - 限制高度，超过3个需要滚动 */
         .security-questions-list {
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            max-height: 320px;  /* 限制最大高度，约显示3个问题 */
-            overflow-y: auto;   /* 启用垂直滚动 */
+            max-height: 320px;
+            /* 限制最大高度，约显示3个问题 */
+            overflow-y: auto;
+            /* 启用垂直滚动 */
             padding-right: 8px;
         }
 
         /* 美化滚动条 */
-        .security-questions-list::-webkit-scrollbar { width: 6px; }
-        .security-questions-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
-        .security-questions-list::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
-        .security-questions-list::-webkit-scrollbar-thumb:hover { background: #b8972b; }
+        .security-questions-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .security-questions-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .security-questions-list::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 3px;
+        }
+
+        .security-questions-list::-webkit-scrollbar-thumb:hover {
+            background: #b8972b;
+        }
 
         .question-item {
             background: var(--light);
@@ -98,9 +266,21 @@
             align-items: center;
             flex-shrink: 0;
         }
-        .question-text { font-weight: 500; color: var(--primary); }
-        .question-answer-mask { color: var(--gray); font-size: 0.9rem; }
-        .question-answer-mask i { margin-right: 0.3rem; color: var(--gold); }
+
+        .question-text {
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .question-answer-mask {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .question-answer-mask i {
+            margin-right: 0.3rem;
+            color: var(--gold);
+        }
 
         /* 模态框样式 */
         .modal-overlay {
@@ -110,11 +290,12 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             z-index: 3000;
             justify-content: center;
             align-items: center;
         }
+
         .modal-box {
             background: white;
             padding: 2rem;
@@ -124,6 +305,7 @@
             max-height: 80vh;
             overflow-y: auto;
         }
+
         .modal-header {
             font-size: 1.3rem;
             font-weight: 600;
@@ -133,26 +315,44 @@
             align-items: center;
             gap: 0.5rem;
         }
-        .modal-header i { color: var(--gold); }
-        .form-group { margin-bottom: 1.2rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--primary); }
-        .form-group select, .form-group input {
+
+        .modal-header i {
+            color: var(--gold);
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .form-group select,
+        .form-group input {
             width: 100%;
             padding: 0.7rem;
             border: 2px solid #e9ecef;
             border-radius: 8px;
             font-size: 1rem;
         }
-        .form-group select:focus, .form-group input:focus {
+
+        .form-group select:focus,
+        .form-group input:focus {
             outline: none;
             border-color: var(--gold);
         }
+
         .modal-actions {
             display: flex;
             gap: 1rem;
             justify-content: flex-end;
             margin-top: 1.5rem;
         }
+
         .btn-cancel {
             background: var(--light);
             color: var(--primary);
@@ -161,7 +361,11 @@
             border-radius: 6px;
             cursor: pointer;
         }
-        .btn-cancel:hover { background: #e9ecef; }
+
+        .btn-cancel:hover {
+            background: #e9ecef;
+        }
+
         .btn-save {
             background: var(--gold);
             color: var(--primary);
@@ -171,15 +375,20 @@
             cursor: pointer;
             font-weight: 600;
         }
-        .btn-save:hover { background: #b8972b; }
+
+        .btn-save:hover {
+            background: #b8972b;
+        }
 
         /* 🔐 密码输入框容器 */
         .password-wrapper {
             position: relative;
         }
+
         .password-wrapper input {
             padding-right: 2.8rem !important;
         }
+
         .password-toggle {
             position: absolute;
             right: 1rem;
@@ -191,6 +400,7 @@
             z-index: 10;
             padding: 0.3rem;
         }
+
         .password-toggle:hover {
             color: var(--primary);
         }
@@ -203,12 +413,13 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.7);
             z-index: 4000;
             justify-content: center;
             align-items: center;
             animation: fadeIn 0.3s ease;
         }
+
         .error-box {
             background: white;
             padding: 2.5rem;
@@ -216,26 +427,30 @@
             max-width: 450px;
             width: 90%;
             text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             animation: slideUp 0.4s ease;
         }
+
         .error-icon {
             font-size: 4rem;
             color: var(--accent);
             margin-bottom: 1.5rem;
         }
+
         .error-title {
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--primary);
             margin-bottom: 1rem;
         }
+
         .error-message {
             color: var(--gray);
             font-size: 1rem;
             line-height: 1.6;
             margin-bottom: 2rem;
         }
+
         .error-btn {
             background: var(--gold);
             color: var(--primary);
@@ -247,375 +462,400 @@
             font-size: 1rem;
             transition: all 0.3s;
         }
+
         .error-btn:hover {
             background: #b8972b;
             transform: translateY(-2px);
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
+
         @keyframes slideUp {
             from {
                 opacity: 0;
                 transform: translateY(50px) scale(0.9);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
             }
         }
 
-        .footer { background: var(--primary); color: rgba(255, 255, 255, 0.7); padding: 2rem; text-align: center; margin-top: 3rem; }
+        .footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
 
-        @media (max-width: 900px) { .dashboard-container { flex-direction: column; } }
+        @media (max-width: 900px) {
+            .dashboard-container {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
+
 <body>
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="dashboard-container">
-    <div th:replace="~{fragments/sidebar :: sidebar(activePage='security')}"></div>
+    <div class="dashboard-container">
+        <div th:replace="~{fragments/sidebar :: sidebar(activePage='security')}"></div>
 
-    <main class="main-content">
-        <h2 class="page-title"><i class="fas fa-shield-alt"></i> 安全設置</h2>
+        <main class="main-content">
+            <h2 class="page-title"><i class="fas fa-shield-alt"></i> 安全設置</h2>
 
-        <!-- 1. 帳戶安全等級 -->
-        <div class="security-card security-level">
-            <div class="security-card-header">
-                <div class="security-card-title"><i class="fas fa-tachometer-alt"></i> 帳戶安全等級</div>
-                <span style="color: var(--gold); font-weight: 600;" th:text="${securityLevel} ?: '中等安全'">中等安全</span>
-            </div>
-            <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 0.5rem;" id="securityTip">
-                <i class="fas fa-info-circle"></i>
-                <span th:if="${securityQuestions == null or #lists.isEmpty(securityQuestions)}">
-                    您的帳戶已綁定郵箱和手機，建議設置安全問答以進一步保護帳戶。
-                </span>
-                <span th:unless="${securityQuestions == null or #lists.isEmpty(securityQuestions)}">
-                    您的帳戶安全設置良好，已綁定郵箱、手機並設置了安全問答。
-                </span>
-            </p>
-            <div class="level-bar-bg">
-                <div class="level-bar-fill" style="width: 75%;"></div>
-            </div>
-            <div class="level-text">
-                <span>弱</span>
-                <span>中</span>
-                <span>強</span>
-                <span>極高</span>
-            </div>
-        </div>
-
-        <!-- 2. 綁定信息管理 -->
-        <div class="security-card">
-            <div class="security-card-header">
-                <div class="security-card-title"><i class="fas fa-link"></i> 綁定信息管理</div>
-            </div>
-            <!-- 找到綁定信息管理區塊，修改如下 -->
-            <div class="info-row">
-                <span class="info-label"><i class="fas fa-envelope"></i> 綁定郵箱</span>
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <span class="info-value" th:text="${user.email}">user@example.com</span>
-                    <button class="btn-sm btn-sm-primary" onclick="showNotification('❌ 修改郵箱需驗證原郵箱，功能開發中')">修改</button>
+            <!-- 1. 帳戶安全等級 -->
+            <div class="security-card security-level">
+                <div class="security-card-header">
+                    <div class="security-card-title"><i class="fas fa-tachometer-alt"></i> 帳戶安全等級</div>
+                    <span style="color: var(--gold); font-weight: 600;" th:text="${securityLevel} ?: '中等安全'">中等安全</span>
                 </div>
-            </div>
-            <div class="info-row">
-                <span class="info-label"><i class="fas fa-mobile-alt"></i> 綁定手機</span>
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <span class="info-value" th:text="${user.phone}">+852 5222 2698</span>
-                    <button class="btn-sm btn-sm-primary" onclick="showNotification('❌ 修改手機需短信驗證，功能開發中')">修改</button>
+                <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 0.5rem;" id="securityTip">
+                    <i class="fas fa-info-circle"></i>
+                    <span th:if="${securityQuestions == null or #lists.isEmpty(securityQuestions)}">
+                        您的帳戶已綁定郵箱和手機，建議設置安全問答以進一步保護帳戶。
+                    </span>
+                    <span th:unless="${securityQuestions == null or #lists.isEmpty(securityQuestions)}">
+                        您的帳戶安全設置良好，已綁定郵箱、手機並設置了安全問答。
+                    </span>
+                </p>
+                <div class="level-bar-bg">
+                    <div class="level-bar-fill" style="width: 75%;"></div>
                 </div>
-            </div>
-            <div class="info-row">
-                <span class="info-label"><i class="fas fa-lock"></i> 登錄密碼</span>
-                <div style="display: flex; align-items: center; gap: 1rem;">
-                    <span class="info-value">********</span>
-                    <a href="/account/password" class="btn-sm btn-sm-primary">修改</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. 🔐 安全問答設置 -->
-        <div class="security-card">
-            <div class="security-card-header">
-                <div class="security-card-title"><i class="fas fa-question-circle"></i> 安全問答</div>
-                <span style="color: var(--gray); font-size: 0.85rem;">用於帳戶找回和重要操作驗證</span>
-            </div>
-
-            <!-- 容器：所有问题都会渲染在这里，CSS控制滚动（max-height: 320px 约显示3个） -->
-            <div class="security-questions-list" id="questionsList">
-                <!-- 如果还没设置 (Thymeleaf 兜底) -->
-                <div th:if="${securityQuestions == null or #lists.isEmpty(securityQuestions)}">
-                    <p style="color: var(--gray); text-align: center; padding: 1rem;">
-                        <i class="fas fa-exclamation-triangle" style="color: var(--gold);"></i>
-                        您還未設置安全問答，建議至少設置 2 個問題以保護帳戶安全。
-                    </p>
+                <div class="level-text">
+                    <span>弱</span>
+                    <span>中</span>
+                    <span>強</span>
+                    <span>極高</span>
                 </div>
             </div>
 
-            <div style="margin-top: 1rem; text-align: center;">
-                <button class="btn-sm btn-sm-primary" onclick="openQuestionModal()"
+            <!-- 2. 綁定信息管理 -->
+            <div class="security-card">
+                <div class="security-card-header">
+                    <div class="security-card-title"><i class="fas fa-link"></i> 綁定信息管理</div>
+                </div>
+                <!-- 找到綁定信息管理區塊，修改如下 -->
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-envelope"></i> 綁定郵箱</span>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="info-value" th:text="${user.email}">user@example.com</span>
+                        <button class="btn-sm btn-sm-primary"
+                            onclick="showNotification('❌ 修改郵箱需驗證原郵箱，功能開發中')">修改</button>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-mobile-alt"></i> 綁定手機</span>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="info-value" th:text="${user.phone}">+852 5222 2698</span>
+                        <button class="btn-sm btn-sm-primary"
+                            onclick="showNotification('❌ 修改手機需短信驗證，功能開發中')">修改</button>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label"><i class="fas fa-lock"></i> 登錄密碼</span>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="info-value">********</span>
+                        <a href="/account/password" class="btn-sm btn-sm-primary">修改</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 🔐 安全問答設置 -->
+            <div class="security-card">
+                <div class="security-card-header">
+                    <div class="security-card-title"><i class="fas fa-question-circle"></i> 安全問答</div>
+                    <span style="color: var(--gray); font-size: 0.85rem;">用於帳戶找回和重要操作驗證</span>
+                </div>
+
+                <!-- 容器：所有问题都会渲染在这里，CSS控制滚动（max-height: 320px 约显示3个） -->
+                <div class="security-questions-list" id="questionsList">
+                    <!-- 如果还没设置 (Thymeleaf 兜底) -->
+                    <div th:if="${securityQuestions == null or #lists.isEmpty(securityQuestions)}">
+                        <p style="color: var(--gray); text-align: center; padding: 1rem;">
+                            <i class="fas fa-exclamation-triangle" style="color: var(--gold);"></i>
+                            您還未設置安全問答，建議至少設置 2 個問題以保護帳戶安全。
+                        </p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem; text-align: center;">
+                    <button class="btn-sm btn-sm-primary" onclick="openQuestionModal()"
                         th:if="${securityQuestions == null or #lists.size(securityQuestions) < 3}">
-                    <i class="fas fa-plus"></i> 添加安全問答
+                        <i class="fas fa-plus"></i> 添加安全問答
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4. 近期登錄記錄 (真實數據) -->
+            <div class="security-card">
+                <div class="security-card-header">
+                    <div class="security-card-title"><i class="fas fa-laptop"></i> 近期登錄設備</div>
+                    <span style="color: var(--gray); font-size: 0.8rem;">
+                        <i class="fas fa-shield-alt"></i> 已啟用單點登錄保護
+                    </span>
+                </div>
+                <ul class="login-log">
+                    <li th:each="log : ${loginLogs}">
+                        <div class="device-info">
+                            <i th:class="${log.deviceIcon}"></i>
+                            <div>
+                                <div>
+                                    <span th:text="${log.deviceName + ' - ' + log.browserName}">Windows - Chrome</span>
+                                    <span class="current-badge" th:if="${log.sessionId == currentSessionId}">當前設備</span>
+                                </div>
+                                <div class="ip-info" th:text="'IP: ' + ${log.maskedIp}">IP: 127.0.0.1 (本地)</div>
+                            </div>
+                        </div>
+                        <span class="ip-info" th:text="${#temporals.format(log.loginTime, 'yyyy-MM-dd HH:mm')}">
+                            2026-06-03 14:20
+                        </span>
+                    </li>
+                    <li th:if="${#lists.isEmpty(loginLogs)}"
+                        style="justify-content: center; color: var(--gray); border: none;">
+                        <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i> 暫無登錄記錄，請先登出並重新登入以生成記錄
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 5. 註銷帳戶 (危險區域) -->
+            <div class="security-card danger-zone">
+                <div class="security-card-header">
+                    <div class="security-card-title"><i class="fas fa-exclamation-triangle"></i> 註銷帳戶 (危險操作)</div>
+                </div>
+                <p style="color: #721c24; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+                    <strong>警告：</strong>註銷後，您的所有數據（包括個人資訊、訂單記錄、出售申請、錢包餘額）將被<strong>永久刪除且無法恢復</strong>。
+                    若您有進行中的交易或未結算的款項，將無法註銷。
+                </p>
+                <button class="btn-danger" onclick="handleDeleteAccount()">
+                    <i class="fas fa-user-slash"></i> 申請註銷帳戶
                 </button>
             </div>
-        </div>
 
-        <!-- 4. 近期登錄記錄 (真實數據) -->
-        <div class="security-card">
-            <div class="security-card-header">
-                <div class="security-card-title"><i class="fas fa-laptop"></i> 近期登錄設備</div>
-                <span style="color: var(--gray); font-size: 0.8rem;">
-                    <i class="fas fa-shield-alt"></i> 已啟用單點登錄保護
-                </span>
+        </main>
+    </div>
+
+    <!-- 🔐 安全问答模态框 -->
+    <div class="modal-overlay" id="questionModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <i class="fas fa-shield-alt"></i>
+                <span id="modalTitle">設置安全問答</span>
             </div>
-            <ul class="login-log">
-                <li th:each="log : ${loginLogs}">
-                    <div class="device-info">
-                        <i th:class="${log.deviceIcon}"></i>
-                        <div>
-                            <div>
-                                <span th:text="${log.deviceName + ' - ' + log.browserName}">Windows - Chrome</span>
-                                <span class="current-badge" th:if="${log.sessionId == currentSessionId}">當前設備</span>
-                            </div>
-                            <div class="ip-info" th:text="'IP: ' + ${log.maskedIp}">IP: 127.0.0.1 (本地)</div>
-                        </div>
+
+            <form id="questionForm" onsubmit="saveQuestion(event)">
+                <div class="form-group">
+                    <label>選擇問題 <span style="color: var(--accent);">*</span></label>
+                    <select id="questionSelect" required onchange="handleQuestionSelect()">
+                        <option value="">請選擇一個問題</option>
+                        <option value="food">你最喜歡的食物是什麼？</option>
+                        <option value="pet">你第一隻寵物的名字是什麼？</option>
+                        <option value="city">你出生的城市是哪裏？</option>
+                        <option value="school">你的小學名稱是什麼？</option>
+                        <option value="movie">你最喜歡的電影是什麼？</option>
+                        <option value="book">你最喜歡的書是什麼？</option>
+                        <option value="sport">你最喜歡的運動是什麼？</option>
+                        <option value="hero">你心目中的英雄是誰？</option>
+                        <option value="custom">自定義問題</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="customQuestionGroup" style="display: none;">
+                    <label>輸入自定義問題 <span style="color: var(--accent);">*</span></label>
+                    <input type="text" id="customQuestion" placeholder="例如：你最難忘的經歷是什麼？" maxlength="50">
+                </div>
+
+                <div class="form-group">
+                    <label>您的答案 <span style="color: var(--accent);">*</span></label>
+                    <div class="password-wrapper">
+                        <input type="password" id="questionAnswer" required placeholder="請輸入答案（不區分大小寫）" maxlength="100">
+                        <i class="fas fa-eye password-toggle" onclick="toggleAnswerVisibility('questionAnswer', this)"
+                            title="顯示/隱藏答案"></i>
                     </div>
-                    <span class="ip-info" th:text="${#temporals.format(log.loginTime, 'yyyy-MM-dd HH:mm')}">
-                        2026-06-03 14:20
-                    </span>
-                </li>
-                <li th:if="${#lists.isEmpty(loginLogs)}" style="justify-content: center; color: var(--gray); border: none;">
-                    <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i> 暫無登錄記錄，請先登出並重新登入以生成記錄
-                </li>
-            </ul>
-        </div>
+                    <small style="color: var(--gray); font-size: 0.8rem;">
+                        <i class="fas fa-info-circle"></i> 答案不區分大小寫，請記住您的答案
+                    </small>
+                </div>
 
-        <!-- 5. 註銷帳戶 (危險區域) -->
-        <div class="security-card danger-zone">
-            <div class="security-card-header">
-                <div class="security-card-title"><i class="fas fa-exclamation-triangle"></i> 註銷帳戶 (危險操作)</div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeQuestionModal()">取消</button>
+                    <button type="submit" class="btn-save">
+                        <i class="fas fa-save"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 🔐 编辑安全问答模态框 -->
+    <div class="modal-overlay" id="editQuestionModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <i class="fas fa-edit"></i>
+                <span>修改安全問答答案</span>
             </div>
-            <p style="color: #721c24; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
-                <strong>警告：</strong>註銷後，您的所有數據（包括個人資訊、訂單記錄、出售申請、錢包餘額）將被<strong>永久刪除且無法恢復</strong>。
-                若您有進行中的交易或未結算的款項，將無法註銷。
-            </p>
-            <button class="btn-danger" onclick="handleDeleteAccount()">
-                <i class="fas fa-user-slash"></i> 申請註銷帳戶
+
+            <form id="editQuestionForm" onsubmit="saveEditedQuestion(event)">
+                <!-- 问题ID（隐藏） -->
+                <input type="hidden" id="editQuestionId">
+
+                <!-- 显示问题 -->
+                <div class="form-group">
+                    <label>安全問題</label>
+                    <div
+                        style="background: var(--light); padding: 0.8rem; border-radius: 8px; border-left: 3px solid var(--gold);">
+                        <strong id="editQuestionText" style="color: var(--primary);"></strong>
+                    </div>
+                </div>
+
+                <!-- 原答案验证 -->
+                <div class="form-group">
+                    <label>原答案 <span style="color: var(--accent);">*</span></label>
+                    <div class="password-wrapper">
+                        <input type="password" id="editOldAnswer" required placeholder="請輸入原答案以驗證身份">
+                        <i class="fas fa-eye password-toggle" onclick="toggleAnswerVisibility('editOldAnswer', this)"
+                            title="顯示/隱藏答案"></i>
+                    </div>
+                    <small style="color: var(--gray); font-size: 0.8rem;">
+                        <i class="fas fa-lock"></i> 需要驗證原答案才能修改
+                    </small>
+                </div>
+
+                <!-- 新答案 -->
+                <div class="form-group">
+                    <label>新答案 <span style="color: var(--accent);">*</span></label>
+                    <div class="password-wrapper">
+                        <input type="password" id="editNewAnswer" required placeholder="請輸入新答案" maxlength="100">
+                        <i class="fas fa-eye password-toggle" onclick="toggleAnswerVisibility('editNewAnswer', this)"
+                            title="顯示/隱藏答案"></i>
+                    </div>
+                    <small style="color: var(--gray); font-size: 0.8rem;">
+                        <i class="fas fa-info-circle"></i> 答案不區分大小寫，請記住新答案
+                    </small>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeEditQuestionModal()">取消</button>
+                    <button type="submit" class="btn-save">
+                        <i class="fas fa-save"></i> 保存修改
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 🔔 错误提示框（居中显示） -->
+    <div class="error-overlay" id="errorOverlay" onclick="closeErrorOverlay()">
+        <div class="error-box" onclick="event.stopPropagation()">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <div class="error-title" id="errorTitle">錯誤</div>
+            <div class="error-message" id="errorMessage">錯誤信息</div>
+            <button class="error-btn" onclick="closeErrorOverlay()">
+                <i class="fas fa-check"></i> 我知道了
             </button>
         </div>
-
-    </main>
-</div>
-
-<!-- 🔐 安全问答模态框 -->
-<div class="modal-overlay" id="questionModal">
-    <div class="modal-box">
-        <div class="modal-header">
-            <i class="fas fa-shield-alt"></i>
-            <span id="modalTitle">設置安全問答</span>
-        </div>
-
-        <form id="questionForm" onsubmit="saveQuestion(event)">
-            <div class="form-group">
-                <label>選擇問題 <span style="color: var(--accent);">*</span></label>
-                <select id="questionSelect" required onchange="handleQuestionSelect()">
-                    <option value="">請選擇一個問題</option>
-                    <option value="food">你最喜歡的食物是什麼？</option>
-                    <option value="pet">你第一隻寵物的名字是什麼？</option>
-                    <option value="city">你出生的城市是哪裏？</option>
-                    <option value="school">你的小學名稱是什麼？</option>
-                    <option value="movie">你最喜歡的電影是什麼？</option>
-                    <option value="book">你最喜歡的書是什麼？</option>
-                    <option value="sport">你最喜歡的運動是什麼？</option>
-                    <option value="hero">你心目中的英雄是誰？</option>
-                    <option value="custom">自定義問題</option>
-                </select>
-            </div>
-
-            <div class="form-group" id="customQuestionGroup" style="display: none;">
-                <label>輸入自定義問題 <span style="color: var(--accent);">*</span></label>
-                <input type="text" id="customQuestion" placeholder="例如：你最難忘的經歷是什麼？" maxlength="50">
-            </div>
-
-            <div class="form-group">
-                <label>您的答案 <span style="color: var(--accent);">*</span></label>
-                <div class="password-wrapper">
-                    <input type="password" id="questionAnswer" required placeholder="請輸入答案（不區分大小寫）" maxlength="100">
-                    <i class="fas fa-eye password-toggle" onclick="toggleAnswerVisibility('questionAnswer', this)" title="顯示/隱藏答案"></i>
-                </div>
-                <small style="color: var(--gray); font-size: 0.8rem;">
-                    <i class="fas fa-info-circle"></i> 答案不區分大小寫，請記住您的答案
-                </small>
-            </div>
-
-            <div class="modal-actions">
-                <button type="button" class="btn-cancel" onclick="closeQuestionModal()">取消</button>
-                <button type="submit" class="btn-save">
-                    <i class="fas fa-save"></i> 保存
-                </button>
-            </div>
-        </form>
     </div>
-</div>
 
-<!-- 🔐 编辑安全问答模态框 -->
-<div class="modal-overlay" id="editQuestionModal">
-    <div class="modal-box">
-        <div class="modal-header">
-            <i class="fas fa-edit"></i>
-            <span>修改安全問答答案</span>
-        </div>
+    <footer class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.</p>
+    </footer>
 
-        <form id="editQuestionForm" onsubmit="saveEditedQuestion(event)">
-            <!-- 问题ID（隐藏） -->
-            <input type="hidden" id="editQuestionId">
+    <div th:replace="~{fragments/common :: modals}"></div>
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const username = [[${ user.username }]];
+    </script>
+    <script src="/js/common.js"></script>
 
-            <!-- 显示问题 -->
-            <div class="form-group">
-                <label>安全問題</label>
-                <div style="background: var(--light); padding: 0.8rem; border-radius: 8px; border-left: 3px solid var(--gold);">
-                    <strong id="editQuestionText" style="color: var(--primary);"></strong>
-                </div>
-            </div>
-
-            <!-- 原答案验证 -->
-            <div class="form-group">
-                <label>原答案 <span style="color: var(--accent);">*</span></label>
-                <div class="password-wrapper">
-                    <input type="password" id="editOldAnswer" required
-                           placeholder="請輸入原答案以驗證身份">
-                    <i class="fas fa-eye password-toggle" onclick="toggleAnswerVisibility('editOldAnswer', this)" title="顯示/隱藏答案"></i>
-                </div>
-                <small style="color: var(--gray); font-size: 0.8rem;">
-                    <i class="fas fa-lock"></i> 需要驗證原答案才能修改
-                </small>
-            </div>
-
-            <!-- 新答案 -->
-            <div class="form-group">
-                <label>新答案 <span style="color: var(--accent);">*</span></label>
-                <div class="password-wrapper">
-                    <input type="password" id="editNewAnswer" required
-                           placeholder="請輸入新答案" maxlength="100">
-                    <i class="fas fa-eye password-toggle" onclick="toggleAnswerVisibility('editNewAnswer', this)" title="顯示/隱藏答案"></i>
-                </div>
-                <small style="color: var(--gray); font-size: 0.8rem;">
-                    <i class="fas fa-info-circle"></i> 答案不區分大小寫，請記住新答案
-                </small>
-            </div>
-
-            <div class="modal-actions">
-                <button type="button" class="btn-cancel" onclick="closeEditQuestionModal()">取消</button>
-                <button type="submit" class="btn-save">
-                    <i class="fas fa-save"></i> 保存修改
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- 🔔 错误提示框（居中显示） -->
-<div class="error-overlay" id="errorOverlay" onclick="closeErrorOverlay()">
-    <div class="error-box" onclick="event.stopPropagation()">
-        <div class="error-icon">
-            <i class="fas fa-exclamation-circle"></i>
-        </div>
-        <div class="error-title" id="errorTitle">錯誤</div>
-        <div class="error-message" id="errorMessage">錯誤信息</div>
-        <button class="error-btn" onclick="closeErrorOverlay()">
-            <i class="fas fa-check"></i> 我知道了
-        </button>
-    </div>
-</div>
-
-<footer class="footer">
-    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
-</footer>
-
-<div th:replace="~{fragments/common :: modals}"></div>
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-        const username = [[${user.username}]];
-</script>
-<script src="/js/common.js"></script>
-
-<script>
-    // 🔐 頁面加載時獲取已設置的安全問題
-    document.addEventListener('DOMContentLoaded', async function() {
-        try {
-            const response = await fetch('/api/security/questions');
-            const result = await response.json();
-            if (result.success && result.data) {
-                renderQuestionsList(result.data);
-            }
-
-            // 获取安全等级
+    <script>
+        // 🔐 頁面加載時獲取已設置的安全問題
+        document.addEventListener('DOMContentLoaded', async function () {
             try {
-                const levelResponse = await fetch('/api/security/security-level');
-                const levelResult = await levelResponse.json();
-                if (levelResult.success) {
-                    updateSecurityLevel(levelResult.data.level, levelResult.data.levelText);
+                const response = await fetch('/api/security/questions');
+                const result = await response.json();
+                if (result.success && result.data) {
+                    renderQuestionsList(result.data);
+                }
+
+                // 获取安全等级
+                try {
+                    const levelResponse = await fetch('/api/security/security-level');
+                    const levelResult = await levelResponse.json();
+                    if (levelResult.success) {
+                        updateSecurityLevel(levelResult.data.level, levelResult.data.levelText);
+                    }
+                } catch (error) {
+                    console.error('获取安全等级失败:', error);
                 }
             } catch (error) {
-                console.error('获取安全等级失败:', error);
+                console.error('獲取安全問題失敗:', error);
             }
-        } catch (error) {
-            console.error('獲取安全問題失敗:', error);
-        }
-    });
+        });
 
-    // 更新安全等级显示
-    function updateSecurityLevel(level, levelText) {
-        const levelBar = document.querySelector('.level-bar-fill');
-        const levelTextSpan = document.querySelector('.security-card-header span');
+        // 更新安全等级显示
+        function updateSecurityLevel(level, levelText) {
+            const levelBar = document.querySelector('.level-bar-fill');
+            const levelTextSpan = document.querySelector('.security-card-header span');
 
-        if (levelBar) {
-            levelBar.style.width = level + '%';
+            if (levelBar) {
+                levelBar.style.width = level + '%';
 
-            // 根据等级改变颜色
-            if (level >= 75) {
-                levelBar.style.background = 'linear-gradient(90deg, #28a745, #20c997)';
-            } else if (level >= 50) {
-                levelBar.style.background = 'linear-gradient(90deg, #ffc107, #fd7e14)';
-            } else {
-                levelBar.style.background = 'linear-gradient(90deg, #dc3545, #fd7e14)';
+                // 根据等级改变颜色
+                if (level >= 75) {
+                    levelBar.style.background = 'linear-gradient(90deg, #28a745, #20c997)';
+                } else if (level >= 50) {
+                    levelBar.style.background = 'linear-gradient(90deg, #ffc107, #fd7e14)';
+                } else {
+                    levelBar.style.background = 'linear-gradient(90deg, #dc3545, #fd7e14)';
+                }
             }
-        }
 
-        if (levelTextSpan) {
-            levelTextSpan.textContent = levelText + '安全';
+            if (levelTextSpan) {
+                levelTextSpan.textContent = levelText + '安全';
 
-            // 根据等级改变文字颜色
-            if (level >= 75) {
-                levelTextSpan.style.color = '#28a745';
-            } else if (level >= 50) {
-                levelTextSpan.style.color = '#ffc107';
-            } else {
-                levelTextSpan.style.color = '#dc3545';
+                // 根据等级改变文字颜色
+                if (level >= 75) {
+                    levelTextSpan.style.color = '#28a745';
+                } else if (level >= 50) {
+                    levelTextSpan.style.color = '#ffc107';
+                } else {
+                    levelTextSpan.style.color = '#dc3545';
+                }
             }
         }
-    }
 
-    //  渲染所有问题，让 CSS 处理滚动（max-height: 320px 约显示3个）
-    function renderQuestionsList(questions) {
-        const listContainer = document.getElementById('questionsList');
+        //  渲染所有问题，让 CSS 处理滚动（max-height: 320px 约显示3个）
+        function renderQuestionsList(questions) {
+            const listContainer = document.getElementById('questionsList');
 
-        // 如果没有问题，显示提示
-        if (!questions || questions.length === 0) {
-            listContainer.innerHTML = `
+            // 如果没有问题，显示提示
+            if (!questions || questions.length === 0) {
+                listContainer.innerHTML = `
                 <p style="color: var(--gray); text-align: center; padding: 1rem;">
                     <i class="fas fa-exclamation-triangle" style="color: var(--gold);"></i>
                     您還未設置安全問答，建議至少設置 2 個問題以保護帳戶安全。
                 </p>`;
-            return;
-        }
+                return;
+            }
 
-        let html = '';
-        //  关键：遍历 ALL 问题，不再 slice(0, 3)，让 CSS 的 max-height 控制显示
-        questions.forEach(q => {
-            html += `
+            let html = '';
+            //  关键：遍历 ALL 问题，不再 slice(0, 3)，让 CSS 的 max-height 控制显示
+            questions.forEach(q => {
+                html += `
                 <div class="question-item">
                     <div>
                         <div class="question-text">${q.question}</div>
@@ -624,211 +864,212 @@
                     <button class="btn-sm btn-sm-primary" onclick="editQuestion(${q.questionId}, '${q.question.replace(/'/g, "\\'")}')">修改</button>
                 </div>
             `;
-        });
+            });
 
-        listContainer.innerHTML = html;
-        // CSS 的 max-height: 320px 和 overflow-y: auto 会自动处理滚动
-        // 超过3个问题会自动出现滚动条，第三个问题需要向下滑动才能完全看到
-    }
-
-    //  安全問答相關功能
-    function openQuestionModal() {
-        document.getElementById('modalTitle').textContent = '設置安全問答';
-        document.getElementById('questionForm').reset();
-        document.getElementById('customQuestionGroup').style.display = 'none';
-        document.getElementById('questionModal').style.display = 'flex';
-    }
-
-    function closeQuestionModal() {
-        document.getElementById('questionModal').style.display = 'none';
-    }
-
-    function handleQuestionSelect() {
-        const select = document.getElementById('questionSelect');
-        const customGroup = document.getElementById('customQuestionGroup');
-        if (select.value === 'custom') {
-            customGroup.style.display = 'block';
-        } else {
-            customGroup.style.display = 'none';
+            listContainer.innerHTML = html;
+            // CSS 的 max-height: 320px 和 overflow-y: auto 会自动处理滚动
+            // 超过3个问题会自动出现滚动条，第三个问题需要向下滑动才能完全看到
         }
-    }
 
-    //  真正對接後端 API 保存問題
-    async function saveQuestion(e) {
-        e.preventDefault();
+        //  安全問答相關功能
+        function openQuestionModal() {
+            document.getElementById('modalTitle').textContent = '設置安全問答';
+            document.getElementById('questionForm').reset();
+            document.getElementById('customQuestionGroup').style.display = 'none';
+            document.getElementById('questionModal').style.display = 'flex';
+        }
 
-        const questionSelect = document.getElementById('questionSelect');
-        const customQuestion = document.getElementById('customQuestion');
-        const answer = document.getElementById('questionAnswer').value.trim();
+        function closeQuestionModal() {
+            document.getElementById('questionModal').style.display = 'none';
+        }
 
-        // 獲取問題文本
-        let questionText;
-        if (questionSelect.value === 'custom') {
-            questionText = customQuestion.value.trim();
-            if (!questionText) {
-                showError('請輸入自定義問題');
+        function handleQuestionSelect() {
+            const select = document.getElementById('questionSelect');
+            const customGroup = document.getElementById('customQuestionGroup');
+            if (select.value === 'custom') {
+                customGroup.style.display = 'block';
+            } else {
+                customGroup.style.display = 'none';
+            }
+        }
+
+        //  真正對接後端 API 保存問題
+        async function saveQuestion(e) {
+            e.preventDefault();
+
+            const questionSelect = document.getElementById('questionSelect');
+            const customQuestion = document.getElementById('customQuestion');
+            const answer = document.getElementById('questionAnswer').value.trim();
+
+            // 獲取問題文本
+            let questionText;
+            if (questionSelect.value === 'custom') {
+                questionText = customQuestion.value.trim();
+                if (!questionText) {
+                    showError('請輸入自定義問題');
+                    return;
+                }
+            } else {
+                questionText = questionSelect.options[questionSelect.selectedIndex].text;
+            }
+
+            if (!answer) {
+                showError('請輸入答案');
                 return;
             }
-        } else {
-            questionText = questionSelect.options[questionSelect.selectedIndex].text;
-        }
 
-        if (!answer) {
-            showError('請輸入答案');
-            return;
-        }
+            try {
+                const response = await fetch('/api/security/question', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: questionText,
+                        answer: answer
+                    })
+                });
 
-        try {
-            const response = await fetch('/api/security/question', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    question: questionText,
-                    answer: answer
-                })
-            });
+                const result = await response.json();
 
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                showSuccess('✅ ' + result.message);
-                closeQuestionModal();
-                // 重新加载页面以更新所有状态
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                showError(result.message || '保存失敗');
+                if (response.ok && result.success) {
+                    showSuccess('✅ ' + result.message);
+                    closeQuestionModal();
+                    // 重新加载页面以更新所有状态
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showError(result.message || '保存失敗');
+                }
+            } catch (error) {
+                console.error('保存失败:', error);
+                showError('網絡錯誤，請稍後重試');
             }
-        } catch (error) {
-            console.error('保存失败:', error);
-            showError('網絡錯誤，請稍後重試');
-        }
-    }
-
-    //  编辑安全问答功能
-    function editQuestion(questionId, questionText) {
-        console.log('编辑问题:', questionId, questionText);
-
-        // 填充编辑模态框
-        document.getElementById('editQuestionId').value = questionId;
-        document.getElementById('editQuestionText').textContent = questionText;
-        document.getElementById('editOldAnswer').value = '';
-        document.getElementById('editNewAnswer').value = '';
-
-        // 显示编辑模态框
-        document.getElementById('editQuestionModal').style.display = 'flex';
-    }
-
-    function closeEditQuestionModal() {
-        document.getElementById('editQuestionModal').style.display = 'none';
-    }
-
-    // 保存修改后的答案
-    async function saveEditedQuestion(e) {
-        e.preventDefault();
-
-        const questionId = document.getElementById('editQuestionId').value;
-        const oldAnswer = document.getElementById('editOldAnswer').value.trim();
-        const newAnswer = document.getElementById('editNewAnswer').value.trim();
-
-        if (!oldAnswer) {
-            showError('請輸入原答案');
-            return;
         }
 
-        if (!newAnswer) {
-            showError('請輸入新答案');
-            return;
+        //  编辑安全问答功能
+        function editQuestion(questionId, questionText) {
+            console.log('编辑问题:', questionId, questionText);
+
+            // 填充编辑模态框
+            document.getElementById('editQuestionId').value = questionId;
+            document.getElementById('editQuestionText').textContent = questionText;
+            document.getElementById('editOldAnswer').value = '';
+            document.getElementById('editNewAnswer').value = '';
+
+            // 显示编辑模态框
+            document.getElementById('editQuestionModal').style.display = 'flex';
         }
 
-        if (oldAnswer.toLowerCase() === newAnswer.toLowerCase()) {
-            showError('新答案不能與原答案相同');
-            return;
+        function closeEditQuestionModal() {
+            document.getElementById('editQuestionModal').style.display = 'none';
         }
 
-        try {
-            // 调用后端 API 验证原答案并更新
-            const response = await fetch(`/api/security/question/${questionId}/update-answer`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    oldAnswer: oldAnswer.toLowerCase(),
-                    newAnswer: newAnswer.toLowerCase()
-                })
-            });
+        // 保存修改后的答案
+        async function saveEditedQuestion(e) {
+            e.preventDefault();
 
-            const result = await response.json();
+            const questionId = document.getElementById('editQuestionId').value;
+            const oldAnswer = document.getElementById('editOldAnswer').value.trim();
+            const newAnswer = document.getElementById('editNewAnswer').value.trim();
 
-            if (response.ok && result.success) {
-                showSuccess('✅ ' + result.message);
-                closeEditQuestionModal();
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                //  显示错误在屏幕中央
-                showError(result.message || '修改失敗，原答案不正確');
+            if (!oldAnswer) {
+                showError('請輸入原答案');
+                return;
             }
-        } catch (error) {
-            console.error('修改答案失败:', error);
-            showError('網絡錯誤，請稍後重試');
+
+            if (!newAnswer) {
+                showError('請輸入新答案');
+                return;
+            }
+
+            if (oldAnswer.toLowerCase() === newAnswer.toLowerCase()) {
+                showError('新答案不能與原答案相同');
+                return;
+            }
+
+            try {
+                // 调用后端 API 验证原答案并更新
+                const response = await fetch(`/api/security/question/${questionId}/update-answer`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        oldAnswer: oldAnswer.toLowerCase(),
+                        newAnswer: newAnswer.toLowerCase()
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showSuccess('✅ ' + result.message);
+                    closeEditQuestionModal();
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    //  显示错误在屏幕中央
+                    showError(result.message || '修改失敗，原答案不正確');
+                }
+            } catch (error) {
+                console.error('修改答案失败:', error);
+                showError('網絡錯誤，請稍後重試');
+            }
         }
-    }
 
-    //  切换答案可见性
-    function toggleAnswerVisibility(inputId, icon) {
-        const input = document.getElementById(inputId);
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
+        //  切换答案可见性
+        function toggleAnswerVisibility(inputId, icon) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
         }
-    }
 
-    //  显示错误提示（居中）
-    function showError(message) {
-        document.getElementById('errorTitle').textContent = '❌ 錯誤';
-        document.getElementById('errorTitle').style.color = 'var(--accent)';
-        document.getElementById('errorMessage').textContent = message;
-        document.getElementById('errorOverlay').style.display = 'flex';
-    }
-
-    //  显示成功提示（居中）
-    function showSuccess(message) {
-        document.getElementById('errorTitle').textContent = '✅ 成功';
-        document.getElementById('errorTitle').style.color = 'var(--gold)';
-        document.getElementById('errorMessage').textContent = message;
-        document.getElementById('errorOverlay').style.display = 'flex';
-    }
-
-    //  关闭错误提示
-    function closeErrorOverlay() {
-        document.getElementById('errorOverlay').style.display = 'none';
-    }
-
-    // 點擊遮罩層關閉模態框
-    document.getElementById('questionModal').addEventListener('click', function(e) {
-        if (e.target === this) closeQuestionModal();
-    });
-
-    document.getElementById('editQuestionModal').addEventListener('click', function(e) {
-        if (e.target === this) closeEditQuestionModal();
-    });
-
-    // 註銷帳戶邏輯
-    function handleDeleteAccount() {
-        if (!confirm('⚠️ 確定要註銷帳戶嗎？此操作不可逆！')) return;
-        const inputName = prompt('為了您的安全，請輸入您的用戶名以確認註銷：\n(輸入用戶名: ' + username + ')');
-        if (inputName === username) {
-            showSuccess('✅ 註銷申請已提交，帳戶將在 24 小時後被徹底刪除。');
-            setTimeout(() => {
-                fetch('/logout', { method: 'POST' }).then(() => { window.location.href = '/'; });
-            }, 2000);
-        } else if (inputName !== null) {
-            showError('❌ 用戶名輸入錯誤，註銷取消。');
+        //  显示错误提示（居中）
+        function showError(message) {
+            document.getElementById('errorTitle').textContent = '❌ 錯誤';
+            document.getElementById('errorTitle').style.color = 'var(--accent)';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorOverlay').style.display = 'flex';
         }
-    }
-</script>
+
+        //  显示成功提示（居中）
+        function showSuccess(message) {
+            document.getElementById('errorTitle').textContent = '✅ 成功';
+            document.getElementById('errorTitle').style.color = 'var(--gold)';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorOverlay').style.display = 'flex';
+        }
+
+        //  关闭错误提示
+        function closeErrorOverlay() {
+            document.getElementById('errorOverlay').style.display = 'none';
+        }
+
+        // 點擊遮罩層關閉模態框
+        document.getElementById('questionModal').addEventListener('click', function (e) {
+            if (e.target === this) closeQuestionModal();
+        });
+
+        document.getElementById('editQuestionModal').addEventListener('click', function (e) {
+            if (e.target === this) closeEditQuestionModal();
+        });
+
+        // 註銷帳戶邏輯
+        function handleDeleteAccount() {
+            if (!confirm('⚠️ 確定要註銷帳戶嗎？此操作不可逆！')) return;
+            const inputName = prompt('為了您的安全，請輸入您的用戶名以確認註銷：\n(輸入用戶名: ' + username + ')');
+            if (inputName === username) {
+                showSuccess('✅ 註銷申請已提交，帳戶將在 24 小時後被徹底刪除。');
+                setTimeout(() => {
+                    fetch('/logout', { method: 'POST' }).then(() => { window.location.href = '/'; });
+                }, 2000);
+            } else if (inputName !== null) {
+                showError('❌ 用戶名輸入錯誤，註銷取消。');
+            }
+        }
+    </script>
 </body>
+
 </html>

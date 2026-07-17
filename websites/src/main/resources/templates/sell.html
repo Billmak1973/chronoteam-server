@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,272 +10,556 @@
   <link rel="stylesheet" href="/css/common.css">
   <!-- 2. 頁面專屬 CSS -->
   <style>
-    .sell-hero { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; padding: 3rem 2rem; text-align: center; }
-    .sell-hero h1 { font-size: 2.2rem; margin-bottom: 0.8rem; color: var(--gold); }
-    .sell-hero p { font-size: 1.05rem; opacity: 0.9; max-width: 700px; margin: 0 auto; }
-
-    .sell-container { max-width: 900px; margin: -2rem auto 3rem; padding: 0 1rem; position: relative; z-index: 10; }
-    .sell-card { background: white; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.08); padding: 2.5rem; margin-bottom: 2rem; }
-
-    .section-title { font-size: 1.3rem; color: var(--primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.6rem; border-bottom: 2px solid #e9ecef; padding-bottom: 0.8rem; }
-    .section-title i { color: var(--gold); }
-
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; margin-bottom: 1.5rem; }
-    .form-group { margin-bottom: 1.2rem; }
-    .form-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--primary); font-size: 0.95rem; }
-    .form-group input, .form-group select, .form-group textarea {
-        width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; transition: all 0.3s;
+    .sell-hero {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      padding: 3rem 2rem;
+      text-align: center;
     }
-    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15); }
-    .form-group textarea { min-height: 100px; resize: vertical; }
-    .required::after { content: "*"; color: var(--accent); margin-left: 4px; }
+
+    .sell-hero h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.8rem;
+      color: var(--gold);
+    }
+
+    .sell-hero p {
+      font-size: 1.05rem;
+      opacity: 0.9;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    .sell-container {
+      max-width: 900px;
+      margin: -2rem auto 3rem;
+      padding: 0 1rem;
+      position: relative;
+      z-index: 10;
+    }
+
+    .sell-card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      color: var(--primary);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      border-bottom: 2px solid #e9ecef;
+      padding-bottom: 0.8rem;
+    }
+
+    .section-title i {
+      color: var(--gold);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+      font-size: 0.95rem;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.8rem;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    }
+
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .required::after {
+      content: "*";
+      color: var(--accent);
+      margin-left: 4px;
+    }
 
     /* 附件勾選 */
-    .accessory-grid { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
-    .accessory-item { flex: 1; min-width: 140px; }
-    .accessory-item input[type="checkbox"] { display: none; }
-    .accessory-item label {
-        display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; background: var(--light); border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: 500;
+    .accessory-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
     }
-    .accessory-item input:checked + label { background: rgba(212, 175, 55, 0.1); border-color: var(--gold); color: var(--gold); }
-    .accessory-item i { font-size: 1.1rem; }
+
+    .accessory-item {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .accessory-item input[type="checkbox"] {
+      display: none;
+    }
+
+    .accessory-item label {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.8rem 1rem;
+      background: var(--light);
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .accessory-item input:checked+label {
+      background: rgba(212, 175, 55, 0.1);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .accessory-item i {
+      font-size: 1.1rem;
+    }
 
     /* 圖片上傳區 */
-    .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; }
-    .upload-box { position: relative; border: 2px dashed #cbd5e1; border-radius: 10px; height: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; background: #f8fafc; overflow: hidden; }
-    .upload-box:hover { border-color: var(--gold); background: rgba(212, 175, 55, 0.05); }
-    .upload-box i { font-size: 1.8rem; color: var(--gray); margin-bottom: 0.5rem; }
-    .upload-box span { font-size: 0.85rem; color: var(--gray); }
-    .upload-box input[type="file"] { position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-    .upload-box.has-image { border-style: solid; border-color: var(--gold); }
-    .upload-box img { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; display: none; }
-    .upload-box.has-image img { display: block; }
-    .upload-box.has-image i, .upload-box.has-image span { display: none; }
+    .upload-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+    }
+
+    .upload-box {
+      position: relative;
+      border: 2px dashed #cbd5e1;
+      border-radius: 10px;
+      height: 140px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #f8fafc;
+      overflow: hidden;
+    }
+
+    .upload-box:hover {
+      border-color: var(--gold);
+      background: rgba(212, 175, 55, 0.05);
+    }
+
+    .upload-box i {
+      font-size: 1.8rem;
+      color: var(--gray);
+      margin-bottom: 0.5rem;
+    }
+
+    .upload-box span {
+      font-size: 0.85rem;
+      color: var(--gray);
+    }
+
+    .upload-box input[type="file"] {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-box.has-image {
+      border-style: solid;
+      border-color: var(--gold);
+    }
+
+    .upload-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: none;
+    }
+
+    .upload-box.has-image img {
+      display: block;
+    }
+
+    .upload-box.has-image i,
+    .upload-box.has-image span {
+      display: none;
+    }
 
     /* 交易模式選擇 (改為單列佈局) */
-    .mode-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
-    .mode-card { position: relative; border: 2px solid #e9ecef; border-radius: 12px; padding: 1.5rem; cursor: pointer; transition: all 0.3s; }
-    .mode-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-    .mode-card input[type="radio"] { position: absolute; opacity: 0; }
-    .mode-card.selected { border-color: var(--gold); background: rgba(212, 175, 55, 0.05); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2); }
-    .mode-card h4 { font-size: 1.1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-    .mode-card p { color: var(--gray); font-size: 0.9rem; line-height: 1.6; }
-    .mode-badge { display: inline-block; padding: 0.2rem 0.6rem; background: var(--gold); color: var(--primary); font-size: 0.7rem; font-weight: 700; border-radius: 20px; margin-left: auto; }
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .mode-card {
+      position: relative;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .mode-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .mode-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+    }
+
+    .mode-card.selected {
+      border-color: var(--gold);
+      background: rgba(212, 175, 55, 0.05);
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+    }
+
+    .mode-card h4 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .mode-card p {
+      color: var(--gray);
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .mode-badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      background: var(--gold);
+      color: var(--primary);
+      font-size: 0.7rem;
+      font-weight: 700;
+      border-radius: 20px;
+      margin-left: auto;
+    }
 
     /* 提示區塊 */
-    .info-box { background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%); color: white; padding: 1.5rem; border-radius: 10px; margin-top: 1.5rem; }
-    .info-box h4 { color: var(--gold); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-    .info-box ul { padding-left: 1.2rem; margin: 0; }
-    .info-box li { margin-bottom: 0.4rem; font-size: 0.9rem; opacity: 0.9; }
+    .info-box {
+      background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+      color: white;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-top: 1.5rem;
+    }
 
-    .submit-area { text-align: center; margin-top: 2rem; }
-    .btn-submit { min-width: 250px; padding: 1rem 2rem; font-size: 1.1rem; justify-content: center; }
+    .info-box h4 {
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .info-box ul {
+      padding-left: 1.2rem;
+      margin: 0;
+    }
+
+    .info-box li {
+      margin-bottom: 0.4rem;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .submit-area {
+      text-align: center;
+      margin-top: 2rem;
+    }
+
+    .btn-submit {
+      min-width: 250px;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      justify-content: center;
+    }
 
     /* 未登入提示 */
-    .auth-prompt { max-width: 600px; margin: -3rem auto 3rem; background: white; padding: 3rem 2rem; border-radius: 16px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); position: relative; z-index: 10; }
-    .auth-prompt i { font-size: 3rem; color: var(--gold); margin-bottom: 1rem; }
-    .auth-prompt h3 { margin-bottom: 1rem; color: var(--primary); }
-    .auth-prompt p { color: var(--gray); margin-bottom: 2rem; }
+    .auth-prompt {
+      max-width: 600px;
+      margin: -3rem auto 3rem;
+      background: white;
+      padding: 3rem 2rem;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      position: relative;
+      z-index: 10;
+    }
+
+    .auth-prompt i {
+      font-size: 3rem;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+
+    .auth-prompt h3 {
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+
+    .auth-prompt p {
+      color: var(--gray);
+      margin-bottom: 2rem;
+    }
 
     @media (max-width: 768px) {
-        .sell-card { padding: 1.5rem; }
+      .sell-card {
+        padding: 1.5rem;
+      }
     }
   </style>
 </head>
+
 <body>
-<!-- 3. 引入公共導航欄 -->
-<div th:replace="~{fragments/common :: navbar}"></div>
+  <!-- 3. 引入公共導航欄 -->
+  <div th:replace="~{fragments/common :: navbar}"></div>
 
-<!-- Hero -->
-<section class="sell-hero">
-  <h1><i class="fas fa-hand-holding-usd"></i> 發佈出售申請</h1>
-  <p>提交您的愛錶資訊，我們將由專業鐘錶師在 24 小時內為您提供初步參考估價與專屬交易方案。</p>
-</section>
+  <!-- Hero -->
+  <section class="sell-hero">
+    <h1><i class="fas fa-hand-holding-usd"></i> 發佈出售申請</h1>
+    <p>提交您的愛錶資訊，我們將由專業鐘錶師在 24 小時內為您提供初步參考估價與專屬交易方案。</p>
+  </section>
 
-<!-- 已登入：顯示表單 -->
-<div class="sell-container" th:if="${#authorization.expression('isAuthenticated()')}">
-  <form id="sellForm" enctype="multipart/form-data">
+  <!-- 已登入：顯示表單 -->
+  <div class="sell-container" th:if="${#authorization.expression('isAuthenticated()')}">
+    <form id="sellForm" enctype="multipart/form-data">
 
-    <!-- 1. 基礎資訊 -->
-    <div class="sell-card">
-      <h3 class="section-title"><i class="fas fa-info-circle"></i> 手錶基礎資訊</h3>
-      <div class="form-grid">
+      <!-- 1. 基礎資訊 -->
+      <div class="sell-card">
+        <h3 class="section-title"><i class="fas fa-info-circle"></i> 手錶基礎資訊</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="required">品牌</label>
+            <select name="brand" required>
+              <option value="">請選擇品牌</option>
+              <option value="rolex">Rolex 勞力士</option>
+              <option value="omega">Omega 歐米茄</option>
+              <option value="patek">Patek Philippe 百達翡麗</option>
+              <option value="ap">Audemars Piguet 愛彼</option>
+              <option value="cartier">Cartier 卡地亞</option>
+              <option value="iwc">IWC 萬國</option>
+              <option value="jlc">Jaeger-LeCoultre 積家</option>
+              <option value="other">其他品牌</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="required">系列</label>
+            <input type="text" name="series" placeholder="例如：Submariner, Speedmaster" required>
+          </div>
+          <div class="form-group">
+            <label>型號 / 編號</label>
+            <input type="text" name="model" placeholder="例如：116610LN">
+          </div>
+          <div class="form-group">
+            <label class="required">購買年份</label>
+            <input type="number" name="purchaseYear" placeholder="例如：2021" min="1950" max="2026" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. 附件與成色 -->
+      <div class="sell-card">
+        <h3 class="section-title"><i class="fas fa-box-open"></i> 附件狀態與手錶現況</h3>
+        <label
+          style="display:block; margin-bottom:0.8rem; font-weight:600; color:var(--primary);">完整附件勾選（齊全可提升估價）</label>
+        <div class="accessory-grid">
+          <div class="accessory-item"><input type="checkbox" name="accessories" id="acc-box" value="box"><label
+              for="acc-box"><i class="fas fa-box"></i> 原裝錶盒</label></div>
+          <div class="accessory-item"><input type="checkbox" name="accessories" id="acc-card" value="card"><label
+              for="acc-card"><i class="fas fa-id-card"></i> 原廠保卡</label></div>
+          <div class="accessory-item"><input type="checkbox" name="accessories" id="acc-receipt" value="receipt"><label
+              for="acc-receipt"><i class="fas fa-file-invoice"></i> 購買發票</label></div>
+          <div class="accessory-item"><input type="checkbox" name="accessories" id="acc-manual" value="manual"><label
+              for="acc-manual"><i class="fas fa-book"></i> 說明書/吊牌</label></div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="required">整體成色</label>
+            <select name="condition" required>
+              <option value="">請選擇</option>
+              <option value="mint">近全新 (98-100%)</option>
+              <option value="excellent">極佳 (95-97%)</option>
+              <option value="good">良好 (90-94%)</option>
+              <option value="fair">正常使用痕跡 (85-89%)</option>
+              <option value="poor">需維修/明顯瑕疵 (85%以下)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>走時與功能狀況</label>
+            <select name="functionStatus">
+              <option value="perfect">一切正常</option>
+              <option value="minor_issue">輕微異常 (如日曆跳動稍慢)</option>
+              <option value="needs_service">需全面保養/維修</option>
+            </select>
+          </div>
+        </div>
         <div class="form-group">
-          <label class="required">品牌</label>
-          <select name="brand" required>
-            <option value="">請選擇品牌</option>
-            <option value="rolex">Rolex 勞力士</option>
-            <option value="omega">Omega 歐米茄</option>
-            <option value="patek">Patek Philippe 百達翡麗</option>
-            <option value="ap">Audemars Piguet 愛彼</option>
-            <option value="cartier">Cartier 卡地亞</option>
-            <option value="iwc">IWC 萬國</option>
-            <option value="jlc">Jaeger-LeCoultre 積家</option>
-            <option value="other">其他品牌</option>
-          </select>
+          <label>瑕疵描述 / 補充說明</label>
+          <textarea name="notes" placeholder="請如實描述劃痕、凹陷、拋光歷史、維修記錄或任何其他需要告知的細節..."></textarea>
         </div>
-        <div class="form-group">
-          <label class="required">系列</label>
-          <input type="text" name="series" placeholder="例如：Submariner, Speedmaster" required>
-        </div>
-        <div class="form-group">
-          <label>型號 / 編號</label>
-          <input type="text" name="model" placeholder="例如：116610LN">
-        </div>
-        <div class="form-group">
-          <label class="required">購買年份</label>
-          <input type="number" name="purchaseYear" placeholder="例如：2021" min="1950" max="2026" required>
-        </div>
-      </div>
-    </div>
-
-    <!-- 2. 附件與成色 -->
-    <div class="sell-card">
-      <h3 class="section-title"><i class="fas fa-box-open"></i> 附件狀態與手錶現況</h3>
-      <label style="display:block; margin-bottom:0.8rem; font-weight:600; color:var(--primary);">完整附件勾選（齊全可提升估價）</label>
-      <div class="accessory-grid">
-        <div class="accessory-item"><input type="checkbox" name="accessories" id="acc-box" value="box"><label for="acc-box"><i class="fas fa-box"></i> 原裝錶盒</label></div>
-        <div class="accessory-item"><input type="checkbox" name="accessories" id="acc-card" value="card"><label for="acc-card"><i class="fas fa-id-card"></i> 原廠保卡</label></div>
-        <div class="accessory-item"><input type="checkbox" name="accessories" id="acc-receipt" value="receipt"><label for="acc-receipt"><i class="fas fa-file-invoice"></i> 購買發票</label></div>
-        <div class="accessory-item"><input type="checkbox" name="accessories" id="acc-manual" value="manual"><label for="acc-manual"><i class="fas fa-book"></i> 說明書/吊牌</label></div>
       </div>
 
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="required">整體成色</label>
-          <select name="condition" required>
-            <option value="">請選擇</option>
-            <option value="mint">近全新 (98-100%)</option>
-            <option value="excellent">極佳 (95-97%)</option>
-            <option value="good">良好 (90-94%)</option>
-            <option value="fair">正常使用痕跡 (85-89%)</option>
-            <option value="poor">需維修/明顯瑕疵 (85%以下)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>走時與功能狀況</label>
-          <select name="functionStatus">
-            <option value="perfect">一切正常</option>
-            <option value="minor_issue">輕微異常 (如日曆跳動稍慢)</option>
-            <option value="needs_service">需全面保養/維修</option>
-          </select>
+      <!-- 3. 圖片上傳 -->
+      <div class="sell-card">
+        <h3 class="section-title"><i class="fas fa-camera"></i> 上傳手錶照片</h3>
+        <p style="color:var(--gray); font-size:0.9rem; margin-bottom:1rem;">請確保光線充足、對焦清晰。建議拍攝：錶面、錶背、機芯、保卡/附件、瑕疵特寫。</p>
+        <div class="upload-grid">
+          <div class="upload-box" onclick="this.querySelector('input').click()">
+            <i class="fas fa-clock"></i><span>錶面</span><img>
+            <input type="file" name="imgDial" accept="image/*" onchange="previewImage(this)"
+              onclick="event.stopPropagation()">
+          </div>
+          <div class="upload-box" onclick="this.querySelector('input').click()">
+            <i class="fas fa-circle-notch"></i><span>錶背/機芯</span><img>
+            <input type="file" name="imgCaseback" accept="image/*" onchange="previewImage(this)"
+              onclick="event.stopPropagation()">
+          </div>
+          <div class="upload-box" onclick="this.querySelector('input').click()">
+            <i class="fas fa-id-card-alt"></i><span>保卡/發票</span><img>
+            <input type="file" name="imgCard" accept="image/*" onchange="previewImage(this)"
+              onclick="event.stopPropagation()">
+          </div>
+          <div class="upload-box" onclick="this.querySelector('input').click()">
+            <i class="fas fa-exclamation-circle"></i><span>瑕疵特寫</span><img>
+            <input type="file" name="imgFlaws" accept="image/*" onchange="previewImage(this)"
+              onclick="event.stopPropagation()">
+          </div>
+          <div class="upload-box" onclick="this.querySelector('input').click()">
+            <i class="fas fa-plus"></i><span>其他照片</span><img>
+            <input type="file" name="imgExtra" accept="image/*" onchange="previewImage(this)"
+              onclick="event.stopPropagation()">
+          </div>
         </div>
       </div>
-      <div class="form-group">
-        <label>瑕疵描述 / 補充說明</label>
-        <textarea name="notes" placeholder="請如實描述劃痕、凹陷、拋光歷史、維修記錄或任何其他需要告知的細節..."></textarea>
-      </div>
-    </div>
 
-    <!-- 3. 圖片上傳 -->
-    <div class="sell-card">
-      <h3 class="section-title"><i class="fas fa-camera"></i> 上傳手錶照片</h3>
-      <p style="color:var(--gray); font-size:0.9rem; margin-bottom:1rem;">請確保光線充足、對焦清晰。建議拍攝：錶面、錶背、機芯、保卡/附件、瑕疵特寫。</p>
-      <div class="upload-grid">
-        <div class="upload-box" onclick="this.querySelector('input').click()">
-          <i class="fas fa-clock"></i><span>錶面</span><img>
-          <input type="file" name="imgDial" accept="image/*" onchange="previewImage(this)" onclick="event.stopPropagation()">
-        </div>
-        <div class="upload-box" onclick="this.querySelector('input').click()">
-          <i class="fas fa-circle-notch"></i><span>錶背/機芯</span><img>
-          <input type="file" name="imgCaseback" accept="image/*" onchange="previewImage(this)" onclick="event.stopPropagation()">
-        </div>
-        <div class="upload-box" onclick="this.querySelector('input').click()">
-          <i class="fas fa-id-card-alt"></i><span>保卡/發票</span><img>
-          <input type="file" name="imgCard" accept="image/*" onchange="previewImage(this)" onclick="event.stopPropagation()">
-        </div>
-        <div class="upload-box" onclick="this.querySelector('input').click()">
-          <i class="fas fa-exclamation-circle"></i><span>瑕疵特寫</span><img>
-          <input type="file" name="imgFlaws" accept="image/*" onchange="previewImage(this)" onclick="event.stopPropagation()">
-        </div>
-        <div class="upload-box" onclick="this.querySelector('input').click()">
-          <i class="fas fa-plus"></i><span>其他照片</span><img>
-          <input type="file" name="imgExtra" accept="image/*" onchange="previewImage(this)" onclick="event.stopPropagation()">
+      <!-- 4. 交易模式選擇 ( 已移除寄售，僅保留直接買斷) -->
+      <div class="sell-card">
+        <h3 class="section-title"><i class="fas fa-handshake"></i> 選擇交易模式</h3>
+        <div class="mode-grid">
+          <label class="mode-card selected" onclick="selectMode(this)">
+            <input type="radio" name="transactionMode" value="BUYOUT" required checked>
+            <h4>平台直接買斷 <span class="mode-badge">快速收款</span></h4>
+            <p>鑑定確認後，平台直接報價收購。款項於您確認後 1 個工作日內全額打入指定帳戶，無需等待終端買家。</p>
+          </label>
         </div>
       </div>
-    </div>
 
-    <!-- 4. 交易模式選擇 ( 已移除寄售，僅保留直接買斷) -->
-    <div class="sell-card">
-      <h3 class="section-title"><i class="fas fa-handshake"></i> 選擇交易模式</h3>
-      <div class="mode-grid">
-        <label class="mode-card selected" onclick="selectMode(this)">
-          <input type="radio" name="transactionMode" value="BUYOUT" required checked>
-          <h4>平台直接買斷 <span class="mode-badge">快速收款</span></h4>
-          <p>鑑定確認後，平台直接報價收購。款項於您確認後 1 個工作日內全額打入指定帳戶，無需等待終端買家。</p>
-        </label>
+      <!-- 提交與提示 -->
+      <div class="sell-card">
+        <div class="info-box">
+          <h4><i class="fas fa-shield-alt"></i> 下一步說明</h4>
+          <ul>
+            <li>提交後，我們的鑑定團隊將在 <strong>24小時內</strong> 透過 Email/WhatsApp 發送初步參考估價。</li>
+            <li>您收到報價後，可選擇：① <strong>預約線下門店面交</strong> ② <strong>申請平台保價物流</strong> 寄送至鑑定中心進行實物複核。</li>
+            <li>所有鑑定與諮詢服務 <strong>完全免費</strong>，若最終報價不合適，可無條件取消申請並退回手錶。</li>
+          </ul>
+        </div>
+        <div class="submit-area">
+          <button type="submit" class="btn btn-gold btn-submit" id="submitBtn">
+            <i class="fas fa-paper-plane"></i> 提交出售申請
+          </button>
+        </div>
       </div>
-    </div>
-
-    <!-- 提交與提示 -->
-    <div class="sell-card">
-      <div class="info-box">
-        <h4><i class="fas fa-shield-alt"></i> 下一步說明</h4>
-        <ul>
-          <li>提交後，我們的鑑定團隊將在 <strong>24小時內</strong> 透過 Email/WhatsApp 發送初步參考估價。</li>
-          <li>您收到報價後，可選擇：① <strong>預約線下門店面交</strong> ② <strong>申請平台保價物流</strong> 寄送至鑑定中心進行實物複核。</li>
-          <li>所有鑑定與諮詢服務 <strong>完全免費</strong>，若最終報價不合適，可無條件取消申請並退回手錶。</li>
-        </ul>
-      </div>
-      <div class="submit-area">
-        <button type="submit" class="btn btn-gold btn-submit" id="submitBtn">
-          <i class="fas fa-paper-plane"></i> 提交出售申請
-        </button>
-      </div>
-    </div>
-  </form>
-</div>
-
-<!-- 未登入：顯示引導 -->
-<div class="auth-prompt" th:unless="${#authorization.expression('isAuthenticated()')}">
-  <i class="fas fa-lock"></i>
-  <h3>需要登入後方可發佈</h3>
-  <p>為了保障您的交易隱私與資金安全，請先登入或註冊帳戶。發佈出售申請完全免費，且無任何強制交易約束。</p>
-  <div style="display:flex; gap:1rem; justify-content:center;">
-    <button onclick="openLoginModal()" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> 立即登入</button>
-    <button onclick="openRegisterModal()" class="btn btn-outline"><i class="fas fa-user-plus"></i> 免費註冊</button>
+    </form>
   </div>
-</div>
 
-<footer class="footer">
-  <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
-</footer>
+  <!-- 未登入：顯示引導 -->
+  <div class="auth-prompt" th:unless="${#authorization.expression('isAuthenticated()')}">
+    <i class="fas fa-lock"></i>
+    <h3>需要登入後方可發佈</h3>
+    <p>為了保障您的交易隱私與資金安全，請先登入或註冊帳戶。發佈出售申請完全免費，且無任何強制交易約束。</p>
+    <div style="display:flex; gap:1rem; justify-content:center;">
+      <button onclick="openLoginModal()" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> 立即登入</button>
+      <button onclick="openRegisterModal()" class="btn btn-outline"><i class="fas fa-user-plus"></i> 免費註冊</button>
+    </div>
+  </div>
 
-<!-- 引入公共組件與腳本 -->
-<div th:replace="~{fragments/common :: modals}"></div>
-<script th:inline="javascript">
-  const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-<script src="/js/common.js"></script>
+  <footer class="footer">
+    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights
+      Reserved.</p>
+  </footer>
 
-<!-- 頁面專屬 JS -->
-<script>
-  // 1. 圖片預覽邏輯
-  function previewImage(input) {
+  <!-- 引入公共組件與腳本 -->
+  <div th:replace="~{fragments/common :: modals}"></div>
+  <script th:inline="javascript">
+    const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+  </script>
+  <script src="/js/common.js"></script>
+
+  <!-- 頁面專屬 JS -->
+  <script>
+    // 1. 圖片預覽邏輯
+    function previewImage(input) {
       const box = input.closest('.upload-box');
       const img = box.querySelector('img');
       if (input.files && input.files[0]) {
-          const reader = new FileReader();
-          reader.onload = function(e) {
-              img.src = e.target.result;
-              box.classList.add('has-image');
-          }
-          reader.readAsDataURL(input.files[0]);
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          img.src = e.target.result;
+          box.classList.add('has-image');
+        }
+        reader.readAsDataURL(input.files[0]);
       } else {
-          img.src = '';
-          box.classList.remove('has-image');
+        img.src = '';
+        box.classList.remove('has-image');
       }
-  }
+    }
 
-  // 2. 交易模式卡片選中效果 (保留以維持 UI 互動感)
-  function selectMode(card) {
+    // 2. 交易模式卡片選中效果 (保留以維持 UI 互動感)
+    function selectMode(card) {
       document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       card.querySelector('input').checked = true;
-  }
+    }
 
-  // 3. 表單提交處理 (對接後端 /sell/submit)
-  document.getElementById('sellForm').addEventListener('submit', async function(e) {
+    // 3. 表單提交處理 (對接後端 /sell/submit)
+    document.getElementById('sellForm').addEventListener('submit', async function (e) {
       e.preventDefault();
 
       const btn = document.getElementById('submitBtn');
@@ -288,34 +573,35 @@
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
 
       try {
-          const response = await fetch('/sell/submit', {
-              method: 'POST',
-              body: formData  // FormData 會自動設置 Content-Type 為 multipart/form-data
-          });
+        const response = await fetch('/sell/submit', {
+          method: 'POST',
+          body: formData  // FormData 會自動設置 Content-Type 為 multipart/form-data
+        });
 
-          const result = await response.json();
+        const result = await response.json();
 
-          if (response.ok && result.success) {
-              showNotification('✅ ' + result.message);
+        if (response.ok && result.success) {
+          showNotification('✅ ' + result.message);
 
-              //  統一跳轉到「我的出售申請」
-              setTimeout(() => {
-                  window.location.href = '/sell/my-applications';
-              }, 2000);
+          //  統一跳轉到「我的出售申請」
+          setTimeout(() => {
+            window.location.href = '/sell/my-applications';
+          }, 2000);
 
-          } else {
-              showNotification('❌ ' + (result.message || '提交失敗'), true);
-              btn.disabled = false;
-              btn.innerHTML = originalText;
-          }
-
-      } catch (error) {
-          console.error('提交錯誤:', error);
-          showNotification('❌ 網絡錯誤，請檢查連接', true);
+        } else {
+          showNotification('❌ ' + (result.message || '提交失敗'), true);
           btn.disabled = false;
           btn.innerHTML = originalText;
+        }
+
+      } catch (error) {
+        console.error('提交錯誤:', error);
+        showNotification('❌ 網絡錯誤，請檢查連接', true);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
       }
-  });
-</script>
+    });
+  </script>
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,7 +18,8 @@
             margin: 2rem auto;
             padding: 0 1rem;
             gap: 2rem;
-            align-items: flex-start; /* 關鍵：防止子元素拉伸，讓 sticky 生效 */
+            align-items: flex-start;
+            /* 關鍵：防止子元素拉伸，讓 sticky 生效 */
         }
 
         /*
@@ -50,13 +52,16 @@
         .sidebar::-webkit-scrollbar {
             width: 6px;
         }
+
         .sidebar::-webkit-scrollbar-track {
             background: transparent;
         }
+
         .sidebar::-webkit-scrollbar-thumb {
             background: #e9ecef;
             border-radius: 3px;
         }
+
         .sidebar::-webkit-scrollbar-thumb:hover {
             background: var(--gold);
         }
@@ -66,9 +71,10 @@
             flex: 1;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             padding: 2.5rem;
-            min-width: 0; /* 防止 flex 子項溢出 */
+            min-width: 0;
+            /* 防止 flex 子項溢出 */
         }
 
         /* 頁面標題與副標題 */
@@ -82,17 +88,26 @@
             border-bottom: 2px solid var(--light);
             padding-bottom: 1rem;
         }
-        .page-title i { color: var(--gold); }
-        .page-subtitle { color: var(--gray); margin-bottom: 2rem; font-size: 0.95rem; }
+
+        .page-title i {
+            color: var(--gold);
+        }
+
+        .page-subtitle {
+            color: var(--gray);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
 
         /* 購物車列表樣式 */
         .cart-items-list {
             background: white;
             border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             overflow: hidden;
             margin-bottom: 2rem;
         }
+
         .cart-items-list .cart-item {
             display: flex;
             align-items: center;
@@ -100,69 +115,185 @@
             border-bottom: 1px solid var(--light);
             transition: all 0.3s ease;
         }
-        .cart-items-list .cart-item:last-child { border-bottom: none; }
-        .cart-items-list .cart-item:hover { background: #f8f9fa; }
+
+        .cart-items-list .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-items-list .cart-item:hover {
+            background: #f8f9fa;
+        }
 
         .item-image {
-            width: 120px; height: 120px; border-radius: 8px;
-            overflow: hidden; margin-right: 1.5rem; flex-shrink: 0;
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
         }
-        .item-image img { width: 100%; height: 100%; object-fit: cover; }
 
-        .item-info { flex: 1; }
-        .item-name { font-size: 1.2rem; font-weight: 600; color: var(--primary); margin-bottom: 0.5rem; }
-        .item-price { color: var(--accent); font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .item-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
-        .item-quantity { display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem; }
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .item-price {
+            color: var(--accent);
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .item-quantity {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
         .qty-btn {
-            width: 32px; height: 32px; border: 1px solid #ddd;
-            background: white; border-radius: 6px; cursor: pointer; transition: all 0.3s;
+            width: 32px;
+            height: 32px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
         }
-        .qty-btn:hover { background: var(--gold); color: white; border-color: var(--gold); }
-        .qty-value { font-weight: 600; min-width: 40px; text-align: center; }
 
-        .item-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 1rem; }
-        .item-subtotal { font-size: 1.2rem; font-weight: 700; color: var(--primary); }
-        .btn-remove {
-            background: none; border: none; color: var(--gray);
-            cursor: pointer; font-size: 1.2rem; transition: color 0.3s;
+        .qty-btn:hover {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
         }
-        .btn-remove:hover { color: var(--accent); }
+
+        .qty-value {
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .item-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 1rem;
+        }
+
+        .item-subtotal {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .btn-remove {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: color 0.3s;
+        }
+
+        .btn-remove:hover {
+            color: var(--accent);
+        }
 
         /* 結算區域 */
         .cart-summary {
-            background: white; border-radius: 12px; padding: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            display: flex; justify-content: space-between; align-items: center;
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .cart-total { font-size: 1.5rem; font-weight: 700; }
-        .cart-total span { color: var(--accent); margin-left: 1rem; }
-        .cart-actions { display: flex; gap: 1rem; }
+
+        .cart-total {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .cart-total span {
+            color: var(--accent);
+            margin-left: 1rem;
+        }
+
+        .cart-actions {
+            display: flex;
+            gap: 1rem;
+        }
 
         .btn-checkout {
-            background: var(--gold); color: var(--primary); padding: 1rem 3rem;
-            border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600;
-            cursor: pointer; transition: all 0.3s;
+            background: var(--gold);
+            color: var(--primary);
+            padding: 1rem 3rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
         }
+
         .btn-checkout:hover {
-            background: #b8972b; transform: translateY(-2px);
+            background: #b8972b;
+            transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
         }
+
         .btn-continue {
-            background: var(--light); color: var(--primary); padding: 1rem 2rem;
-            border: 2px solid var(--light); border-radius: 8px; font-size: 1rem;
-            font-weight: 600; cursor: pointer; transition: all 0.3s;
-            text-decoration: none; display: inline-block;
+            background: var(--light);
+            color: var(--primary);
+            padding: 1rem 2rem;
+            border: 2px solid var(--light);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
         }
-        .btn-continue:hover { border-color: var(--gold); color: var(--gold); }
+
+        .btn-continue:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
 
         /* 空狀態 */
         .empty-cart {
-            text-align: center; padding: 4rem 2rem; background: white;
-            border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
-        .empty-cart i { font-size: 4rem; color: #ddd; margin-bottom: 1rem; }
-        .empty-cart h3 { color: var(--primary); margin-bottom: 1rem; }
+
+        .empty-cart i {
+            font-size: 4rem;
+            color: #ddd;
+            margin-bottom: 1rem;
+        }
+
+        .empty-cart h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
 
         /* 復選框樣式 */
         .item-checkbox {
@@ -170,45 +301,71 @@
             display: flex;
             align-items: center;
         }
+
         .cart-items-list .cart-item-checkbox {
-            position: absolute; opacity: 0; cursor: pointer;
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
         }
+
         .cart-items-list .checkbox-label {
-            position: relative; display: block; width: 22px; height: 22px;
-            background: white; border: 2px solid #ddd; border-radius: 6px;
-            cursor: pointer; transition: all 0.3s;
+            position: relative;
+            display: block;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
         }
-        .cart-items-list .cart-item-checkbox:checked + .checkbox-label {
-            background: var(--gold); border-color: var(--gold);
+
+        .cart-items-list .cart-item-checkbox:checked+.checkbox-label {
+            background: var(--gold);
+            border-color: var(--gold);
         }
-        .cart-items-list .cart-item-checkbox:checked + .checkbox-label::after {
-            content: '✓'; position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); color: white;
-            font-size: 14px; font-weight: bold;
+
+        .cart-items-list .cart-item-checkbox:checked+.checkbox-label::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
         }
+
         .cart-items-list .checkbox-label:hover {
-            border-color: var(--gold); transform: scale(1.05);
+            border-color: var(--gold);
+            transform: scale(1.05);
         }
 
         /* 選中/未選中 狀態樣式 */
         .cart-items-list .cart-item.not-selected {
             opacity: 0.5;
         }
+
         .cart-items-list .cart-item.not-selected .item-image img {
             filter: grayscale(100%);
         }
+
         .cart-items-list .cart-item.not-selected .item-name,
         .cart-items-list .cart-item.not-selected .item-price,
         .cart-items-list .cart-item.not-selected .item-subtotal {
             color: var(--gray) !important;
         }
+
         .cart-items-list .cart-item:not(.not-selected) {
             opacity: 1;
         }
 
         /* 響應式 */
         @media (max-width: 900px) {
-            .dashboard-container { flex-direction: column; }
+            .dashboard-container {
+                flex-direction: column;
+            }
+
             /* 手機版取消 sticky，恢復自然流 */
             .sidebar {
                 position: static;
@@ -219,10 +376,30 @@
         }
 
         @media (max-width: 768px) {
-            .cart-items-list .cart-item { flex-direction: column; align-items: flex-start; }
-            .item-image { width: 100%; height: 200px; margin-right: 0; margin-bottom: 1rem; }
-            .item-actions { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; margin-top: 1rem; }
-            .cart-summary { flex-direction: column; gap: 1.5rem; }
+            .cart-items-list .cart-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .item-image {
+                width: 100%;
+                height: 200px;
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+
+            .item-actions {
+                width: 100%;
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 1rem;
+            }
+
+            .cart-summary {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
         }
 
         /* 購物車刪除確認彈窗樣式 */
@@ -328,6 +505,7 @@
                 opacity: 0;
                 transform: translateY(50px) scale(0.9);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
@@ -358,7 +536,7 @@
         }
 
         /* 分隔不同日期組的商品 */
-        .cart-items-list > div:not(:last-child) {
+        .cart-items-list>div:not(:last-child) {
             margin-bottom: 1.5rem;
         }
 
@@ -421,514 +599,512 @@
         }
     </style>
 </head>
+
 <body>
-<!-- 引入公共導航欄 -->
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <!-- 引入公共導航欄 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="dashboard-container">
-    <!-- 正確引入 Sidebar Fragment -->
-    <div th:replace="~{fragments/sidebar :: sidebar(activePage='cart')}"></div>
+    <div class="dashboard-container">
+        <!-- 正確引入 Sidebar Fragment -->
+        <div th:replace="~{fragments/sidebar :: sidebar(activePage='cart')}"></div>
 
-    <!-- 右側主內容區 -->
-    <main class="main-content">
-        <h2 class="page-title"><i class="fas fa-shopping-cart"></i> 購物車</h2>
-        <p class="page-subtitle">您購物車中有 <strong th:text="${cartCount}">0</strong> 件商品</p>
+        <!-- 右側主內容區 -->
+        <main class="main-content">
+            <h2 class="page-title"><i class="fas fa-shopping-cart"></i> 購物車</h2>
+            <p class="page-subtitle">您購物車中有 <strong th:text="${cartCount}">0</strong> 件商品</p>
 
-        <!-- 全選按鈕區域 -->
-        <div th:if="${cartItems != null and !cartItems.isEmpty()}"
-             style="margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
-            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" checked>
-                <span style="font-weight: 600; color: var(--primary);">全選</span>
-            </label>
-            <span style="color: var(--gray);">
-                已選擇 <strong id="selectedCount">0</strong> 件商品
-            </span>
-        </div>
+            <!-- 全選按鈕區域 -->
+            <div th:if="${cartItems != null and !cartItems.isEmpty()}"
+                style="margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" checked>
+                    <span style="font-weight: 600; color: var(--primary);">全選</span>
+                </label>
+                <span style="color: var(--gray);">
+                    已選擇 <strong id="selectedCount">0</strong> 件商品
+                </span>
+            </div>
 
-        <!-- 購物車商品列表 (分組版) -->
-        <div th:if="${groupedCartItems != null and !groupedCartItems.isEmpty()}"
-             id="cartItemsContainer" class="cart-items-list">
+            <!-- 購物車商品列表 (分組版) -->
+            <div th:if="${groupedCartItems != null and !groupedCartItems.isEmpty()}" id="cartItemsContainer"
+                class="cart-items-list">
 
-            <!-- 遍歷每個日期分組 -->
-            <div th:each="entry : ${groupedCartItems}">
-                <!-- 日期標題 -->
-                <div class="cart-date-header">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span th:text="${entry.key}">2026-07-14</span>
-                </div>
-
-                <!-- 該日期的商品列表 -->
-                <div th:each="item : ${entry.value}"
-                     class="cart-item"
-                     th:data-cart-id="${item.cartId}"
-                     th:data-product-id="${item.product.productId}"
-                     th:data-price="${item.price}">
-
-                    <!-- Checkbox -->
-                    <div class="item-checkbox">
-                        <input type="checkbox"
-                               class="cart-item-checkbox"
-                               th:id="'checkbox-' + ${item.cartId}"
-                               th:data-cart-id="${item.cartId}"
-                               onchange="toggleItemSelection(this)"
-                               th:checked="${item.selected != false}">
-                        <label th:for="'checkbox-' + ${item.cartId}" class="checkbox-label"></label>
+                <!-- 遍歷每個日期分組 -->
+                <div th:each="entry : ${groupedCartItems}">
+                    <!-- 日期標題 -->
+                    <div class="cart-date-header">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span th:text="${entry.key}">2026-07-14</span>
                     </div>
 
-                    <!-- 圖片與信息 -->
-                    <div class="item-image">
-                        <img th:src="@{/images/products/{img}(img=${item.product.image})}" alt="...">
-                    </div>
-                    <div class="item-info">
-                        <div class="item-name" th:text="${item.product.description}">名稱</div>
-                        <div class="item-price">HK$ <span th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span></div>
+                    <!-- 該日期的商品列表 -->
+                    <div th:each="item : ${entry.value}" class="cart-item" th:data-cart-id="${item.cartId}"
+                        th:data-product-id="${item.product.productId}" th:data-price="${item.price}">
 
-                        <!-- 數量按鈕 -->
-                        <div class="item-quantity">
-                            <button class="qty-btn" th:onclick="'updateQuantity(' + ${item.cartId} + ', -1)'">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            <span class="qty-value" th:text="${item.quantity}">1</span>
-                            <button class="qty-btn" th:onclick="'updateQuantity(' + ${item.cartId} + ', 1)'">
-                                <i class="fas fa-plus"></i>
+                        <!-- Checkbox -->
+                        <div class="item-checkbox">
+                            <input type="checkbox" class="cart-item-checkbox" th:id="'checkbox-' + ${item.cartId}"
+                                th:data-cart-id="${item.cartId}" onchange="toggleItemSelection(this)"
+                                th:checked="${item.selected != false}">
+                            <label th:for="'checkbox-' + ${item.cartId}" class="checkbox-label"></label>
+                        </div>
+
+                        <!-- 圖片與信息 -->
+                        <div class="item-image">
+                            <img th:src="@{/images/products/{img}(img=${item.product.image})}" alt="...">
+                        </div>
+                        <div class="item-info">
+                            <div class="item-name" th:text="${item.product.description}">名稱</div>
+                            <div class="item-price">HK$ <span
+                                    th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                            </div>
+
+                            <!-- 數量按鈕 -->
+                            <div class="item-quantity">
+                                <button class="qty-btn" th:onclick="'updateQuantity(' + ${item.cartId} + ', -1)'">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <span class="qty-value" th:text="${item.quantity}">1</span>
+                                <button class="qty-btn" th:onclick="'updateQuantity(' + ${item.cartId} + ', 1)'">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 小計與刪除 -->
+                        <div class="item-actions">
+                            <div class="item-subtotal">
+                                HK$ <span
+                                    th:text="${#numbers.formatDecimal(item.price * item.quantity, 1, 'COMMA', 0, 'POINT')}">0</span>
+                            </div>
+                            <button class="btn-remove"
+                                th:onclick="'openCartRemoveModal(' + ${item.product.productId} + ')'">
+                                <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
                     </div>
-
-                    <!-- 小計與刪除 -->
-                    <div class="item-actions">
-                        <div class="item-subtotal">
-                            HK$ <span th:text="${#numbers.formatDecimal(item.price * item.quantity, 1, 'COMMA', 0, 'POINT')}">0</span>
-                        </div>
-                        <button class="btn-remove" th:onclick="'openCartRemoveModal(' + ${item.product.productId} + ')'">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 總結區域 -->
-        <div th:if="${cartItems != null and !cartItems.isEmpty()}" class="cart-summary">
-            <div class="cart-total">
-                總計：<span>HK$ <span id="cartTotalDisplay">0</span></span>
+            <!-- 總結區域 -->
+            <div th:if="${cartItems != null and !cartItems.isEmpty()}" class="cart-summary">
+                <div class="cart-total">
+                    總計：<span>HK$ <span id="cartTotalDisplay">0</span></span>
+                </div>
+                <div class="cart-actions">
+                    <a href="/browse" class="btn-continue">
+                        <i class="fas fa-arrow-left"></i> 繼續購物
+                    </a>
+                    <button class="btn-checkout" onclick="checkout()">
+                        <i class="fas fa-credit-card"></i> 結賬
+                    </button>
+                </div>
             </div>
-            <div class="cart-actions">
-                <a href="/browse" class="btn-continue">
-                    <i class="fas fa-arrow-left"></i> 繼續購物
+
+            <!-- 空購物車提示 -->
+            <div th:if="${cartItems == null or cartItems.isEmpty()}" class="empty-cart">
+                <i class="fas fa-shopping-cart"></i>
+                <h3>購物車是空的</h3>
+                <p style="color: var(--gray); margin-bottom: 2rem;">快去選購您喜歡的手錶吧！</p>
+                <a href="/browse" class="btn btn-gold">
+                    <i class="fas fa-search"></i> 瀏覽商品
                 </a>
-                <button class="btn-checkout" onclick="checkout()">
-                    <i class="fas fa-credit-card"></i> 結賬
+            </div>
+
+            <!-- ==================== 智能分頁導航 ==================== -->
+            <div class="pagination-wrapper" th:if="${totalPages > 1}">
+
+                <!-- 上一頁按鈕 -->
+                <a th:href="@{/cart/view(page=${currentPage - 1})}"
+                    th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'" th:if="${currentPage > 1}">
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                </a>
+                <span th:if="${currentPage == 1}" class="page-btn disabled">
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                </span>
+
+                <!-- 智能頁碼遍歷 (核心邏輯：渲染 1 ... 3, 4, 5 ... 10) -->
+                <th:block th:each="item : ${smartPages}">
+                    <!-- 如果是省略號 "..." -->
+                    <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
+
+                    <!-- 如果是數字頁碼 -->
+                    <a th:unless="${item.isEllipsis}" th:href="@{/cart/view(page=${item.pageNumber})}"
+                        th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
+                        th:text="${item.pageNumber}">1</a>
+                </th:block>
+
+                <!-- 下一頁按鈕 -->
+                <a th:href="@{/cart/view(page=${currentPage + 1})}"
+                    th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
+                    th:if="${currentPage < totalPages}">
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                </a>
+                <span th:if="${currentPage == totalPages}" class="page-btn disabled">
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                </span>
+            </div>
+            <!-- ==================== 智能分頁導航結束 ==================== -->
+        </main>
+    </div>
+
+    <!-- 購物車刪除確認彈窗 (新名稱防止衝突) -->
+    <div id="cartRemoveConfirmModal" class="cart-remove-overlay" style="display: none;">
+        <div class="cart-remove-modal">
+            <div class="remove-modal-icon">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+            <h3 class="remove-modal-title">確認移除商品？</h3>
+            <p class="remove-modal-message">確定要將此商品從購物車中移除嗎？</p>
+            <div class="remove-modal-actions">
+                <button class="btn-cancel-remove" onclick="closeCartRemoveModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-confirm-remove" onclick="confirmCartRemove()">
+                    <i class="fas fa-trash-alt"></i> 確認移除
                 </button>
             </div>
         </div>
-
-        <!-- 空購物車提示 -->
-        <div th:if="${cartItems == null or cartItems.isEmpty()}" class="empty-cart">
-            <i class="fas fa-shopping-cart"></i>
-            <h3>購物車是空的</h3>
-            <p style="color: var(--gray); margin-bottom: 2rem;">快去選購您喜歡的手錶吧！</p>
-            <a href="/browse" class="btn btn-gold">
-                <i class="fas fa-search"></i> 瀏覽商品
-            </a>
-        </div>
-
-        <!-- ==================== 智能分頁導航 ==================== -->
-        <div class="pagination-wrapper" th:if="${totalPages > 1}">
-
-            <!-- 上一頁按鈕 -->
-            <a th:href="@{/cart/view(page=${currentPage - 1})}"
-               th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'"
-               th:if="${currentPage > 1}">
-                <i class="fas fa-chevron-left"></i> 上一頁
-            </a>
-            <span th:if="${currentPage == 1}" class="page-btn disabled">
-                <i class="fas fa-chevron-left"></i> 上一頁
-            </span>
-
-            <!-- 智能頁碼遍歷 (核心邏輯：渲染 1 ... 3, 4, 5 ... 10) -->
-            <th:block th:each="item : ${smartPages}">
-                <!-- 如果是省略號 "..." -->
-                <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
-
-                <!-- 如果是數字頁碼 -->
-                <a th:unless="${item.isEllipsis}"
-                   th:href="@{/cart/view(page=${item.pageNumber})}"
-                   th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
-                   th:text="${item.pageNumber}">1</a>
-            </th:block>
-
-            <!-- 下一頁按鈕 -->
-            <a th:href="@{/cart/view(page=${currentPage + 1})}"
-               th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
-               th:if="${currentPage < totalPages}">
-                下一頁 <i class="fas fa-chevron-right"></i>
-            </a>
-            <span th:if="${currentPage == totalPages}" class="page-btn disabled">
-                下一頁 <i class="fas fa-chevron-right"></i>
-            </span>
-        </div>
-        <!-- ==================== 智能分頁導航結束 ==================== -->
-    </main>
-</div>
-
-<!-- 購物車刪除確認彈窗 (新名稱防止衝突) -->
-<div id="cartRemoveConfirmModal" class="cart-remove-overlay" style="display: none;">
-    <div class="cart-remove-modal">
-        <div class="remove-modal-icon">
-            <i class="fas fa-trash-alt"></i>
-        </div>
-        <h3 class="remove-modal-title">確認移除商品？</h3>
-        <p class="remove-modal-message">確定要將此商品從購物車中移除嗎？</p>
-        <div class="remove-modal-actions">
-            <button class="btn-cancel-remove" onclick="closeCartRemoveModal()">
-                <i class="fas fa-times"></i> 取消
-            </button>
-            <button class="btn-confirm-remove" onclick="confirmCartRemove()">
-                <i class="fas fa-trash-alt"></i> 確認移除
-            </button>
-        </div>
     </div>
-</div>
 
-<!-- 引入公共彈窗 -->
-<div th:replace="~{fragments/common :: modals}"></div>
+    <!-- 引入公共彈窗 -->
+    <div th:replace="~{fragments/common :: modals}"></div>
 
-<!-- 注入登錄狀態 -->
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-<script src="/js/common.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // 初始化全局選中集合
-        window.selectedCartItems = new Set();
+    <!-- 注入登錄狀態 -->
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    </script>
+    <script src="/js/common.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // 初始化全局選中集合
+            window.selectedCartItems = new Set();
 
-        // 從當前 DOM 重建狀態
-        const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
-        checkboxes.forEach(cb => {
-            if (cb.checked) window.selectedCartItems.add(cb.dataset.cartId);
-            else cb.closest('.cart-item').classList.add('not-selected');
-        });
-
-        // 初始計算
-        updateCartTotal();
-        updateSelectedCount();
-        syncSelectAllCheckbox();
-    });
-
-    /**
-     * 【AJAX】切換單選框：只調 API + 更新 DOM，不刷新頁面
-     */
-    async function toggleItemSelection(checkbox) {
-        const cartId = checkbox.dataset.cartId;
-        const isChecked = checkbox.checked;
-        const cartItem = checkbox.closest('.cart-item');
-
-        // 1. 立即更新 UI 視覺狀態 (樂觀更新)
-        if (isChecked) {
-            window.selectedCartItems.add(cartId);
-            cartItem.classList.remove('not-selected');
-        } else {
-            window.selectedCartItems.delete(cartId);
-            cartItem.classList.add('not-selected');
-        }
-
-        // 2. 異步同步後端
-        try {
-            await fetch(`/api/cart/toggle-selection/${cartId}?isSelected=${isChecked}`, { method: 'PUT' });
-
-            // 3. 同步導航欄下拉菜單 (如果有)
-            if (typeof loadCartItems === 'function') loadCartItems();
-
-        } catch (err) {
-            console.error('同步失敗:', err);
-            showNotification('❌ 網絡錯誤', true);
-            // 回滾 UI
-            checkbox.checked = !isChecked;
-            if (isChecked) {
-                window.selectedCartItems.delete(cartId);
-                cartItem.classList.add('not-selected');
-            } else {
-                window.selectedCartItems.add(cartId);
-                cartItem.classList.remove('not-selected');
-            }
-        }
-
-        // 4. 即時重新計算總價與數量
-        updateCartTotal();
-        updateSelectedCount();
-        syncSelectAllCheckbox();
-    }
-
-    /**
-     * 【AJAX】全選/取消全選
-     */
-    async function toggleSelectAll() {
-        const selectAllCheckbox = document.getElementById('selectAll');
-        const isChecked = selectAllCheckbox.checked;
-        const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
-
-        // 批量發送請求
-        const promises = [];
-        checkboxes.forEach(cb => {
-            if (cb.checked !== isChecked) {
-                promises.push(fetch(`/api/cart/toggle-selection/${cb.dataset.cartId}?isSelected=${isChecked}`, { method: 'PUT' }));
-            }
-        });
-
-        try {
-            await Promise.all(promises);
-
-            // 統一更新 UI
+            // 從當前 DOM 重建狀態
+            const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
             checkboxes.forEach(cb => {
-                cb.checked = isChecked;
-                const item = cb.closest('.cart-item');
-                if (isChecked) {
-                    window.selectedCartItems.add(cb.dataset.cartId);
-                    item.classList.remove('not-selected');
-                } else {
-                    window.selectedCartItems.delete(cb.dataset.cartId);
-                    item.classList.add('not-selected');
-                }
+                if (cb.checked) window.selectedCartItems.add(cb.dataset.cartId);
+                else cb.closest('.cart-item').classList.add('not-selected');
             });
 
-            if (typeof loadCartItems === 'function') loadCartItems();
+            // 初始計算
             updateCartTotal();
             updateSelectedCount();
             syncSelectAllCheckbox();
+        });
 
-        } catch (err) {
-            showNotification('❌ 批量操作失敗', true);
-        }
-    }
+        /**
+         * 【AJAX】切換單選框：只調 API + 更新 DOM，不刷新頁面
+         */
+        async function toggleItemSelection(checkbox) {
+            const cartId = checkbox.dataset.cartId;
+            const isChecked = checkbox.checked;
+            const cartItem = checkbox.closest('.cart-item');
 
-    /**
-     * 【終極安全版 AJAX】更新數量：樂觀更新 + 失敗回滾 + 絕不刷新頁面
-     */
-    async function updateQuantity(cartId, change) {
-        // 1. 嚴格限定在 .cart-items-list 內查找，避免誤傷導航欄
-        const qtyElement = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"] .qty-value`);
-        if (!qtyElement) {
-            console.error('❌ 找不到數量元素，cartId:', cartId);
-            return;
-        }
-
-        let currentQty = parseInt(qtyElement.textContent);
-        let newQty = currentQty + change;
-
-        // 如果減到 0，打開確認刪除彈窗
-        if (newQty < 1) {
-            const productId = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"]`).dataset.productId;
-            openCartRemoveModal(productId);
-            return;
-        }
-
-        const cartItem = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"]`);
-        const price = parseFloat(cartItem.dataset.price);
-        const subtotalSpan = cartItem.querySelector('.item-subtotal span');
-
-        try {
-            // 2. 【樂觀更新】立刻更新 UI，讓用戶看到即時反應，不等待網絡
-            qtyElement.textContent = newQty;
-            if (subtotalSpan) {
-                subtotalSpan.textContent = (price * newQty).toLocaleString('zh-HK');
+            // 1. 立即更新 UI 視覺狀態 (樂觀更新)
+            if (isChecked) {
+                window.selectedCartItems.add(cartId);
+                cartItem.classList.remove('not-selected');
+            } else {
+                window.selectedCartItems.delete(cartId);
+                cartItem.classList.add('not-selected');
             }
+
+            // 2. 異步同步後端
+            try {
+                await fetch(`/api/cart/toggle-selection/${cartId}?isSelected=${isChecked}`, { method: 'PUT' });
+
+                // 3. 同步導航欄下拉菜單 (如果有)
+                if (typeof loadCartItems === 'function') loadCartItems();
+
+            } catch (err) {
+                console.error('同步失敗:', err);
+                showNotification('❌ 網絡錯誤', true);
+                // 回滾 UI
+                checkbox.checked = !isChecked;
+                if (isChecked) {
+                    window.selectedCartItems.delete(cartId);
+                    cartItem.classList.add('not-selected');
+                } else {
+                    window.selectedCartItems.add(cartId);
+                    cartItem.classList.remove('not-selected');
+                }
+            }
+
+            // 4. 即時重新計算總價與數量
             updateCartTotal();
             updateSelectedCount();
+            syncSelectAllCheckbox();
+        }
 
-            // 3. 發送 API 請求更新後端
-            const response = await fetch(`/api/cart/update/${cartId}?quantity=${newQty}`, { method: 'PUT' });
+        /**
+         * 【AJAX】全選/取消全選
+         */
+        async function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const isChecked = selectAllCheckbox.checked;
+            const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
 
-            if (response.ok) {
-                showNotification('✅ 數量更新成功');
-                // 4. 僅在成功後，靜默更新導航欄下拉菜單
-                if (typeof loadCartItems === 'function') {
-                    loadCartItems();
+            // 批量發送請求
+            const promises = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked !== isChecked) {
+                    promises.push(fetch(`/api/cart/toggle-selection/${cb.dataset.cartId}?isSelected=${isChecked}`, { method: 'PUT' }));
                 }
-            } else {
-                // 5. 【失敗回滾】如果後端拒絕，立刻恢復原狀
-                const data = await response.json();
+            });
+
+            try {
+                await Promise.all(promises);
+
+                // 統一更新 UI
+                checkboxes.forEach(cb => {
+                    cb.checked = isChecked;
+                    const item = cb.closest('.cart-item');
+                    if (isChecked) {
+                        window.selectedCartItems.add(cb.dataset.cartId);
+                        item.classList.remove('not-selected');
+                    } else {
+                        window.selectedCartItems.delete(cb.dataset.cartId);
+                        item.classList.add('not-selected');
+                    }
+                });
+
+                if (typeof loadCartItems === 'function') loadCartItems();
+                updateCartTotal();
+                updateSelectedCount();
+                syncSelectAllCheckbox();
+
+            } catch (err) {
+                showNotification('❌ 批量操作失敗', true);
+            }
+        }
+
+        /**
+         * 【終極安全版 AJAX】更新數量：樂觀更新 + 失敗回滾 + 絕不刷新頁面
+         */
+        async function updateQuantity(cartId, change) {
+            // 1. 嚴格限定在 .cart-items-list 內查找，避免誤傷導航欄
+            const qtyElement = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"] .qty-value`);
+            if (!qtyElement) {
+                console.error('❌ 找不到數量元素，cartId:', cartId);
+                return;
+            }
+
+            let currentQty = parseInt(qtyElement.textContent);
+            let newQty = currentQty + change;
+
+            // 如果減到 0，打開確認刪除彈窗
+            if (newQty < 1) {
+                const productId = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"]`).dataset.productId;
+                openCartRemoveModal(productId);
+                return;
+            }
+
+            const cartItem = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"]`);
+            const price = parseFloat(cartItem.dataset.price);
+            const subtotalSpan = cartItem.querySelector('.item-subtotal span');
+
+            try {
+                // 2. 【樂觀更新】立刻更新 UI，讓用戶看到即時反應，不等待網絡
+                qtyElement.textContent = newQty;
+                if (subtotalSpan) {
+                    subtotalSpan.textContent = (price * newQty).toLocaleString('zh-HK');
+                }
+                updateCartTotal();
+                updateSelectedCount();
+
+                // 3. 發送 API 請求更新後端
+                const response = await fetch(`/api/cart/update/${cartId}?quantity=${newQty}`, { method: 'PUT' });
+
+                if (response.ok) {
+                    showNotification('✅ 數量更新成功');
+                    // 4. 僅在成功後，靜默更新導航欄下拉菜單
+                    if (typeof loadCartItems === 'function') {
+                        loadCartItems();
+                    }
+                } else {
+                    // 5. 【失敗回滾】如果後端拒絕，立刻恢復原狀
+                    const data = await response.json();
+                    qtyElement.textContent = currentQty;
+                    if (subtotalSpan) {
+                        subtotalSpan.textContent = (price * currentQty).toLocaleString('zh-HK');
+                    }
+                    updateCartTotal();
+                    updateSelectedCount();
+                    showNotification('❌ ' + (data.message || '更新失敗'), true);
+                }
+            } catch (error) {
+                console.error('更新數量失敗:', error);
+                // 6. 【網絡錯誤回滾】
                 qtyElement.textContent = currentQty;
                 if (subtotalSpan) {
                     subtotalSpan.textContent = (price * currentQty).toLocaleString('zh-HK');
                 }
                 updateCartTotal();
                 updateSelectedCount();
-                showNotification('❌ ' + (data.message || '更新失敗'), true);
+                showNotification('❌ 網絡錯誤', true);
             }
-        } catch (error) {
-            console.error('更新數量失敗:', error);
-            // 6. 【網絡錯誤回滾】
-            qtyElement.textContent = currentQty;
-            if (subtotalSpan) {
-                subtotalSpan.textContent = (price * currentQty).toLocaleString('zh-HK');
-            }
-            updateCartTotal();
-            updateSelectedCount();
-            showNotification('❌ 網絡錯誤', true);
         }
-    }
 
-    // === 輔助計算函數 ===
-    function updateCartTotal() {
-        let total = 0;
-        document.querySelectorAll('.cart-items-list .cart-item').forEach(item => {
-            const checkbox = item.querySelector('.cart-item-checkbox');
-            if (checkbox && checkbox.checked) {
-                const subtotal = parseFloat(item.querySelector('.item-subtotal span').textContent.replace(/[^0-9.]/g, ''));
-                total += subtotal;
+        // === 輔助計算函數 ===
+        function updateCartTotal() {
+            let total = 0;
+            document.querySelectorAll('.cart-items-list .cart-item').forEach(item => {
+                const checkbox = item.querySelector('.cart-item-checkbox');
+                if (checkbox && checkbox.checked) {
+                    const subtotal = parseFloat(item.querySelector('.item-subtotal span').textContent.replace(/[^0-9.]/g, ''));
+                    total += subtotal;
+                }
+            });
+            const totalEl = document.querySelector('#cartTotalDisplay');
+            if (totalEl) totalEl.textContent = total.toLocaleString('zh-HK');
+        }
+
+        function updateSelectedCount() {
+            const count = document.querySelectorAll('.cart-items-list .cart-item-checkbox:checked').length;
+            const el = document.getElementById('selectedCount');
+            if (el) el.textContent = count;
+        }
+
+        function syncSelectAllCheckbox() {
+            const selectAll = document.getElementById('selectAll');
+            if (!selectAll) return;
+            const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            selectAll.checked = (checkboxes.length > 0 && checkedCount === checkboxes.length);
+        }
+
+        // 結賬邏輯
+        async function checkout() {
+            if (window.selectedCartItems.size === 0) {
+                showNotification('❌ 請至少選擇一件商品！', true);
+                return;
+            }
+            try {
+                const response = await fetch('/checkout/api/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ selectedCartIds: Array.from(window.selectedCartItems) })
+                });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    window.location.href = `/checkout?orderNo=${result.data}`;
+                } else {
+                    showNotification('❌ ' + (result.message || '創建訂單失敗'), true);
+                }
+            } catch (error) {
+                console.error('結賬錯誤:', error);
+                showNotification('❌ 網絡錯誤', true);
+            }
+        }
+
+        // ==========================================
+        //  購物車刪除確認彈窗邏輯 (整合版)
+        // ==========================================
+        let pendingRemoveProductId = null; // 全局變量：暫存待刪除的商品 ID
+
+        // 1. 打開刪除確認彈窗
+        function openCartRemoveModal(productId) {
+            pendingRemoveProductId = productId;
+            const modal = document.getElementById('cartRemoveConfirmModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            }
+        }
+
+        // 2. 關閉刪除確認彈窗
+        function closeCartRemoveModal() {
+            const modal = document.getElementById('cartRemoveConfirmModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = ''; // 恢復背景滾動
+            }
+            pendingRemoveProductId = null; // 清空暫存
+        }
+
+        // 3. 確認移除操作 (點擊彈窗中的「確認移除」按鈕時調用)
+        async function confirmCartRemove() {
+            if (!pendingRemoveProductId) return;
+
+            const productId = pendingRemoveProductId;
+            const btn = document.querySelector('.btn-confirm-remove');
+            const originalText = btn.innerHTML;
+
+            // 按鈕進入 Loading 狀態，防止重複點擊
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
+            try {
+                const response = await fetch(`/api/cart/remove/${productId}`, { method: 'DELETE' });
+
+                if (response.ok) {
+                    //  核心修復 1：無論購物車是否為空，先顯示成功提示
+                    showNotification('✅ 商品已移除');
+
+                    // 先關閉彈窗
+                    closeCartRemoveModal();
+
+                    // 找到對應 DOM 並執行移除動畫
+                    const cartItem = document.querySelector(`.cart-items-list [data-product-id="${productId}"]`);
+                    if (cartItem) {
+                        cartItem.style.transition = 'all 0.3s ease';
+                        cartItem.style.opacity = '0';
+                        cartItem.style.transform = 'translateX(-20px)';
+
+                        setTimeout(() => {
+                            cartItem.remove();
+
+                            // 檢查是否空了
+                            const remainingItems = document.querySelectorAll('.cart-items-list .cart-item');
+                            if (remainingItems.length === 0) {
+                                //  核心修復 2：延遲一點點刷新，確保用戶能看到上方的成功提示框
+                                setTimeout(() => {
+                                    location.reload();
+                                }, 800);
+                            } else {
+                                // 只更新當前頁面的統計數據，不調用 loadCartItems()
+                                updateCartTotal();
+                                updateSelectedCount();
+                                syncSelectAllCheckbox();
+                            }
+                        }, 300);
+                    } else {
+                        //  核心修復 3：萬一找不到 DOM 元素（邊緣情況），也延遲刷新頁面以同步狀態
+                        setTimeout(() => {
+                            location.reload();
+                        }, 800);
+                    }
+                } else {
+                    showNotification('❌ 移除失敗', true);
+                }
+            } catch (error) {
+                console.error('移除失敗:', error);
+                showNotification('❌ 網絡錯誤', true);
+            } finally {
+                // 恢復按鈕狀態
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // 4. 點擊遮罩層關閉彈窗 (提升用戶體驗)
+        document.getElementById('cartRemoveConfirmModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeCartRemoveModal();
             }
         });
-        const totalEl = document.querySelector('#cartTotalDisplay');
-        if (totalEl) totalEl.textContent = total.toLocaleString('zh-HK');
-    }
 
-    function updateSelectedCount() {
-        const count = document.querySelectorAll('.cart-items-list .cart-item-checkbox:checked').length;
-        const el = document.getElementById('selectedCount');
-        if (el) el.textContent = count;
-    }
-
-    function syncSelectAllCheckbox() {
-        const selectAll = document.getElementById('selectAll');
-        if (!selectAll) return;
-        const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
-        const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-        selectAll.checked = (checkboxes.length > 0 && checkedCount === checkboxes.length);
-    }
-
-    // 結賬邏輯
-    async function checkout() {
-        if (window.selectedCartItems.size === 0) {
-            showNotification('❌ 請至少選擇一件商品！', true);
-            return;
-        }
-        try {
-            const response = await fetch('/checkout/api/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ selectedCartIds: Array.from(window.selectedCartItems) })
-            });
-            const result = await response.json();
-            if (response.ok && result.success) {
-                window.location.href = `/checkout?orderNo=${result.data}`;
-            } else {
-                showNotification('❌ ' + (result.message || '創建訂單失敗'), true);
-            }
-        } catch (error) {
-            console.error('結賬錯誤:', error);
-            showNotification('❌ 網絡錯誤', true);
-        }
-    }
-
-    // ==========================================
-    //  購物車刪除確認彈窗邏輯 (整合版)
-    // ==========================================
-    let pendingRemoveProductId = null; // 全局變量：暫存待刪除的商品 ID
-
-    // 1. 打開刪除確認彈窗
-    function openCartRemoveModal(productId) {
-        pendingRemoveProductId = productId;
-        const modal = document.getElementById('cartRemoveConfirmModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden'; // 禁止背景滾動
-        }
-    }
-
-    // 2. 關閉刪除確認彈窗
-    function closeCartRemoveModal() {
-        const modal = document.getElementById('cartRemoveConfirmModal');
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = ''; // 恢復背景滾動
-        }
-        pendingRemoveProductId = null; // 清空暫存
-    }
-
-    // 3. 確認移除操作 (點擊彈窗中的「確認移除」按鈕時調用)
-    async function confirmCartRemove() {
-        if (!pendingRemoveProductId) return;
-
-        const productId = pendingRemoveProductId;
-        const btn = document.querySelector('.btn-confirm-remove');
-        const originalText = btn.innerHTML;
-
-        // 按鈕進入 Loading 狀態，防止重複點擊
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-
-        try {
-            const response = await fetch(`/api/cart/remove/${productId}`, { method: 'DELETE' });
-
-            if (response.ok) {
-                //  核心修復 1：無論購物車是否為空，先顯示成功提示
-                showNotification('✅ 商品已移除');
-
-                // 先關閉彈窗
-                closeCartRemoveModal();
-
-                // 找到對應 DOM 並執行移除動畫
-                const cartItem = document.querySelector(`.cart-items-list [data-product-id="${productId}"]`);
-                if (cartItem) {
-                    cartItem.style.transition = 'all 0.3s ease';
-                    cartItem.style.opacity = '0';
-                    cartItem.style.transform = 'translateX(-20px)';
-
-                    setTimeout(() => {
-                        cartItem.remove();
-
-                        // 檢查是否空了
-                        const remainingItems = document.querySelectorAll('.cart-items-list .cart-item');
-                        if (remainingItems.length === 0) {
-                            //  核心修復 2：延遲一點點刷新，確保用戶能看到上方的成功提示框
-                            setTimeout(() => {
-                                location.reload();
-                            }, 800);
-                        } else {
-                            // 只更新當前頁面的統計數據，不調用 loadCartItems()
-                            updateCartTotal();
-                            updateSelectedCount();
-                            syncSelectAllCheckbox();
-                        }
-                    }, 300);
-                } else {
-                    //  核心修復 3：萬一找不到 DOM 元素（邊緣情況），也延遲刷新頁面以同步狀態
-                    setTimeout(() => {
-                        location.reload();
-                    }, 800);
+        // 5. 按 ESC 鍵關閉彈窗
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('cartRemoveConfirmModal');
+                if (modal && modal.style.display === 'flex') {
+                    closeCartRemoveModal();
                 }
-            } else {
-                showNotification('❌ 移除失敗', true);
             }
-        } catch (error) {
-            console.error('移除失敗:', error);
-            showNotification('❌ 網絡錯誤', true);
-        } finally {
-            // 恢復按鈕狀態
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
-    }
-
-    // 4. 點擊遮罩層關閉彈窗 (提升用戶體驗)
-    document.getElementById('cartRemoveConfirmModal')?.addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeCartRemoveModal();
-        }
-    });
-
-    // 5. 按 ESC 鍵關閉彈窗
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            const modal = document.getElementById('cartRemoveConfirmModal');
-            if (modal && modal.style.display === 'flex') {
-                closeCartRemoveModal();
-            }
-        }
-    });
-</script>
+        });
+    </script>
 </body>
+
 </html>

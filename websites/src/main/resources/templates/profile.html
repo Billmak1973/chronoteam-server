@@ -1195,12 +1195,12 @@
                                         window.location.href = '/'; // 即使接口報錯也強制跳轉
                                     });
                             }, 3000);
-                                      } else if (fieldName === 'backupAddress') {
-                    //  备用地址保存成功后，延迟刷新页面
-                    showCenterToast('✅ 備用地址保存成功！', 'success');
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
+                        } else if (fieldName === 'backupAddress') {
+                            //  备用地址保存成功后，延迟刷新页面
+                            showCenterToast('✅ 備用地址保存成功！', 'success');
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1000);
                         } else {
                             showCenterToast('✅ 保存成功！', 'success');
                         }
@@ -1338,9 +1338,9 @@
                         alert('✅ 備用地址已刪除！');
                     }
                     // 【新增】延迟 1 秒后刷新页面
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
 
                 } else {
                     if (typeof showNotification === 'function') {
