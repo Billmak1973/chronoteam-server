@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統配置管理 - ChronoTeam 管理中心</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <style>
+        /* === 系統配置專屬樣式 === */
+        .config-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            max-width: 700px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        .config-card-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .config-card-header i {
+            font-size: 1.5rem;
+            color: var(--gold);
+        }
+        .config-card-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .config-card-body {
+            padding: 2.5rem;
+        }
+        .form-group {
+            margin-bottom: 1.8rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.6rem;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .form-group label i {
+            color: var(--gold);
+            width: 16px;
+            text-align: center;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: #fafafa;
+            color: var(--primary);
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--gold);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+        }
+        .form-hint {
+            display: block;
+            margin-top: 0.5rem;
+            color: var(--gray);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn-save-config {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            margin-top: 1rem;
+        }
+        .btn-save-config:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+            filter: brightness(1.05);
+        }
+        .btn-save-config:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        /* 響應式 */
+        @media (max-width: 768px) {
+            .config-card-body { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+<!-- 引入公共導航欄 -->
+<div th:replace="~{fragments/common :: navbar}"></div>
+
+<div class="admin-layout">
+    <!-- 引入左側邊欄 (activePage 設為 'config') -->
+    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='config')}"></div>
+
+    <!-- 右側內容區 -->
+    <main class="admin-main">
+        <!-- 頂部標題與麵包屑 -->
+        <div class="content-header">
+            <h2><i class="fas fa-cogs"></i> <span id="pageTitle">系統配置管理</span></h2>
+            <div class="breadcrumb">
+                <a href="/admin/dashboard">管理中心</a> /
+                <a href="#">系統與權限管理</a> /
+                <span id="pageBreadcrumb">系統配置</span>
+            </div>
+        </div>
+
+        <!-- 動態內容容器 -->
+        <div class="content-body">
+            <div class="config-card">
+                <div class="config-card-header">
+                    <i class="fas fa-truck-fast"></i>
+                    <h3>物流與運費規則設置</h3>
+                </div>
+                <div class="config-card-body">
+                    <form id="shippingConfigForm" onsubmit="saveShippingConfig(event)">
+                        <div class="form-group">
+                            <label for="shippingFee">
+                                <i class="fas fa-coins"></i> 基礎快遞費用 (HKD)
+                            </label>
+                            <input type="number" id="shippingFee" step="0.01" min="0" required class="form-input" placeholder="例如：50">
+                            <small class="form-hint">
+                                <i class="fas fa-info-circle"></i> 當訂單未達到免郵門檻時，將向顧客收取此固定運費。
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="freeShippingThreshold">
+                                <i class="fas fa-gift"></i> 免運費門檻 (HKD)
+                            </label>
+                            <input type="number" id="freeShippingThreshold" step="0.01" min="0" required class="form-input" placeholder="例如：30000">
+                            <small class="form-hint">
+                                <i class="fas fa-info-circle"></i> 例如填寫 30000，則顧客訂單總額滿 3 萬即可自動免除快遞費。
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn-save-config" id="saveConfigBtn">
+                            <i class="fas fa-save"></i> 保存設置
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- 引入公共彈窗 -->
+<div th:replace="~{fragments/common :: modals}"></div>
+
+<!-- 注入登入狀態 -->
+<script th:inline="javascript">
+    const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+</script>
+
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+
+<!-- 頁面專屬 JS -->
+<script>
+    // 1. 頁面加載時，從後端獲取當前配置並填充表單
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadCurrentConfig();
+    });
+
+    async function loadCurrentConfig() {
+        try {
+            // 注意：請確保您的 AdminConfigController 中有提供此 GET 接口
+            const res = await fetch('/api/admin/config/get', {
+                method: 'GET',
+                credentials: 'same-origin'
+            });
+
+            if (res.ok) {
+                const configs = await res.json();
+                if (configs.SHIPPING_FEE) {
+                    document.getElementById('shippingFee').value = configs.SHIPPING_FEE;
+                }
+                if (configs.FREE_SHIPPING_THRESHOLD) {
+                    document.getElementById('freeShippingThreshold').value = configs.FREE_SHIPPING_THRESHOLD;
+                }
+            }
+        } catch (error) {
+            console.warn('加載當前配置失敗 (若後端尚未提供 GET 接口可忽略此警告):', error);
+        }
+    }
+
+    // 2. 保存配置邏輯
+    async function saveShippingConfig(e) {
+        e.preventDefault();
+
+        const data = {
+            "SHIPPING_FEE": document.getElementById('shippingFee').value,
+            "FREE_SHIPPING_THRESHOLD": document.getElementById('freeShippingThreshold').value
+        };
+
+        const btn = document.getElementById('saveConfigBtn');
+        const originalText = btn.innerHTML;
+
+        // 進入 Loading 狀態，防止重複點擊
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
+
+        try {
+            const res = await fetch('/api/admin/config/update-shipping', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify(data) // 【修復】原代碼遺失了 body 參數
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                if (typeof showNotification === 'function') {
+                    showNotification('✅ ' + (result.message || '設置已成功保存！'));
+                } else {
+                    alert('✅ ' + (result.message || '設置已成功保存！'));
+                }
+            } else {
+                const err = await res.json().catch(() => ({}));
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ ' + (err.message || '保存失敗，請檢查權限'), true);
+                } else {
+                    alert('❌ 保存失敗，請檢查權限');
+                }
+            }
+        } catch (error) {
+            console.error('保存配置錯誤:', error);
+            if (typeof showNotification === 'function') {
+                showNotification('❌ 網絡錯誤，請稍後重試', true);
+            } else {
+                alert('❌ 網絡錯誤，請稍後重試');
+            }
+        } finally {
+            // 恢復按鈕狀態
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+</script>
+</body>
+</html>

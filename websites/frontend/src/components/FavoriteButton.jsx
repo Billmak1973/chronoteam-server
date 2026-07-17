@@ -15,14 +15,17 @@ const FavoriteButton = ({ productId, initialIsFavorite }) => {
 
       const result = await response.json()
 
-      if (response.ok && result.success) {
+    if (response.ok && result.success) {
         const newState = !isFavorite
         setIsFavorite(newState)
-        // 統一使用全局通知，替換掉原生 alert
+
         if (typeof window.showNotification === 'function') {
-          window.showNotification(newState ? '💔 已取消收藏' : '❤️ 已加入收藏')
+            //  修正：newState 為 true 代表「已加入收藏」
+            window.showNotification(
+                newState ? '❤️ 已加入收藏' : '💔 已取消收藏'
+            )
         }
-      } else {
+    } else {
         if (typeof window.showNotification === 'function') {
           window.showNotification('❌ ' + (result.message || '操作失敗'), true)
         }

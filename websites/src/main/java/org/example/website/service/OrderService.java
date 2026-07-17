@@ -5,6 +5,7 @@ import org.example.website.entity.*;
 import org.example.website.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.example.website.repository.SystemConfigRepository; // 新增
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ public class OrderService {
     private final UserRepository userRepository; // 新增：直接獲取用戶實體
     private final OrderItemRepository orderItemRepository;
     private final DailyBusinessReportService dailyBusinessReportService; // 新增
+    private final SystemConfigRepository systemConfigRepository; // 新增注入
 
     /**
      * 1. 創建訂單 (移除庫存扣減，僅校驗庫存是否充足)
@@ -90,12 +92,12 @@ public class OrderService {
         }
     }
 
-
     /**
-     * 2. 線上模擬支付處理 (支付成功後扣減庫存)
+     * 2. 線上模擬支付處理 (支付成功後扣減庫存，並正確處理運費)
      */
     @Transactional
-    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount) {
+    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount, String deliveryMethod) {
+        // 1. 查詢訂單並校驗權限
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
 
@@ -103,19 +105,51 @@ public class OrderService {
             throw new RuntimeException("訂單狀態異常，無法重複支付。當前狀態: " + order.getPaymentStatus());
         }
 
-        if (order.getTotalAmount().compareTo(payAmount) != 0) {
-            throw new RuntimeException("支付金額不匹配，可能存在安全風險！");
+        // 2. 從數據庫動態讀取最新的運費規則
+        BigDecimal realShippingFee = systemConfigRepository.findById("SHIPPING_FEE")
+                .map(c -> new BigDecimal(c.getConfigValue())).orElse(new BigDecimal("50"));
+        BigDecimal realThreshold = systemConfigRepository.findById("FREE_SHIPPING_THRESHOLD")
+                .map(c -> new BigDecimal(c.getConfigValue())).orElse(new BigDecimal("50000"));
+
+        // 3. 獲取純商品總價 (創建訂單時存入的 totalAmount 就是純商品總價)
+        BigDecimal realSubtotal = order.getTotalAmount();
+        BigDecimal realTotal = realSubtotal; // 默認總價等於商品總價
+
+        // 4. 重新計算真實的應付總價
+        if ("EXPRESS".equals(deliveryMethod) && realSubtotal.compareTo(realThreshold) < 0) {
+            realTotal = realTotal.add(realShippingFee);
         }
 
+        // 5.  核心安全校驗：比對前端傳來的金額與後端計算的真實總價是否一致
+        if (payAmount.compareTo(realTotal) != 0) {
+            throw new RuntimeException("安全警告：訂單金額與後端計算不符，可能存在篡改行為！");
+        }
+
+
+        // 6.  更新訂單的真實總價與運費記錄 (寫入數據庫)
+        order.setTotalAmount(realTotal);
+        order.setShippingFee(realTotal.compareTo(realSubtotal) > 0 ? realShippingFee : BigDecimal.ZERO);
+
+        // 7. 【新增】設置配送方式和delivery字段
+        order.setDeliveryMethod(deliveryMethod);
+        order.setDelivery("EXPRESS".equals(deliveryMethod)); // 如果是快遞配送，delivery=true；門店自取=false
+
+        // 8. 【新增】設置發貨截止時間（當前時間 ）
+        order.setDeadlineAt(LocalDateTime.now());
+
+        // 7. 更新支付狀態
         order.setPaymentStatus(Order.PaymentStatus.PAID_SIMULATED);
         order.setStatus(Order.OrderStatus.PAID);
         order.setPaidAt(LocalDateTime.now());
+
         Order savedOrder = orderRepository.save(order);
 
-        //  【修改處 2】：線上支付成功，真正扣減庫存！
+        // 8. 線上支付成功，真正扣減庫存！
         deductStock(savedOrder);
 
+        // 9. 更新每日業務報表
         dailyBusinessReportService.updateDailyReport(savedOrder);
+
         return savedOrder;
     }
 
@@ -139,7 +173,7 @@ public class OrderService {
      * 4. 處理線下支付邏輯 (確認線下支付訂單後扣減庫存)
      */
     @Transactional
-    public Order processOfflinePayment(String orderNo, String username, String storeId) {
+    public Order processOfflinePayment(String orderNo, String username, String storeId,String deliveryMethod) {
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
 
@@ -150,6 +184,13 @@ public class OrderService {
         order.setPaymentStatus(Order.PaymentStatus.PENDING_OFFLINE);
         order.setPaymentMethod("OFFLINE_STORE");
         order.setOfflineStoreId(storeId);
+
+        order.setDeliveryMethod("STORE_PICKUP");
+        order.setDelivery(false); // 線下支付=門店自取，delivery=false
+
+        // 設置發貨截止時間（當前時間 + 7天）
+        order.setDeadlineAt(LocalDateTime.now());
+
         Order savedOrder = orderRepository.save(order);
 
         // 【修改處 3】：線下支付確認生成訂單後，扣減庫存。
@@ -255,13 +296,29 @@ public class OrderService {
      * 根据订单当前的 OrderItem 重新计算总价
      */
     private void recalculateOrderTotal(Order order) {
-        // 重新查询最新的 OrderItem 列表，防止缓存问题
+        // 1. 獲取最新的訂單明細
         List<OrderItem> items = orderItemRepository.findByOrder_OrderNo(order.getOrderNo());
-        BigDecimal newTotal = items.stream()
+
+        // 2. 計算純商品總價 (Subtotal)
+        BigDecimal subtotal = items.stream()
                 .map(i -> i.getPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        order.setTotalAmount(newTotal);
+        // 3. 【核心修復】實時從數據庫讀取管理員最新的運費配置
+        BigDecimal shippingFeeConfig = systemConfigRepository.findById("SHIPPING_FEE")
+                .map(c -> new BigDecimal(c.getConfigValue())).orElse(new BigDecimal("50"));
+        BigDecimal freeThresholdConfig = systemConfigRepository.findById("FREE_SHIPPING_THRESHOLD")
+                .map(c -> new BigDecimal(c.getConfigValue())).orElse(new BigDecimal("50000"));
+
+        // 4. 動態計算實際運費 (如果不是門店自取，且未達免郵門檻，則收取運費)
+        BigDecimal actualShippingFee = BigDecimal.ZERO;
+        if (!"STORE_PICKUP".equals(order.getDeliveryMethod()) && subtotal.compareTo(freeThresholdConfig) < 0) {
+            actualShippingFee = shippingFeeConfig;
+        }
+
+        // 5. 更新訂單的運費和總價，並保存
+        order.setShippingFee(actualShippingFee);
+        order.setTotalAmount(subtotal.add(actualShippingFee));
         orderRepository.save(order);
     }
 }

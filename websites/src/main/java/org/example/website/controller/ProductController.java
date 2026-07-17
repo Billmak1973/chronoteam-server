@@ -264,7 +264,18 @@ public class ProductController {
             if (request.getImage() != null) {
                 product.setImage(request.getImage());
             }
-
+            if (request.getVisible() != null) {
+                product.setVisible(request.getVisible());
+            }
+            if (request.getConditionVisible() != null) {
+                product.setConditionVisible(request.getConditionVisible());
+            }
+            if (request.getCondition() != null) {
+                product.setCondition(request.getCondition());
+            }
+            if (request.getGroupCode()!=null){
+                product.setGroupCode(request.getGroupCode());
+            }
             productRepository.save(product);
 
             return ResponseEntity.ok(ApiResponse.ok("修改成功"));
@@ -312,6 +323,9 @@ public class ProductController {
             } else {
                 dto.setCondition("good");
             }
+
+            dto.setBrand(p.getBrand());
+            dto.setCategory(p.getCategory());
 
             return dto;
         }).collect(Collectors.toList());

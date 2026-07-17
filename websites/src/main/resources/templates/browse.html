@@ -326,14 +326,21 @@
 
         <!-- 分頁 -->
         <div class="pagination" th:if="${totalPages > 1}">
+            <!-- 上一頁 -->
             <a th:if="${currentPage > 1}"
-               th:href="@{/browse(page=${currentPage - 1}, ${buildQueryString(currentFilters)})}">
+               th:href="@{/browse(page=${currentPage - 1}, ${currentFilters})}">
                 <i class="fas fa-chevron-left"></i> 上一頁
             </a>
-            <span th:each="i : ${#numbers.sequence(1, totalPages)}" th:class="${i == currentPage} ? 'active' : ''"
-                  th:text="${i}">1</span>
+
+            <!-- 頁碼數字 - 修改這裡：從 span 改成 a 標籤 -->
+            <a th:each="i : ${#numbers.sequence(1, totalPages)}"
+               th:href="@{/browse(page=${i}, ${currentFilters})}"
+               th:class="${i == currentPage} ? 'active' : ''"
+               th:text="${i}">1</a>
+
+            <!-- 下一頁 -->
             <a th:if="${currentPage < totalPages}"
-               th:href="@{/browse(page=${currentPage + 1}, ${buildQueryString(currentFilters)})}">
+               th:href="@{/browse(page=${currentPage + 1}, ${currentFilters})}">
                 下一頁 <i class="fas fa-chevron-right"></i>
             </a>
         </div>

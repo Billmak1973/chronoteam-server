@@ -39,12 +39,27 @@ const ReplySection = ({
     const [blockUnit, setBlockUnit] = useState('day');
 
     // ==========================================
-    // 新增：刪除回覆模態框相關狀態
+    // 刪除回覆模態框相關狀態
     // ==========================================
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteReason, setDeleteReason] = useState('inappropriate');
     const [customReason, setCustomReason] = useState('');
     const [deletingReplyId, setDeletingReplyId] = useState(null);
+
+    // ==========================================
+    // 🛡️ 兜底邏輯：確保關閉管理員權限彈窗的全局函數存在
+    // ==========================================
+    useEffect(() => {
+        if (typeof window.closeAdminPermissionModal !== 'function') {
+            window.closeAdminPermissionModal = () => {
+                const modal = document.getElementById('adminPermissionModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = ''; // 恢復背景滾動
+                }
+            };
+        }
+    }, []);
 
     // 不再需要本地 blockedUsers 狀態，改用 props
 
@@ -312,8 +327,21 @@ const ReplySection = ({
         confirmBlock(val);
     };
 
-    // 【架構優化】：使用父組件傳遞的 onBlockUser 函數
+    // ==========================================
+    // 核心修改：解除禁言函數 (攔截管理員)
+    // ==========================================
     const handleUnblock = async (targetUsername) => {
+        // 1. 核心攔截：如果是管理員，彈出權限提示並阻止操作
+        if (isAdmin) {
+            const modal = document.getElementById('adminPermissionModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            }
+            return; // 攔截，不執行後續的解除禁言邏輯
+        }
+
+        // 2. 普通用戶的解除禁言邏輯保持不變
         if (!window.confirm('確定要解除禁言嗎？')) return;
         const result = await onBlockUser(targetUsername, false);
         if (result.success) {
@@ -340,7 +368,7 @@ const ReplySection = ({
         }
     };
 
-    // 🚫 管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗) 不是react自帶的
+    //  管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗) 不是react自帶的
     const handleBlacklist = (targetUsername) => {
         // 調用 HTML 中定義的全局函數，打開漂亮的自定義彈窗
         if (typeof window.openBlacklistConfirmModal === 'function') {

@@ -8,6 +8,7 @@ import org.example.website.repository.OrderItemRepository;
 import org.example.website.service.OrderService;
 import org.example.website.entity.User;
 import org.example.website.repository.UserRepository;
+import org.example.website.service.SystemConfigService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -26,6 +27,7 @@ public class CheckoutController {
     private final OrderService orderService;
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
+    private final SystemConfigService systemConfigService;
 
     /**
      * 渲染结账页面：现在查询的是 OrderItem，而不是 Cart！
@@ -43,6 +45,8 @@ public class CheckoutController {
 
         model.addAttribute("order", order);
         model.addAttribute("orderItems", orderItems); // 传给前端的变量名改为 orderItems
+        model.addAttribute("shippingFee", systemConfigService.getShippingFee());
+        model.addAttribute("freeShippingThreshold", systemConfigService.getFreeShippingThreshold());
         return "checkout";
     }
 
@@ -60,18 +64,20 @@ public class CheckoutController {
         }
     }
 
-    /**
-     * API: 前端點擊「確認支付」時調用
-     */
     @PostMapping("/api/pay")
     @ResponseBody
     public ResponseEntity<?> simulatePay(@RequestBody Map<String, Object> payload, Authentication authentication) {
         try {
             String orderNo = (String) payload.get("orderNo");
-            // 前端傳來的金額轉為 BigDecimal
+
+            // 1. 前端傳來的金額轉為 BigDecimal
             BigDecimal payAmount = new BigDecimal(payload.get("amount").toString());
 
-            Order order = orderService.simulatePayment(orderNo, authentication.getName(), payAmount);
+            //  從 payload 中提取配送方式 (如果前端沒傳，默認為 null)
+            String deliveryMethod = payload.containsKey("deliveryMethod") ? (String) payload.get("deliveryMethod") : null;
+
+            //  傳遞 4 個參數給 Service 層
+            Order order = orderService.simulatePayment(orderNo, authentication.getName(), payAmount, deliveryMethod);
 
             return ResponseEntity.ok(ApiResponse.okWithData("支付成功", order.getOrderNo()));
         } catch (Exception e) {
@@ -111,9 +117,11 @@ public class CheckoutController {
             if (storeId == null || storeId.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("請選擇線下支付店鋪"));
             }
+            // 從 payload 中提取配送方式（線下支付時也可能有配送方式選擇）
+            String deliveryMethod = payload.containsKey("deliveryMethod") ? (String) payload.get("deliveryMethod") : "STORE_PICKUP";
 
             //  核心：調用 Service 層處理業務與數據庫操作
-            Order order = orderService.processOfflinePayment(orderNo, authentication.getName(), storeId);
+            Order order = orderService.processOfflinePayment(orderNo, authentication.getName(), storeId,deliveryMethod);
 
             // 構建返回數據
             Map<String, Object> data = new HashMap<>();
@@ -176,31 +184,43 @@ public class CheckoutController {
             Authentication authentication) {
         try {
             OrderItem updatedItem = orderService.updateOrderItemQuantity(orderItemId, quantity, authentication.getName());
-            // 返回更新后的单价、数量、小计，以及最新的订单总价
+            Order order = updatedItem.getOrder(); // 獲取已經被 recalculateOrderTotal 更新過的訂單對象
+
             Map<String, Object> data = new HashMap<>();
             data.put("quantity", updatedItem.getQuantity());
             data.put("subtotal", updatedItem.getPrice().multiply(BigDecimal.valueOf(updatedItem.getQuantity())));
-            data.put("newTotalAmount", updatedItem.getOrder().getTotalAmount());
+            data.put("newTotalAmount", order.getTotalAmount());
+            data.put("shippingFee", order.getShippingFee()); // 【關鍵】必須返回最新運費
+
             return ResponseEntity.ok(ApiResponse.okWithData("更新成功", data));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         }
     }
 
-    /**
-     * 在结账页面删除订单商品
-     */
     @DeleteMapping("/api/remove-item/{orderItemId}")
     @ResponseBody
     public ResponseEntity<?> removeOrderItem(
             @PathVariable Long orderItemId,
             Authentication authentication) {
         try {
+            // 先獲取 orderNo，以便刪除後查詢最新狀態
+            OrderItem item = orderItemRepository.findById(orderItemId).orElseThrow(() -> new RuntimeException("訂單商品不存在"));
+            String orderNo = item.getOrder().getOrderNo();
+
+            // 執行刪除 (內部會調用 recalculateOrderTotal)
             orderService.removeOrderItem(orderItemId, authentication.getName());
-            return ResponseEntity.ok(ApiResponse.ok("已移除"));
+
+            // 如果沒拋異常，說明訂單還在，重新查詢最新訂單狀態返回給前端
+            Order updatedOrder = orderService.getOrderByOrderNoAndUsername(orderNo, authentication.getName());
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("newTotalAmount", updatedOrder.getTotalAmount());
+            data.put("shippingFee", updatedOrder.getShippingFee()); // 【關鍵】必須返回最新運費
+
+            return ResponseEntity.ok(ApiResponse.okWithData("已移除", data));
         } catch (RuntimeException e) {
-            // 如果是订单被删空了，返回特定状态让前端刷新
-            if (e.getMessage().contains("订单已自动取消")) {
+            if (e.getMessage().contains("訂單已自動取消")) {
                 return ResponseEntity.ok(ApiResponse.error("ORDER_EMPTY"));
             }
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));

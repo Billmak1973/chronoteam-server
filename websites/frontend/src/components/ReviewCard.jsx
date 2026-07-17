@@ -376,11 +376,23 @@ const handleDeleteClick = () => {
         confirmBlock(val);
     };
 
-    // 修改：使用父組件傳遞的 onBlockUser 函數
     const handleUnblock = async () => {
+        // 1. 【核心攔截】：如果是管理員，直接彈出權限提示並阻止操作
+        if (isAdmin) {
+            const modal = document.getElementById('adminPermissionModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            }
+            return; // 攔截，不執行後續的解除禁言邏輯
+        }
+
+        // 2. 普通用戶的解除禁言邏輯保持不變
         if (!window.confirm('確定要解除禁言嗎？')) return;
+
         const targetUsername = review.customer.username;
         const result = await onBlockUser(targetUsername, false);
+
         if (result.success) {
             notify('✅ 已解除禁言');
         } else {
@@ -396,7 +408,7 @@ const handleDeleteClick = () => {
         }
     };
 
-    // 🚫 管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗)
+    // 管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗)
     const handleBlacklist = (targetUsername) => {
         if (typeof window.openBlacklistConfirmModal === 'function') {
             window.openBlacklistConfirmModal(targetUsername);
@@ -665,7 +677,7 @@ const toolbarBtnStyle = {
 
             {/* 底部操作區：修改、刪除 (置頂按鈕已移走) */}
             <div className="review-actions">
-                {/* 🔒 修改按鈕：僅作者可見，且僅當未置頂時可見。如果有互動，直接禁用按鈕 */}
+                {/* 僅作者可見，且僅當未置頂時可見。如果有互動，直接禁用按鈕 */}
                 {review.customer.username === currentUsername && !review.pinned && (
                     <button
                         className="btn-edit"

@@ -221,7 +221,7 @@
             /* 增加字體 */
         }
 
-        /* === 新增：篩選與排序區域樣式 === */
+        /* 篩選與排序區域樣式 === */
         .filter-sort-bar {
             background: white;
             border-radius: 12px;
@@ -581,6 +581,141 @@
                 width: 95%;
             }
         }
+        /* === 新建商品：圖片上傳區域專屬樣式 === */
+.image-upload-wrapper {
+    position: relative;
+    width: 100%;
+    height: 150px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+.image-upload-wrapper:hover {
+    border-color: var(--gold);
+    background: rgba(212, 175, 55, 0.05);
+}
+.image-upload-wrapper input[type="file"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+.upload-placeholder {
+    text-align: center;
+    color: var(--gray);
+    pointer-events: none;
+    z-index: 1;
+}
+.upload-placeholder i {
+    font-size: 2rem;
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+.upload-placeholder span {
+    font-weight: 600;
+    color: var(--primary);
+    display: block;
+}
+.upload-placeholder small {
+    font-size: 0.75rem;
+    color: var(--gray);
+}
+.image-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+}
+.remove-image-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.remove-image-btn:hover {
+    background: #dc3545;
+    transform: scale(1.1);
+}
+                /* === 智能分頁組件樣式 === */
+        .pagination-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f1f3f5;
+        }
+
+        .page-btn {
+            padding: 0.6rem 1rem;
+            border: 1px solid #e9ecef;
+            background: white;
+            color: var(--primary);
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .page-btn:hover:not(.disabled) {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+            transform: translateY(-1px);
+        }
+
+        .page-btn.active {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+            font-weight: 600;
+            cursor: default;
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+        }
+
+        .page-btn.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+            background: #f8f9fa;
+            border-color: #e9ecef;
+        }
+
+        .page-ellipsis {
+            padding: 0.6rem 0.5rem;
+            color: var(--gray);
+            font-weight: bold;
+            letter-spacing: 2px;
+            user-select: none;
+        }
     </style>
 </head>
 
@@ -858,6 +993,70 @@
                     </table>
                 </div>
             </div>
+
+            <!-- ==================== 智能分頁導航 ==================== -->
+            <div class="pagination-wrapper" th:if="${totalPages > 1}">
+
+                <!-- 上一頁按鈕 -->
+                <a th:href="@{/admin/products(
+                            page=${currentPage - 1},
+                            currentBrand=${currentBrand},
+                            currentCategory=${currentCategory},
+                            condition=${currentCondition},
+                            status=${currentStatus},
+                            sortField=${currentSortField},
+                            sortDirection=${currentSortDirection},
+                            conditionVisible=${currentConditionVisible}
+                        )}"
+                   th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'"
+                   th:if="${currentPage > 1}">
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                </a>
+                <span th:if="${currentPage == 1}" class="page-btn disabled">
+                        <i class="fas fa-chevron-left"></i> 上一頁
+                    </span>
+
+                <!-- 智能頁碼遍歷 (核心邏輯) -->
+                <th:block th:each="item : ${smartPages}">
+                    <!-- 如果是省略號 "..." -->
+                    <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
+
+                    <!-- 如果是數字頁碼 -->
+                    <a th:unless="${item.isEllipsis}"
+                       th:href="@{/admin/products(
+                                   page=${item.pageNumber},
+                                   currentBrand=${currentBrand},
+                                   currentCategory=${currentCategory},
+                                   condition=${currentCondition},
+                                   status=${currentStatus},
+                                   sortField=${currentSortField},
+                                   sortDirection=${currentSortDirection},
+                                   conditionVisible=${currentConditionVisible}
+                               )}"
+                       th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
+                       th:text="${item.pageNumber}">1</a>
+                </th:block>
+
+                <!-- 下一頁按鈕 -->
+                <a th:href="@{/admin/products(
+                            page=${currentPage + 1},
+                            currentBrand=${currentBrand},
+                            currentCategory=${currentCategory},
+                            condition=${currentCondition},
+                            status=${currentStatus},
+                            sortField=${currentSortField},
+                            sortDirection=${currentSortDirection},
+                            conditionVisible=${currentConditionVisible}
+                        )}"
+                   th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
+                   th:if="${currentPage < totalPages}">
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                </a>
+                <span th:if="${currentPage == totalPages}" class="page-btn disabled">
+                        下一頁 <i class="fas fa-chevron-right"></i>
+                    </span>
+            </div>
+            <!-- ==================== 智能分頁導航結束 ==================== -->
         </main>
     </div>
 
@@ -970,6 +1169,132 @@
         </div>
     </div>
 
+    <!-- ==================== 新建商品 Modal ==================== -->
+    <div id="addProductModal" class="edit-modal-overlay">
+        <div class="edit-modal-box" style="max-width: 800px;">
+            <div class="edit-modal-header">
+                <h3><i class="fas fa-plus-circle"></i> 新建商品</h3>
+                <button class="modal-close-btn" onclick="closeAddProductModal()">&times;</button>
+            </div>
+
+            <!-- 使用 FormData 支援圖片上傳 -->
+            <form id="addProductForm" onsubmit="saveNewProduct(event)" enctype="multipart/form-data">
+
+                <!-- 第一行：品牌與分類 -->
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-crown"></i> 品牌 <span style="color:var(--accent)">*</span></label>
+                        <!-- 使用 datalist 實現：既可從數據庫選擇，也可手動輸入新品牌 -->
+                        <input type="text" id="newBrand" name="brand" list="brandList" required placeholder="輸入或選擇品牌 (如: Rolex)">
+                        <datalist id="brandList">
+                            <!-- 將由 JS 動態填充現有品牌 -->
+                        </datalist>
+                        <small><i class="fas fa-info-circle"></i> 可直接輸入新品牌名稱</small>
+                    </div>
+                    <!-- 在 admin-products.html 的新建商品 Modal 中 -->
+                    <div class="form-group">
+                        <label><i class="fas fa-link"></i> 同款分組碼 <span style="color:var(--accent)">*</span></label>
+                        <!-- 添加 onblur 事件，当用户输完分组码并点击别处时触发 -->
+                        <input type="text" id="newGroupCode" name="groupCode" required placeholder="例如: G001, ROLEX_SUB"
+                               onblur="checkGroupCode(this.value)">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-th-large"></i> 分類 <span style="color:var(--accent)">*</span></label>
+                    <select id="newCategory" name="category" required>
+                        <option value="pilot">飛行錶</option>
+                        <option value="dive">潛水錶</option>
+                        <option value="dress">正裝錶</option>
+                        <option value="chronograph">計時碼錶</option>
+                        <option value="vintage">古董錶</option>
+                        <option value="others">其它類型手錶</option>
+                    </select>
+                </div>
+
+                <!-- 第二行：價格與庫存 -->
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-tag"></i> 價格 (HK$) <span style="color:var(--accent)">*</span></label>
+                        <input type="number" id="newPrice" name="price" step="0.01" min="0" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-boxes"></i> 庫存數量 <span style="color:var(--accent)">*</span></label>
+                        <input type="number" id="newStock" name="stock" min="0" required placeholder="0">
+                    </div>
+                </div>
+
+                <!-- 第三行：成色與狀態 -->
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label><i class="fas fa-gem"></i> 手錶成色 <span style="color:var(--accent)">*</span></label>
+                        <select id="newCondition" name="condition" required>
+                            <option value="" disabled selected>請選擇成色...</option>
+                            <option value="NEAR_MINT">NEAR_MINT (近全新 98-100%)</option>
+                            <option value="EXCELLENT">EXCELLENT (極佳 95-97%)</option>
+                            <option value="GOOD">GOOD (良好 90-94%)</option>
+                            <option value="FAIR">FAIR (正常使用痕跡 85-89%)</option>
+                            <option value="HEAVILY_USED">HEAVILY_USED (重度使用痕跡 <85%)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-eye"></i> 前台顯示狀態 <span style="color:var(--accent)">*</span></label>
+                        <select id="newVisible" name="visible" required>
+                            <option value="true">顯示中 (true)</option>
+                            <option value="false">已隱藏 (false)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-gem"></i> 成色選項顯示狀態 <span style="color:var(--accent)">*</span></label>
+                    <select id="newConditionVisible" name="conditionVisible" required>
+                        <option value="true">顯示中 (true)</option>
+                        <option value="false">已隱藏 (false)</option>
+                    </select>
+                </div>
+
+                <!-- 第四行：描述與詳情 -->
+                <div class="form-group">
+                    <label><i class="fas fa-align-left"></i> 商品簡介 (prod_desc) <span style="color:var(--accent)">*</span></label>
+                    <textarea id="newDescription" name="description" rows="2" required placeholder="簡短描述商品，例如：Rolex Submariner 黑水鬼 41mm"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-file-alt"></i> 詳細介紹 (prod_details)</label>
+                    <textarea id="newDetails" name="details" rows="3" placeholder="詳細介紹商品的來源、特點、規格等 (選填)"></textarea>
+                </div>
+
+                <!-- 第五行：圖片上傳 -->
+                <div class="form-group">
+                    <label><i class="fas fa-image"></i> 商品圖片 <span style="color:var(--accent)">*</span></label>
+                    <div class="image-upload-wrapper">
+                        <input type="file" id="newProductImage" name="imageFile" accept="image/*" required onchange="previewNewImage(this)">
+                        <div class="upload-placeholder" id="uploadPlaceholder">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>點擊選擇圖片 或 拖拽至此</span>
+                            <small>支援 JPG, PNG, WEBP (將保存至 /images/products/)</small>
+                        </div>
+                        <img id="imagePreview" class="image-preview" style="display: none;">
+                        <button type="button" class="remove-image-btn" id="removeImageBtn" style="display: none;" onclick="removeNewImage()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 按鈕區 -->
+                <div class="modal-actions">
+                    <button type="button" class="btn-modal-cancel" onclick="closeAddProductModal()">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                    <button type="submit" class="btn-modal-save" id="saveNewProductBtn">
+                        <i class="fas fa-save"></i> 確認新建
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div th:replace="~{fragments/common :: modals}"></div>
 
     <script th:inline="javascript">
@@ -978,9 +1303,163 @@
         // 當前排序狀態
         let currentSort = { field: null, direction: null };
 
-        function openAddProductModal() {
-            alert('新建商品功能開發中...');
+            // ==========================================
+// 新建商品 Modal 邏輯
+// ==========================================
+
+// 1. 打開 Modal 並初始化
+async function openAddProductModal() {
+    const modal = document.getElementById('addProductModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // 禁止背景滾動
+
+    // 重置表單
+    document.getElementById('addProductForm').reset();
+    removeNewImage();
+
+    // 動態獲取現有品牌填充到 datalist (讓用戶可以選也可以自己寫)
+    try {
+        const response = await fetch('/admin/products'); // 或者您現有的獲取品牌列表的 API
+        const brandList = document.getElementById('brandList');
+        brandList.innerHTML = ''; // 清空
+
+        // 預設一些常見品牌，如果您的後端有接口，請替換為 fetch 獲取的數據
+        const defaultBrands = ['rolex', 'omega', 'patek', 'ap', 'cartier', 'iwc', 'jlc'];
+        defaultBrands.forEach(brand => {
+            const option = document.createElement('option');
+            option.value = brand;
+            brandList.appendChild(option);
+        });
+
+        // 如果您有從後端獲取 allBrands 的邏輯，可以這樣做：
+        // const existingBrands = /* 從後端獲取的數組 */;
+        // existingBrands.forEach(brand => { ... })
+
+    } catch (error) {
+        console.error('獲取品牌列表失敗:', error);
+    }
+}
+
+// 2. 關閉 Modal
+function closeAddProductModal() {
+    document.getElementById('addProductModal').style.display = 'none';
+    document.body.style.overflow = ''; // 恢復背景滾動
+    document.getElementById('addProductForm').reset();
+    removeNewImage();
+}
+
+// 3. 圖片預覽邏輯
+function previewNewImage(input) {
+    const preview = document.getElementById('imagePreview');
+    const placeholder = document.getElementById('uploadPlaceholder');
+    const removeBtn = document.getElementById('removeImageBtn');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+            removeBtn.style.display = 'flex';
         }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+// 4. 移除已選擇的圖片
+function removeNewImage() {
+    const input = document.getElementById('newProductImage');
+    const preview = document.getElementById('imagePreview');
+    const placeholder = document.getElementById('uploadPlaceholder');
+    const removeBtn = document.getElementById('removeImageBtn');
+
+    input.value = ''; // 清空 file input
+    preview.src = '';
+    preview.style.display = 'none';
+    placeholder.style.display = 'block';
+    removeBtn.style.display = 'none';
+}
+// 5. 保存新建商品 (使用 FormData 支援圖片上傳)
+async function saveNewProduct(event) {
+    event.preventDefault(); // 阻止表單默認提交
+
+    const form = document.getElementById('addProductForm');
+    const saveBtn = document.getElementById('saveNewProductBtn');
+    const originalBtnText = saveBtn.innerHTML;
+
+    // 顯示 Loading 狀態
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 新建中...';
+
+    // 使用 FormData 收集數據 (包含文件)
+    const formData = new FormData(form);
+
+    // 【調試用】打印 FormData 內容，確保前端數據正確打包
+    console.log('--- 準備發送的 FormData ---');
+    for (let [key, value] of formData.entries()) {
+        console.log(key, value instanceof File ? `File: ${value.name}` : value);
+    }
+    console.log('---------------------------');
+
+    try {
+        // 【核心修復】：使用絕對路徑 '/admin/add'，避免相對路徑拼接錯誤導致 404
+        const response = await fetch('/admin/add', {
+            method: 'POST',
+            // 注意：使用 FormData 時，千萬不要手動設置 'Content-Type'
+            // 瀏覽器會自動設置為 'multipart/form-data' 並附上 boundary
+            body: formData
+        });
+
+        // 【核心修復】：檢查響應是否是 JSON，防止 404/500 時解析 HTML 報錯
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new Error(`後端未返回 JSON 數據 (狀態碼: ${response.status})，請檢查後端控制台日誌`);
+        }
+
+        const result = await response.json();
+        console.log('後端響應:', result);
+
+        if (response.ok && result.success) {
+            if (typeof showNotification === 'function') {
+                showNotification('✅ 商品新建成功！');
+            } else {
+                alert('✅ 商品新建成功！');
+            }
+            closeAddProductModal();
+            // 延遲 1 秒後刷新頁面以顯示最新數據
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            if (typeof showNotification === 'function') {
+                showNotification('❌ ' + (result.message || '新建失敗'), true);
+            } else {
+                alert('❌ ' + (result.message || '新建失敗'));
+            }
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnText;
+        }
+    } catch (error) {
+        console.error('新建失敗詳細錯誤:', error);
+        if (typeof showNotification === 'function') {
+            showNotification('❌ 網絡錯誤或路徑錯誤 (請按 F12 查看控制台)', true);
+        } else {
+            alert('❌ 網絡錯誤或路徑錯誤，請打開 F12 控制台查看詳情');
+        }
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalBtnText;
+    }
+}
+
+// ESC 鍵關閉 Modal
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('addProductModal');
+        if (modal && modal.style.display === 'flex') {
+            closeAddProductModal();
+        }
+    }
+});
 
         // 打開編輯 Modal 並填充數據
         function openEditModal(button) {
@@ -1171,6 +1650,51 @@
             // 跳轉到無參數的頁面
             window.location.href = '/admin/products';
         }
+
+        // ==========================================
+// 检查分组码并自动填充品牌和分类
+// ==========================================
+async function checkGroupCode(groupCode) {
+    if (!groupCode || groupCode.trim() === '') return;
+
+    const brandInput = document.getElementById('newBrand');
+    const categorySelect = document.getElementById('newCategory');
+
+    try {
+        // 调用现有的 variants 接口 (需要先完成第一步的后端修改)
+        const response = await fetch(`/variants/${groupCode}`);
+
+        if (response.ok) {
+            const variants = await response.json();
+
+            // 如果该分组下已经有商品
+            if (variants && variants.length > 0) {
+                const firstProduct = variants[0]; // 取第一个作为参考
+
+                // 1. 自动填充品牌
+                if (firstProduct.brand) {
+                    brandInput.value = firstProduct.brand;
+                    // 可选：设为只读，防止用户乱改，或者只是填充让用户确认
+                    // brandInput.readOnly = true;
+                }
+
+                // 2. 自动填充分类
+                if (firstProduct.category) {
+                    categorySelect.value = firstProduct.category;
+                }
+
+                // 给用户一个提示
+                if (typeof showNotification === 'function') {
+                    showNotification('✅ 检测到同款分组，已自动填充品牌和分类');
+                }
+            }
+        }
+    } catch (error) {
+        console.error('查询分组信息失败:', error);
+        // 静默失败即可，不影响用户手动输入
+    }
+}
+
     </script>
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>

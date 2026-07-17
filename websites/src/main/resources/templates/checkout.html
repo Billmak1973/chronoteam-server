@@ -1217,128 +1217,132 @@
         }
 
         /* === 庫存超額選擇彈窗 === */
-.stock-exceed-modal-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px);
-    z-index: 10004;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    animation: fadeIn 0.3s ease;
-}
+        .stock-exceed-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 10004;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
 
-.stock-exceed-modal-box {
-    background: white;
-    padding: 2.5rem;
-    border-radius: 16px;
-    width: 90%;
-    max-width: 480px;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    border-top: 5px solid #ffc107;
-    animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
+        .stock-exceed-modal-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 480px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-top: 5px solid #ffc107;
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
 
-.stock-exceed-icon {
-    width: 70px;
-    height: 70px;
-    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0 auto 1.5rem;
-    box-shadow: 0 8px 20px rgba(255, 152, 0, 0.4);
-}
+        .stock-exceed-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 8px 20px rgba(255, 152, 0, 0.4);
+        }
 
-.stock-exceed-icon i {
-    font-size: 2rem;
-    color: white;
-}
+        .stock-exceed-icon i {
+            font-size: 2rem;
+            color: white;
+        }
 
-.stock-exceed-title {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--primary);
-    margin-bottom: 0.5rem;
-}
+        .stock-exceed-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
 
-.stock-exceed-message {
-    color: var(--gray);
-    font-size: 1rem;
-    line-height: 1.6;
-    margin-bottom: 1.5rem;
-}
+        .stock-exceed-message {
+            color: var(--gray);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
 
-.stock-exceed-info {
-    background: #fff3cd;
-    border: 1px dashed #ffc107;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 2rem;
-    text-align: left;
-}
+        .stock-exceed-info {
+            background: #fff3cd;
+            border: 1px dashed #ffc107;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
 
-.stock-exceed-info p {
-    margin: 0.3rem 0;
-    font-size: 0.95rem;
-    color: #856404;
-}
+        .stock-exceed-info p {
+            margin: 0.3rem 0;
+            font-size: 0.95rem;
+            color: #856404;
+        }
 
-.stock-exceed-info strong {
-    color: #d32f2f;
-}
+        .stock-exceed-info strong {
+            color: #d32f2f;
+        }
 
-.stock-exceed-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-}
+        .stock-exceed-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
 
-.btn-set-to-one, .btn-set-to-max, .btn-cancel-adjust {
-    padding: 0.8rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    border: none;
-    font-size: 1rem;
-    min-width: 140px;
-}
+        .btn-set-to-one,
+        .btn-set-to-max,
+        .btn-cancel-adjust {
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 1rem;
+            min-width: 140px;
+        }
 
-.btn-set-to-one {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
+        .btn-set-to-one {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
 
-.btn-set-to-one:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
+        .btn-set-to-one:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
 
-.btn-set-to-max {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-}
+        .btn-set-to-max {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
 
-.btn-set-to-max:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
-}
+        .btn-set-to-max:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
+        }
 
-.btn-cancel-adjust {
-    background: #e9ecef;
-    color: var(--primary);
-}
+        .btn-cancel-adjust {
+            background: #e9ecef;
+            color: var(--primary);
+        }
 
-.btn-cancel-adjust:hover {
-    background: #dee2e6;
-    transform: translateY(-2px);
-}
-
+        .btn-cancel-adjust:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 
@@ -1463,7 +1467,7 @@
             <!-- 線上支付 -->
             <div class="payment-option">
                 <input type="radio" name="paymentMethod" value="ONLINE" id="pay-online" checked
-                       onchange="togglePaymentMethod()">
+                    onchange="togglePaymentMethod()">
                 <label for="pay-online">
                     <i class="fas fa-credit-card"></i>
                     <div>
@@ -1475,7 +1479,7 @@
 
             <!-- 配送方式 (僅線上支付時顯示) -->
             <div id="deliveryMethodSection"
-                 style="display: none; margin-left: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 3px solid var(--gold); margin-bottom: 1rem;">
+                style="display: none; margin-left: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 3px solid var(--gold); margin-bottom: 1rem;">
                 <label style="display: block; margin-bottom: 0.8rem; font-weight: 600; color: var(--primary);">
                     <i class="fas fa-truck" style="color: var(--gold); margin-right: 0.5rem;"></i> 選擇配送方式
                 </label>
@@ -1483,29 +1487,29 @@
                 <!--  快遞配送 (已整合備用地址切換功能) -->
                 <div class="payment-option" style="margin-bottom: 0.5rem; background: white;">
                     <input type="radio" name="deliveryMethod" value="EXPRESS" id="delivery-express"
-                           onchange="toggleDeliveryMethod()"
-                           th:disabled="${user.address == null || user.address.isEmpty()}"
-                           th:checked="${user.address != null && !user.address.isEmpty()}">
+                        onchange="toggleDeliveryMethod()"
+                        th:disabled="${user.address == null || user.address.isEmpty()}"
+                        th:checked="${user.address != null && !user.address.isEmpty()}">
                     <label for="delivery-express" style="cursor: pointer;"
-                           th:classappend="${user.address == null || user.address.isEmpty()} ? 'text-muted' : ''">
+                        th:classappend="${user.address == null || user.address.isEmpty()} ? 'text-muted' : ''">
                         <i class="fas fa-shipping-fast"></i>
                         <div style="flex: 1;">
                             <div style="font-weight: 600;">快遞配送</div>
                             <div style="font-size: 0.85rem; color: var(--gray);">
-                <span id="expressDeliveryAddress">
-                    <span th:if="${user.address != null && !user.address.isEmpty()}">送至: <span
-                            th:text="${user.address}">您的收貨地址</span></span>
-                    <span th:if="${user.address == null || user.address.isEmpty()}"
-                          style="color: #dc3545; font-weight: 600;">請先在「帳戶信息」中填寫收貨地址</span>
-                </span>
+                                <span id="expressDeliveryAddress">
+                                    <span th:if="${user.address != null && !user.address.isEmpty()}">送至: <span
+                                            th:text="${user.address}">您的收貨地址</span></span>
+                                    <span th:if="${user.address == null || user.address.isEmpty()}"
+                                        style="color: #dc3545; font-weight: 600;">請先在「帳戶信息」中填寫收貨地址</span>
+                                </span>
                             </div>
 
                             <!-- 备用地址切换按钮 -->
                             <div th:if="${user.backupAddress != null && !user.backupAddress.isEmpty()}"
-                                 style="margin-top: 0.5rem;">
+                                style="margin-top: 0.5rem;">
                                 <button type="button" id="toggleAddressBtn" class="btn-sm"
-                                        style="background: transparent; color: var(--gold); border: 1px dashed var(--gold); padding: 0.3rem 0.8rem; font-size: 0.8rem; cursor: pointer; border-radius: 4px;"
-                                        onclick="showAddressToggleModal()">
+                                    style="background: transparent; color: var(--gold); border: 1px dashed var(--gold); padding: 0.3rem 0.8rem; font-size: 0.8rem; cursor: pointer; border-radius: 4px;"
+                                    onclick="showAddressToggleModal()">
                                     <i class="fas fa-exchange-alt"></i>
                                     <span id="toggleAddressText">改用備用地址收貨</span>
                                 </button>
@@ -1514,10 +1518,12 @@
 
                         <!-- 右侧倒计时区域（与左侧内容并排） -->
                         <div style="flex-shrink: 0; margin-left: 1rem; text-align: right;">
-                            <div style="background: #fff9f0; border: 1px dashed var(--gold); border-radius: 6px; padding: 0.8rem; min-width: 200px;">
+                            <div
+                                style="background: #fff9f0; border: 1px dashed var(--gold); border-radius: 6px; padding: 0.8rem; min-width: 200px;">
                                 <div style="font-size: 0.85rem; color: var(--primary); margin-bottom: 0.3rem;">
                                     <i class="fas fa-clock" style="color: var(--gold);"></i>
-                                    截止時間還剩：<span id="cutoffCountdown" style="font-weight: 700; color: var(--accent);">計算中...</span>
+                                    截止時間還剩：<span id="cutoffCountdown"
+                                        style="font-weight: 700; color: var(--accent);">計算中...</span>
                                 </div>
                                 <div style="font-size: 0.85rem; color: var(--gray);">
                                     <i class="fas fa-shipping-fast" style="color: var(--gold);"></i>
@@ -1532,8 +1538,8 @@
                 <!-- 門店自取 -->
                 <div class="payment-option" style="background: white;">
                     <input type="radio" name="deliveryMethod" value="STORE_PICKUP" id="delivery-pickup"
-                           onchange="toggleDeliveryMethod()"
-                           th:checked="${user.address == null || user.address.isEmpty()}">
+                        onchange="toggleDeliveryMethod()"
+                        th:checked="${user.address == null || user.address.isEmpty()}">
                     <label for="delivery-pickup">
                         <i class="fas fa-store-alt"></i>
                         <div>
@@ -1547,7 +1553,7 @@
             <!-- 線下支付 -->
             <div class="payment-option">
                 <input type="radio" name="paymentMethod" value="OFFLINE" id="pay-offline"
-                       onchange="togglePaymentMethod()">
+                    onchange="togglePaymentMethod()">
                 <label for="pay-offline">
                     <i class="fas fa-store"></i>
                     <div>
@@ -1583,7 +1589,8 @@
                     <i class="fas fa-map-marker-alt" style="color: var(--gold);"></i>
                     <span id="modalTitle">確認切換收貨地址？</span>
                 </h3>
-                <div class="confirm-modal-message" style="text-align: left; background: var(--light); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                <div class="confirm-modal-message"
+                    style="text-align: left; background: var(--light); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
                     <div style="margin-bottom: 0.8rem;">
                         <div style="font-size: 0.85rem; color: var(--gray); margin-bottom: 0.3rem;">當前地址：</div>
                         <div id="currentAddressDisplay" style="font-weight: 600; color: var(--primary);">-</div>
@@ -1778,9 +1785,37 @@
         </div>
     </div>
 
+    <!-- ⚠️ 離開頁面警告彈窗 (自定義) -->
+    <div id="exitWarningModal" class="confirm-modal-overlay" style="display: none; z-index: 99999;">
+        <div class="confirm-modal-box">
+            <div class="modal-icon warning-icon"
+                style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); margin-bottom: 1rem;">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="confirm-modal-title">️ 交易尚未完成</h3>
+            <p class="confirm-modal-message">
+                您當前還有未支付的訂單！<br>
+                <span style="color: var(--accent); font-weight: 600;">您的快遞方式及門店選擇尚未保存。</span><br>
+                若現在離開，這些設置將會丟失，請務必留意！
+            </p>
+            <div class="confirm-modal-actions">
+                <!-- 取消離開：留在當前頁 -->
+                <button class="btn-confirm-cancel" onclick="cancelExit()">
+                    <i class="fas fa-arrow-left"></i> 留在結賬頁
+                </button>
+                <!-- 確認離開：允許關閉 -->
+                <button class="btn-confirm-yes" onclick="confirmExit()" style="background: var(--gray); color: white;">
+                    我已知曉，繼續離開
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script th:inline="javascript">
         const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-
+        //  接收後端傳來的動態配置
+        const baseShippingFee = [[${ shippingFee }]];
+        const freeShippingThreshold = [[${ freeShippingThreshold }]];
         // ==========================================
         // 1. 删除商品功能 - 改为调用订单删除 API
         // ==========================================
@@ -1788,21 +1823,21 @@
             const orderItemId = button.getAttribute('data-item-id');
             const card = button.closest('.cart-item-card');
 
-            // 检查订单中有多少个商品
+            // 檢查訂單中有多少個商品
             const allCards = document.querySelectorAll('.cart-item-card');
             const totalItems = allCards.length;
 
-            // 如果只有1个商品，显示禁止删除提示
+            // 如果只有1個商品，顯示禁止刪除提示
             if (totalItems === 1) {
                 showOnlyOneItemModal();
-                return; // 阻止删除
+                return; // 阻止刪除
             }
 
-            // 如果有多个商品，显示确认删除提示
+            // 如果有多個商品，顯示確認刪除提示
             const isConfirmed = await showDeleteConfirmModal();
-            if (!isConfirmed) return; // 用户取消删除
+            if (!isConfirmed) return; // 用戶取消刪除
 
-            // 执行删除操作
+            // 執行刪除動畫
             card.style.transition = 'all 0.3s ease';
             card.style.opacity = '0';
             card.style.transform = 'translateX(50px)';
@@ -1813,22 +1848,55 @@
                     const result = await response.json();
 
                     if (response.ok && result.success) {
+                        // 1. 移除 DOM 元素
                         card.remove();
-                        updateTotal();
+
+                        // 【核心修復】如果後端返回了最新總價和運費，直接覆蓋 DOM，絕不依賴前端計算
+                        if (result.data && result.data.newTotalAmount !== undefined) {
+                            // 更新全局總價
+                            document.getElementById('totalAmountDisplay').textContent = formatPrice(result.data.newTotalAmount);
+
+                            // 更新運費顯示行
+                            const shippingRow = document.getElementById('shippingFeeRow');
+                            if (shippingRow) {
+                                if (result.data.shippingFee > 0) {
+                                    shippingRow.innerHTML = `<span>快遞費用：</span><span>HK$ ${formatPrice(result.data.shippingFee)}</span>`;
+                                } else {
+                                    shippingRow.innerHTML = `<span>快遞費用：</span><span style="color:#28a745; font-weight:600;">已達免郵門檻，免運費</span>`;
+                                }
+                            }
+
+                            // 更新支付按鈕金額
+                            const confirmBtn = document.getElementById('confirmPayBtn');
+                            confirmBtn.setAttribute('data-amount', result.data.newTotalAmount);
+                            confirmBtn.innerHTML = `<i class="fas fa-credit-card"></i> 確認支付 HK$ ${formatPrice(result.data.newTotalAmount)}`;
+                        } else {
+                            // 降級方案：萬一後端沒返回數據，才調用前端的 updateTotal() 重新計算
+                            updateTotal();
+                        }
+
                         showNotification('✅ 商品已從訂單移除');
+
                     } else {
+                        // 處理後端返回的業務錯誤
                         if (result.message === 'ORDER_EMPTY') {
                             showNotification('⚠️ 訂單商品已清空，訂單已取消', true);
                             setTimeout(() => window.location.href = '/browse', 1500);
                             return;
                         }
                         showNotification('❌ ' + result.message, true);
+
+                        // 刪除失敗，恢復卡片狀態
                         card.style.opacity = '1';
                         card.style.transform = 'translateX(0)';
                     }
                 } catch (error) {
                     console.error('刪除商品失敗:', error);
                     showNotification('❌ 網絡錯誤', true);
+
+                    // 網絡錯誤時，同樣恢復卡片狀態
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateX(0)';
                 }
             }, 300);
         }
@@ -1946,214 +2014,210 @@
 
 
         // 全局變量，存儲待處理的商品信息
-let pendingOrderItemId = null;
-let pendingNewQuantity = null;
-let pendingMaxStock = null;
-let pendingItemName = null;
+        let pendingOrderItemId = null;
+        let pendingNewQuantity = null;
+        let pendingMaxStock = null;
+        let pendingItemName = null;
 
-async function updateQuantity(orderItemId, change) {
-    // 【核心修復】檢查 orderItemId 是否有效
-    if (!orderItemId || orderItemId === 'null' || orderItemId === 'undefined') {
-        showNotification('❌ 商品ID無效，請刷新頁面重試', true);
-        console.error('無效的 orderItemId:', orderItemId);
-        return;
-    }
+        async function updateQuantity(orderItemId, change) {
+            // 【核心修復】檢查 orderItemId 是否有效
+            if (!orderItemId || orderItemId === 'null' || orderItemId === 'undefined') {
+                showNotification('❌ 商品ID無效，請刷新頁面重試', true);
+                console.error('無效的 orderItemId:', orderItemId);
+                return;
+            }
 
-    const card = document.querySelector(`.cart-item-card[data-order-item-id="${orderItemId}"]`);
-    if (!card) {
-        showNotification('❌ 找不到該商品，請刷新頁面', true);
-        return;
-    }
+            const card = document.querySelector(`.cart-item-card[data-order-item-id="${orderItemId}"]`);
+            if (!card) {
+                showNotification('❌ 找不到該商品，請刷新頁面', true);
+                return;
+            }
 
-    const qtyElement = card.querySelector('.qty-value');
-    let currentQty = parseInt(qtyElement.textContent);
-    const maxStock = parseInt(card.getAttribute('data-stock'));
-    const itemName = card.querySelector('.item-name').textContent;
-    let newQty = currentQty + change;
+            const qtyElement = card.querySelector('.qty-value');
+            let currentQty = parseInt(qtyElement.textContent);
+            const maxStock = parseInt(card.getAttribute('data-stock'));
+            const itemName = card.querySelector('.item-name').textContent;
+            let newQty = currentQty + change;
 
-    // 檢查 newQty 是否有效
-    if (isNaN(newQty) || newQty < 1) {
-        showNotification('❌ 數量無效', true);
-        return;
-    }
+            // 檢查 newQty 是否有效
+            if (isNaN(newQty) || newQty < 1) {
+                showNotification('❌ 數量無效', true);
+                return;
+            }
 
-    // 如果是點擊「-」按鈕且新數量仍大於庫存
-    if (change < 0 && newQty > maxStock) {
-        // 【關鍵修復】傳遞 currentQty（原本的數量），而不是 newQty
-        showStockExceedModal(orderItemId, currentQty, maxStock, itemName);
-        return;
-    }
+            // 如果是點擊「-」按鈕且新數量仍大於庫存
+            if (change < 0 && newQty > maxStock) {
+                // 【關鍵修復】傳遞 currentQty（原本的數量），而不是 newQty
+                showStockExceedModal(orderItemId, currentQty, maxStock, itemName);
+                return;
+            }
 
-    // 如果是點擊「+」按鈕且新數量大於庫存
-    if (change > 0 && newQty > maxStock) {
-        showNotification(`❌ 庫存不足！最多只能購買 ${maxStock} 件`, true);
-        return;
-    }
+            // 如果是點擊「+」按鈕且新數量大於庫存
+            if (change > 0 && newQty > maxStock) {
+                showNotification(`❌ 庫存不足！最多只能購買 ${maxStock} 件`, true);
+                return;
+            }
 
-    // 正常更新數量
-    await performQuantityUpdate(orderItemId, newQty, card, qtyElement, maxStock);
-}
-
-// 顯示庫存超額選擇彈窗
-function showStockExceedModal(orderItemId, newQty, maxStock, itemName) {
-    pendingOrderItemId = orderItemId;
-    pendingNewQuantity = newQty;
-    pendingMaxStock = maxStock;
-    pendingItemName = itemName;
-
-    // 更新彈窗內容
-    document.getElementById('exceedItemName').textContent = itemName;
-    document.getElementById('exceedCurrentQty').textContent = newQty;
-    document.getElementById('exceedMaxStock').textContent = maxStock;
-
-    // 顯示彈窗
-    const modal = document.getElementById('stockExceedModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
-}
-
-// 關閉庫存超額彈窗
-function closeStockExceedModal() {
-    const modal = document.getElementById('stockExceedModal');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-    }
-    // 清空全局變量
-    pendingOrderItemId = null;
-    pendingNewQuantity = null;
-    pendingMaxStock = null;
-    pendingItemName = null;
-}
-
-// 設置數量為 1
-async function setQuantityToOne() {
-    // 【核心修復】檢查全局變量是否有效
-    if (!pendingOrderItemId || pendingOrderItemId === 'null' || pendingOrderItemId === 'undefined') {
-        showNotification('❌ 商品ID無效，請關閉彈窗重試', true);
-        closeStockExceedModal();
-        return;
-    }
-    const card = document.querySelector(`.cart-item-card[data-order-item-id="${pendingOrderItemId}"]`);
-    if (!card) {
-        showNotification('❌ 找不到該商品', true);
-        closeStockExceedModal();
-        return;
-    }
-    const qtyElement = card.querySelector('.qty-value');
-    const maxStock = parseInt(card.getAttribute('data-stock'));
-
-    //  關鍵修復：在關閉彈窗前，先把值保存到局部變量！
-    const targetOrderId = pendingOrderItemId;
-    const targetQty = 1;
-
-    // 先關閉彈窗
-    closeStockExceedModal();
-
-    // 延遲一點點確保彈窗完全關閉
-    setTimeout(async () => {
-        await performQuantityUpdate(targetOrderId, targetQty, card, qtyElement, maxStock);
-    }, 100);
-}
-
-// 設置數量為最大庫存
-async function setQuantityToMax() {
-    // 【核心修復】檢查全局變量是否有效
-    if (!pendingOrderItemId || pendingOrderItemId === 'null' || pendingOrderItemId === 'undefined') {
-        showNotification('❌ 商品ID無效，請關閉彈窗重試', true);
-        closeStockExceedModal();
-        return;
-    }
-    if (!pendingMaxStock || isNaN(pendingMaxStock)) {
-        showNotification('❌ 庫存數據無效', true);
-        closeStockExceedModal();
-        return;
-    }
-    const card = document.querySelector(`.cart-item-card[data-order-item-id="${pendingOrderItemId}"]`);
-    if (!card) {
-        showNotification('❌ 找不到該商品', true);
-        closeStockExceedModal();
-        return;
-    }
-    const qtyElement = card.querySelector('.qty-value');
-
-    //  關鍵修復：在關閉彈窗前，先把值保存到局部變量！
-    const targetOrderId = pendingOrderItemId;
-    const targetMaxStock = pendingMaxStock;
-
-    // 先關閉彈窗
-    closeStockExceedModal();
-
-    // 延遲一點點確保彈窗完全關閉
-    setTimeout(async () => {
-        await performQuantityUpdate(targetOrderId, targetMaxStock, card, qtyElement, targetMaxStock);
-    }, 100);
-}
-
-// 執行數量更新（提取為獨立函數）
-async function performQuantityUpdate(orderItemId, newQty, card, qtyElement, maxStock) {
-    // 【最終防線】再次檢查參數，確保萬無一失
-    if (!orderItemId || orderItemId === 'null' || orderItemId === 'undefined') {
-        showNotification('❌ 系統錯誤：無效的商品ID', true);
-        return;
-    }
-
-    if (isNaN(newQty) || newQty < 1) {
-        showNotification('❌ 無效的數量', true);
-        return;
-    }
-
-    console.log(`🔄 開始更新商品 ${orderItemId} 的數量為 ${newQty}`);
-
-    try {
-        // 調用修改訂單明细 API
-        const response = await fetch(`/checkout/api/update-item/${orderItemId}?quantity=${newQty}`, {
-            method: 'PUT'
-        });
-
-        console.log('📡 API 響應狀態:', response.status);
-        const result = await response.json();
-        console.log('📥 API 響應數據:', result);
-
-        if (response.ok && result.success) {
-            const data = result.data;
-            // 更新前端显示
-            qtyElement.textContent = data.quantity;
-            card.setAttribute('data-quantity', data.quantity);
-
-            // 更新小计
-            const subtotalElement = card.querySelector('.item-subtotal span');
-            subtotalElement.textContent = formatPrice(data.subtotal);
-
-            // 更新全局总价
-            document.getElementById('totalAmountDisplay').textContent = formatPrice(data.newTotalAmount);
-
-            // 更新支付按钮金额
-            const confirmBtn = document.getElementById('confirmPayBtn');
-            confirmBtn.setAttribute('data-amount', data.newTotalAmount);
-            confirmBtn.innerHTML = `<i class="fas fa-credit-card"></i> 確認支付 HK$ ${formatPrice(data.newTotalAmount)}`;
-
-            // 更新加減号禁用状态
-            card.querySelector('.qty-btn:first-child').disabled = (data.quantity <= 1);
-            card.querySelector('.qty-btn:last-child').disabled = (data.quantity >= maxStock);
-
-            showNotification('✅ 數量更新成功');
-        } else {
-            console.error('❌ 更新失敗:', result);
-            showNotification('❌ ' + (result.message || '更新失敗'), true);
+            // 正常更新數量
+            await performQuantityUpdate(orderItemId, newQty, card, qtyElement, maxStock);
         }
-    } catch (error) {
-        console.error('❌ 更新數量失敗:', error);
-        showNotification('❌ 網絡錯誤', true);
-    }
-}
 
-// 格式化价格辅助函数 (保留原有的)
-function formatPrice(price) {
-    return new Intl.NumberFormat('zh-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
-}
+        // 顯示庫存超額選擇彈窗
+        function showStockExceedModal(orderItemId, newQty, maxStock, itemName) {
+            pendingOrderItemId = orderItemId;
+            pendingNewQuantity = newQty;
+            pendingMaxStock = maxStock;
+            pendingItemName = itemName;
+
+            // 更新彈窗內容
+            document.getElementById('exceedItemName').textContent = itemName;
+            document.getElementById('exceedCurrentQty').textContent = newQty;
+            document.getElementById('exceedMaxStock').textContent = maxStock;
+
+            // 顯示彈窗
+            const modal = document.getElementById('stockExceedModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        // 關閉庫存超額彈窗
+        function closeStockExceedModal() {
+            const modal = document.getElementById('stockExceedModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            // 清空全局變量
+            pendingOrderItemId = null;
+            pendingNewQuantity = null;
+            pendingMaxStock = null;
+            pendingItemName = null;
+        }
+
+        // 設置數量為 1
+        async function setQuantityToOne() {
+            // 【核心修復】檢查全局變量是否有效
+            if (!pendingOrderItemId || pendingOrderItemId === 'null' || pendingOrderItemId === 'undefined') {
+                showNotification('❌ 商品ID無效，請關閉彈窗重試', true);
+                closeStockExceedModal();
+                return;
+            }
+            const card = document.querySelector(`.cart-item-card[data-order-item-id="${pendingOrderItemId}"]`);
+            if (!card) {
+                showNotification('❌ 找不到該商品', true);
+                closeStockExceedModal();
+                return;
+            }
+            const qtyElement = card.querySelector('.qty-value');
+            const maxStock = parseInt(card.getAttribute('data-stock'));
+
+            //  關鍵修復：在關閉彈窗前，先把值保存到局部變量！
+            const targetOrderId = pendingOrderItemId;
+            const targetQty = 1;
+
+            // 先關閉彈窗
+            closeStockExceedModal();
+
+            // 延遲一點點確保彈窗完全關閉
+            setTimeout(async () => {
+                await performQuantityUpdate(targetOrderId, targetQty, card, qtyElement, maxStock);
+            }, 100);
+        }
+
+        // 設置數量為最大庫存
+        async function setQuantityToMax() {
+            // 【核心修復】檢查全局變量是否有效
+            if (!pendingOrderItemId || pendingOrderItemId === 'null' || pendingOrderItemId === 'undefined') {
+                showNotification('❌ 商品ID無效，請關閉彈窗重試', true);
+                closeStockExceedModal();
+                return;
+            }
+            if (!pendingMaxStock || isNaN(pendingMaxStock)) {
+                showNotification('❌ 庫存數據無效', true);
+                closeStockExceedModal();
+                return;
+            }
+            const card = document.querySelector(`.cart-item-card[data-order-item-id="${pendingOrderItemId}"]`);
+            if (!card) {
+                showNotification('❌ 找不到該商品', true);
+                closeStockExceedModal();
+                return;
+            }
+            const qtyElement = card.querySelector('.qty-value');
+
+            //  關鍵修復：在關閉彈窗前，先把值保存到局部變量！
+            const targetOrderId = pendingOrderItemId;
+            const targetMaxStock = pendingMaxStock;
+
+            // 先關閉彈窗
+            closeStockExceedModal();
+
+            // 延遲一點點確保彈窗完全關閉
+            setTimeout(async () => {
+                await performQuantityUpdate(targetOrderId, targetMaxStock, card, qtyElement, targetMaxStock);
+            }, 100);
+        }
+
+        async function performQuantityUpdate(orderItemId, newQty, card, qtyElement, maxStock) {
+            if (!orderItemId || orderItemId === 'null' || orderItemId === 'undefined') {
+                showNotification('❌ 系統錯誤：無效的商品ID', true);
+                return;
+            }
+            if (isNaN(newQty) || newQty < 1) {
+                showNotification('❌ 無效的數量', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/checkout/api/update-item/${orderItemId}?quantity=${newQty}`, { method: 'PUT' });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    const data = result.data;
+
+                    // 1. 更新數量和小計
+                    qtyElement.textContent = data.quantity;
+                    card.setAttribute('data-quantity', data.quantity);
+                    card.querySelector('.item-subtotal span').textContent = formatPrice(data.subtotal);
+
+                    // 2. 【核心修復】強制覆蓋全局總價
+                    document.getElementById('totalAmountDisplay').textContent = formatPrice(data.newTotalAmount);
+
+                    // 3. 【核心修復】強制覆蓋運費顯示行
+                    const shippingRow = document.getElementById('shippingFeeRow');
+                    if (shippingRow) {
+                        if (data.shippingFee > 0) {
+                            shippingRow.innerHTML = `<span>快遞費用：</span><span>HK$ ${formatPrice(data.shippingFee)}</span>`;
+                        } else {
+                            shippingRow.innerHTML = `<span>快遞費用：</span><span style="color:#28a745; font-weight:600;">已達免郵門檻，免運費</span>`;
+                        }
+                    }
+
+                    // 4. 更新支付按鈕金額
+                    const confirmBtn = document.getElementById('confirmPayBtn');
+                    confirmBtn.setAttribute('data-amount', data.newTotalAmount);
+                    confirmBtn.innerHTML = `<i class="fas fa-credit-card"></i> 確認支付 HK$ ${formatPrice(data.newTotalAmount)}`;
+
+                    // 5. 更新加減號禁用狀態
+                    card.querySelector('.qty-btn:first-child').disabled = (data.quantity <= 1);
+                    card.querySelector('.qty-btn:last-child').disabled = (data.quantity >= maxStock);
+
+                    showNotification('✅ 數量更新成功');
+                } else {
+                    showNotification('❌ ' + (result.message || '更新失敗'), true);
+                }
+            } catch (error) {
+                console.error('❌ 更新數量失敗:', error);
+                showNotification('❌ 網絡錯誤', true);
+            }
+        }
+
+        // 格式化价格辅助函数 (保留原有的)
+        function formatPrice(price) {
+            return new Intl.NumberFormat('zh-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
+        }
 
         // ==========================================
         // 3. 全選功能 - 修改版
@@ -2185,21 +2249,22 @@ function formatPrice(price) {
         }
 
         // ==========================================
-        // 4. 更新總價 - 修改版
+        // 4. 更新總價 - 完整融合版 (支援快遞費動態計算 + 全選狀態同步 + 支付方式切換)
         // ==========================================
         function updateTotal() {
             const itemCheckboxes = document.querySelectorAll('.item-checkbox');
-            let totalAmount = 0;
+            let subtotal = 0; // 商品總價
             let selectedCount = 0;
             let allChecked = true;
             let noneChecked = true;
 
+            // 1. 計算選中商品的總價
             itemCheckboxes.forEach(checkbox => {
                 const card = checkbox.closest('.cart-item-card');
                 if (checkbox.checked && card) {
                     const price = parseFloat(card.getAttribute('data-price')) || 0;
                     const quantity = parseInt(card.getAttribute('data-quantity')) || 0;
-                    totalAmount += price * quantity;
+                    subtotal += price * quantity;
                     selectedCount++;
                     card.classList.add('selected');
                     noneChecked = false;
@@ -2211,10 +2276,53 @@ function formatPrice(price) {
                 }
             });
 
-            // 更新选中数量
-            document.getElementById('selectedCount').textContent = selectedCount;
+            // 更新選中數量顯示
+            const selectedCountEl = document.getElementById('selectedCount');
+            if (selectedCountEl) {
+                selectedCountEl.textContent = selectedCount;
+            }
 
-            // 更新总价显示
+            //  2. 動態計算快遞費
+            let shippingFee = 0;
+            const deliveryMethodRadio = document.querySelector('input[name="deliveryMethod"]:checked');
+
+            // 只有選擇「快遞配送」且「未達到免郵門檻」才收快遞費
+            if (deliveryMethodRadio && deliveryMethodRadio.value === 'EXPRESS') {
+                if (subtotal < freeShippingThreshold) {
+                    shippingFee = baseShippingFee;
+                }
+            }
+
+            // 計算最終應付總價
+            const totalAmount = subtotal + shippingFee;
+
+            //  3. 動態更新 UI 顯示 (快遞費用行)
+            const summaryContainer = document.querySelector('.order-summary');
+            if (summaryContainer) {
+                let shippingRow = document.getElementById('shippingFeeRow');
+                if (!shippingRow) {
+                    shippingRow = document.createElement('div');
+                    shippingRow.id = 'shippingFeeRow';
+                    shippingRow.className = 'summary-row';
+                    // 插入到總價行 (.total-row) 之前，確保排版正確
+                    const totalRow = document.querySelector('.total-row');
+                    if (totalRow) {
+                        summaryContainer.insertBefore(shippingRow, totalRow);
+                    } else {
+                        summaryContainer.appendChild(shippingRow);
+                    }
+                }
+
+                if (shippingFee > 0) {
+                    shippingRow.innerHTML = `<span>快遞費用：</span><span>HK$ ${shippingFee.toFixed(2)}</span>`;
+                    shippingRow.style.display = 'flex';
+                } else {
+                    shippingRow.innerHTML = `<span>快遞費用：</span><span style="color:#28a745; font-weight:600;">已達免郵門檻，免運費</span>`;
+                    shippingRow.style.display = 'flex';
+                }
+            }
+
+            // 4. 更新總價顯示
             const totalAmountElement = document.getElementById('totalAmountDisplay');
             if (totalAmountElement) {
                 totalAmountElement.textContent = totalAmount.toLocaleString('zh-HK', {
@@ -2223,7 +2331,7 @@ function formatPrice(price) {
                 });
             }
 
-            // 更新支付按钮
+            // 5. 更新支付按鈕 (結合代碼1的完善邏輯：區分線上/線下，並處理未選商品狀態)
             const confirmBtn = document.getElementById('confirmPayBtn');
             if (confirmBtn) {
                 confirmBtn.setAttribute('data-amount', totalAmount.toFixed(2));
@@ -2232,26 +2340,26 @@ function formatPrice(price) {
                     confirmBtn.innerHTML = '<i class="fas fa-shopping-cart"></i> 請選擇商品';
                 } else {
                     confirmBtn.disabled = false;
-                    const isOnline = document.getElementById('pay-online').checked;
+                    const isOnline = document.getElementById('pay-online')?.checked;
                     const icon = isOnline ? 'fa-credit-card' : 'fa-store';
                     const text = isOnline ? '確認線上支付' : '確認訂單（到店支付）';
                     confirmBtn.innerHTML = `<i class="fas ${icon}"></i> ${text} HK$ ${totalAmount.toLocaleString('zh-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 }
             }
 
-            // 同步全选框状态 - 核心修改：根据单项选择状态更新全选框
+            // 6. 同步全選框狀態 - 核心修改：根據單項選擇狀態更新全選框
             const selectAllCheckboxes = document.querySelectorAll('#selectAllBottom');
             selectAllCheckboxes.forEach(cb => {
                 if (itemCheckboxes.length === 0) {
                     cb.checked = false;
                 } else if (allChecked) {
-                    // 所有单项都勾选，全选框勾选
+                    // 所有單項都勾選，全選框勾選
                     cb.checked = true;
                 } else if (noneChecked) {
-                    // 所有单项都没勾选，全选框不勾选
+                    // 所有單項都沒勾選，全選框不勾選
                     cb.checked = false;
                 } else {
-                    // 部分勾选，全选框不勾选
+                    // 部分勾選，全選框不勾選
                     cb.checked = false;
                 }
             });
@@ -2354,6 +2462,8 @@ function formatPrice(price) {
                 // 門店自取：顯示店鋪選擇
                 storeSelection.style.display = 'block';
             }
+            // 切换配送方式后，必须重新计算总价（清除或添加快递费）
+            updateTotal();
         }
 
         function updateStoreInfo() {
@@ -2364,14 +2474,14 @@ function formatPrice(price) {
             if (storeId && storeData[storeId]) {
                 const store = storeData[storeId];
                 storeInfoList.innerHTML = `
-            <li><strong>店鋪：</strong>${store.name}</li>
-            <li><strong>地址：</strong>${store.address}</li>
-            <li><strong>電話：</strong>${store.phone}</li>
-            <li><strong>營業時間：</strong>${store.hours}</li>
-            <li style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(133, 100, 4, 0.3);">
-                <strong>注意事項：</strong>
-                <ul style="margin-top: 0.3rem;">${store.tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
-            </li>`;
+        <li><strong>店鋪：</strong>${store.name}</li>
+        <li><strong>地址：</strong>${store.address}</li>
+        <li><strong>電話：</strong>${store.phone}</li>
+        <li><strong>營業時間：</strong>${store.hours}</li>
+        <li style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(133, 100, 4, 0.3);">
+            <strong>注意事項：</strong>
+            <ul style="margin-top: 0.3rem;">${store.tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
+        </li>`;
                 storeInfo.style.display = 'block';
             } else {
                 storeInfo.style.display = 'none';
@@ -2459,6 +2569,9 @@ function formatPrice(price) {
                     });
                     const result = await response.json();
                     if (response.ok && result.success) {
+                        // 標記支付已完成，解除離開攔截
+                        isPaymentCompleted = true;
+                        allowExit = true;
                         window.location.href = `/checkout/payment-success?orderNo=${orderNo}`;
                     } else {
                         btn.disabled = false;
@@ -2470,7 +2583,11 @@ function formatPrice(price) {
                     const response = await fetch('/checkout/api/offline-payment', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ orderNo: orderNo, storeId: storeId })
+                        body: JSON.stringify({
+                            orderNo: orderNo,
+                            storeId: storeId,
+                            deliveryMethod: 'STORE_PICKUP' // 線下支付默認為門店自取
+                        })
                     });
                     const result = await response.json();
                     if (response.ok && result.success) {
@@ -2599,28 +2716,28 @@ function formatPrice(price) {
             let listHtml = '';
             outOfStockItems.forEach(item => {
                 listHtml += `
-            <div class="stock-error-item">
-                <span class="error-item-name" title="${item.name}">${item.name}</span>
-                <span class="error-item-stock">僅剩 ${item.stock} 件</span>
-            </div>
-        `;
+        <div class="stock-error-item">
+            <span class="error-item-name" title="${item.name}">${item.name}</span>
+            <span class="error-item-stock">僅剩 ${item.stock} 件</span>
+        </div>
+    `;
             });
 
             const modalHtml = `
-        <div id="stockErrorModal" class="stock-error-overlay">
-            <div class="stock-error-box">
-                <div class="stock-error-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <h3 class="stock-error-title">庫存不足，無法結賬</h3>
-                <div class="stock-error-list">
-                    ${listHtml}
-                </div>
-                <p class="stock-error-tip">請調整數量後再重新嘗試支付</p>
-                <div class="stock-error-progress"></div>
+    <div id="stockErrorModal" class="stock-error-overlay">
+        <div class="stock-error-box">
+            <div class="stock-error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
             </div>
+            <h3 class="stock-error-title">庫存不足，無法結賬</h3>
+            <div class="stock-error-list">
+                ${listHtml}
+            </div>
+            <p class="stock-error-tip">請調整數量後再重新嘗試支付</p>
+            <div class="stock-error-progress"></div>
         </div>
-    `;
+    </div>
+`;
 
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             document.body.style.overflow = 'hidden';
@@ -2637,6 +2754,68 @@ function formatPrice(price) {
                     }, 300);
                 }
             }, 3000);
+        }
+
+        // ==========================================
+        // 離開頁面攔截與警告邏輯 (雙重防護版)
+        // ==========================================
+        let isPaymentCompleted = false; // 標記支付是否已完成
+        let allowExit = false;          // 標記是否允許直接離開（用於點擊「確認離開」後放行）
+
+        // 1. 監聽瀏覽器原生的離開事件 (刷新/關閉/跳轉)
+        window.addEventListener('beforeunload', function (e) {
+            // 如果支付已完成 或 用戶已點擊「確認離開」，則不攔截
+            if (isPaymentCompleted || allowExit) return;
+
+            // 【關鍵】這裡不要直接 e.preventDefault()，而是先顯示我們的自定義彈窗
+            // 由於 beforeunload 是同步的，我們必須在這裡立即顯示彈窗
+            showExitWarningModal();
+
+            // 為了讓瀏覽器顯示原生確認框（作為第二道防線），我們仍然需要設置 returnValue
+            // 但此時用戶已經看到了我們的自定義提示
+            e.preventDefault();
+            e.returnValue = '';
+        });
+
+        // 2. 顯示自定義警告彈窗
+        function showExitWarningModal() {
+            const modal = document.getElementById('exitWarningModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            }
+        }
+
+        // 3. 用戶點擊「留在結賬頁」(取消離開)
+        function cancelExit() {
+            const modal = document.getElementById('exitWarningModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            // 注意：這裡不需要做任何事，因為 beforeunload 已經阻止了默認行為
+            // 用戶點擊此按鈕只是關閉了我們的自定義彈窗，頁面依然停留在原地
+        }
+
+        // 4. 用戶點擊「我已知曉，繼續離開」
+        function confirmExit() {
+            allowExit = true; // 設置放行標記
+
+            // 嘗試觸發頁面關閉或導航
+            // 由於 beforeunload 是同步事件，我們需要延遲一點點讓瀏覽器處理
+            setTimeout(() => {
+                window.close(); // 嘗試關閉窗口
+
+                // 如果 window.close() 無效（大多數現代瀏覽器限制腳本關閉非腳本打開的窗口）
+                // 則強制刷新或導航到首頁，這會再次觸發 beforeunload，但因為 allowExit=true 所以會放行
+                window.location.href = '/';
+            }, 100);
+        }
+
+        // 5. 支付成功後的回調 (需要在你的支付成功邏輯中調用此函數)
+        function onPaymentSuccess() {
+            isPaymentCompleted = true;
+            allowExit = true;
         }
 
         // ==========================================
@@ -2686,217 +2865,217 @@ function formatPrice(price) {
         });
 
         // 點擊遮罩層關閉庫存超額彈窗
-document.getElementById('stockExceedModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeStockExceedModal();
-    }
-});
+        document.getElementById('stockExceedModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeStockExceedModal();
+            }
+        });
 
-// ESC鍵關閉庫存超額彈窗
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeStockExceedModal();
-    }
-});
-
-// ==========================================
-// 9. 发货截止时间倒计时
-// ==========================================
-function updateCountdown() {
-    const now = new Date();
-    const currentDay = now.getDay(); // 0=周日, 1=周一, ..., 6=周六
-
-    // 计算下一个周六23:59:59
-    let nextSaturday = new Date(now);
-    const daysUntilSaturday = (6 - currentDay + 7) % 7; // 距离周六还有几天
-
-    if (daysUntilSaturday === 0 && currentDay === 6) {
-        // 如果今天是周六
-        if (now.getHours() >= 23 && now.getMinutes() >= 59) {
-            // 已经过了截止时间，显示下周
-            nextSaturday.setDate(nextSaturday.getDate() + 7);
-        }
-    } else {
-        nextSaturday.setDate(nextSaturday.getDate() + daysUntilSaturday);
-    }
-
-    nextSaturday.setHours(23, 59, 59, 0);
-
-    // 计算发货日期（周日）
-    let shippingDate = new Date(nextSaturday);
-    shippingDate.setDate(shippingDate.getDate() + 1); // 周六+1天=周日
-
-    // 更新倒计时
-    const countdownElement = document.getElementById('cutoffCountdown');
-    const shippingDateElement = document.getElementById('shippingDate');
-
-    if (countdownElement && shippingDateElement) {
-        const diff = nextSaturday - now;
-
-        if (diff > 0) {
-            // 计算天数、小时、分钟、秒
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-            // 显示"x日x时x分x秒"格式
-            countdownElement.textContent = `${days}日${hours}時${minutes}分${seconds}秒`;
-
-            // 格式化发货日期
-            const options = { month: 'long', day: 'numeric', weekday: 'long' };
-            shippingDateElement.textContent = shippingDate.toLocaleDateString('zh-TW', options);
-        } else {
-            countdownElement.textContent = '已截止';
-            shippingDateElement.textContent = '下週日';
-        }
-    }
-}
-
-// 每秒更新倒计时
-setInterval(updateCountdown, 1000);
-// 页面加载时立即执行
-document.addEventListener('DOMContentLoaded', updateCountdown);
+        // ESC鍵關閉庫存超額彈窗
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeStockExceedModal();
+            }
+        });
 
         // ==========================================
-    //  2. 地址切換功能 (從這裡開始插入代碼 2)
-    // ==========================================
-    let isUsingBackupAddress = false; // 标记当前是否使用备用地址
+        // 9. 发货截止时间倒计时
+        // ==========================================
+        function updateCountdown() {
+            const now = new Date();
+            const currentDay = now.getDay(); // 0=周日, 1=周一, ..., 6=周六
 
-    // 显示地址切换确认弹窗
-    function showAddressToggleModal() {
-        const modal = document.getElementById('addressToggleModal');
-        const currentAddressDisplay = document.getElementById('currentAddressDisplay');
-        const newAddressDisplay = document.getElementById('newAddressDisplay');
-        const toggleText = document.getElementById('toggleAddressText');
+            // 计算下一个周六23:59:59
+            let nextSaturday = new Date(now);
+            const daysUntilSaturday = (6 - currentDay + 7) % 7; // 距离周六还有几天
 
-        // 获取 Thymeleaf 传递的地址数据
-        const mainAddress = /*[[${user.address}]]*/ '';
-        const backupAddress = /*[[${user.backupAddress}]]*/ '';
-
-        if (isUsingBackupAddress) {
-            currentAddressDisplay.textContent = backupAddress;
-            newAddressDisplay.textContent = mainAddress;
-        } else {
-            currentAddressDisplay.textContent = mainAddress;
-            newAddressDisplay.textContent = backupAddress;
-        }
-
-        if (modal) {
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-    }
-
-    // 关闭地址切换弹窗
-    function closeAddressToggleModal() {
-        const modal = document.getElementById('addressToggleModal');
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-    }
-
-// 确认切换地址
-function confirmAddressToggle() {
-    const expressDeliveryAddress = document.getElementById('expressDeliveryAddress');
-    const toggleText = document.getElementById('toggleAddressText');
-
-    const mainAddress = /*[[${user.address}]]*/ '';
-    const backupAddress = /*[[${user.backupAddress}]]*/ '';
-
-    isUsingBackupAddress = !isUsingBackupAddress;
-
-    if (isUsingBackupAddress) {
-        expressDeliveryAddress.innerHTML = `送至: <span style="color: var(--accent);">${backupAddress}</span>`;
-        toggleText.textContent = '改用主地址發貨';
-    } else {
-        expressDeliveryAddress.innerHTML = `送至: <span>${mainAddress}</span>`;
-        toggleText.textContent = '改用備用地址收貨';
-    }
-
-    // 关闭弹窗
-    closeAddressToggleModal();
-
-    // 显示居中成功提示
-    showCenteredSuccessMessage('已成功切換！');
-}
-
-// 显示居中成功提示（2秒后自动消失）
-function showCenteredSuccessMessage(message) {
-    // 创建提示元素
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        color: white;
-        padding: 1.5rem 3rem;
-        border-radius: 12px;
-        font-size: 1.2rem;
-        font-weight: 600;
-        box-shadow: 0 10px 40px rgba(40, 167, 69, 0.4);
-        z-index: 10004;
-        animation: slideUpFade 0.4s ease;
-        display: flex;
-        align-items: center;
-        gap: 0.8rem;
-    `;
-
-    toast.innerHTML = `
-        <i class="fas fa-check-circle" style="font-size: 1.5rem;"></i>
-        <span>${message}</span>
-    `;
-
-    // 添加动画样式
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideUpFade {
-            from {
-                opacity: 0;
-                transform: translate(-50%, -40%);
+            if (daysUntilSaturday === 0 && currentDay === 6) {
+                // 如果今天是周六
+                if (now.getHours() >= 23 && now.getMinutes() >= 59) {
+                    // 已经过了截止时间，显示下周
+                    nextSaturday.setDate(nextSaturday.getDate() + 7);
+                }
+            } else {
+                nextSaturday.setDate(nextSaturday.getDate() + daysUntilSaturday);
             }
-            to {
-                opacity: 1;
-                transform: translate(-50%, -50%);
+
+            nextSaturday.setHours(23, 59, 59, 0);
+
+            // 计算发货日期（周日）
+            let shippingDate = new Date(nextSaturday);
+            shippingDate.setDate(shippingDate.getDate() + 1); // 周六+1天=周日
+
+            // 更新倒计时
+            const countdownElement = document.getElementById('cutoffCountdown');
+            const shippingDateElement = document.getElementById('shippingDate');
+
+            if (countdownElement && shippingDateElement) {
+                const diff = nextSaturday - now;
+
+                if (diff > 0) {
+                    // 计算天数、小时、分钟、秒
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                    // 显示"x日x时x分x秒"格式
+                    countdownElement.textContent = `${days}日${hours}時${minutes}分${seconds}秒`;
+
+                    // 格式化发货日期
+                    const options = { month: 'long', day: 'numeric', weekday: 'long' };
+                    shippingDateElement.textContent = shippingDate.toLocaleDateString('zh-TW', options);
+                } else {
+                    countdownElement.textContent = '已截止';
+                    shippingDateElement.textContent = '下週日';
+                }
             }
         }
-    `;
-    document.head.appendChild(style);
 
-    document.body.appendChild(toast);
+        // 每秒更新倒计时
+        setInterval(updateCountdown, 1000);
+        // 页面加载时立即执行
+        document.addEventListener('DOMContentLoaded', updateCountdown);
 
-    // 2秒后淡出并移除
-    setTimeout(() => {
-        toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-        toast.style.opacity = '0';
-        toast.style.transform = 'translate(-50%, -60%)';
+        // ==========================================
+        //  2. 地址切換功能 (從這裡開始插入代碼 2)
+        // ==========================================
+        let isUsingBackupAddress = false; // 标记当前是否使用备用地址
 
-        setTimeout(() => {
-            toast.remove();
-            style.remove();
-        }, 300);
-    }, 2000);
-}
+        // 显示地址切换确认弹窗
+        function showAddressToggleModal() {
+            const modal = document.getElementById('addressToggleModal');
+            const currentAddressDisplay = document.getElementById('currentAddressDisplay');
+            const newAddressDisplay = document.getElementById('newAddressDisplay');
+            const toggleText = document.getElementById('toggleAddressText');
 
-    // 点击遮罩层关闭弹窗
-    document.getElementById('addressToggleModal')?.addEventListener('click', function (e) {
-        if (e.target === this) {
+            // 获取 Thymeleaf 传递的地址数据
+            const mainAddress = /*[[${user.address}]]*/ '';
+            const backupAddress = /*[[${user.backupAddress}]]*/ '';
+
+            if (isUsingBackupAddress) {
+                currentAddressDisplay.textContent = backupAddress;
+                newAddressDisplay.textContent = mainAddress;
+            } else {
+                currentAddressDisplay.textContent = mainAddress;
+                newAddressDisplay.textContent = backupAddress;
+            }
+
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        // 关闭地址切换弹窗
+        function closeAddressToggleModal() {
+            const modal = document.getElementById('addressToggleModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+
+        // 确认切换地址
+        function confirmAddressToggle() {
+            const expressDeliveryAddress = document.getElementById('expressDeliveryAddress');
+            const toggleText = document.getElementById('toggleAddressText');
+
+            const mainAddress = /*[[${user.address}]]*/ '';
+            const backupAddress = /*[[${user.backupAddress}]]*/ '';
+
+            isUsingBackupAddress = !isUsingBackupAddress;
+
+            if (isUsingBackupAddress) {
+                expressDeliveryAddress.innerHTML = `送至: <span style="color: var(--accent);">${backupAddress}</span>`;
+                toggleText.textContent = '改用主地址發貨';
+            } else {
+                expressDeliveryAddress.innerHTML = `送至: <span>${mainAddress}</span>`;
+                toggleText.textContent = '改用備用地址收貨';
+            }
+
+            // 关闭弹窗
             closeAddressToggleModal();
-        }
-    });
 
-    // ESC 键关闭弹窗
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-            const addressModal = document.getElementById('addressToggleModal');
-            if (addressModal && addressModal.style.display === 'flex') {
+            // 显示居中成功提示
+            showCenteredSuccessMessage('已成功切換！');
+        }
+
+        // 显示居中成功提示（2秒后自动消失）
+        function showCenteredSuccessMessage(message) {
+            // 创建提示元素
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 1.5rem 3rem;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    box-shadow: 0 10px 40px rgba(40, 167, 69, 0.4);
+    z-index: 10004;
+    animation: slideUpFade 0.4s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+`;
+
+            toast.innerHTML = `
+    <i class="fas fa-check-circle" style="font-size: 1.5rem;"></i>
+    <span>${message}</span>
+`;
+
+            // 添加动画样式
+            const style = document.createElement('style');
+            style.textContent = `
+    @keyframes slideUpFade {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -40%);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%);
+        }
+    }
+`;
+            document.head.appendChild(style);
+
+            document.body.appendChild(toast);
+
+            // 2秒后淡出并移除
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, -60%)';
+
+                setTimeout(() => {
+                    toast.remove();
+                    style.remove();
+                }, 300);
+            }, 2000);
+        }
+
+        // 点击遮罩层关闭弹窗
+        document.getElementById('addressToggleModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
                 closeAddressToggleModal();
             }
-        }
-    });
+        });
+
+        // ESC 键关闭弹窗
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const addressModal = document.getElementById('addressToggleModal');
+                if (addressModal && addressModal.style.display === 'flex') {
+                    closeAddressToggleModal();
+                }
+            }
+        });
 
     </script>
 </body>

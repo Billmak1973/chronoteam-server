@@ -60,6 +60,60 @@
         .empty-state { text-align: center; padding: 4rem 2rem; }
         .empty-state i { font-size: 4rem; color: #ddd; margin-bottom: 1rem; }
         .footer { background: var(--primary); color: rgba(255, 255, 255, 0.7); padding: 2rem; text-align: center; margin-top: 3rem; }
+
+        /* === 智能分页组件样式 === */
+        .pagination-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f1f3f5;
+        }
+        .page-btn {
+            padding: 0.6rem 1rem;
+            border: 1px solid #e9ecef;
+            background: white;
+            color: var(--primary);
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .page-btn:hover:not(.disabled) {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+            transform: translateY(-1px);
+        }
+        .page-btn.active {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+            font-weight: 600;
+            cursor: default;
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+        }
+        .page-btn.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+            background: #f8f9fa;
+            border-color: #e9ecef;
+        }
+        .page-ellipsis {
+            padding: 0.6rem 0.5rem;
+            color: var(--gray);
+            font-weight: bold;
+            letter-spacing: 2px;
+            user-select: none;
+        }
+
         @media (max-width: 900px) { .dashboard-container { flex-direction: column; } }
     </style>
 </head>
@@ -129,6 +183,46 @@
             <p style="color: var(--gray); margin-bottom: 1.5rem;">去瀏覽商品，您的瀏覽歷史將自動保存在這裡</p>
             <a href="/browse" class="btn btn-gold"><i class="fas fa-search"></i> 瀏覽商品</a>
         </div>
+
+        <!-- ==================== 智能分頁導航 ==================== -->
+        <!-- 只有当总页数大于1时才显示分页 -->
+        <div class="pagination-wrapper" th:if="${totalPages > 1}">
+
+            <!-- 上一頁按鈕 -->
+            <a th:href="@{/account/history(page=${currentPage - 1})}"
+               th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'"
+               th:if="${currentPage > 1}">
+                <i class="fas fa-chevron-left"></i> 上一頁
+            </a>
+            <span th:if="${currentPage == 1}" class="page-btn disabled">
+                <i class="fas fa-chevron-left"></i> 上一頁
+            </span>
+
+            <!-- 智能頁碼遍歷 (核心邏輯) -->
+            <th:block th:each="item : ${smartPages}">
+                <!-- 如果是省略號 "..." -->
+                <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
+
+                <!-- 如果是數字頁碼 -->
+                <a th:unless="${item.isEllipsis}"
+                   th:href="@{/account/history(page=${item.pageNumber})}"
+                   th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
+                   th:text="${item.pageNumber}">1</a>
+            </th:block>
+
+            <!-- 下一頁按鈕 -->
+            <a th:href="@{/account/history(page=${currentPage + 1})}"
+               th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
+               th:if="${currentPage < totalPages}">
+                下一頁 <i class="fas fa-chevron-right"></i>
+            </a>
+            <span th:if="${currentPage == totalPages}" class="page-btn disabled">
+                下一頁 <i class="fas fa-chevron-right"></i>
+            </span>
+
+        </div>
+        <!-- ==================== 智能分頁導航結束 ==================== -->
+
     </main>
 </div>
 <footer class="footer">

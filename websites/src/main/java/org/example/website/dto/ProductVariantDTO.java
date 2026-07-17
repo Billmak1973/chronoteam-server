@@ -20,4 +20,7 @@ public class ProductVariantDTO {
     private Double rating;       // 评分
     private Integer totalReviewCount; // 评论总数
     private BigDecimal totalScore;    // 总评分
+
+    private String brand;
+    private String category;
 }

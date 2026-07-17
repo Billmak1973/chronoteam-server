@@ -239,38 +239,104 @@ public class PageController {
 
 
     /**
-     *  新增：我的收藏頁面路由
+     *  新增：我的收藏頁面路由 (支援分頁)
      */
     @GetMapping("/account/favorites")
-    public String myFavorites(Model model) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    public String myFavorites(Model model,
+                              Authentication authentication,
+                              @RequestParam(defaultValue = "1") int page) { // Default to page 1
         String username = authentication.getName();
 
         // 【修改處 1】：使用 UserService 獲取 User 實體
         User user = userService.findByUsername(username);
 
         // 查詢當前用戶的收藏列表（按時間倒序）
-        List<Favorite> favorites = favoriteRepository.findByUser_UsernameOrderByCreatedAtDesc(username);
+        List<Favorite> allFavorites = favoriteRepository.findByUser_UsernameOrderByCreatedAtDesc(username);
+
+        // ================= 核心修正：內存分頁邏輯 =================
+        int size = 15; // 【需求】每頁顯示 15 條 (3列 * 5行)
+        int totalElements = allFavorites.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+
+        // 防止頁碼越界
+        if (page < 1) page = 1;
+        if (totalPages == 0) totalPages = 1; // 如果沒有數據，至少保持1頁防止報錯
+        if (page > totalPages) page = totalPages;
+
+        int fromIndex = (page - 1) * size;
+        int toIndex = Math.min(fromIndex + size, totalElements);
+
+        // 截取當前頁的數據
+        List<Favorite> pagedFavorites = new ArrayList<>();
+        if (fromIndex < totalElements) {
+            pagedFavorites = allFavorites.subList(fromIndex, toIndex);
+        }
+
+        // 6. 生成智能分頁列表 (1 ... 3, 4, 5 ... 10)
+        List<PageItem> smartPages = generateSmartPagination(page, totalPages);
+        // ================================================================
 
         // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
         model.addAttribute("user", user);
-        model.addAttribute("favorites", favorites);
+
+        // 傳遞分頁後的數據
+        model.addAttribute("favorites", pagedFavorites);
+
+        // 傳遞分頁相關變量
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("smartPages", smartPages);
 
         return "favorites";
     }
 
     @GetMapping("/account/history")
-    public String myHistory(Model model, Authentication authentication) {
+    public String myHistory(Model model,
+                            Authentication authentication,
+                            @RequestParam(defaultValue = "1") int page) { // Default to page 1
         String username = authentication.getName();
 
         // 【修改處 1】：使用 UserService 獲取 User 實體
         User user = userService.findByUsername(username);
 
-        List<ViewHistory> historyList = viewHistoryService.getUserHistory(username);
+        // 获取所有历史记录 (假设 Service 返回的是 List)
+        List<ViewHistory> allHistoryList = viewHistoryService.getUserHistory(username);
+
+        // ================= 核心修正：手动分页逻辑 =================
+        int size = 15; // 【需求】每页显示 15 条 (3列 * 5行)
+        int totalElements = allHistoryList.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+
+        // 防止页码越界
+        if (page < 1) page = 1;
+        if (totalPages == 0) totalPages = 1; // 如果没有数据，至少保持1页防止报错
+        if (page > totalPages) page = totalPages;
+
+        // 截取当前页的数据
+        int fromIndex = (page - 1) * size;
+        int toIndex = Math.min(fromIndex + size, totalElements);
+
+        // 确保索引有效
+        List<ViewHistory> pagedHistoryList = new ArrayList<>();
+        if (fromIndex < totalElements) {
+            pagedHistoryList = allHistoryList.subList(fromIndex, toIndex);
+        }
+
+        // 6. 生成智能分页列表 (1 ... 3, 4, 5 ... 10)
+        List<PageItem> smartPages = generateSmartPagination(page, totalPages);
+        // ================================================================
 
         // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
         model.addAttribute("user", user);
-        model.addAttribute("historyList", historyList);
+
+        // 传递分页后的数据
+        model.addAttribute("historyList", pagedHistoryList);
+
+        // 传递分页相关变量
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalElements", totalElements);
+        model.addAttribute("smartPages", smartPages);
 
         return "history";
     }
@@ -488,8 +554,57 @@ public class PageController {
         return "blocked-users";
     }
 
+    // ==========================================
+    // 內部類：用於智能分頁渲染 (如果之前沒加在 PageController，請加上)
+    // ==========================================
+    public static class PageItem {
+        private boolean isEllipsis;
+        private Integer pageNumber;
+
+        public PageItem(boolean isEllipsis, Integer pageNumber) {
+            this.isEllipsis = isEllipsis;
+            this.pageNumber = pageNumber;
+        }
+        public boolean isEllipsis() { return isEllipsis; }
+        public Integer getPageNumber() { return pageNumber; }
+    }
+
+    /**
+     * 生成智能分頁列表的核心算法
+     */
+    private List<PageItem> generateSmartPagination(int currentPage, int totalPages) {
+        List<PageItem> pages = new ArrayList<>();
+        if (totalPages <= 7) {
+            for (int i = 1; i <= totalPages; i++) {
+                pages.add(new PageItem(false, i));
+            }
+        } else {
+            pages.add(new PageItem(false, 1)); // 始終顯示第一頁
+            if (currentPage > 3) {
+                pages.add(new PageItem(true, null)); // 省略號
+            }
+            int start = Math.max(2, currentPage - 1);
+            int end = Math.min(totalPages - 1, currentPage + 1);
+            for (int i = start; i <= end; i++) {
+                pages.add(new PageItem(false, i));
+            }
+            if (currentPage < totalPages - 2) {
+                pages.add(new PageItem(true, null)); // 省略號
+            }
+            pages.add(new PageItem(false, totalPages)); // 始終顯示最後一頁
+        }
+        return pages;
+    }
+
+    /**
+     * 購物車頁面 (支援分頁 + 日期分組)
+     */
     @GetMapping("/cart/view")
-    public String viewCartPage(Model model, Authentication authentication) {
+    public String viewCartPage(
+            @RequestParam(defaultValue = "1") int page, // 【新增】當前頁碼
+            Model model,
+            Authentication authentication) {
+
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
             return "redirect:/";
         }
@@ -498,35 +613,49 @@ public class PageController {
         User user = userService.findByUsername(username);
         model.addAttribute("user", user);
 
-        // 獲取購物車數據
-        List<Cart> cartItems = cartService.getCartItems(username);
+        // 1. 獲取所有購物車數據
+        List<Cart> allCartItems = cartService.getCartItems(username);
         long cartCount = cartService.getCartCount(username);
 
-        // 計算總價
-        double totalAmount = cartItems.stream()
+        // 2. 計算總價 (基於所有選中商品，不受分頁影響，符合電商常規邏輯)
+        double totalAmount = allCartItems.stream()
                 .filter(Cart::getSelected)
                 .mapToDouble(item -> item.getPrice().doubleValue() * item.getQuantity())
                 .sum();
 
-        // ================= 核心修正：按日期分組並倒序排列 =================
-        Map<String, List<Cart>> groupedCartItems = cartItems.stream()
+        // ================= 核心修正：分頁 + 按日期分組 =================
+        int size = 20; // 【需求】每頁只加載 20 條數據
+        int totalElements = allCartItems.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+
+        // 防止頁碼越界
+        if (page < 1) page = 1;
+        if (page > totalPages && totalPages > 0) page = totalPages;
+
+        // 3. 先對所有商品按時間倒序排序
+        allCartItems.sort(Comparator.comparing(Cart::getCreatedAt).reversed());
+
+        // 4. 截取當前頁的數據
+        int fromIndex = (page - 1) * size;
+        int toIndex = Math.min(fromIndex + size, totalElements);
+        List<Cart> pagedCartItems = (totalElements > 0) ? allCartItems.subList(fromIndex, toIndex) : new ArrayList<>();
+
+        // 5. 【關鍵】僅對【當前頁的數據】進行日期分組
+        // 這樣即使分頁切斷了同一天的商品，當前頁也能正確顯示它所包含的日期標題，不會錯亂
+        Map<String, List<Cart>> groupedPagedCartItems = pagedCartItems.stream()
                 .collect(Collectors.groupingBy(
-                        // 1. 分組鍵：根據日期遠近格式化為不同字符串
                         item -> {
                             LocalDate date = item.getCreatedAt().toLocalDate();
                             LocalDate today = LocalDate.now();
-
                             if (date.getYear() == today.getYear() && date.getMonth() == today.getMonth()) {
-                                return date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")); // 本月：完整日期
+                                return date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
                             } else if (date.getYear() == today.getYear()) {
-                                return date.format(DateTimeFormatter.ofPattern("yyyy-MM"));   // 本年非本月：年月
+                                return date.format(DateTimeFormatter.ofPattern("yyyy-MM"));
                             } else {
-                                return String.valueOf(date.getYear());                        // 非本年：年份
+                                return String.valueOf(date.getYear());
                             }
                         },
-                        // 2. Map 工廠：【關鍵修復】明確指定泛型 <String, List<Cart>>，解決推斷衝突
                         () -> new TreeMap<String, List<Cart>>(Comparator.reverseOrder()),
-                        // 3. 組內排序：【關鍵修復】明確聲明 (List<Cart> list)，並使用 Comparator 簡化代碼
                         Collectors.collectingAndThen(
                                 Collectors.toList(),
                                 (List<Cart> list) -> {
@@ -535,13 +664,30 @@ public class PageController {
                                 }
                         )
                 ));
+
+        // 6. 生成智能分頁列表 (1 ... 3, 4, 5 ... 10)
+        List<PageItem> smartPages = generateSmartPagination(page, totalPages);
         // ================================================================
 
-        model.addAttribute("cartItems", cartItems);
+        // 傳遞分頁後的數據給前端
+        model.addAttribute("cartItems", pagedCartItems);
+        model.addAttribute("groupedCartItems", groupedPagedCartItems);
         model.addAttribute("totalAmount", totalAmount);
         model.addAttribute("cartCount", cartCount);
-        model.addAttribute("groupedCartItems", groupedCartItems);
 
-        return "cart-detail"; // 或者你的視圖名稱
+        // 傳遞分頁相關變量
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("smartPages", smartPages);
+
+        return "cart-detail";
+    }
+
+    /**
+     * 系統配置管理頁面
+     */
+    @GetMapping("/admin/config")
+    public String adminConfigPage(Model model) {
+        return "admin-config";
     }
 }

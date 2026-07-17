@@ -17,13 +17,58 @@
             margin: 2rem auto;
             padding: 0 1rem;
             gap: 2rem;
+            align-items: flex-start; /* 關鍵：防止子元素拉伸，讓 sticky 生效 */
         }
+
+        /*
+         * 【核心修復】側邊欄樣式
+         * 使用 sticky 定位 + 固定高度計算，確保它獨立於右側內容長度
+         */
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+
+            /* 1. 啟用黏性定位，距離頂部 100px 時開始固定 (根據 Navbar 高度調整) */
+            position: sticky;
+            top: 100px;
+
+            /* 2. 設定最大高度為視窗高度減去上下間距，防止溢出螢幕 */
+            max-height: calc(100vh - 120px);
+
+            /* 3. 當菜單過長時，允許側邊欄內部獨立滾動，不影響頁面整體滾動 */
+            overflow-y: auto;
+
+            /* 4. 隱藏預設滾動條但保留功能 (可選美化) */
+            scrollbar-width: thin;
+            scrollbar-color: var(--gold) transparent;
+        }
+
+        /* Webkit 瀏覽器滾動條美化 */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #e9ecef;
+            border-radius: 3px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--gold);
+        }
+
+        /* 主內容區樣式 */
         .main-content {
             flex: 1;
             background: white;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             padding: 2.5rem;
+            min-width: 0; /* 防止 flex 子項溢出 */
         }
 
         /* 頁面標題與副標題 */
@@ -53,7 +98,7 @@
             align-items: center;
             padding: 1.5rem;
             border-bottom: 1px solid var(--light);
-            transition: all 0.3s ease; /* 增加過渡效果以支持刪除動畫 */
+            transition: all 0.3s ease;
         }
         .cart-items-list .cart-item:last-child { border-bottom: none; }
         .cart-items-list .cart-item:hover { background: #f8f9fa; }
@@ -162,149 +207,218 @@
         }
 
         /* 響應式 */
-        @media (max-width: 900px) { .dashboard-container { flex-direction: column; } }
+        @media (max-width: 900px) {
+            .dashboard-container { flex-direction: column; }
+            /* 手機版取消 sticky，恢復自然流 */
+            .sidebar {
+                position: static;
+                max-height: none;
+                width: 100%;
+                margin-bottom: 2rem;
+            }
+        }
+
         @media (max-width: 768px) {
             .cart-items-list .cart-item { flex-direction: column; align-items: flex-start; }
             .item-image { width: 100%; height: 200px; margin-right: 0; margin-bottom: 1rem; }
             .item-actions { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; margin-top: 1rem; }
             .cart-summary { flex-direction: column; gap: 1.5rem; }
         }
-        /* 購物車刪除確認彈窗樣式 (新名稱) */
-.cart-remove-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-    backdrop-filter: blur(4px);
-}
 
-.cart-remove-modal {
-    background: white;
-    padding: 2.5rem 2rem;
-    border-radius: 16px;
-    width: 90%;
-    max-width: 420px;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    border-top: 5px solid var(--accent);
-}
+        /* 購物車刪除確認彈窗樣式 */
+        .cart-remove-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(4px);
+        }
 
-.cart-remove-modal .remove-modal-icon {
-    background: linear-gradient(135deg, #ffd89b 0%, #e94560 100%);
-    width: 70px;
-    height: 70px;
-    margin: 0 auto 1.5rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+        .cart-remove-modal {
+            background: white;
+            padding: 2.5rem 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid var(--accent);
+        }
 
-.cart-remove-modal .remove-modal-icon i {
-    font-size: 2rem;
-    color: white;
-}
+        .cart-remove-modal .remove-modal-icon {
+            background: linear-gradient(135deg, #ffd89b 0%, #e94560 100%);
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 1.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-.cart-remove-modal .remove-modal-title {
-    font-size: 1.5rem;
-    color: var(--primary);
-    margin-bottom: 1rem;
-    font-weight: 700;
-}
+        .cart-remove-modal .remove-modal-icon i {
+            font-size: 2rem;
+            color: white;
+        }
 
-.cart-remove-modal .remove-modal-message {
-    color: var(--gray);
-    font-size: 1rem;
-    line-height: 1.6;
-    margin-bottom: 2rem;
-}
+        .cart-remove-modal .remove-modal-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
 
-.cart-remove-modal .remove-modal-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-}
+        .cart-remove-modal .remove-modal-message {
+            color: var(--gray);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
 
-.cart-remove-modal .btn-cancel-remove {
-    background: #e9ecef;
-    color: var(--primary);
-    padding: 0.7rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s;
-}
+        .cart-remove-modal .remove-modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
 
-.cart-remove-modal .btn-cancel-remove:hover {
-    background: #dee2e6;
-    transform: translateY(-2px);
-}
+        .cart-remove-modal .btn-cancel-remove {
+            background: #e9ecef;
+            color: var(--primary);
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
 
-.cart-remove-modal .btn-confirm-remove {
-    background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%);
-    color: white;
-    padding: 0.7rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: all 0.3s;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
+        .cart-remove-modal .btn-cancel-remove:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
 
-.cart-remove-modal .btn-confirm-remove:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
-}
+        .cart-remove-modal .btn-confirm-remove {
+            background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%);
+            color: white;
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(50px) scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
+        .cart-remove-modal .btn-confirm-remove:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
 
         /* 日期分組標題 */
-.cart-date-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, var(--light) 0%, #f8f9fa 100%);
-    border-bottom: 2px solid var(--gold);
-    font-weight: 600;
-    color: var(--primary);
-    font-size: 1rem;
-    margin-top: 1.5rem;
-}
+        .cart-date-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, var(--light) 0%, #f8f9fa 100%);
+            border-bottom: 2px solid var(--gold);
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+            margin-top: 1.5rem;
+        }
 
-.cart-date-header:first-child {
-    margin-top: 0;
-}
+        .cart-date-header:first-child {
+            margin-top: 0;
+        }
 
-.cart-date-header i {
-    color: var(--gold);
-    font-size: 1.1rem;
-}
+        .cart-date-header i {
+            color: var(--gold);
+            font-size: 1.1rem;
+        }
 
-/* 分隔不同日期組的商品 */
-.cart-items-list > div:not(:last-child) {
-    margin-bottom: 1.5rem;
-}
+        /* 分隔不同日期組的商品 */
+        .cart-items-list > div:not(:last-child) {
+            margin-bottom: 1.5rem;
+        }
+
+        /* === 智能分頁組件樣式 === */
+        .pagination-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f1f3f5;
+        }
+
+        .page-btn {
+            padding: 0.6rem 1rem;
+            border: 1px solid #e9ecef;
+            background: white;
+            color: var(--primary);
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .page-btn:hover:not(.disabled) {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+            transform: translateY(-1px);
+        }
+
+        .page-btn.active {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+            font-weight: 600;
+            cursor: default;
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+        }
+
+        .page-btn.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+            background: #f8f9fa;
+            border-color: #e9ecef;
+        }
+
+        .page-ellipsis {
+            padding: 0.6rem 0.5rem;
+            color: var(--gray);
+            font-weight: bold;
+            letter-spacing: 2px;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
@@ -419,6 +533,43 @@
                 <i class="fas fa-search"></i> 瀏覽商品
             </a>
         </div>
+
+        <!-- ==================== 智能分頁導航 ==================== -->
+        <div class="pagination-wrapper" th:if="${totalPages > 1}">
+
+            <!-- 上一頁按鈕 -->
+            <a th:href="@{/cart/view(page=${currentPage - 1})}"
+               th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'"
+               th:if="${currentPage > 1}">
+                <i class="fas fa-chevron-left"></i> 上一頁
+            </a>
+            <span th:if="${currentPage == 1}" class="page-btn disabled">
+                <i class="fas fa-chevron-left"></i> 上一頁
+            </span>
+
+            <!-- 智能頁碼遍歷 (核心邏輯：渲染 1 ... 3, 4, 5 ... 10) -->
+            <th:block th:each="item : ${smartPages}">
+                <!-- 如果是省略號 "..." -->
+                <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
+
+                <!-- 如果是數字頁碼 -->
+                <a th:unless="${item.isEllipsis}"
+                   th:href="@{/cart/view(page=${item.pageNumber})}"
+                   th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
+                   th:text="${item.pageNumber}">1</a>
+            </th:block>
+
+            <!-- 下一頁按鈕 -->
+            <a th:href="@{/cart/view(page=${currentPage + 1})}"
+               th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
+               th:if="${currentPage < totalPages}">
+                下一頁 <i class="fas fa-chevron-right"></i>
+            </a>
+            <span th:if="${currentPage == totalPages}" class="page-btn disabled">
+                下一頁 <i class="fas fa-chevron-right"></i>
+            </span>
+        </div>
+        <!-- ==================== 智能分頁導航結束 ==================== -->
     </main>
 </div>
 

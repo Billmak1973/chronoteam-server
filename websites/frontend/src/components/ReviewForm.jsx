@@ -27,7 +27,7 @@ const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin })
     // 富文本編輯器格式化功能
     const formatText = (command, value = null) => {
         if (editorRef.current) {
-            editorRef.current.focus(); // 🟢 確保焦點在編輯器內，否則 execCommand 無效
+            editorRef.current.focus(); //  確保焦點在編輯器內，否則 execCommand 無效
             document.execCommand(command, false, value);
         }
     };
@@ -42,7 +42,7 @@ const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin })
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // 🟢 核心修復：直接從 DOM 讀取最終內容，不依賴 React State
+        //  核心修復：直接從 DOM 讀取最終內容，不依賴 React State
         const finalContent = editorRef.current ? editorRef.current.innerHTML.trim() : '';
         const textContent = editorRef.current ? editorRef.current.innerText.trim() : '';
 
@@ -205,7 +205,7 @@ const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin })
                                 cursor: 'pointer', borderRadius: '3px'
                             }}>⊞</button>
 
-                            {/* 🟢 修復 1：居中按鈕添加圖標 */}
+                            {/*  居中按鈕添加圖標 */}
                             <button type="button" onClick={() => formatText('justifyCenter')} title="居中" style={{
                                 padding: '4px 8px', border: '1px solid transparent', background: 'transparent',
                                 cursor: 'pointer', borderRadius: '3px'
@@ -223,7 +223,7 @@ const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin })
                         </div>
                     </div>
 
-                    {/* 🟢 修復 2：注入 CSS 處理無序列表溢出問題 */}
+                    {/* 注入 CSS 處理無序列表溢出問題 */}
                     <style>{`
                         .review-editor ul, .review-editor ol {
                             padding-left: 20px;
@@ -234,7 +234,7 @@ const ReviewForm = ({ productId, orderNo, onSuccess, currentUsername, isAdmin })
                         }
                     `}</style>
 
-                    {/* 🟢 核心修復 3：徹底移除 dangerouslySetInnerHTML，改為非受控組件！ */}
+                    {/* 徹底移除 dangerouslySetInnerHTML，改為非受控組件！ */}
                     <div
                         ref={editorRef}
                         contentEditable

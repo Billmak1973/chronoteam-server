@@ -61,4 +61,12 @@ public class Product {
 
     @Column(name = "total_score")
     private BigDecimal totalScore;
+
+    /**
+     * 首頁展示排序權重
+     * 數值越小越靠前 (例如: 1, 2, 3...)
+     * null 或 0 表示不在首頁推薦列表中
+     */
+    @Column(name = "home_display_order")
+    private Integer homeDisplayOrder;
 }
