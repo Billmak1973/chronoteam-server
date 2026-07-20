@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const ReplySection = ({
     reviewId,
@@ -28,10 +28,12 @@ const ReplySection = ({
     const [totalPages, setTotalPages] = useState(0);
     const [loading, setLoading] = useState(false);
     const [sort, setSort] = useState('newest');
+
     // 內部表單狀態
     const [replyText, setReplyText] = useState('');
     const [replyToUser, setReplyToUser] = useState('');
     const [replyParentId, setReplyParentId] = useState(null);
+
     // 禁言模態框狀態
     const [showBlockModal, setShowBlockModal] = useState(false);
     const [targetBlockUser, setTargetBlockUser] = useState('');
@@ -45,6 +47,11 @@ const ReplySection = ({
     const [deleteReason, setDeleteReason] = useState('inappropriate');
     const [customReason, setCustomReason] = useState('');
     const [deletingReplyId, setDeletingReplyId] = useState(null);
+
+    // ==========================================
+    // 【新增】用於記錄管理員當前會話中已封禁的用戶
+    // ==========================================
+    const adminBannedUsersRef = useRef(new Set());
 
     // ==========================================
     // 🛡️ 兜底邏輯：確保關閉管理員權限彈窗的全局函數存在
@@ -298,6 +305,9 @@ const ReplySection = ({
             const params = new URLSearchParams();
             params.append('durationMinutes', totalMinutes);
             params.append('reason', '管理員禁言');
+            params.append('reviewId', reply.id);
+            params.append('reviewContent', reply.content);
+
             try {
                 const response = await fetch(
                     `/api/user/${targetBlockUser}/toggle-block?${params}`,
@@ -305,19 +315,20 @@ const ReplySection = ({
                 );
                 const result = await response.json();
                 if (response.ok) {
-                    notify(`已全局禁言用戶 ${blockValue} ${blockUnit === 'day' ? '天' : blockUnit === 'week' ? '週' : '月'}`);
+                    notify(`✅ 已全局禁言用戶 ${blockValue} ${blockUnit === 'day' ? '天' : blockUnit === 'week' ? '週' : '月'}`);
                     // 調用父組件的 onBlockUser 更新共享狀態
                     await onBlockUser(targetBlockUser, true);
                 } else {
-                    notify(' ' + result.message, true);
+                    notify('❌ ' + result.message, true);
                 }
             } catch (error) {
-                notify(' 網絡錯誤', true);
+                notify('❌ 網絡錯誤', true);
             }
         }
         setShowBlockModal(false);
     };
 
+    // 【修改】確認封禁 (選時長)
     const handleConfirmBlock = () => {
         const val = parseInt(blockValue);
         if (!val || val <= 0) {
@@ -325,6 +336,11 @@ const ReplySection = ({
             return;
         }
         confirmBlock(val);
+
+        // 【新增】記錄封禁，以便下次檢查
+        if (isAdmin && targetBlockUser) {
+            adminBannedUsersRef.current.add(targetBlockUser);
+        }
     };
 
     // ==========================================
@@ -347,15 +363,29 @@ const ReplySection = ({
         if (result.success) {
             notify('✅ 已解除禁言');
         } else {
-            notify(' ' + result.message, true);
+            notify('❌ ' + result.message, true);
         }
     };
 
-    // 【禁止改動下面的代碼，以免傳出空值】普通用戶禁言時，直接傳入 targetUsername，避免 setState 非同步導致的空值問題
+    // 【修改】禁言按鈕點擊處理
     const handleBlockClick = (targetUsername) => {
         setTargetBlockUser(targetUsername); // 僅用於管理員模態框顯示
+
         if (isAdmin) {
-            setShowBlockModal(true);
+            // 1. 檢查該用戶是否已經被封禁過 (這裡檢查本地記錄，實際應查後端)
+            const isAlreadyBanned = adminBannedUsersRef.current.has(targetUsername);
+
+            if (isAlreadyBanned) {
+                // 2. 如果已封禁，彈出確認框 (復用 adminPermissionModal)
+                const modal = document.getElementById('adminPermissionModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                }
+            } else {
+                // 3. 如果未封禁，直接彈出選時長模態框
+                setShowBlockModal(true);
+            }
         } else {
             // 普通用戶直接調用父組件的禁言函數
             onBlockUser(targetUsername, true).then(result => {
@@ -366,6 +396,21 @@ const ReplySection = ({
                 }
             });
         }
+    };
+
+    // 【新增】確認再次封禁的函數 (被 adminPermissionModal 的按鈕調用)
+    window.confirmRepeatBan = () => {
+        if (typeof window.closeAdminPermissionModal === 'function') {
+            window.closeAdminPermissionModal();
+        } else {
+            const modal = document.getElementById('adminPermissionModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+        // 確認後，彈出選時長模態框
+        setShowBlockModal(true);
     };
 
     //  管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗) 不是react自帶的
@@ -474,7 +519,6 @@ const ReplySection = ({
                                             <button className="reply-action-btn" onClick={async () => {
                                                 // 1. 登錄檢查
                                                 if (!currentUsername || currentUsername === 'anonymousUser') {
-                                                    //  【修改這裡】：替換掉原本的 alert
                                                     if (typeof window.showLoginRequiredModal === 'function') {
                                                         window.showLoginRequiredModal();
                                                     }
@@ -505,30 +549,44 @@ const ReplySection = ({
                                             }}>
                                                 <i className="fas fa-reply"></i> 回復
                                             </button>
+
                                             {(reply.customer.username === currentUsername || isAdmin) && (
                                                 <button className="reply-action-btn delete" onClick={() => handleDeleteReply(reply.id)}>
                                                     <i className="fas fa-trash-alt"></i> 刪除
                                                 </button>
                                             )}
-                                            {/* 禁言/解除禁言按鈕：使用父組件傳來的共享 blockedUsers 狀態 */}
+
+                                            {/* 【核心修改】：樓中樓的禁言按鈕渲染邏輯 */}
                                             {currentUsername && currentUsername !== 'anonymousUser' && reply.customer.username !== currentUsername && (
-                                                blockedUsers && blockedUsers.includes(reply.customer.username) ? (
-                                                    <button
-                                                        className="reply-action-btn btn-unblock"
-                                                        onClick={() => handleUnblock(reply.customer.username)}
-                                                        title="解除禁言"
-                                                        style={{ color: '#28a745', borderColor: '#28a745' }}
-                                                    >
-                                                        <i className="fas fa-unlock"></i> 解除禁言
-                                                    </button>
-                                                ) : (
+                                                isAdmin ? (
+                                                    // 管理員永遠顯示「禁言」按鈕
                                                     <button
                                                         className="reply-action-btn btn-ban"
                                                         onClick={() => handleBlockClick(reply.customer.username)}
-                                                        title={isAdmin ? "全局禁言" : "雙向禁言"}
+                                                        title="全局禁言"
                                                     >
                                                         <i className="fas fa-ban"></i> 禁言
                                                     </button>
+                                                ) : (
+                                                    // 普通用戶邏輯：根據 blockedUsers 狀態顯示「禁言」或「解除禁言」
+                                                    blockedUsers && blockedUsers.includes(reply.customer.username) ? (
+                                                        <button
+                                                            className="reply-action-btn btn-unblock"
+                                                            onClick={() => handleUnblock(reply.customer.username)}
+                                                            title="解除禁言"
+                                                            style={{ color: '#28a745', borderColor: '#28a745' }}
+                                                        >
+                                                            <i className="fas fa-unlock"></i> 解除禁言
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            className="reply-action-btn btn-ban"
+                                                            onClick={() => handleBlockClick(reply.customer.username)}
+                                                            title="雙向禁言"
+                                                        >
+                                                            <i className="fas fa-ban"></i> 禁言
+                                                        </button>
+                                                    )
                                                 )
                                             )}
 
@@ -551,7 +609,7 @@ const ReplySection = ({
                                             {currentUsername && isAdmin && (
                                                 <button
                                                     className="reply-action-btn btn-blacklist"
-                                                    onClick={() => handleBlacklist(reply.customer.username)} //調用真實函數
+                                                    onClick={() => handleBlacklist(reply.customer.username)}
                                                     title="永久拉黑該用戶"
                                                 >
                                                     <i className="fas fa-user-slash"></i> 永久拉黑

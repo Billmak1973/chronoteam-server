@@ -1,237 +1,1600 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChronoTeam | 專業二手名錶交易平台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!--  1. 引入公共 CSS (包含导航栏、按钮、弹窗、购物车等所有公共样式) -->
+    <!-- 1. 引入公共 CSS -->
     <link rel="stylesheet" href="/css/common.css">
-
-    <!--  2. 首页专属 CSS (只保留 Hero、搜索栏、商品卡片等首页特有样式) -->
     <style>
-        /* Hero 區域 */
-        .hero { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; padding: 4rem 2rem; text-align: center; }
-        .hero h1 { font-size: 2.5rem; margin-bottom: 1rem; background: linear-gradient(to right, #fff, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .hero p { font-size: 1.2rem; opacity: 0.9; margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+        /* === 全局晚上模式背景 === */
+        body.night-mode {
+            background: linear-gradient(180deg, #0a0e27 0%, #0f1535 50%, #16213e 100%);
+            background-attachment: fixed;
+        }
 
-        /* 搜索欄 */
-        .search-bar { background: white; padding: 2rem; border-radius: 12px; max-width: 800px; margin: -2rem auto 2rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); position: relative; z-index: 10; }
-        .search-form { display: flex; gap: 1rem; flex-wrap: wrap; }
-        .search-form input, .search-form select { flex: 1; min-width: 150px; padding: 0.8rem 1rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; transition: border-color 0.3s; }
-        .search-form input:focus, .search-form select:focus { outline: none; border-color: var(--gold); }
-        .search-form .btn { padding: 0.8rem 2rem; white-space: nowrap; }
+        /* === Hero 區域 === */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
 
-        /* 分類快捷入口 */
-        .categories { padding: 3rem 2rem; max-width: 1200px; margin: 0 auto; }
-        .section-title { text-align: center; margin-bottom: 2rem; color: var(--primary); position: relative; }
-        .section-title::after { content: ''; display: block; width: 60px; height: 3px; background: var(--gold); margin: 0.5rem auto; border-radius: 2px; }
-        .category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; }
-        .category-card { background: white; padding: 1.5rem 1rem; border-radius: 10px; text-align: center; cursor: pointer; transition: all 0.3s; border: 2px solid transparent; }
-        .category-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1); }
-        .category-card i { font-size: 2rem; color: var(--gold); margin-bottom: 0.5rem; }
-        .category-card span { font-weight: 500; color: var(--primary); }
+        /* 晚上模式 - Hero 星空背景 */
+        body.night-mode .hero {
+            background: linear-gradient(135deg, #0a0e27 0%, #16213e 100%);
+        }
 
-        /* 熱門商品 */
-        .featured { background: white; padding: 3rem 2rem; }
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; max-width: 1200px; margin: 0 auto; }
-        .product-card { background: var(--light); border-radius: 12px; overflow: hidden; transition: transform 0.3s; border: 1px solid #eee; }
-        .product-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
-        .product-img { height: 200px; background: linear-gradient(135deg, #f5f5f5, #e9ecef); display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        .product-img img { width: 100%; height: 100%; object-fit: cover; }
-        .product-info { padding: 1rem; }
-        .product-brand { color: var(--gold); font-weight: 600; font-size: 0.9rem; text-transform: uppercase; }
-        .product-name { font-weight: 600; margin: 0.3rem 0; color: var(--primary); }
-        .product-price { color: var(--accent); font-size: 1.3rem; font-weight: 700; margin: 0.5rem 0; }
-        .product-condition { display: inline-block; padding: 0.2rem 0.6rem; background: #e9ecef; border-radius: 4px; font-size: 0.8rem; color: var(--gray); margin-bottom: 0.8rem; }
-        .product-actions { display: flex; gap: 0.5rem; }
-        .product-actions .btn { flex: 1; justify-content: center; padding: 0.5rem; font-size: 0.9rem; }
+        body.night-mode .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(2px 2px at 50px 30px, #ffd700, transparent),
+                radial-gradient(1px 1px at 100px 80px, #00d4ff, transparent),
+                radial-gradient(2px 2px at 200px 50px, #ffd700, transparent),
+                radial-gradient(1px 1px at 300px 100px, #00d4ff, transparent),
+                radial-gradient(2px 2px at 400px 60px, #ffd700, transparent);
+            background-repeat: repeat;
+            background-size: 500px 200px;
+            opacity: 0.4;
+            animation: starsTwinkle 5s ease-in-out infinite;
+        }
 
-        /* 平台特色 */
-        .features { padding: 4rem 2rem; background: var(--secondary); color: white; text-align: center; }
-        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; max-width: 1000px; margin: 0 auto; }
-        .feature-item i { font-size: 2.5rem; color: var(--gold); margin-bottom: 1rem; }
-        .feature-item h3 { margin-bottom: 0.5rem; }
-        .feature-item p { opacity: 0.8; font-size: 0.95rem; }
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #fff, var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            z-index: 1;
+        }
 
-        /* 頁腳 */
-        .footer { background: var(--primary); color: rgba(255, 255, 255, 0.7); padding: 3rem 2rem 1rem; text-align: center; }
-        .footer-links { display: flex; justify-content: center; gap: 2rem; margin: 1.5rem 0; flex-wrap: wrap; }
-        .footer-links a { color: rgba(255, 255, 255, 0.9); text-decoration: none; transition: color 0.3s; }
-        .footer-links a:hover { color: var(--gold); }
-        .copyright { border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1rem; font-size: 0.9rem; }
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            z-index: 1;
+        }
 
-        /* 首页专属响应式 */
+        /* === 搜索欄 === */
+        .search-bar {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 800px;
+            margin: -2rem auto 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            position: relative;
+            z-index: 10;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .search-form input,
+        .search-form select {
+            flex: 1;
+            min-width: 150px;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .search-form input:focus,
+        .search-form select:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        .search-form .btn {
+            padding: 0.8rem 2rem;
+            white-space: nowrap;
+        }
+
+        /* === 分類快捷入口 === */
+        .categories {
+            padding: 3rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--primary);
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 3px;
+            background: var(--gold);
+            margin: 0.5rem auto;
+            border-radius: 2px;
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+
+        .category-card {
+            background: white;
+            padding: 1.5rem 1rem;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .category-card:hover {
+            border-color: var(--gold);
+            transform: translateY(-4px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .category-card i {
+            font-size: 2rem;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .category-card span {
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        /* ========================================== */
+        /* ========== 晚上模式 - 搜索欄和分類區域 ========== */
+        /* ========================================== */
+
+        /* 晚上模式 - 搜索欄樣式 */
+        body.night-mode .search-bar {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3), 0 0 60px rgba(0, 212, 255, 0.1);
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 晚上模式 - 搜索欄星星裝飾 */
+        body.night-mode .search-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(1px 1px at 30px 20px, #ffd700, transparent),
+                radial-gradient(1px 1px at 80px 50px, #00d4ff, transparent),
+                radial-gradient(1px 1px at 150px 30px, #ffd700, transparent),
+                radial-gradient(1px 1px at 200px 60px, #7b2cbf, transparent),
+                radial-gradient(1px 1px at 280px 40px, #00d4ff, transparent),
+                radial-gradient(1px 1px at 350px 70px, #ffd700, transparent);
+            background-repeat: repeat;
+            background-size: 400px 100px;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        body.night-mode .search-form input,
+        body.night-mode .search-form select {
+            background: rgba(10, 14, 39, 0.9);
+            border: 2px solid rgba(0, 212, 255, 0.4);
+            color: #e0e0e0;
+            position: relative;
+            z-index: 1;
+        }
+
+        body.night-mode .search-form input:focus,
+        body.night-mode .search-form select:focus {
+            border-color: #00d4ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+
+        body.night-mode .search-form input::placeholder {
+            color: rgba(224, 224, 224, 0.6);
+        }
+
+        body.night-mode .search-form .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #7b2cbf);
+            border: none;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.4);
+            position: relative;
+            z-index: 1;
+        }
+
+        body.night-mode .search-form .btn-primary:hover {
+            box-shadow: 0 6px 25px rgba(0, 212, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        /* 晚上模式 - 分類區域樣式 */
+        body.night-mode .categories {
+            background: linear-gradient(180deg, rgba(22, 33, 62, 0.95) 0%, rgba(10, 14, 39, 0.98) 100%);
+            border-radius: 20px;
+            margin: 2rem auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            padding: 3rem 2rem;
+        }
+
+        body.night-mode .categories .section-title {
+            color: white;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+
+        body.night-mode .categories .section-title::after {
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf, #ffd700);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        body.night-mode .category-card {
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        body.night-mode .category-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        body.night-mode .category-card:hover::before {
+            opacity: 1;
+        }
+
+        body.night-mode .category-card i {
+            color: #00d4ff;
+            text-shadow: 0 0 15px rgba(0, 212, 255, 0.6);
+            position: relative;
+            z-index: 1;
+        }
+
+        body.night-mode .category-card span {
+            color: #e0e0e0;
+            position: relative;
+            z-index: 1;
+        }
+
+        body.night-mode .category-card:hover {
+            border-color: #00d4ff;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.5), 0 10px 40px rgba(0, 0, 0, 0.4);
+            transform: translateY(-6px);
+        }
+
+        /* === 熱門商品 (基礎卡片樣式) === */
+        .featured {
+            background: white;
+            padding: 3rem 2rem;
+            transition: all 0.5s ease;
+        }
+
+        .product-card {
+            background: var(--light);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s;
+            border: 1px solid #eee;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .product-img {
+            height: 200px;
+            background: linear-gradient(135deg, #f5f5f5, #e9ecef);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .product-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 1rem;
+        }
+
+        .product-brand {
+            color: var(--gold);
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .product-name {
+            font-weight: 600;
+            margin: 0.3rem 0;
+            color: var(--primary);
+        }
+
+        .product-price {
+            color: var(--accent);
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+
+        .product-condition {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--gray);
+            margin-bottom: 0.8rem;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .product-actions .btn {
+            flex: 1;
+            justify-content: center;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        /* === 首頁輪播專用樣式 === */
+        .carousel-wrapper {
+            position: relative;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        .carousel-track-container {
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: 1.5rem;
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform;
+        }
+
+        .carousel-slide {
+            flex: 0 0 calc(25% - 1.125rem);
+            min-width: 280px;
+        }
+
+        @media (max-width: 1024px) {
+            .carousel-slide {
+                flex: 0 0 calc(33.333% - 1rem);
+            }
+        }
+
         @media (max-width: 768px) {
-            .hero h1 { font-size: 2rem; }
-            .search-form { flex-direction: column; }
-            .search-form .btn { width: 100%; }
+            .carousel-slide {
+                flex: 0 0 calc(50% - 0.75rem);
+            }
+
+            .carousel-wrapper {
+                padding: 0 30px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .carousel-slide {
+                flex: 0 0 100%;
+            }
+        }
+
+        .carousel-btn {
+            position: absolute;
+            top: 40%;
+            transform: translateY(-50%);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: white;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            transition: all 0.3s;
+        }
+
+        .carousel-btn:hover {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .prev-btn {
+            left: 0;
+        }
+
+        .next-btn {
+            right: 0;
+        }
+
+        /* === 平台特色 === */
+        .features {
+            padding: 4rem 2rem;
+            background: var(--secondary);
+            color: white;
+            text-align: center;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .feature-item i {
+            font-size: 2.5rem;
+            color: var(--gold);
+            margin-bottom: 1rem;
+        }
+
+        .feature-item h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-item p {
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+
+        /* === 頁腳 === */
+        .footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 3rem 2rem 1rem;
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--gold);
+        }
+
+        .copyright {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .search-form {
+                flex-direction: column;
+            }
+
+            .search-form .btn {
+                width: 100%;
+            }
+        }
+
+        /* ========================================== */
+        /* ========== 白天主題 - 金色奢華 ========== */
+        /* ========================================== */
+
+        /* 整體區域背景 */
+        .featured.day-theme {
+            background: linear-gradient(180deg, #fff9f0 0%, #fff 100%);
+            position: relative;
+        }
+
+        .featured.day-theme::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(212, 175, 55, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        /* 白天主題 - 裝飾圖案（左側） */
+        .featured.day-theme .decoration-left {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 150px;
+            height: 150px;
+            opacity: 0.15;
+            background: radial-gradient(circle, #d4af37 0%, transparent 70%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: #d4af37;
+            z-index: 0;
+        }
+
+        /* 白天主題 - 裝飾圖案（右側） */
+        .featured.day-theme .decoration-right {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 150px;
+            height: 150px;
+            opacity: 0.15;
+            background: radial-gradient(circle, #d4af37 0%, transparent 70%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: #d4af37;
+            z-index: 0;
+        }
+
+        /* 白天主題卡片 */
+        .product-card.day-theme {
+            position: relative;
+            z-index: 1;
+            border: 2px solid transparent;
+            background: linear-gradient(white, white) padding-box,
+                linear-gradient(135deg, #f5e6c8 0%, #d4af37 50%, #f5e6c8 100%) border-box;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.1);
+        }
+
+        .product-card.day-theme::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #d4af37, transparent);
+            animation: dayShine 3s infinite;
+        }
+
+        .product-card.day-theme:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(212, 175, 55, 0.3);
+        }
+
+        @keyframes dayShine {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        /* 白天主題 - 四個角的金色裝飾 */
+        .product-card.day-theme .corner-decoration {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 2px solid #d4af37;
+            opacity: 0.6;
+            z-index: 2;
+        }
+
+        .product-card.day-theme .corner-top-left {
+            top: 10px;
+            left: 10px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .product-card.day-theme .corner-top-right {
+            top: 10px;
+            right: 10px;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .product-card.day-theme .corner-bottom-left {
+            bottom: 10px;
+            left: 10px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .product-card.day-theme .corner-bottom-right {
+            bottom: 10px;
+            right: 10px;
+            border-left: none;
+            border-top: none;
+        }
+
+        /* 白天主題 - 按鈕樣式 */
+        .featured.day-theme .carousel-btn {
+            background: white;
+            border: 2px solid #d4af37;
+            color: #d4af37;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+        }
+
+        .featured.day-theme .carousel-btn:hover {
+            background: #d4af37;
+            color: white;
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        /* 白天主題 - 查看更多按鈕 */
+        .featured.day-theme .view-more-container {
+            text-align: center;
+            margin-top: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .featured.day-theme .view-more-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.875rem 2rem;
+            background: white;
+            border: 2px solid #d4af37;
+            color: #d4af37;
+            border-radius: 50px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+        }
+
+        .featured.day-theme .view-more-btn:hover {
+            background: #d4af37;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        /* 白天主題 - 標題樣式 */
+        .featured.day-theme .section-title {
+            color: var(--primary);
+            position: relative;
+            z-index: 1;
+        }
+
+        .featured.day-theme .section-title i {
+            color: #d4af37;
+            animation: sunPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes sunPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+        }
+
+        /* ========================================== */
+        /* ========== 晚上主題 - 科技霓虹 ========== */
+        /* ========================================== */
+
+        /* 整體區域背景 */
+        .featured.night-theme {
+            background: linear-gradient(180deg, #0a0e27 0%, #1a1a2e 50%, #16213e 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 晚上主題 - 星空背景效果 */
+        .featured.night-theme::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, #00d4ff, transparent),
+                radial-gradient(2px 2px at 40px 70px, rgba(0, 212, 255, 0.8), transparent),
+                radial-gradient(2px 2px at 50px 160px, #7b2cbf, transparent),
+                radial-gradient(2px 2px at 90px 40px, #00d4ff, transparent),
+                radial-gradient(2px 2px at 130px 80px, rgba(0, 212, 255, 0.8), transparent),
+                radial-gradient(2px 2px at 160px 120px, #7b2cbf, transparent);
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            opacity: 0.3;
+            animation: starsTwinkle 5s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        /* 修改星星動畫 */
+        @keyframes starTwinkle {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(1);
+                filter: brightness(0.5);
+                /* 暗黃色 */
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.3);
+                filter: brightness(1.3);
+                /* 明黃色 */
+            }
+        }
+
+        /* 晚上主題 - 左側裝飾（發光月亮） */
+        .featured.night-theme .decoration-left {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 0;
+        }
+
+        .featured.night-theme .decoration-left::before {
+            content: '\f186';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 400;
+            font-size: 8rem;
+            color: #00d4ff;
+            opacity: 0.15;
+            filter: drop-shadow(0 0 30px rgba(0, 212, 255, 0.5));
+            animation: moonGlow 4s ease-in-out infinite;
+        }
+
+        @keyframes moonGlow {
+
+            0%,
+            100% {
+                filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.3));
+                transform: translateY(-50%) scale(1);
+            }
+
+            50% {
+                filter: drop-shadow(0 0 40px rgba(0, 212, 255, 0.6));
+                transform: translateY(-50%) scale(1.05);
+            }
+        }
+
+        /* 晚上主題 - 右側裝飾（發光星球） */
+        .featured.night-theme .decoration-right {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 200px;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 0;
+        }
+
+        .featured.night-theme .decoration-right::before {
+            content: '\f0d7';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 8rem;
+            color: #7b2cbf;
+            opacity: 0.15;
+            filter: drop-shadow(0 0 30px rgba(123, 44, 191, 0.5));
+            animation: planetRotate 20s linear infinite;
+        }
+
+        @keyframes planetRotate {
+            from {
+                transform: translateY(-50%) rotate(0deg);
+            }
+
+            to {
+                transform: translateY(-50%) rotate(360deg);
+            }
+        }
+
+        /* 晚上主題卡片 */
+        .product-card.night-theme {
+            position: relative;
+            z-index: 1;
+            border: 2px solid transparent;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.2);
+        }
+
+        .product-card.night-theme::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #00d4ff, #7b2cbf, #00d4ff);
+            background-size: 400% 400%;
+            z-index: -1;
+            animation: nightGlow 8s ease infinite;
+            border-radius: 14px;
+        }
+
+        @keyframes nightGlow {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .product-card.night-theme .product-info {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+
+        .product-card.night-theme .product-img {
+            background: linear-gradient(135deg, #0f0f1e, #1a1a3e);
+        }
+
+        .product-card.night-theme:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 0 50px rgba(0, 212, 255, 0.5),
+                0 0 100px rgba(123, 44, 191, 0.3);
+        }
+
+        /* 晚上主題 - 四個發光點 */
+        .product-card.night-theme .glow-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00d4ff;
+            box-shadow: 0 0 10px #00d4ff,
+                0 0 20px #00d4ff,
+                0 0 30px #00d4ff;
+            z-index: 2;
+        }
+
+        .product-card.night-theme .glow-dot:nth-child(1) {
+            top: 15px;
+            left: 15px;
+            animation: pulse 2s infinite;
+        }
+
+        .product-card.night-theme .glow-dot:nth-child(2) {
+            top: 15px;
+            right: 15px;
+            animation: pulse 2s infinite 0.5s;
+        }
+
+        .product-card.night-theme .glow-dot:nth-child(3) {
+            bottom: 15px;
+            left: 15px;
+            animation: pulse 2s infinite 1s;
+        }
+
+        .product-card.night-theme .glow-dot:nth-child(4) {
+            bottom: 15px;
+            right: 15px;
+            animation: pulse 2s infinite 1.5s;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+        }
+
+        /* 晚上主題 - 按鈕樣式 */
+        .featured.night-theme .carousel-btn {
+            background: rgba(0, 212, 255, 0.1);
+            border: 2px solid #00d4ff;
+            color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .featured.night-theme .carousel-btn:hover {
+            background: #00d4ff;
+            color: #1a1a2e;
+            box-shadow: 0 0 40px rgba(0, 212, 255, 0.6);
+        }
+
+        /* 晚上主題 - 查看更多按鈕 */
+        .featured.night-theme .view-more-container {
+            text-align: center;
+            margin-top: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .featured.night-theme .view-more-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.875rem 2rem;
+            background: transparent;
+            border: 2px solid #00d4ff;
+            color: #00d4ff;
+            border-radius: 50px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .featured.night-theme .view-more-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .featured.night-theme .view-more-btn:hover::before {
+            left: 100%;
+        }
+
+        .featured.night-theme .view-more-btn:hover {
+            background: #00d4ff;
+            color: #1a1a2e;
+            transform: translateY(-2px);
+            box-shadow: 0 0 40px rgba(0, 212, 255, 0.6);
+        }
+
+        /* 晚上主題 - 標題樣式 */
+        .featured.night-theme .section-title {
+            color: white;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+        }
+
+        .featured.night-theme .section-title i {
+            color: #00d4ff;
+            animation: neonFlicker 2s ease-in-out infinite;
+        }
+
+        @keyframes neonFlicker {
+
+            0%,
+            100% {
+                opacity: 1;
+                text-shadow: 0 0 20px rgba(0, 212, 255, 0.8);
+            }
+
+            50% {
+                opacity: 0.9;
+                text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+            }
+        }
+
+        /* 晚上主題 - 卡片內部文字顏色 */
+        .product-card.night-theme .product-brand,
+        .product-card.night-theme .product-name {
+            color: #e0e0e0;
+        }
+
+        .product-card.night-theme .product-price {
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .product-card.night-theme .product-condition {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .product-card.night-theme .btn-outline {
+            background: transparent;
+            border: 2px solid #00d4ff;
+            color: #00d4ff;
+        }
+
+        .product-card.night-theme .btn-outline:hover {
+            background: #00d4ff;
+            color: #1a1a2e;
+        }
+
+        .product-card.night-theme .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #7b2cbf);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .product-card.night-theme .btn-primary:hover {
+            box-shadow: 0 6px 20px rgba(0, 212, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* ========================================== */
+        /* ========== 晚上模式裝飾元素 ========== */
+        /* ========================================== */
+
+        /* 晚上模式裝飾元素樣式 */
+        .night-decorations {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .deco-moon {
+            position: absolute;
+            top: 5%;
+            right: 10%;
+            animation: moonFloat 6s ease-in-out infinite;
+        }
+
+        /* 修改月亮動畫 */
+        @keyframes moonFloat {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+                filter: brightness(0.6);
+                /* 暗黃色 */
+            }
+
+            50% {
+                transform: translateY(-20px) rotate(5deg);
+                filter: brightness(1.2);
+                /* 明黃色 */
+            }
+        }
+
+        .deco-star {
+            position: absolute;
+            animation: starTwinkle 3s ease-in-out infinite;
+        }
+
+        @keyframes starTwinkle {
+
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(1.2);
+            }
+        }
+
+        .deco-clock {
+            position: absolute;
+            animation: clockRotate 20s linear infinite;
+        }
+
+        @keyframes clockRotate {
+            0% {
+                transform: rotate(0deg);
+                filter: brightness(0.6);
+                /* 暗黃色 */
+            }
+
+            50% {
+                filter: brightness(1.2);
+                /* 明黃色 */
+            }
+
+            100% {
+                transform: rotate(360deg);
+                filter: brightness(0.6);
+                /* 暗黃色 */
+            }
         }
     </style>
 </head>
 
-<body>
+<body th:classappend="${cardTheme == 'night'} ? 'night-mode' : ''">
 
-<!--  3. 引入公共导航栏 (删除了原本 50 多行的 nav 代码) -->
-<div th:replace="~{fragments/common :: navbar}"></div>
-
-<!-- Hero 區域 -->
-<section class="hero">
-    <h1><i class="fas fa-gem"></i> 專業二手名錶交易平台</h1>
-    <p>嚴選認證 · 真實保證 · 安全交易 · 全球配送</p>
-    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-        <a href="/browse" class="btn btn-primary"><i class="fas fa-search"></i> 立即選購</a>
-        <a href="javascript:void(0)" onclick="requireLogin('/sell', '❌ 請先登入後再賣出手錶！')" class="btn btn-outline">
-            <i class="fas fa-tag"></i> 賣出手錶
-        </a>
-    </div>
-</section>
-
-<!-- 搜索欄 -->
-<div class="search-bar">
-    <form class="search-form" th:action="@{/browse}" method="get">
-        <input type="text" name="keyword" placeholder="搜尋品牌、型號..." th:value="${param.keyword}">
-        <select name="brand">
-            <option value="">所有品牌</option>
-            <option value="rolex" th:selected="${param.brand == 'rolex'}">Rolex 勞力士</option>
-            <option value="omega" th:selected="${param.brand == 'omega'}">Omega 歐米茄</option>
-            <option value="patek" th:selected="${param.brand == 'patek'}">Patek Philippe 百達翡麗</option>
-            <option value="ap" th:selected="${param.brand == 'ap'}">Audemars Piguet 愛彼</option>
-            <option value="cartier" th:selected="${param.brand == 'cartier'}">Cartier 卡地亞</option>
-        </select>
-        <select name="priceRange">
-            <option value="">價格區間</option>
-            <option value="0-5000" th:selected="${param.priceRange == '0-5000'}">HK$ 0 - 5,000</option>
-            <option value="5000-20000" th:selected="${param.priceRange == '5000-20000'}">HK$ 5,000 - 20,000</option>
-            <option value="20000-50000" th:selected="${param.priceRange == '20000-50000'}">HK$ 20,000 - 50,000</option>
-            <option value="50000+" th:selected="${param.priceRange == '50000+'}">HK$ 50,000+</option>
-        </select>
-        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> 搜尋</button>
-    </form>
-</div>
-
-<!-- 分類快捷入口 -->
-<section class="categories">
-    <h2 class="section-title"><i class="fas fa-th-large"></i> 熱門分類</h2>
-    <div class="category-grid">
-        <div class="category-card" onclick="location.href='/browse?category=dress'"><i class="fas fa-tie"></i><span>正裝錶</span></div>
-        <div class="category-card" onclick="location.href='/browse?category=dive'"><i class="fas fa-water"></i><span>潛水錶</span></div>
-        <div class="category-card" onclick="location.href='/browse?category=chronograph'"><i class="fas fa-stopwatch"></i><span>計時碼錶</span></div>
-        <div class="category-card" onclick="location.href='/browse?category=vintage'"><i class="fas fa-history"></i><span>古董錶</span></div>
-        <div class="category-card" onclick="location.href='/browse?brand=rolex'"><i class="fas fa-crown"></i><span>勞力士</span></div>
-        <div class="category-card" onclick="location.href='/browse?condition=excellent'"><i class="fas fa-star"></i><span>近全新</span></div>
-    </div>
-</section>
-
-<!-- 熱門商品 -->
-<section class="featured">
-    <h2 class="section-title"><i class="fas fa-fire"></i> 精選熱賣</h2>
-    <div class="product-grid">
-        <!-- 商品卡片 1 -->
-        <div class="product-card">
-            <div class="product-img"><img src="/images/products/watch1.png" alt="Rolex Submariner"></div>
-            <div class="product-info">
-                <div class="product-brand">Rolex</div>
-                <div class="product-name">Submariner Date 116610LN</div>
-                <div class="product-condition"><i class="fas fa-check-circle"></i> 95% 新 · 附盒證</div>
-                <div class="product-price">HK$ 68,000</div>
-                <div class="product-actions">
-                    <a href="/product/1" class="btn btn-outline"><i class="fas fa-eye"></i> 詳情</a>
-                    <button onclick="addToCart(1)" class="btn btn-primary"><i class="fas fa-cart-plus"></i> 加入</button>
-                </div>
-            </div>
+    <!-- 晚上模式裝飾元素 -->
+    <div th:if="${cardTheme == 'night'}" class="night-decorations">
+        <!-- 月亮 -->
+        <div class="deco-moon">
+            <i class="fas fa-moon" style="font-size: 4rem; color: #ffd700; opacity: 0.3;"></i>
         </div>
-        <!-- 商品卡片 2 -->
-        <div class="product-card">
-            <div class="product-img"><img src="/images/products/watch2.png" alt="Omega Speedmaster"></div>
-            <div class="product-info">
-                <div class="product-brand">Omega</div>
-                <div class="product-name">Speedmaster Professional Moonwatch</div>
-                <div class="product-condition"><i class="fas fa-check-circle"></i> 90% 新 · 保養中</div>
-                <div class="product-price">HK$ 32,500</div>
-                <div class="product-actions">
-                    <a href="/product/2" class="btn btn-outline"><i class="fas fa-eye"></i> 詳情</a>
-                    <button onclick="addToCart(2)" class="btn btn-primary"><i class="fas fa-cart-plus"></i> 加入</button>
-                </div>
-            </div>
+        <!-- 星星1 -->
+        <div class="deco-star" style="top: 15%; left: 10%;">
+            <i class="fas fa-star" style="color: #ffd700; opacity: 0.4;"></i>
         </div>
-        <!-- 商品卡片 3 -->
-        <div class="product-card">
-            <div class="product-img"><img src="/images/products/watch3.png" alt="Cartier Santos"></div>
-            <div class="product-info">
-                <div class="product-brand">Cartier</div>
-                <div class="product-name">Santos de Cartier Medium</div>
-                <div class="product-condition"><i class="fas fa-check-circle"></i> 98% 新 · 全套</div>
-                <div class="product-price">HK$ 45,800</div>
-                <div class="product-actions">
-                    <a href="/product/3" class="btn btn-outline"><i class="fas fa-eye"></i> 詳情</a>
-                    <button onclick="addToCart(3)" class="btn btn-primary"><i class="fas fa-cart-plus"></i> 加入</button>
-                </div>
-            </div>
+        <!-- 星星2 -->
+        <div class="deco-star" style="top: 25%; right: 15%;">
+            <i class="fas fa-star" style="color: #00d4ff; opacity: 0.3;"></i>
         </div>
-        <!-- 商品卡片 4 -->
-        <div class="product-card">
-            <div class="product-img"><img src="/images/products/watch4.png" alt="AP Royal Oak"></div>
-            <div class="product-info">
-                <div class="product-brand">AP</div>
-                <div class="product-name">Royal Oak 15400ST</div>
-                <div class="product-condition"><i class="fas fa-check-circle"></i> 92% 新 · 原廠保卡</div>
-                <div class="product-price">HK$ 128,000</div>
-                <div class="product-actions">
-                    <a href="/product/4" class="btn btn-outline"><i class="fas fa-eye"></i> 詳情</a>
-                    <button onclick="addToCart(4)" class="btn btn-primary"><i class="fas fa-cart-plus"></i> 加入</button>
-                </div>
-            </div>
+        <!-- 鐘錶圖標1 -->
+        <div class="deco-clock" style="top: 40%; left: 5%;">
+            <i class="fas fa-clock" style="font-size: 2rem; color: #7b2cbf; opacity: 0.2;"></i>
+        </div>
+        <!-- 鐘錶圖標2 -->
+        <div class="deco-clock" style="bottom: 30%; right: 8%;">
+            <i class="fas fa-stopwatch" style="font-size: 2.5rem; color: #00d4ff; opacity: 0.15;"></i>
         </div>
     </div>
-    <div style="text-align: center; margin-top: 2rem;">
-        <a href="/browse" class="btn btn-outline">查看更多 <i class="fas fa-arrow-right"></i></a>
-    </div>
-</section>
 
-<!-- 平台特色 -->
-<section class="features">
-    <h2 class="section-title" style="color: white;"><i class="fas fa-shield-alt"></i> 為什麼選擇 ChronoTeam</h2>
-    <div class="features-grid">
-        <div class="feature-item"><i class="fas fa-certificate"></i><h3>專業鑑定</h3><p>每隻手錶經認證鐘錶師檢測，出具鑑定報告</p></div>
-        <div class="feature-item"><i class="fas fa-lock"></i><h3>安全交易</h3><p>平台擔保付款，確認收貨後才放款給賣家</p></div>
-        <div class="feature-item"><i class="fas fa-undo"></i><h3>7天退換</h3><p>收到商品7天內如有問題，支持無理由退換</p></div>
-        <div class="feature-item"><i class="fas fa-headset"></i><h3>專屬客服</h3><p>一對一專業顧問，全程協助選購與售後</p></div>
-    </div>
-</section>
+    <!-- 3. 引入公共导航栏 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<!-- 頁腳 -->
-<footer class="footer">
-    <div class="footer-links">
-        <a href="/about">關於我們</a>
-        <a href="/authentication">鑑定流程</a>
-        <a href="/sell-guide">賣家指南</a>
-        <a href="/buyer-protection">買家保障</a>
-        <a href="/contact">聯絡我們</a>
-        <a href="/faq">常見問題</a>
-    </div>
-    <div style="margin: 1rem 0;">
-        <a href="#" style="margin: 0 0.5rem; color: white;"><i class="fab fa-facebook fa-lg"></i></a>
-        <a href="#" style="margin: 0 0.5rem; color: white;"><i class="fab fa-instagram fa-lg"></i></a>
-        <a href="#" style="margin: 0 0.5rem; color: white;"><i class="fab fa-whatsapp fa-lg"></i></a>
-    </div>
-    <div class="copyright">
-        &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.
-        <br>當前時間：<span th:text="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd HH:mm:ss')}">--</span>
-    </div>
-</footer>
+    <!-- Hero 區域 -->
+    <section class="hero">
+        <h1><i class="fas fa-gem"></i> 專業二手名錶交易平台</h1>
+        <p>嚴選認證 · 真實保證 · 安全交易 · 全球配送</p>
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a href="/browse" class="btn btn-primary" style="cursor: pointer; z-index: 100; position: relative;">
+                <i class="fas fa-search"></i> 立即選購
+            </a>
+            <a href="javascript:void(0)" onclick="requireLogin('/sell', '❌ 請先登入後再賣出手錶！')" class="btn btn-outline"
+                style="cursor: pointer; z-index: 100; position: relative;">
+                <i class="fas fa-tag"></i> 賣出手錶
+            </a>
+        </div>
+    </section>
 
-<!--  4. 引入公共弹窗 HTML (删除了原本 100 多行的 Modal 代码) -->
-<div th:replace="~{fragments/common :: modals}"></div>
+    <!-- 搜索欄 -->
+    <div class="search-bar">
+        <form class="search-form" th:action="@{/browse}" method="get">
+            <input type="text" name="keyword" placeholder="搜尋品牌、型號..." th:value="${param.keyword}">
+            <select name="brand">
+                <option value="">所有品牌</option>
+                <option value="rolex" th:selected="${param.brand == 'rolex'}">Rolex 勞力士</option>
+                <option value="omega" th:selected="${param.brand == 'omega'}">Omega 歐米茄</option>
+                <option value="patek" th:selected="${param.brand == 'patek'}">Patek Philippe 百達翡麗</option>
+                <option value="ap" th:selected="${param.brand == 'ap'}">Audemars Piguet 愛彼</option>
+                <option value="cartier" th:selected="${param.brand == 'cartier'}">Cartier 卡地亞</option>
+            </select>
+            <select name="priceRange">
+                <option value="">價格區間</option>
+                <option value="0-5000" th:selected="${param.priceRange == '0-5000'}">HK$ 0 - 5,000</option>
+                <option value="5000-20000" th:selected="${param.priceRange == '5000-20000'}">HK$ 5,000 - 20,000</option>
+                <option value="20000-50000" th:selected="${param.priceRange == '20000-50000'}">HK$ 20,000 - 50,000
+                </option>
+                <option value="50000+" th:selected="${param.priceRange == '50000+'}">HK$ 50,000+</option>
+            </select>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> 搜尋</button>
+        </form>
+    </div>
 
-<!--  5. 注入登录状态变量 (必须在 common.js 之前) -->
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
+    <!-- 分類快捷入口 -->
+    <section class="categories">
+        <h2 class="section-title"><i class="fas fa-th-large"></i> 熱門分類</h2>
+        <div class="category-grid">
+            <div class="category-card" onclick="location.href='/browse?category=dress'"><i
+                    class="fas fa-tie"></i><span>正裝錶</span></div>
+            <div class="category-card" onclick="location.href='/browse?category=dive'"><i
+                    class="fas fa-water"></i><span>潛水錶</span></div>
+            <div class="category-card" onclick="location.href='/browse?category=chronograph'"><i
+                    class="fas fa-stopwatch"></i><span>計時碼錶</span></div>
+            <div class="category-card" onclick="location.href='/browse?category=vintage'"><i
+                    class="fas fa-history"></i><span>古董錶</span></div>
+            <div class="category-card" onclick="location.href='/browse?brand=rolex'"><i
+                    class="fas fa-crown"></i><span>勞力士</span></div>
+            <div class="category-card" onclick="location.href='/browse?condition=excellent'"><i
+                    class="fas fa-star"></i><span>近全新</span></div>
+        </div>
+    </section>
 
-<!--  6. 引入公共 JS  -->
-<script src="/js/common.js"></script>
+    <!-- ========================================== -->
+    <!-- 熱門商品 ( dramatic day/night themes ) -->
+    <!-- ========================================== -->
+    <section class="featured" th:classappend="${cardTheme == 'night'} ? 'night-theme' : 'day-theme'"
+        th:if="${featuredProducts != null and !featuredProducts.isEmpty()}">
+
+        <!-- 裝飾元素（左右兩側） -->
+        <div th:classappend="${cardTheme == 'night'} ? 'decoration-left' : 'decoration-left'">
+            <i th:if="${cardTheme == 'day'}" class="fas fa-sun"
+                style="font-size: 5rem; color: #d4af37; opacity: 0.2;"></i>
+            <i th:if="${cardTheme == 'night'}" class="fas fa-moon"
+                style="font-size: 5rem; color: #00d4ff; opacity: 0.2;"></i>
+        </div>
+
+        <h2 class="section-title">
+            <i th:if="${cardTheme == 'day'}" class="fas fa-sun"></i>
+            <i th:if="${cardTheme == 'night'}" class="fas fa-moon"></i>
+            <span th:text="${cardTheme == 'night'} ? '精選熱賣' : '精選熱賣'"></span>
+        </h2>
+
+        <div class="carousel-wrapper">
+            <!-- 向左箭頭 -->
+            <button class="carousel-btn prev-btn" onclick="moveCarousel(-1)" aria-label="上一張">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <!-- 滑動軌道 -->
+            <div class="carousel-track-container">
+                <div class="carousel-track" id="featuredTrack">
+                    <!-- Thymeleaf 動態生成卡片 -->
+                    <div class="product-card carousel-slide"
+                        th:classappend="${cardTheme == 'night'} ? 'night-theme' : 'day-theme'"
+                        th:each="product : ${featuredProducts}">
+
+                        <!-- 白天主題裝飾 -->
+                        <div th:if="${cardTheme == 'day'}" class="corner-decoration corner-top-left"></div>
+                        <div th:if="${cardTheme == 'day'}" class="corner-decoration corner-top-right"></div>
+                        <div th:if="${cardTheme == 'day'}" class="corner-decoration corner-bottom-left"></div>
+                        <div th:if="${cardTheme == 'day'}" class="corner-decoration corner-bottom-right"></div>
+
+                        <!-- 晚上主題裝飾 -->
+                        <div th:if="${cardTheme == 'night'}" class="glow-dot"></div>
+                        <div th:if="${cardTheme == 'night'}" class="glow-dot"></div>
+                        <div th:if="${cardTheme == 'night'}" class="glow-dot"></div>
+                        <div th:if="${cardTheme == 'night'}" class="glow-dot"></div>
+
+                        <div class="product-img">
+                            <img th:src="@{/images/products/{img}(img=${product.image})}"
+                                th:alt="${product.description}" onerror="this.src='/images/placeholder.png'">
+                        </div>
+                        <div class="product-info">
+                            <div class="product-brand" th:text="${product.brand} ?: 'ChronoTeam'">Brand</div>
+                            <div class="product-name" th:text="${product.description}">Name</div>
+
+                            <div class="product-condition" th:if="${product.condition != null}">
+                                <i class="fas fa-check-circle"></i>
+                                <span th:text="${#strings.replace(product.condition.name(), '_', ' ')} + ' 新'">95%
+                                    新</span>
+                            </div>
+
+                            <div class="product-price">
+                                HK$ <span
+                                    th:text="${#numbers.formatDecimal(product.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                            </div>
+
+                            <div class="product-actions">
+                                <a th:href="@{/product/{id}(id=${product.productId})}" class="btn btn-outline">
+                                    <i class="fas fa-eye"></i> 詳情
+                                </a>
+                                <button type="button" th:onclick="'addToCart(' + ${product.productId} + ')'"
+                                    class="btn btn-primary">
+                                    <i class="fas fa-cart-plus"></i> 加入
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 向右箭頭 -->
+            <button class="carousel-btn next-btn" onclick="moveCarousel(1)" aria-label="下一張">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <!-- 查看更多按鈕 -->
+        <div class="view-more-container">
+            <a href="/browse" class="view-more-btn">
+                <span>查看更多</span>
+                <i th:if="${cardTheme == 'day'}" class="fas fa-arrow-right"></i>
+                <i th:if="${cardTheme == 'night'}" class="fas fa-rocket"></i>
+            </a>
+        </div>
+    </section>
+
+    <!-- 平台特色 -->
+    <section class="features">
+        <h2 class="section-title" style="color: white;"><i class="fas fa-shield-alt"></i> 為什麼選擇 ChronoTeam</h2>
+        <div class="features-grid">
+            <div class="feature-item"><i class="fas fa-certificate"></i>
+                <h3>專業鑑定</h3>
+                <p>每隻手錶經認證鐘錶師檢測，出具鑑定報告</p>
+            </div>
+            <div class="feature-item"><i class="fas fa-lock"></i>
+                <h3>安全交易</h3>
+                <p>平台擔保付款，確認收貨後才放款給賣家</p>
+            </div>
+            <div class="feature-item"><i class="fas fa-undo"></i>
+                <h3>7天退換</h3>
+                <p>收到商品7天內如有問題，支持無理由退換</p>
+            </div>
+            <div class="feature-item"><i class="fas fa-headset"></i>
+                <h3>專屬客服</h3>
+                <p>一對一專業顧問，全程協助選購與售後</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 頁腳 -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="/about">關於我們</a>
+            <a href="/authentication">鑑定流程</a>
+            <a href="/sell-guide">賣家指南</a>
+            <a href="/buyer-protection">買家保障</a>
+            <a href="/contact">聯絡我們</a>
+            <a href="/faq">常見問題</a>
+        </div>
+        <div style="margin: 1rem 0;">
+            <a href="#" style="margin: 0 0.5rem; color: white;"><i class="fab fa-facebook fa-lg"></i></a>
+            <a href="#" style="margin: 0 0.5rem; color: white;"><i class="fab fa-instagram fa-lg"></i></a>
+            <a href="#" style="margin: 0 0.5rem; color: white;"><i class="fab fa-whatsapp fa-lg"></i></a>
+        </div>
+        <div class="copyright">
+            &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.
+            <br>當前時間：<span id="currentTime">--</span>
+        </div>
+    </footer>
+
+    <!-- 4. 引入公共弹窗 HTML -->
+    <div th:replace="~{fragments/common :: modals}"></div>
+
+    <!-- 5. 注入登录状态变量 -->
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    </script>
+
+    <!-- 6. 引入公共 JS -->
+    <script src="/js/common.js"></script>
+
+    <!-- 7. 首頁輪播專屬 JS -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const track = document.getElementById('featuredTrack');
+            if (!track || track.children.length === 0) return;
+
+            let currentIndex = 0;
+            let autoPlayInterval;
+            let isTransitioning = false;
+            const AUTO_PLAY_DELAY = 4000;
+
+            function getVisibleCount() {
+                const width = window.innerWidth;
+                if (width <= 480) return 1;
+                if (width <= 768) return 2;
+                if (width <= 1024) return 3;
+                return 4;
+            }
+
+            function initCarousel() {
+                const existingClones = track.querySelectorAll('[data-clone="true"]');
+                existingClones.forEach(clone => clone.remove());
+
+                let originalSlides = Array.from(track.querySelectorAll('[data-original="true"]'));
+                if (originalSlides.length === 0) {
+                    originalSlides = Array.from(track.children);
+                    originalSlides.forEach(slide => slide.setAttribute('data-original', 'true'));
+                }
+
+                const visibleCount = getVisibleCount();
+                const totalOriginal = originalSlides.length;
+
+                if (totalOriginal <= visibleCount) {
+                    track.style.transform = 'translateX(0)';
+                    return;
+                }
+
+                const clonesForStart = originalSlides.slice(-visibleCount).map(slide => {
+                    const clone = slide.cloneNode(true);
+                    clone.setAttribute('data-clone', 'true');
+                    clone.setAttribute('aria-hidden', 'true');
+                    return clone;
+                });
+                clonesForStart.forEach(clone => track.prepend(clone));
+
+                const clonesForEnd = originalSlides.slice(0, visibleCount).map(slide => {
+                    const clone = slide.cloneNode(true);
+                    clone.setAttribute('data-clone', 'true');
+                    clone.setAttribute('aria-hidden', 'true');
+                    return clone;
+                });
+                clonesForEnd.forEach(clone => track.appendChild(clone));
+
+                currentIndex = visibleCount;
+                updateTrackPosition(false);
+            }
+
+            function updateTrackPosition(useTransition = true) {
+                if (!useTransition) {
+                    track.style.transition = 'none';
+                } else {
+                    track.style.transition = 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)';
+                }
+
+                const slide = track.firstElementChild;
+                if (!slide) return;
+
+                const slideWidth = slide.offsetWidth;
+                const computedGap = parseFloat(window.getComputedStyle(track).gap) || 24;
+
+                const moveAmount = currentIndex * (slideWidth + computedGap);
+                track.style.transform = `translateX(-${moveAmount}px)`;
+            }
+
+            window.moveCarousel = function (direction) {
+                const slides = Array.from(track.children);
+                const visibleCount = getVisibleCount();
+                const totalSlides = slides.length;
+                const originalCount = totalSlides - (visibleCount * 2);
+
+                if (originalCount <= 0) return;
+
+                const nextIndex = currentIndex + direction;
+
+                if (nextIndex >= visibleCount + originalCount) {
+                    currentIndex = nextIndex;
+                    updateTrackPosition(true);
+                    isTransitioning = true;
+                    setTimeout(() => {
+                        currentIndex = visibleCount;
+                        updateTrackPosition(false);
+                        isTransitioning = false;
+                    }, 500);
+                } else if (nextIndex < visibleCount) {
+                    currentIndex = nextIndex;
+                    updateTrackPosition(true);
+                    isTransitioning = true;
+                    setTimeout(() => {
+                        currentIndex = visibleCount + originalCount - 1;
+                        updateTrackPosition(false);
+                        isTransitioning = false;
+                    }, 500);
+                } else {
+                    currentIndex = nextIndex;
+                    updateTrackPosition(true);
+                }
+
+                resetAutoPlay();
+            };
+
+            function startAutoPlay() {
+                stopAutoPlay();
+                autoPlayInterval = setInterval(() => {
+                    if (!isTransitioning) {
+                        window.moveCarousel(1);
+                    }
+                }, AUTO_PLAY_DELAY);
+            }
+
+            function stopAutoPlay() {
+                if (autoPlayInterval) clearInterval(autoPlayInterval);
+            }
+
+            function resetAutoPlay() {
+                stopAutoPlay();
+                startAutoPlay();
+            }
+
+            initCarousel();
+            startAutoPlay();
+
+            const wrapper = track.closest('.carousel-wrapper');
+            if (wrapper) {
+                wrapper.addEventListener('mouseenter', stopAutoPlay);
+                wrapper.addEventListener('mouseleave', startAutoPlay);
+            }
+
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    track.style.transition = 'none';
+                    initCarousel();
+                    setTimeout(() => {
+                        track.style.transition = 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)';
+                    }, 50);
+                }, 200);
+            });
+        });
+
+        function updateCurrentTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            const timeString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            document.getElementById('currentTime').textContent = timeString;
+        }
+
+        // 立即执行一次
+        updateCurrentTime();
+        // 每秒更新一次
+        setInterval(updateCurrentTime, 1000);
+
+    </script>
 
 </body>
+
 </html>

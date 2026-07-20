@@ -37,4 +37,11 @@ public interface ViewHistoryRepository extends JpaRepository<ViewHistory, Long> 
     @Transactional
     @Query("DELETE FROM ViewHistory vh WHERE vh.user.username = :username")
     void deleteAllForUser(@Param("username") String username);
+
+    /**
+     * 批量刪除：根據 ID 列表和用戶名刪除（防止越權刪除別人的記錄）
+     * 假設主鍵名為 historyId，如果是 id 請改為 deleteByIdInAndUser_Username
+     */
+    @Modifying
+    void deleteByHistoryIdInAndUser_Username(List<Long> historyIds, String username);
 }

@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>站点设置 - ChronoTeam 管理后台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="/css/common.css">
+
+    <style>
+        /* ===== 全局变量 ===== */
+        :root {
+            --primary: #1a1a2e;
+            --secondary: #16213e;
+            --gold: #d4af37;
+            --gold-light: #f5e6c8;
+            --success: #10b981;
+            --error: #ef4444;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+            --border: #e9ecef;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: var(--light);
+            color: var(--primary);
+            line-height: 1.6;
+        }
+
+        /* ===== 管理后台布局 ===== */
+        .admin-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ===== 侧边栏样式 (终极修复版) ===== */
+        .admin-sidebar {
+            width: 280px;
+            background: var(--primary);
+            color: white;
+            position: fixed;
+            top: 0;          /* 固定在顶部 */
+            bottom: 0;       /* 固定在底部，完美撑满高度，彻底告别 100vh 计算错误 */
+            left: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            z-index: 1000;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 侧边栏自定义滚动条样式 (Chrome/Safari/Edge) */
+        .admin-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .admin-sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .admin-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(212, 175, 55, 0.5);
+            border-radius: 3px;
+        }
+        .admin-sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(212, 175, 55, 0.8);
+        }
+        /* Firefox 滚动条支持 */
+        .admin-sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(212, 175, 55, 0.5) rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar-header {
+            padding: 2rem 1.5rem;
+            border-bottom: 2px solid var(--gold);
+            text-align: center;
+            flex-shrink: 0; /* 防止头部被压缩 */
+        }
+
+        .sidebar-header i {
+            font-size: 2.5rem;
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .sidebar-header p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        /* 确保菜单列表可以正常撑开并占据剩余空间 */
+        .admin-menu {
+            list-style: none;
+            padding: 1rem 0;
+            flex: 1;
+        }
+
+        .menu-group {
+            margin-bottom: 0.5rem;
+            flex-shrink: 0; /* 防止菜单组被压缩 */
+        }
+
+        .menu-group-title {
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .menu-group-title:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .menu-group-title span {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+        }
+
+        .menu-group-title i.fa-chevron-right,
+        .menu-group-title i.fa-chevron-down {
+            font-size: 0.75rem;
+            transition: transform 0.3s;
+        }
+
+        .menu-group.active .menu-group-title i.fa-chevron-right {
+            transform: rotate(90deg);
+        }
+
+        .menu-items {
+            list-style: none;
+            padding-left: 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        /* 修复：确保展开时有足够的高度，并让外层 .admin-sidebar 统一处理滚动 */
+        .menu-group.active .menu-items {
+            max-height: 1000px;
+            overflow-y: visible;
+        }
+
+        /* 子菜单自定义细滚动条 (保留以防部分浏览器需要) */
+        .menu-items::-webkit-scrollbar {
+            width: 4px;
+        }
+        .menu-items::-webkit-scrollbar-thumb {
+            background: rgba(212, 175, 55, 0.3);
+            border-radius: 2px;
+        }
+
+        .menu-items li a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 0.25rem 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .menu-items li a:hover,
+        .menu-items li a.active {
+            background: var(--gold);
+            color: var(--primary);
+        }
+
+        .menu-items li a i {
+            font-size: 0.9rem;
+            width: 20px;
+        }
+
+        /* 侧边栏底部固定内容（可选） */
+        .sidebar-footer {
+            flex-shrink: 0;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            text-align: center;
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .admin-main {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+        }
+
+        .admin-header {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .admin-header h1 {
+            font-size: 2rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-header h1 i {
+            color: var(--gold);
+        }
+
+        /* ===== 设置卡片 ===== */
+        .settings-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        .settings-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .settings-header h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .settings-header h2 i {
+            color: var(--gold);
+        }
+
+        .settings-header p {
+            color: var(--gray);
+            font-size: 0.95rem;
+        }
+
+        /* ===== 警告/成功提示 ===== */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid var(--success);
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid var(--error);
+        }
+
+        /* ===== 主题选择器 ===== */
+        .theme-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .theme-option {
+            position: relative;
+        }
+
+        .theme-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .theme-card {
+            border: 3px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .theme-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, transparent 0%, rgba(0, 0, 0, 0.02) 100%);
+            pointer-events: none;
+        }
+
+        .theme-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* 白天主题样式 */
+        .theme-card.day {
+            background: linear-gradient(135deg, #fff 0%, var(--gold-light) 100%);
+        }
+
+        .theme-card.day .theme-icon {
+            background: var(--gold);
+            color: white;
+        }
+
+        /* 晚上主题样式 */
+        .theme-card.night {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+        }
+
+        .theme-card.night .theme-icon {
+            background: #00d4ff;
+            color: white;
+        }
+
+        .theme-card.night h3,
+        .theme-card.night p {
+            color: white;
+        }
+
+        /* 选中状态 */
+        .theme-option input[type="radio"]:checked + .theme-card {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.2), var(--shadow-lg);
+            transform: scale(1.02);
+        }
+
+        .theme-option input[type="radio"]:checked + .theme-card::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 32px;
+            height: 32px;
+            background: var(--gold);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: checkmark 0.3s ease-out;
+        }
+
+        @keyframes checkmark {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .theme-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .theme-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .theme-card p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            line-height: 1.5;
+        }
+
+        .theme-preview-box {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-preview-box .mini-card {
+            background: white;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .theme-preview-box.night .mini-card {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 2px solid #00d4ff;
+        }
+
+        .theme-preview-box.day .mini-card {
+            border: 2px solid var(--gold);
+        }
+
+        /* ===== 按钮样式 ===== */
+        .btn {
+            padding: 0.875rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8941f 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            padding-top: 1.5rem;
+            border-top: 2px solid var(--border);
+        }
+
+        /* ===== 响应式设计 ===== */
+        @media (max-width: 768px) {
+            .admin-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+                /* 已移除 height，依靠 top:0; bottom:0; 完美适配 */
+            }
+
+            .admin-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .admin-main {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .theme-options {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ===== 加载动画 ===== */
+        .saving {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .saving.show {
+            display: flex;
+        }
+
+        .saving-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/common :: navbar}"></div>
+
+<div class="admin-layout">
+    <!-- 引入管理后台侧边栏 -->
+    <div th:replace="~{fragments/admin-sidebar :: adminSidebar('settings')}"></div>
+
+    <!-- 主内容区域 -->
+    <main class="admin-main">
+        <div class="admin-header">
+            <h1>
+                <i class="fas fa-cog"></i>
+                站点设置
+            </h1>
+        </div>
+
+        <!-- 成功/错误提示 -->
+        <div th:if="${successMessage}" class="alert alert-success">
+            <i class="fas fa-check-circle"></i>
+            <span th:text="${successMessage}"></span>
+        </div>
+
+        <div th:if="${errorMessage}" class="alert alert-error">
+            <i class="fas fa-exclamation-circle"></i>
+            <span th:text="${errorMessage}"></span>
+        </div>
+
+        <!-- 产品卡片边框主题设置 -->
+        <div class="settings-card">
+            <div class="settings-header">
+                <h2>
+                    <i class="fas fa-palette"></i>
+                    产品卡片边框主题
+                </h2>
+                <p>选择产品展示卡片的边框装饰风格，提升网站视觉效果</p>
+            </div>
+
+            <form th:action="@{/admin/settings/update-theme}" method="post" id="themeForm">
+                <div class="theme-options">
+                    <!-- 白天主题 -->
+                    <label class="theme-option">
+                        <input type="radio" name="theme" value="day" th:checked="${currentTheme == 'day'}">
+                        <div class="theme-card day">
+                            <div class="theme-icon">
+                                <i class="fas fa-sun"></i>
+                            </div>
+                            <h3>白天主题</h3>
+                            <p>金色优雅边框，适合日间浏览，展现高端奢华感</p>
+                            <div class="theme-preview-box day">
+                                <small style="opacity: 0.7;">预览效果</small>
+                                <div class="mini-card">
+                                    <div style="height: 8px; background: linear-gradient(90deg, #d4af37, #f5e6c8); border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- 晚上主题 -->
+                    <label class="theme-option">
+                        <input type="radio" name="theme" value="night" th:checked="${currentTheme == 'night'}">
+                        <div class="theme-card night">
+                            <div class="theme-icon">
+                                <i class="fas fa-moon"></i>
+                            </div>
+                            <h3>晚上主题</h3>
+                            <p>深蓝发光边框，科技感十足，适合夜间浏览</p>
+                            <div class="theme-preview-box night">
+                                <small style="opacity: 0.7;">预览效果</small>
+                                <div class="mini-card">
+                                    <div style="height: 8px; background: linear-gradient(90deg, #00d4ff, #7b2cbf); border-radius: 4px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn" style="background: var(--gray); color: white;" onclick="resetForm()">
+                        <i class="fas fa-undo"></i> 重置
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存设置
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<!-- 保存中遮罩 -->
+<div class="saving" id="savingOverlay">
+    <div class="saving-spinner"></div>
+</div>
+
+<script>
+    // 主题卡片点击效果
+    document.querySelectorAll('.theme-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+            // 防止重复触发
+            if (e.target.tagName === 'INPUT') return;
+
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+
+            // 移除所有选中状态
+            document.querySelectorAll('.theme-card').forEach(card => {
+                card.style.transform = '';
+            });
+
+            // 添加选中效果
+            const card = this.querySelector('.theme-card');
+            card.style.transform = 'scale(1.02)';
+        });
+    });
+
+    // 表单提交时显示加载动画
+    document.getElementById('themeForm').addEventListener('submit', function() {
+        document.getElementById('savingOverlay').classList.add('show');
+    });
+
+    // 重置表单
+    function resetForm() {
+        if (confirm('确定要重置为默认设置吗？')) {
+            location.reload();
+        }
+    }
+
+    // 侧边栏菜单展开/收起
+    document.querySelectorAll('.menu-group-title').forEach(title => {
+        title.addEventListener('click', function() {
+            const group = this.parentElement;
+            const isActive = group.classList.contains('active');
+
+            // 关闭所有组
+            document.querySelectorAll('.menu-group').forEach(g => {
+                g.classList.remove('active');
+            });
+
+            // 如果之前不是激活状态，则打开当前组
+            if (!isActive) {
+                group.classList.add('active');
+            }
+        });
+    });
+</script>
+</body>
+</html>

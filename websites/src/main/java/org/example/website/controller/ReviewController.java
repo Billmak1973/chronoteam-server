@@ -20,6 +20,7 @@ import org.jsoup.safety.Safelist;
 
 import java.math.BigDecimal;
 import java.security.Principal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -619,31 +620,25 @@ public class ReviewController {
     }
 
 
-    /**
-     * 獲取互動消息列表 (我的評論 / 回復我的 / @我的)
-     * 限制：最多只加載最近的 1000 條數據，每頁 30 條
-     */
     @GetMapping("/interactions")
     public ResponseEntity<?> getInteractions(
             @RequestParam(defaultValue = "MY") String type,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "30") int size, //  默認每頁 30 條
+            @RequestParam(defaultValue = "30") int size,
             Authentication authentication) {
 
         String username = authentication.getName();
-        int maxRecords = 1000; //  核心限制：最多 1000 條
+        int maxRecords = 1000;
 
-        // 攔截：如果請求的起始位置已經超過 1000 條，直接返回空數據
         if (page * size >= maxRecords) {
             Map<String, Object> emptyData = new HashMap<>();
             emptyData.put("content", new ArrayList<>());
-            emptyData.put("totalPages", 34); // 1000 / 30 = 33.33 -> 34頁
+            emptyData.put("totalPages", 34);
             emptyData.put("totalElements", maxRecords);
             emptyData.put("currentPage", page);
             return ResponseEntity.ok(ApiResponse.okWithData("success", emptyData));
         }
 
-        //  按時間倒序排列 (選最近的)
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Review> resultPage;
 
@@ -659,12 +654,66 @@ public class ReviewController {
                     String keyword = "@" + username;
                     resultPage = reviewRepository.findMentions(keyword, username, pageable);
                     break;
+                case "LIKED_BY_ME":
+                    resultPage = reviewRepository.findReviewsLikedByMe(username, pageable);
+                    break;
+                case "LIKED_ME":
+                    // 特殊處理：返回 Review，實際數據在後面單獨查詢
+                    resultPage = Page.empty();
+                    break;
                 default:
                     return ResponseEntity.badRequest().body(ApiResponse.error("無效的類型"));
             }
 
-            // 手動提取需要的數據，避免 Hibernate 關聯導致的 JSON 循環引用
             List<Map<String, Object>> list = new ArrayList<>();
+
+            // 特殊處理 LIKED_ME
+            if ("LIKED_ME".equals(type)) {
+                Page<Object[]> likesPage = reviewRepository.findLikesOnMyReviews(username, username, pageable);
+
+                for (Object[] row : likesPage.getContent()) {
+                    Review r = (Review) row[0];
+                    String likerUsername = (String) row[1];
+                    LocalDateTime likeTime = (LocalDateTime) row[2];
+
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", r.getReviewId());
+                    map.put("content", r.getContent());
+                    map.put("createdAt", r.getCreatedAt());
+                    map.put("rating", r.getRating());
+                    map.put("parentId", r.getParentId());
+                    map.put("replyToUser", r.getReplyToUser());
+                    map.put("likeCount", r.getLikeCount());
+                    map.put("updatedAt", likeTime); // 點贊時間
+
+                    // 點贊者信息
+                    Map<String, Object> likerInfo = new HashMap<>();
+                    likerInfo.put("username", likerUsername);
+                    map.put("customer", likerInfo);
+
+                    Map<String, Object> prodInfo = new HashMap<>();
+                    prodInfo.put("id", r.getProduct().getProductId());
+                    prodInfo.put("desc", r.getProduct().getDescription());
+                    map.put("product", prodInfo);
+
+                    list.add(map);
+                }
+
+                // 更新總數
+                long actualTotal = likesPage.getTotalElements();
+                long displayTotal = Math.min(actualTotal, maxRecords);
+                int displayTotalPages = (int) Math.ceil((double) displayTotal / size);
+
+                Map<String, Object> data = new HashMap<>();
+                data.put("content", list);
+                data.put("totalPages", displayTotalPages);
+                data.put("totalElements", displayTotal);
+                data.put("currentPage", page);
+
+                return ResponseEntity.ok(ApiResponse.okWithData("success", data));
+            }
+
+            // 其他類型的原有邏輯
             for (Review r : resultPage.getContent()) {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", r.getReviewId());
@@ -673,6 +722,8 @@ public class ReviewController {
                 map.put("rating", r.getRating());
                 map.put("parentId", r.getParentId());
                 map.put("replyToUser", r.getReplyToUser());
+                map.put("likeCount", r.getLikeCount());
+                map.put("updatedAt", r.getCreatedAt());//无法解析 'Review' 中的方法 'getUpdatedAt'
 
                 Map<String, Object> prodInfo = new HashMap<>();
                 prodInfo.put("id", r.getProduct().getProductId());
@@ -686,21 +737,21 @@ public class ReviewController {
                 list.add(map);
             }
 
-            //  核心：截斷總數，確保前端計算的總頁數不超過 1000 條的限制
             long actualTotal = resultPage.getTotalElements();
-            long displayTotal = Math.min(actualTotal, maxRecords); // 強制最大為 1000
-            int displayTotalPages = (int) Math.ceil((double) displayTotal / size); // 計算總頁數 (34頁)
+            long displayTotal = Math.min(actualTotal, maxRecords);
+            int displayTotalPages = (int) Math.ceil((double) displayTotal / size);
 
             Map<String, Object> data = new HashMap<>();
             data.put("content", list);
             data.put("totalPages", displayTotalPages);
             data.put("totalElements", displayTotal);
-            data.put("currentPage", page); // 返回當前頁碼給前端
+            data.put("currentPage", page);
 
             return ResponseEntity.ok(ApiResponse.okWithData("success", data));
 
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(ApiResponse.error("查詢失敗"));
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(ApiResponse.error("查詢失敗: " + e.getMessage()));
         }
     }
 

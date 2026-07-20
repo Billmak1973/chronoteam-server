@@ -118,6 +118,7 @@
             transition: all 0.3s;
             display: flex;
             flex-direction: column;
+            position: relative;
         }
 
         .history-card:hover {
@@ -125,11 +126,18 @@
             transform: translateY(-5px);
         }
 
+        /* 选中状态的卡片样式 */
+        .history-card.selected {
+            border: 2px solid var(--gold);
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+        }
+
         .hist-img {
             height: 200px;
             background: var(--light);
             overflow: hidden;
             position: relative;
+            cursor: pointer;
         }
 
         .hist-img img {
@@ -141,6 +149,68 @@
 
         .history-card:hover .hist-img img {
             transform: scale(1.08);
+        }
+
+        /* ========================================== */
+        /*  新增：左上角选择框样式 */
+        /* ========================================== */
+        .select-checkbox {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            font-size: 14px;
+            color: transparent;
+            user-select: none;
+        }
+
+        .select-checkbox:hover {
+            transform: scale(1.1);
+            background: white;
+        }
+
+        .history-card.selected .select-checkbox {
+            background: var(--gold);
+            border-color: var(--gold);
+            color: white;
+            animation: checkmarkPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes checkmarkPop {
+            0% {
+                transform: scale(0);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* 选中状态下图片变暗 */
+        .history-card.selected .hist-img::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.2);
+            pointer-events: none;
         }
 
         .hist-info {
@@ -298,9 +368,297 @@
             user-select: none;
         }
 
+        /* ========================================== */
+        /*  新增：底部批量操作栏 */
+        /* ========================================== */
+        .batch-action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 2px solid var(--gold);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+            padding: 1rem 2rem;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 1000;
+            animation: slideUp 0.3s ease;
+        }
+
+        .batch-action-bar.show {
+            display: flex;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .batch-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .batch-count {
+            background: var(--gold);
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .batch-text {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .batch-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-batch {
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .btn-batch-cancel {
+            background: #e9ecef;
+            color: var(--primary);
+        }
+
+        .btn-batch-cancel:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-batch-delete {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-batch-delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+        }
+
+        /* 为主体内容添加底部padding，防止被固定栏遮挡 */
+        .main-content.has-batch-bar {
+            padding-bottom: 100px;
+        }
+
         @media (max-width: 900px) {
             .dashboard-container {
                 flex-direction: column;
+            }
+
+            .batch-action-bar {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .batch-actions {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .btn-batch {
+                flex: 1;
+                max-width: 200px;
+                justify-content: center;
+            }
+        }
+
+        /* ========================================== */
+        /*  自定義確認彈窗樣式 */
+        /* ========================================== */
+        .custom-confirm-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .custom-confirm-overlay.show {
+            display: flex;
+        }
+
+        .custom-confirm-modal {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUpModal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid var(--gold);
+        }
+
+        .custom-confirm-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: #856404;
+            box-shadow: 0 8px 20px rgba(255, 193, 7, 0.3);
+            animation: iconBounce 0.6s ease;
+        }
+
+        .custom-confirm-icon.danger {
+            background: linear-gradient(135deg, #f8d7da 0%, #f1aeb5 100%);
+            color: #721c24;
+            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.3);
+        }
+
+        @keyframes iconBounce {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .custom-confirm-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .custom-confirm-message {
+            font-size: 1rem;
+            color: var(--gray);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .custom-confirm-warning {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            color: #721c24;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .custom-confirm-warning i {
+            margin-right: 0.5rem;
+        }
+
+        .custom-confirm-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-confirm {
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-confirm-cancel {
+            background: #e9ecef;
+            color: var(--primary);
+        }
+
+        .btn-confirm-cancel:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirm-ok {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-confirm-ok:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-confirm-ok.danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-confirm-ok.danger:hover {
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUpModal {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
             }
         }
     </style>
@@ -311,7 +669,7 @@
     <div class="dashboard-container">
         <!--  引入側邊欄，高亮 'history' -->
         <div th:replace="~{fragments/sidebar :: sidebar(activePage='history')}"></div>
-        <main class="main-content">
+        <main class="main-content" id="mainContent">
             <h2 class="page-title"><i class="fas fa-history"></i> 瀏覽歷史</h2>
             <p class="page-subtitle">您最近瀏覽過的商品都在這裡，系統最多保留 200 條記錄，並自動清理半年前的數據</p>
 
@@ -336,8 +694,13 @@
 
             <!--  歷史列表 -->
             <div class="history-grid" th:if="${!historyList.isEmpty()}">
-                <div class="history-card" th:each="hist : ${historyList}">
-                    <div class="hist-img">
+                <div class="history-card" th:each="hist : ${historyList}" th:data-id="${hist.historyId}">
+                    <!-- 左上角选择框 -->
+                    <div class="select-checkbox" onclick="toggleSelect(this, event)">
+                        <i class="fas fa-check"></i>
+                    </div>
+
+                    <div class="hist-img" onclick="toggleSelectByImage(this, event)">
                         <!-- 顯示圖片 -->
                         <img th:src="@{/images/products/{img}(img=${hist.product.image})}"
                             th:alt="${hist.product.description}" onerror="this.src='/images/placeholder.png'">
@@ -413,6 +776,50 @@
 
         </main>
     </div>
+
+    <!-- ========================================== -->
+    <!--  新增：底部批量操作栏 -->
+    <!-- ========================================== -->
+    <div class="batch-action-bar" id="batchActionBar">
+        <div class="batch-info">
+            <div class="batch-count" id="batchCount">0</div>
+            <div class="batch-text">已選擇 <span id="batchCountText">0</span> 項</div>
+        </div>
+        <div class="batch-actions">
+            <button class="btn-batch btn-batch-cancel" onclick="cancelBatchSelect()">
+                <i class="fas fa-times"></i> 取消
+            </button>
+            <button class="btn-batch btn-batch-delete" onclick="batchDelete()">
+                <i class="fas fa-trash-alt"></i> 刪除所選
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!--  自定義確認彈窗 -->
+    <!-- ========================================== -->
+    <div class="custom-confirm-overlay" id="customConfirmOverlay">
+        <div class="custom-confirm-modal">
+            <div class="custom-confirm-icon" id="confirmIcon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="custom-confirm-title" id="confirmTitle">確認操作</h3>
+            <p class="custom-confirm-message" id="confirmMessage">您確定要執行此操作嗎？</p>
+            <div class="custom-confirm-warning" id="confirmWarning" style="display: none;">
+                <i class="fas fa-info-circle"></i>
+                <span id="confirmWarningText">此操作無法恢復！</span>
+            </div>
+            <div class="custom-confirm-actions">
+                <button class="btn-confirm btn-confirm-cancel" onclick="closeCustomConfirm()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-confirm btn-confirm-ok" id="confirmOkBtn" onclick="executeConfirmAction()">
+                    <i class="fas fa-check"></i> 確定
+                </button>
+            </div>
+        </div>
+    </div>
+
     <footer class="footer">
         <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
             Rights Reserved.</p>
@@ -425,6 +832,157 @@
 
     <!--  清除歷史的 JS 函數 -->
     <script>
+        // ==========================================
+        //  1. 自定義確認彈窗功能 (取代原生 confirm)
+        // ==========================================
+        let confirmCallback = null;
+
+        /**
+         * 顯示自定義確認彈窗
+         * @param {string} title - 標題
+         * @param {string} message - 消息內容
+         * @param {function} callback - 確認後的回調函數
+         * @param {boolean} isDanger - 是否為危險操作（紅色主題）
+         */
+        function showCustomConfirm(title, message, callback, isDanger = false) {
+            const overlay = document.getElementById('customConfirmOverlay');
+            const icon = document.getElementById('confirmIcon');
+            const confirmOkBtn = document.getElementById('confirmOkBtn');
+            const warning = document.getElementById('confirmWarning');
+
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMessage').textContent = message;
+
+            // 設置圖標和按鈕樣式
+            if (isDanger) {
+                icon.classList.add('danger');
+                icon.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                confirmOkBtn.classList.add('danger');
+                confirmOkBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 確認刪除';
+                warning.style.display = 'block';
+            } else {
+                icon.classList.remove('danger');
+                icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                confirmOkBtn.classList.remove('danger');
+                confirmOkBtn.innerHTML = '<i class="fas fa-check"></i> 確定';
+                warning.style.display = 'none';
+            }
+
+            // 保存回調函數
+            confirmCallback = callback;
+
+            // 顯示彈窗
+            overlay.classList.add('show');
+            document.body.style.overflow = 'hidden'; // 禁止背景滾動
+        }
+
+        /**
+         * 關閉自定義確認彈窗
+         */
+        function closeCustomConfirm() {
+            const overlay = document.getElementById('customConfirmOverlay');
+            overlay.classList.remove('show');
+            document.body.style.overflow = ''; // 恢復背景滾動
+            confirmCallback = null;
+        }
+
+        /**
+         * 執行確認操作
+         */
+        function executeConfirmAction() {
+            if (confirmCallback) {
+                confirmCallback();
+            }
+            closeCustomConfirm();
+        }
+
+        // 點擊遮罩層關閉
+        document.getElementById('customConfirmOverlay')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeCustomConfirm();
+            }
+        });
+
+        // ESC 鍵關閉
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const overlay = document.getElementById('customConfirmOverlay');
+                if (overlay && overlay.classList.contains('show')) {
+                    closeCustomConfirm();
+                }
+            }
+        });
+
+        // ==========================================
+        //  2. 批量選擇功能
+        // ==========================================
+
+        // 切換單個項目的選擇狀態
+        function toggleSelect(checkbox, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const card = checkbox.closest('.history-card');
+            card.classList.toggle('selected');
+            updateBatchActionBar();
+        }
+
+        // 點擊圖片區域也能切換選擇
+        function toggleSelectByImage(imgContainer, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            const card = imgContainer.closest('.history-card');
+            const checkbox = card.querySelector('.select-checkbox');
+            card.classList.toggle('selected');
+
+            // 更新復選框狀態
+            if (card.classList.contains('selected')) {
+                checkbox.style.color = 'white';
+            } else {
+                checkbox.style.color = 'transparent';
+            }
+            updateBatchActionBar();
+        }
+
+        // 更新底部操作欄
+        function updateBatchActionBar() {
+            const selectedCards = document.querySelectorAll('.history-card.selected');
+            const count = selectedCards.length;
+            const batchBar = document.getElementById('batchActionBar');
+            const batchCount = document.getElementById('batchCount');
+            const batchCountText = document.getElementById('batchCountText');
+            const mainContent = document.getElementById('mainContent');
+
+            if (count > 0) {
+                batchBar.classList.add('show');
+                batchCount.textContent = count;
+                batchCountText.textContent = count;
+                mainContent.classList.add('has-batch-bar');
+            } else {
+                batchBar.classList.remove('show');
+                mainContent.classList.remove('has-batch-bar');
+            }
+        }
+
+        // 取消批量選擇
+        function cancelBatchSelect() {
+            const selectedCards = document.querySelectorAll('.history-card.selected');
+            selectedCards.forEach(card => {
+                card.classList.remove('selected');
+                const checkbox = card.querySelector('.select-checkbox');
+                checkbox.style.color = 'transparent';
+            });
+            updateBatchActionBar();
+        }
+
+        // ==========================================
+        //  3. 核心業務邏輯 (清除歷史 & 批量刪除)
+        // ==========================================
+
+        /**
+         * 清除歷史 (按時間範圍)
+         */
         async function clearHistory(period) {
             const periodText = {
                 '1day': '1 天內',
@@ -433,29 +991,112 @@
                 'all': '所有'
             };
 
-            if (!confirm(`⚠️ 確定要清除${periodText[period]}的瀏覽歷史嗎？\n此操作無法恢復！`)) {
+            // 使用自定義彈窗替換 confirm
+            showCustomConfirm(
+                '確認清除歷史',
+                `確定要清除 ${periodText[period]} 的瀏覽歷史嗎？`,
+                async () => {
+                    // 確認後的執行邏輯
+                    try {
+                        const response = await fetch(`/api/history/clear?period=${period}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok && result.success) {
+                            showNotification('✅ ' + result.message);
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showNotification('❌ ' + (result.message || '清除失敗'), true);
+                        }
+                    } catch (error) {
+                        console.error('清除歷史錯誤:', error);
+                        showNotification('❌ 網絡錯誤，請稍後重試', true);
+                    }
+                },
+                true // isDanger = true (危險操作，顯示紅色主題)
+            );
+        }
+
+        /**
+         * 批量刪除選中的歷史記錄
+         */
+        async function batchDelete() {
+            const selectedCards = document.querySelectorAll('.history-card.selected');
+            const count = selectedCards.length;
+
+            if (count === 0) {
+                showNotification('❌ 請先選擇要刪除的項目', true);
                 return;
             }
 
-            try {
-                const response = await fetch(`/api/history/clear?period=${period}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
+<!--  if (!confirm(`⚠️ 確定要刪除這 ${count} 項瀏覽歷史嗎？\n此操作無法恢復！`)) {-->
+< !--            return; -->
+< !--        } -->
 
-                const result = await response.json();
+            // 使用自定義彈窗替換 confirm
+            showCustomConfirm(
+                '確認刪除',
+                `確定要刪除這 ${count} 項瀏覽歷史嗎？`,
+                async () => {
+                    // 確認後的執行邏輯
+                    const historyIds = [];
+                    selectedCards.forEach(card => {
+                        const id = card.getAttribute('data-id');
+                        if (id) {
+                            historyIds.push(id);
+                        }
+                    });
 
-                if (response.ok && result.success) {
-                    showNotification('✅ ' + result.message);
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showNotification('❌ ' + (result.message || '清除失敗'), true);
-                }
-            } catch (error) {
-                console.error('清除歷史錯誤:', error);
-                showNotification('❌ 網絡錯誤，請稍後重試', true);
+                    try {
+                        const response = await fetch('/api/history/batch-delete', {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(historyIds)
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok && result.success) {
+                            showNotification('✅ 成功刪除 ' + count + ' 項歷史記錄');
+
+                            // 從頁面移除選中的卡片 (帶淡出動畫)
+                            selectedCards.forEach(card => {
+                                card.style.transition = 'all 0.3s ease';
+                                card.style.opacity = '0';
+                                card.style.transform = 'scale(0.9)';
+                                setTimeout(() => card.remove(), 300);
+                            });
+
+                            // 隱藏操作欄
+                            setTimeout(() => {
+                                cancelBatchSelect();
+                                // 檢查是否還有剩餘項目，若無則刷新頁面顯示空狀態
+                                const remainingCards = document.querySelectorAll('.history-card');
+                                if (remainingCards.length === 0) {
+                                    setTimeout(() => location.reload(), 500);
+                                }
+                            }, 300);
+                        } else {
+                            showNotification('❌ ' + (result.message || '刪除失敗'), true);
+                        }
+                    } catch (error) {
+                        console.error('批量刪除錯誤:', error);
+                        showNotification('❌ 網絡錯誤，請稍後重試', true);
+                    }
+                },
+                true // isDanger = true (危險操作，顯示紅色主題)
+            );
+    }
+
+        // 點擊頁面其他地方取消選擇（可選功能，目前已註解）
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest('.history-card') && !event.target.closest('.select-checkbox')) {
+                // cancelBatchSelect();
             }
-        }
+        });
     </script>
 </body>
 

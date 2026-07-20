@@ -30,19 +30,30 @@ public class NotificationController {
                 || "anonymousUser".equals(authentication.getPrincipal())) {
             response.put("systemCount", 0);
             response.put("messageCount", 0);
+            response.put("replyCount", 0);
+            response.put("mentionCount", 0);
+            response.put("likeCount", 0);
             return ResponseEntity.ok(response);
         }
 
         String username = authentication.getName();
 
-        //  1. 系統通知未讀數 (來自 Notification 表，例如：管理員刪除評論)
+        // 1. 系统通知未读数
         long systemCount = notificationRepository.countByRecipient_UsernameAndIsReadFalse(username);
 
-        //  2. 消息通知未讀數 (來自 Review 互動，例如：回覆我的、@我的)
-        long messageCount = notificationService.getTotalUnreadCount(username);
+        // 2. 各类互动消息未读数
+        long replyCount = notificationService.getUnreadCount(username, NotificationService.TYPE_REVIEW_REPLY);
+        long mentionCount = notificationService.getUnreadCount(username, NotificationService.TYPE_REVIEW_MENTION);
+        long likeCount = notificationService.getUnreadCount(username, NotificationService.TYPE_LIKED_ME);
+
+        long messageCount = replyCount + mentionCount + likeCount;
 
         response.put("systemCount", systemCount);
         response.put("messageCount", messageCount);
+        response.put("replyCount", replyCount);
+        response.put("mentionCount", mentionCount);
+        response.put("likeCount", likeCount);
+
         return ResponseEntity.ok(response);
     }
 
@@ -59,7 +70,7 @@ public class NotificationController {
         // 這樣後端計算未讀數量時，就會把這些視為已讀
         notificationService.markAsRead(username, NotificationService.TYPE_REVIEW_REPLY);
         notificationService.markAsRead(username, NotificationService.TYPE_REVIEW_MENTION);
-
+        notificationService.markAsRead(username, NotificationService.TYPE_LIKED_ME);  //
         return ResponseEntity.ok().body("標記成功");
     }
 }

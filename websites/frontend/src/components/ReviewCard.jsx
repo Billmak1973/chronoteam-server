@@ -44,23 +44,26 @@ const ReviewCard = ({
     const [blockValue, setBlockValue] = useState(1);
     const [blockUnit, setBlockUnit] = useState('day');
 
+    // 【新增 2】用於記錄當前操作封禁的目標用戶名
+    const [targetBlockUser, setTargetBlockUser] = useState('');
+    // 【新增 2】用於記錄管理員當前會話中已封禁的用戶 (模擬後端檢查)
+    const adminBannedUsersRef = useRef(new Set());
+
     // 不再需要本地 isBlocked 狀態，改用 props 中的 blockedUsers
     // 檢查當前評論作者是否被禁言
     const isAuthorBlocked = blockedUsers && blockedUsers.includes(review.customer.username);
+
     // 檢查評論是否有互動（點贊/踩/回覆）
-    //  核心修復：必須使用局部的 likeCount 和 dislikeCount state！
-    // 因為點讚只會更新局部 state，不會更新 review prop！
+    // 核心修復：必須使用局部的 likeCount 和 dislikeCount state！
     const hasInteractions = useCallback(() => {
-        // 1. 檢查點贊或踩 (讀取實時的局部 state)
         if (likeCount > 0 || dislikeCount > 0) {
             return true;
         }
-        // 2. 檢查樓中樓回覆數量 (讀取 props，因為回覆會觸發父組件更新 props)
         if (review.replyCount > 0) {
             return true;
         }
         return false;
-    }, [likeCount, dislikeCount, review.replyCount]); //  依賴項必須包含這三個
+    }, [likeCount, dislikeCount, review.replyCount]);
 
     // --- 現有函數 ---
     const handleLike = async () => {
@@ -80,12 +83,11 @@ const ReviewCard = ({
                 setIsLiked(result.liked);
                 setIsDisliked(result.disliked);
             } else {
-                // 攔截「永久拉黑」錯誤，彈出紅色警告框
                 if (result.message === "BLACKLISTED" || result.blacklisted) {
                     if (window.showBlacklistedModal) {
                         window.showBlacklistedModal();
                     }
-                    return; // 攔截，不執行後續的 alert
+                    return;
                 }
                 alert(result.message || '點贊失敗');
             }
@@ -112,12 +114,11 @@ const ReviewCard = ({
                 setIsLiked(result.liked);
                 setIsDisliked(result.disliked);
             } else {
-                // 攔截「永久拉黑」錯誤，彈出紅色警告框
                 if (result.message === "BLACKLISTED" || result.blacklisted) {
                     if (window.showBlacklistedModal) {
                         window.showBlacklistedModal();
                     }
-                    return; // 攔截，不執行後續的 alert
+                    return;
                 }
                 alert(result.message || '踩失敗');
             }
@@ -127,79 +128,67 @@ const ReviewCard = ({
         }
     };
 
-// 核心：執行實際刪除操作的函數 (支持發送原因)
-const handleDeleteAction = async (reasonText = null) => {
-    try {
-        const body = {};
-        // 如果是管理員且提供了原因，則放入請求體
-        if (isAdmin && reasonText) {
-            body.deleteReason = reasonText;
-        }
-        const res = await fetch(`/api/review/${review.id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined
-        });
-        const result = await res.json();
-        if (res.ok && result.success) {
-            setShowDeleteModal(false); // 關閉模態框
-
-            //  核心修復：刪除後刷新頁面，避免出現訂單不存在錯誤
-            if (typeof window.showNotification === 'function') {
-                window.showNotification('✅ 評論已刪除，頁面將刷新...');
+    const handleDeleteAction = async (reasonText = null) => {
+        try {
+            const body = {};
+            if (isAdmin && reasonText) {
+                body.deleteReason = reasonText;
             }
-
-            // 延遲一點點讓用戶看到提示，然後刷新頁面
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-
-        } else {
-            alert(result.message || '刪除失敗');
-        }
-    } catch (error) {
-        console.error('網絡錯誤:', error);
-        alert('網絡錯誤，請稍後重試');
-    }
-};
-
-// 修改：點擊刪除按鈕時，根據身份決定行為
-const handleDeleteClick = () => {
-    if (isAdmin) {
-        // 管理員：打開模態框選擇原因
-        setShowDeleteModal(true);
-        setDeleteReason('inappropriate'); // 默認選項
-        setCustomReason('');
-    } else {
-        // 普通用戶：調用漂亮的自定義彈窗
-        window.openDeleteModal('確定刪除這條評論嗎？此操作無法恢復！', async () => {
-            try {
-                const res = await fetch(`/api/review/${review.id}`, {
-                    method: 'DELETE',
-                    credentials: 'same-origin'
-                });
-                const result = await res.json();
-                if (result.success) {
-                    // 刪除成功後刷新頁面
-                    if(window.showNotification) {
-                        window.showNotification('✅ 評論已刪除，頁面將刷新...');
-                    }
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    alert(result.message || '刪除失敗');
+            const res = await fetch(`/api/review/${review.id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined
+            });
+            const result = await res.json();
+            if (res.ok && result.success) {
+                setShowDeleteModal(false);
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('✅ 評論已刪除，頁面將刷新...');
                 }
-            } catch (error) {
-                console.error('刪除失敗:', error);
-                alert('網絡錯誤');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                alert(result.message || '刪除失敗');
             }
-        });
-    }
-};
+        } catch (error) {
+            console.error('網絡錯誤:', error);
+            alert('網絡錯誤，請稍後重試');
+        }
+    };
 
-    // 處理模態框中的提交邏輯
+    const handleDeleteClick = () => {
+        if (isAdmin) {
+            setShowDeleteModal(true);
+            setDeleteReason('inappropriate');
+            setCustomReason('');
+        } else {
+            window.openDeleteModal('確定刪除這條評論嗎？此操作無法恢復！', async () => {
+                try {
+                    const res = await fetch(`/api/review/${review.id}`, {
+                        method: 'DELETE',
+                        credentials: 'same-origin'
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        if(window.showNotification) {
+                            window.showNotification('✅ 評論已刪除，頁面將刷新...');
+                        }
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        alert(result.message || '刪除失敗');
+                    }
+                } catch (error) {
+                    console.error('刪除失敗:', error);
+                    alert('網絡錯誤');
+                }
+            });
+        }
+    };
+
     const confirmDeleteWithReason = () => {
         let finalReason = '';
         if (deleteReason === 'custom') {
@@ -209,7 +198,6 @@ const handleDeleteClick = () => {
             }
             finalReason = customReason;
         } else {
-            // 根據選項映射為更委婉的文字
             switch (deleteReason) {
                 case 'inappropriate':
                     finalReason = '該內容不符合社區規範，因此被移除。';
@@ -227,22 +215,18 @@ const handleDeleteClick = () => {
         handleDeleteAction(finalReason);
     };
 
-    // 【修改】編輯按鈕點擊處理：管理員使用富文本編輯器，普通用戶使用純文本
     const handleEditClick = () => {
         if (isAdmin) {
-            // 【核心修改】管理員編輯：使用富文本編輯器
-            setEditMode('rich'); // 設置為富文本編輯模式
-            setEditContent(review.formattedContent || review.content); // 使用富文本內容
+            setEditMode('rich');
+            setEditContent(review.formattedContent || review.content);
             setIsEditing(true);
         } else {
-            // 普通用戶：使用純文本編輯
             setEditMode('text');
             setEditContent(review.content);
             setIsEditing(true);
         }
     };
 
-    // 【修改】保存編輯：新增 isFormatted 欄位告知後端是否為富文本
     const handleSaveEdit = async () => {
         if (!editContent.trim()) {
             alert('評論內容不能為空');
@@ -252,16 +236,15 @@ const handleDeleteClick = () => {
             const res = await fetch(`/api/review/${review.id}/update`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'same-origin', // 【新增】保持與 1 一致，帶上 cookie
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     content: editContent,
-                    isFormatted: editMode === 'rich' // 【新增】告訴後端這是富文本
+                    isFormatted: editMode === 'rich'
                 })
             });
             const result = await res.json();
 
             if (result.success) {
-                // 【修改】更新本地狀態並通知父組件
                 setLikeCount(review.likeCount);
                 setDislikeCount(review.dislikeCount);
                 onReviewUpdated({
@@ -272,30 +255,22 @@ const handleDeleteClick = () => {
                 });
                 setIsEditing(false);
 
-                // 刷新評論列表
                 if (typeof window.refreshReviews === 'function') {
                     window.refreshReviews();
                 }
             } else {
-                // 🚫 已刪除：攔截「互動阻止」錯誤及相關彈窗代碼
-
-                // 檢查是否為全局禁言
                 if (result.message === "GLOBAL_BAN" && result.data && result.data.banned) {
                     if (window.showGlobalBanModal) {
                         window.showGlobalBanModal(currentUsername, result.data.expiresAt);
                     }
                     return;
                 }
-
-                // 檢查是否被永久拉黑
                 if (result.message === "BLACKLISTED") {
                     if (window.showBlacklistedModal) {
                         window.showBlacklistedModal();
                     }
                     return;
                 }
-
-                // 普通錯誤提示
                 alert(result.message || '修改失敗');
             }
         } catch (error) {
@@ -323,22 +298,22 @@ const handleDeleteClick = () => {
         }
     };
 
-    // 修改：使用父組件傳遞的 onBlockUser 函數，並直接使用 review.customer.username
     const confirmBlock = async (durationMinutes) => {
         const targetUsername = review.customer.username;
         if (isAdmin && durationMinutes) {
-            // 管理員禁言邏輯保持不變
             let totalMinutes = 0;
             if (blockUnit === 'day') {
-                totalMinutes = durationMinutes * 24 * 60;  //  修正：1 天 = 1440 分钟
+                totalMinutes = durationMinutes * 24 * 60;
             } else if (blockUnit === 'week') {
-                totalMinutes = durationMinutes * 7 * 24 * 60;  //  正确：1 周 = 7 天
+                totalMinutes = durationMinutes * 7 * 24 * 60;
             } else if (blockUnit === 'month') {
-                totalMinutes = durationMinutes * 30 * 24 * 60;  //  正确：1 月 ≈ 30 天
+                totalMinutes = durationMinutes * 30 * 24 * 60;
             }
             const params = new URLSearchParams();
             params.append('durationMinutes', totalMinutes);
             params.append('reason', '管理員禁言');
+             params.append('reviewId', review.id);
+             params.append('reviewContent', review.content); // 這裡的 content 是純文本，長度適中，適合 URL 傳遞
             try {
                 const response = await fetch(
                     `/api/user/${targetUsername}/toggle-block?${params}`,
@@ -347,7 +322,6 @@ const handleDeleteClick = () => {
                 const result = await response.json();
                 if (response.ok) {
                     notify(`✅ 已全局禁言用戶 ${blockValue} ${blockUnit === 'day' ? '天' : blockUnit === 'week' ? '週' : '月'}`);
-                    // 調用父組件的 onBlockUser 更新共享狀態
                     await onBlockUser(targetUsername, true);
                 } else {
                     notify('❌ ' + result.message, true);
@@ -356,7 +330,6 @@ const handleDeleteClick = () => {
                 notify('❌ 網絡錯誤', true);
             }
         } else {
-            // 普通用戶禁言：直接調用父組件函數，避免 state 非同步問題
             const result = await onBlockUser(targetUsername, true);
             if (result.success) {
                 notify('✅ 已禁言該用戶，雙方將無法互相回復');
@@ -367,6 +340,7 @@ const handleDeleteClick = () => {
         setShowBlockModal(false);
     };
 
+    // 【修改 2】確認封禁 (選時長模態框的確認按鈕)
     const handleConfirmBlock = () => {
         const val = parseInt(blockValue);
         if (!val || val <= 0) {
@@ -374,6 +348,11 @@ const handleDeleteClick = () => {
             return;
         }
         confirmBlock(val);
+
+        // 【新增 2】封禁成功後，記錄到臨時集合中，以便下次檢查
+        if (isAdmin && targetBlockUser) {
+            adminBannedUsersRef.current.add(targetBlockUser);
+        }
     };
 
     const handleUnblock = async () => {
@@ -400,12 +379,51 @@ const handleDeleteClick = () => {
         }
     };
 
-    const handleBlockClick = () => {
+    // 【修改 2】禁言/解除禁言按鈕點擊處理
+    const handleBlockClick = (targetUsername) => {
+        setTargetBlockUser(targetUsername); // 僅用於管理員模態框顯示
+
         if (isAdmin) {
-            setShowBlockModal(true); // 管理員彈出模態框
+            // 【核心修改】：管理員邏輯
+            // 1. 檢查該用戶是否已經被封禁過 (這裡檢查本地記錄，實際應查後端)
+            const isAlreadyBanned = adminBannedUsersRef.current.has(targetUsername);
+
+            if (isAlreadyBanned) {
+                // 2. 如果已封禁，彈出確認框 (復用 adminPermissionModal)
+                const modal = document.getElementById('adminPermissionModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                }
+            } else {
+                // 3. 如果未封禁，直接彈出選時長模態框
+                setShowBlockModal(true);
+            }
         } else {
-            confirmBlock(null); // 普通用戶直接雙向禁言
+            // 普通用戶邏輯保持不變 (雙向禁言)
+            onBlockUser(targetUsername, true).then(result => {
+                if (result.success) {
+                    notify('✅ 已禁言該用戶，雙方將無法互相回復');
+                } else {
+                    notify('❌ ' + result.message, true);
+                }
+            });
         }
+    };
+
+    // 【新增 2】確認再次封禁的函數 (被 adminPermissionModal 的按鈕調用)
+    window.confirmRepeatBan = () => {
+        if (typeof window.closeAdminPermissionModal === 'function') {
+            window.closeAdminPermissionModal();
+        } else {
+            const modal = document.getElementById('adminPermissionModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+        // 確認後，彈出選時長模態框
+        setShowBlockModal(true);
     };
 
     // 管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗)
@@ -416,27 +434,6 @@ const handleDeleteClick = () => {
             notify('❌ 系統彈窗組件未加載，請刷新頁面後重試', true);
         }
     };
-    // const handleBlacklist = async (targetUsername) => {
-    //if (!window.confirm(`⚠️ 確定要永久拉黑用戶 "${targetUsername}" 嗎？\n 拉黑後該用戶將永遠無法點贊、踩、評價和回復！`)) return;
-
-    // const reason = prompt("請輸入拉黑原因（將發送系統通知給該用戶）：", "嚴重違反社區規範");
-    // if (!reason) return;
-
-    // try {
-    //   const response = await fetch(`/api/admin/penalty/blacklist/${targetUsername}?reason=${encodeURIComponent(reason)}`, {
-    //   method: 'POST',
-    //   credentials: 'same-origin'
-    //     });
-    //    const result = await response.json();
-    //     if (response.ok && result.success) {
-    //        notify('✅ ' + result.message);
-    //    } else {
-    //       notify('❌ ' + result.message, true);
-    //    }
-    // } catch (error) {
-    //    notify('❌ 網絡錯誤', true);
-    //  }
-    // };
 
     const renderStars = (rating) => {
         if (!rating) return null;
@@ -453,33 +450,33 @@ const handleDeleteClick = () => {
         );
     };
 
-// 富文本格式化功能
-const formatText = (command, value = null) => {
-    document.execCommand(command, false, value);
-    if (editorRef.current) {
-        setEditContent(editorRef.current.innerHTML);
-    }
-    editorRef.current?.focus();
-};
+    // 富文本格式化功能
+    const formatText = (command, value = null) => {
+        document.execCommand(command, false, value);
+        if (editorRef.current) {
+            setEditContent(editorRef.current.innerHTML);
+        }
+        editorRef.current?.focus();
+    };
 
-const insertLink = () => {
-    const url = prompt('請輸入連結地址：', 'https://');
-    if (url) {
-        formatText('createLink', url);
-    }
-};
+    const insertLink = () => {
+        const url = prompt('請輸入連結地址：', 'https://');
+        if (url) {
+            formatText('createLink', url);
+        }
+    };
 
-// 【新增】工具栏按钮样式
-const toolbarBtnStyle = {
-    padding: '0.4rem 0.8rem',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    backgroundColor: '#fff',
-    cursor: 'pointer',
-    fontSize: '0.9rem',
-    transition: 'all 0.2s',
-    minWidth: '40px'
-};
+    // 【新增】工具栏按钮样式
+    const toolbarBtnStyle = {
+        padding: '0.4rem 0.8rem',
+        border: '1px solid #ddd',
+        borderRadius: '4px',
+        backgroundColor: '#fff',
+        cursor: 'pointer',
+        fontSize: '0.9rem',
+        transition: 'all 0.2s',
+        minWidth: '40px'
+    };
 
     return (
         <div className={`review-card ${review.pinned ? 'pinned' : ''}`}>
@@ -501,43 +498,34 @@ const toolbarBtnStyle = {
                         <button className={`review-action-btn btn-dislike ${isDisliked ? 'active' : ''}`} onClick={handleDislike}>
                             <i className={isDisliked ? "fas fa-thumbs-down" : "far fa-thumbs-down"}></i> {dislikeCount}
                         </button>
-                        {/* 保留原有的回復截邏輯 */}
                         <button className="review-action-btn btn-reply" onClick={async () => {
-                            // 1. 登錄檢
                             if (!currentUsername || currentUsername === 'anonymousUser') {
-                                //  【修改這裡】：替換掉醜陋的 alert
                                 if (typeof window.showLoginRequiredModal === 'function') {
                                     window.showLoginRequiredModal();
                                 }
                                 return;
                             }
-                            // 2. 核心攔截：檢查是否被該評論作者禁言
                             const authorUsername = review.customer.username;
                             if (authorUsername !== currentUsername) {
                                 try {
-                                    // 調用後端已有的 can-reply 接口
                                     const res = await fetch(`/api/user/can-reply/${authorUsername}`, { credentials: 'same-origin' });
                                     const data = await res.json();
-                                    // 如果後端返回 canReply 為 false，說明被禁言了
                                     if (data.success && !data.canReply) {
-                                        // 調用 HTML 中定義的全局彈窗
                                         if (window.showBlockedModal) {
                                             window.showBlockedModal('您已經被對方禁言，無法回復！！！');
                                         } else {
                                             alert('您已經被對方禁言，無法回復！！！');
                                         }
-                                        return; // 阻止後續代碼執行，不彈出回復框
+                                        return;
                                     }
                                 } catch (e) {
                                     console.error('檢查禁言狀態失敗', e);
                                 }
                             }
-                            // 3. 檢查通過，正常彈出回復框
                             setShowReplyForm(true);
                         }}>
                             <i className="fas fa-reply"></i> 回復
                         </button>
-                        {/* 修改：將管理員的置頂按鈕移到這裡（右上角），跟回復在一起 */}
                         {isAdmin && (
                             <button
                                 className={`review-action-btn btn-pin-header ${review.pinned ? 'active' : ''}`}
@@ -552,7 +540,7 @@ const toolbarBtnStyle = {
                 </div>
             </div>
 
-            {/* 【修改】評論內容 / 編輯框：整合富文本編輯器 */}
+            {/* 評論內容 / 編輯框：整合富文本編輯器 */}
             {isEditing ? (
                 <div className="edit-container" style={{
                     border: '2px solid var(--gold)',
@@ -561,7 +549,6 @@ const toolbarBtnStyle = {
                     marginBottom: '1rem',
                     backgroundColor: '#fff'
                 }}>
-                    {/* 【核心修改】管理員顯示富文本工具欄 */}
                     {editMode === 'rich' && (
                         <div className="editor-toolbar" style={{
                             display: 'flex',
@@ -572,30 +559,18 @@ const toolbarBtnStyle = {
                             borderRadius: '6px',
                             flexWrap: 'wrap'
                         }}>
-                            <button type="button" onClick={() => formatText('bold')}
-                                style={toolbarBtnStyle} title="粗體"><b>B</b></button>
-                            <button type="button" onClick={() => formatText('italic')}
-                                style={toolbarBtnStyle} title="斜體"><i>I</i></button>
-                            <button type="button" onClick={() => formatText('underline')}
-                                style={toolbarBtnStyle} title="下劃線"><u>U</u></button>
-
+                            <button type="button" onClick={() => formatText('bold')} style={toolbarBtnStyle} title="粗體"><b>B</b></button>
+                            <button type="button" onClick={() => formatText('italic')} style={toolbarBtnStyle} title="斜體"><i>I</i></button>
+                            <button type="button" onClick={() => formatText('underline')} style={toolbarBtnStyle} title="下劃線"><u>U</u></button>
                             <div style={{ width: '1px', backgroundColor: '#ddd', margin: '0 0.25rem' }}></div>
-
-                            <button type="button" onClick={() => formatText('foreColor', '#e94560')}
-                                style={{...toolbarBtnStyle, color: '#e94560'}} title="紅色字體">A</button>
-                            <button type="button" onClick={() => formatText('hiliteColor', '#fff3cd')}
-                                style={{...toolbarBtnStyle, backgroundColor: '#fff3cd'}} title="背景色">A</button>
-
+                            <button type="button" onClick={() => formatText('foreColor', '#e94560')} style={{...toolbarBtnStyle, color: '#e94560'}} title="紅色字體">A</button>
+                            <button type="button" onClick={() => formatText('hiliteColor', '#fff3cd')} style={{...toolbarBtnStyle, backgroundColor: '#fff3cd'}} title="背景色">A</button>
                             <div style={{ width: '1px', backgroundColor: '#ddd', margin: '0 0.25rem' }}></div>
-
-                            <button type="button" onClick={() => formatText('insertUnorderedList')}
-                                style={toolbarBtnStyle} title="列表">• List</button>
-                            <button type="button" onClick={insertLink}
-                                style={toolbarBtnStyle} title="插入連結">🔗</button>
+                            <button type="button" onClick={() => formatText('insertUnorderedList')} style={toolbarBtnStyle} title="列表">• List</button>
+                            <button type="button" onClick={insertLink} style={toolbarBtnStyle} title="插入連結">🔗</button>
                         </div>
                     )}
 
-                    {/* 編輯區域：根據 editMode 切換富文本 / 純文本 */}
                     {editMode === 'rich' ? (
                         <div
                             ref={editorRef}
@@ -628,7 +603,6 @@ const toolbarBtnStyle = {
                         />
                     )}
 
-                    {/* 按鈕區域 */}
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                         <button
                             onClick={() => setIsEditing(false)}
@@ -661,15 +635,10 @@ const toolbarBtnStyle = {
                     </div>
                 </div>
             ) : (
-                /*                <div className="review-content">{review.content}</div> */
-/*                <div className="review-content">{review.content}</div> */
                 <div className="review-content">
-                    {/* 核心修復：如果是富文本，渲染 HTML；否則渲染純文本（兼容舊數據） */}
                     {review.isFormatted && review.formattedContent ? (
-                        // 情况 1: 富文本模式 (确保 formattedContent 存在)
                         <span dangerouslySetInnerHTML={{ __html: review.formattedContent }} />
                     ) : (
-                        // 情况 2: 普通文本模式 (兼容旧数据，防止 undefined 报错)
                         <span>{review.content || ''}</span>
                     )}
                 </div>
@@ -677,7 +646,6 @@ const toolbarBtnStyle = {
 
             {/* 底部操作區：修改、刪除 (置頂按鈕已移走) */}
             <div className="review-actions">
-                {/* 僅作者可見，且僅當未置頂時可見。如果有互動，直接禁用按鈕 */}
                 {review.customer.username === currentUsername && !review.pinned && (
                     <button
                         className="btn-edit"
@@ -689,30 +657,47 @@ const toolbarBtnStyle = {
                         <i className="fas fa-edit"></i> 修改
                     </button>
                 )}
-                {/*
-                刪除按鈕邏輯修復：
-                1. 作者：只能刪除未置頂的評論 (!review.pinned)
-                2. 管理員：隨時可以刪除 (isAdmin)，不受置頂限制
-                */}
+
                 {((review.customer.username === currentUsername && !review.pinned) || isAdmin) && (
                     <button className="btn-delete" onClick={handleDeleteClick}>
                         <i className="fas fa-trash-alt"></i> 刪除
                     </button>
                 )}
-                {/* 禁言/解除禁言按鈕：使用共享的 blockedUsers 狀態 */}
+
+                {/* 【核心修改 2】：禁言/解除禁言按鈕渲染邏輯 */}
                 {currentUsername && currentUsername !== 'anonymousUser' && review.customer.username !== currentUsername && (
-                    isAuthorBlocked ? (
-                        <button className="btn-unblock" onClick={handleUnblock} title="解除禁言">
-                            <i className="fas fa-unlock"></i> 解除禁言
-                        </button>
-                    ) : (
-                        <button className="btn-ban" onClick={handleBlockClick} title={isAdmin ? "全局禁言該用戶" : "雙向禁言該用戶"}>
+                    // 如果是管理員，永遠顯示「禁言」按鈕
+                    isAdmin ? (
+                        <button
+                            className="btn-ban"
+                            onClick={() => handleBlockClick(review.customer.username)}
+                            title="全局禁言該用戶"
+                        >
                             <i className="fas fa-ban"></i> 禁言
                         </button>
+                    ) : (
+                        // 普通用戶：根據 blockedUsers 狀態顯示「禁言」或「解除禁言」
+                        blockedUsers && blockedUsers.includes(review.customer.username) ? (
+                            <button
+                                className="btn-unblock"
+                                onClick={handleUnblock}
+                                title="解除禁言"
+                                style={{ color: '#28a745', borderColor: '#28a745' }}
+                            >
+                                <i className="fas fa-unlock"></i> 解除禁言
+                            </button>
+                        ) : (
+                            <button
+                                className="btn-ban"
+                                onClick={() => handleBlockClick(review.customer.username)}
+                                title="雙向禁言該用戶"
+                            >
+                                <i className="fas fa-ban"></i> 禁言
+                            </button>
+                        )
                     )
                 )}
 
-                {/*  新增：舉報按鈕（僅其他登錄用戶可見，本人和 admin 不可見） */}
                 {currentUsername && currentUsername !== 'anonymousUser' &&
                     review.customer.username !== currentUsername &&
                     !isAdmin && (
@@ -729,18 +714,17 @@ const toolbarBtnStyle = {
                         </button>
                     )}
 
-                {/* 拉黑按鈕：僅管理員可見 */}
                 {isAdmin && (
                     <button
                         className="btn-blacklist"
-                        onClick={() => handleBlacklist(review.customer.username)} // 調用真實函數
+                        onClick={() => handleBlacklist(review.customer.username)}
                         title="永久拉黑該用戶（加入黑名單）"
                     >
                         <i className="fas fa-user-slash"></i> 永久拉黑
                     </button>
                 )}
             </div>
-            {/* 把 showReplyForm 和它的設置方法直接傳給子組件 */}
+
             <ReplySection
                 reviewId={review.id}
                 initialReplyCount={review.replyCount}
@@ -751,11 +735,11 @@ const toolbarBtnStyle = {
                 onReplyCountChange={onReplyCountChange}
                 showReplyForm={showReplyForm}
                 setShowReplyForm={setShowReplyForm}
-                // 傳遞禁言相關 props 給 ReplySection
                 blockedUsers={blockedUsers}
                 onBlockUser={onBlockUser}
             />
-            {/* 新增：管理員刪除確認模態框 */}
+
+            {/* 管理員刪除確認模態框 */}
             {showDeleteModal && (
                 <div style={modalOverlayStyle}>
                     <div style={modalContentStyle}>
@@ -799,7 +783,8 @@ const toolbarBtnStyle = {
                     </div>
                 </div>
             )}
-            {/* 新增：管理員禁言時長選擇模態框 */}
+
+            {/* 管理員禁言時長選擇模態框 */}
             {showBlockModal && (
                 <div style={modalOverlayStyle} onClick={() => setShowBlockModal(false)}>
                     <div style={modalContentStyle} onClick={e => e.stopPropagation()}>
@@ -808,7 +793,7 @@ const toolbarBtnStyle = {
                             管理員禁言
                         </h3>
                         <p style={{ marginBottom: '1rem', color: 'var(--gray)' }}>
-                            請輸入禁言時長，用戶在期間內將無法在任何評論區回復：
+                            請輸入禁言時長，用戶 <strong>{targetBlockUser}</strong> 在期間內將無法在任何評論區回復：
                         </p>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', margin: '1.5rem 0' }}>
                             <input

@@ -11,6 +11,7 @@ import org.example.website.repository.OrderItemRepository;
 import org.example.website.repository.OrderRepository;
 import org.example.website.repository.ProductRepository;
 import org.example.website.repository.ReviewRepository;
+import org.example.website.service.ProductService;
 import org.example.website.service.ViewHistoryService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -33,19 +35,21 @@ public class ProductController {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final FavoriteRepository favoriteRepository;
-
+    private final ProductService productService;
     public ProductController(ProductRepository productRepository,
                              ReviewRepository reviewRepository,
                              ViewHistoryService viewHistoryService,
                              OrderRepository orderRepository,
                              OrderItemRepository orderItemRepository,
-                             FavoriteRepository favoriteRepository) {
+                             FavoriteRepository favoriteRepository,
+                             ProductService productService) {
         this.productRepository = productRepository;
         this.reviewRepository = reviewRepository;
         this.viewHistoryService = viewHistoryService;
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.favoriteRepository = favoriteRepository;
+        this.productService = productService;
     }
 
     @GetMapping("/product/{id}")
@@ -229,8 +233,14 @@ public class ProductController {
     @PutMapping("/api/admin/product/{id}")
     public ResponseEntity<ApiResponse> updateProduct(
             @PathVariable Integer id,
-            @RequestBody ProductUpdateRequest request,
-            Authentication authentication) {
+            @RequestBody ProductUpdateRequest request) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(401)
+                    .body(ApiResponse.error("未登入，請先登入"));
+        }
 
         // 权限检查
         if (!"admin".equals(authentication.getName())) {
@@ -276,6 +286,19 @@ public class ProductController {
             if (request.getGroupCode()!=null){
                 product.setGroupCode(request.getGroupCode());
             }
+
+            // 3. 【核心修改】处理首页推荐的智能排序逻辑
+            // 注意：这里不再直接 product.setHomeDisplayOrder，而是交给 Service 层的智能方法统一处理
+            Integer newOrder = request.getHomeDisplayOrder();
+
+            if (newOrder != null && newOrder > 0) {
+                // 设置为推荐，并触发智能排序调整（其他商品自动 +1 或 -1）
+                productService.updateHomeDisplayOrder(id, newOrder);
+            } else {
+                // 传入 null，表示取消推荐，触发后续商品排序自动 -1 的逻辑
+                productService.updateHomeDisplayOrder(id, null);
+            }
+
             productRepository.save(product);
 
             return ResponseEntity.ok(ApiResponse.ok("修改成功"));
@@ -331,5 +354,15 @@ public class ProductController {
         }).collect(Collectors.toList());
 
         return ResponseEntity.ok(variants);
+    }
+
+    @GetMapping("/api/admin/products/featured/max-order")
+    public ResponseEntity<Integer> getMaxHomeDisplayOrder() {
+        try {
+            Integer maxOrder = productRepository.findMaxHomeDisplayOrder();
+            return ResponseEntity.ok(maxOrder != null ? maxOrder : 0);
+        } catch (Exception e) {
+            return ResponseEntity.ok(0); // 出错时返回0
+        }
     }
 }

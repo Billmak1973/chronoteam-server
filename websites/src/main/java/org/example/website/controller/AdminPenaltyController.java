@@ -1,10 +1,16 @@
 package org.example.website.controller;
 
 import org.example.website.dto.ApiResponse;
+import org.example.website.entity.AdminPenalty;
+import org.example.website.entity.Notification;
+import org.example.website.repository.AdminPenaltyRepository;
+import org.example.website.repository.NotificationRepository;
 import org.example.website.service.AdminPenaltyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/penalty")

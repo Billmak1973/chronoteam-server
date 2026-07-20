@@ -106,4 +106,18 @@ public class ViewHistoryService {
         viewHistoryRepository.deleteOlderThan(cutoffDate);
         System.out.println(" 已自動清理半年前的瀏覽歷史記錄");
     }
+
+    /**
+     * 批量刪除瀏覽歷史 (新增)
+     * @param username 當前登錄用戶名 (用於權限校驗)
+     * @param historyIds 要刪除的歷史記錄 ID 列表
+     */
+    @Transactional
+    public void batchDelete(String username, List<Long> historyIds) {
+        if (historyIds == null || historyIds.isEmpty()) {
+            return;
+        }
+        // 調用 Repository 方法，確保只刪除屬於該 username 的記錄
+        viewHistoryRepository.deleteByHistoryIdInAndUser_Username(historyIds, username);
+    }
 }

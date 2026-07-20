@@ -20,4 +20,5 @@ public class ProductUpdateRequest {
     private Boolean visible;
     private Boolean conditionVisible;
     private WatchCondition condition;
+    private Integer homeDisplayOrder;
 }

@@ -9,7 +9,6 @@ import java.util.Optional;
 @Repository
 public interface AdminPenaltyRepository extends JpaRepository<AdminPenalty, Long> {
 
-    //使用 TargetUser_Username 導航到 User 表的 username 字段
     Optional<AdminPenalty> findTopByTargetUser_UsernameAndTypeAndStatusOrderByStartTimeDesc(
             String username, // 參數名可以改為 username，類型依然是 String
             AdminPenalty.PenaltyType type,
@@ -29,5 +28,4 @@ public interface AdminPenaltyRepository extends JpaRepository<AdminPenalty, Long
     );
 
     Optional<AdminPenalty> findByNotificationId(Long notificationId);
-
 }

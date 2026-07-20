@@ -17,6 +17,7 @@ public class NotificationService {
     private final UserInteractionStatsRepository statsRepository;
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
+
     public NotificationService(UserInteractionStatsRepository statsRepository,
                                ReviewRepository reviewRepository,
                                UserRepository userRepository) {
@@ -27,6 +28,7 @@ public class NotificationService {
 
     public static final String TYPE_REVIEW_REPLY = "REVIEW_REPLY";
     public static final String TYPE_REVIEW_MENTION = "REVIEW_MENTION";
+    public static final String TYPE_LIKED_ME = "LIKED_ME";
 
     /**
      *  核心：獲取未讀消息數量 (僅需 2 次 DB 交互：1次查時間，1次查數量)
@@ -48,7 +50,11 @@ public class NotificationService {
             return reviewRepository.countUnreadReplies(username, lastViewedAt);
         } else if (TYPE_REVIEW_MENTION.equals(type)) {
             return reviewRepository.countUnreadMentions("@" + username, username, lastViewedAt);
+        }else if (TYPE_LIKED_ME.equals(type)) {
+            // 统计别人点赞我的评论
+            return reviewRepository.countUnreadLikes(username, lastViewedAt);
         }
+
 
         return 0;
     }
@@ -58,7 +64,8 @@ public class NotificationService {
     public long getTotalUnreadCount(String username) {
         // 這裡只會執行 2 次 SQL 查詢 (一次 Reply, 一次 Mention)，無論有多少條消息，都是 O(1) 複雜度
         return getUnreadCount(username, TYPE_REVIEW_REPLY) +
-                getUnreadCount(username, TYPE_REVIEW_MENTION);
+                getUnreadCount(username, TYPE_REVIEW_MENTION)+
+                getUnreadCount(username, TYPE_LIKED_ME);
     }
 
     @Transactional

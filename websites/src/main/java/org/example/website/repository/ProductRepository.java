@@ -106,4 +106,11 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     }
 
     List<Product> findByGroupCode(String groupCode);
+
+    List<Product> findAllByHomeDisplayOrderGreaterThan(Integer order);
+    List<Product> findAllByHomeDisplayOrderGreaterThanEqual(Integer order);
+    List<Product> findAllByHomeDisplayOrderBetween(Integer start, Integer end);
+
+    @Query("SELECT MAX(p.homeDisplayOrder) FROM Product p WHERE p.homeDisplayOrder IS NOT NULL AND p.homeDisplayOrder > 0")
+    Integer findMaxHomeDisplayOrder();
 }

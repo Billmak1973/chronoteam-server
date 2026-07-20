@@ -31,6 +31,8 @@ public class UserBlockController {
             @PathVariable String targetUsername,
             @RequestParam(required = false) Integer durationMinutes,  // 管理员专用：禁言时长
             @RequestParam(required = false) String reason,             // 管理员专用：禁言原因
+            @RequestParam(required = false) Long reviewId,             // 【新增】管理員專用：關聯的評論 ID
+            @RequestParam(required = false) String reviewContent,      // 【新增】管理員專用：關聯的評論內容快照
             Authentication authentication) {
 
         String currentUsername = authentication.getName();
@@ -41,7 +43,7 @@ public class UserBlockController {
         if (isAdmin && durationMinutes != null) {
             // 管理员禁言（全局禁言）
             result = adminPenaltyService.adminBanUser(
-                    targetUsername, currentUsername, durationMinutes, reason
+                    targetUsername, currentUsername, durationMinutes, reason,reviewId,reviewContent
             );
         } else {
             // 普通用户禁言（双向禁言）

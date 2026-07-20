@@ -58,6 +58,20 @@ public class AdminPenalty {
     @Column(name = "appeal_id")
     private Long appealId;
 
+    /**
+     * 引發處罰的評論 ID
+     * (注意：不使用 @ManyToOne 關聯，防止評論被物理刪除時導致外鍵約束報錯或處罰記錄丟失)
+     */
+    @Column(name = "review_id")
+    private Long reviewId;
+
+    /**
+     * 評論內容快照
+     * (防止原評論被刪除後，管理員無法追溯當時用戶具體說了什麼)
+     */
+    @Column(name = "review_content", columnDefinition = "TEXT")
+    private String reviewContent;
+
     public enum PenaltyType {
         BAN,         // 封禁 (有期限)
         BLACKLIST    // 拉黑 (永久)

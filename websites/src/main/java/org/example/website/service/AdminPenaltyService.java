@@ -215,7 +215,7 @@ public class AdminPenaltyService {
      */
     @Transactional
     public Map<String, Object> adminBanUser(String bannedUsername, String adminUsername,
-                                            int durationMinutes, String reason) {
+                                            int durationMinutes, String reason, Long reviewId, String reviewContent) {
         Map<String, Object> response = new HashMap<>();
 
         //  核心修改 1：先查出對應的 User 實體
@@ -286,6 +286,8 @@ public class AdminPenaltyService {
         // penalty.setStartTime(LocalDateTime.now()); // 實體類已有 @CreationTimestamp，此行可省略
         penalty.setEndTime(LocalDateTime.now().plusMinutes(durationMinutes));
         penalty.setStatus(AdminPenalty.PenaltyStatus.ACTIVE);
+        penalty.setReviewId(reviewId);
+        penalty.setReviewContent(reviewContent);
 
         // 核心修改：將剛才獲取的通知 ID 綁定到處罰記錄中
         if (savedNotificationId != null) {

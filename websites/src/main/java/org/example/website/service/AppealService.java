@@ -1,8 +1,10 @@
 package org.example.website.service;
 
 import org.example.website.dto.AppealRequest;
+import org.example.website.entity.AdminPenalty;
 import org.example.website.entity.Appeal;
 import org.example.website.entity.Notification;
+import org.example.website.repository.AdminPenaltyRepository;
 import org.example.website.repository.AppealRepository;
 import org.example.website.repository.NotificationRepository;
 import org.springframework.stereotype.Service;
@@ -11,6 +13,7 @@ import org.example.website.entity.User;
 import org.example.website.repository.UserRepository;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class AppealService {
@@ -18,10 +21,13 @@ public class AppealService {
     private final AppealRepository appealRepository;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    public AppealService(AppealRepository appealRepository, NotificationRepository notificationRepository, UserRepository userRepository) {
+    private final AdminPenaltyRepository adminPenaltyRepository;
+    public AppealService(AppealRepository appealRepository, NotificationRepository notificationRepository, UserRepository userRepository
+    , AdminPenaltyRepository adminPenaltyRepository) {
         this.appealRepository = appealRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.adminPenaltyRepository = adminPenaltyRepository;
     }
 
     @Transactional
@@ -62,8 +68,16 @@ public class AppealService {
         appeal.setStatus(Appeal.AppealStatus.PENDING);
 
         // 4. 保存數據庫
-        appealRepository.save(appeal);
+        Appeal savedAppeal = appealRepository.save(appeal);
 
+        // 5. 更新 admin_penalty 表的 appeal_id 字段
+        Optional<AdminPenalty>penaltyOpt= adminPenaltyRepository.findByNotificationId(request.getNotificationId());
+        if (penaltyOpt.isPresent()) {
+            AdminPenalty penalty = penaltyOpt.get();
+            // 设置 appeal_id
+            penalty.setAppealId(savedAppeal.getAppealId());
+            adminPenaltyRepository.save(penalty);
+        }
         response.put("success", true);
         response.put("message", "申訴提交成功，請耐心等待管理員審核");
         return response;

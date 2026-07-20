@@ -491,6 +491,80 @@
             font-weight: bold;
             letter-spacing: 2px;
         }
+
+        /* Tab 下拉菜单样式 */
+        .tab-dropdown-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            border: 2px solid var(--light);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-dropdown-label {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-dropdown-label i {
+            color: var(--gold);
+        }
+
+        .tab-dropdown-select {
+            flex: 1;
+            max-width: 400px;
+            padding: 0.8rem 1.2rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--primary);
+            background: white;
+            border: 2px solid var(--gold);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            outline: none;
+            box-shadow: 0 2px 5px rgba(212, 175, 55, 0.1);
+        }
+
+        .tab-dropdown-select:hover {
+            border-color: #b8972b;
+            box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .tab-dropdown-select:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+        }
+
+        .tab-dropdown-select option {
+            padding: 0.8rem;
+            font-size: 1rem;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .tab-dropdown-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tab-dropdown-label {
+                justify-content: center;
+                margin-bottom: 0.5rem;
+            }
+
+            .tab-dropdown-select {
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 
@@ -506,17 +580,18 @@
                 <i class="fas fa-comments" style="color: var(--gold);"></i> 互動中心
             </h2>
 
-            <!-- Tab 切换 -->
-            <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('MY', this)">
-                    <i class="fas fa-pen"></i> 我的評論
-                </button>
-                <button class="tab-btn" onclick="switchTab('REPLY', this)">
-                    <i class="fas fa-reply"></i> 回復我的
-                </button>
-                <button class="tab-btn" onclick="switchTab('MENTION', this)">
-                    <i class="fas fa-at"></i> 提到我的
-                </button>
+            <!-- Tab 下拉菜单 -->
+            <div class="tab-dropdown-container">
+                <label for="tabSelect" class="tab-dropdown-label">
+                    <i class="fas fa-filter"></i> 筛选：
+                </label>
+                <select id="tabSelect" class="tab-dropdown-select" onchange="handleTabChange(this.value)">
+                    <option value="MY" selected>✏️ 我的評論</option>
+                    <option value="REPLY">↩️ 回復我的</option>
+                    <option value="MENTION">@ 提到我的</option>
+                    <option value="LIKED_BY_ME">👍 我的點贊</option>
+                    <option value="LIKED_ME">❤️ 點贊我的</option>
+                </select>
             </div>
 
             <!-- 内容区域 -->
@@ -527,7 +602,7 @@
                 </div>
             </div>
 
-            <!-- 🟢 新增：分頁組件容器 -->
+            <!--  新增：分頁組件容器 -->
             <div id="pagination-area"></div>
         </main>
     </div>
@@ -588,15 +663,21 @@
             markAllNotificationsAsRead();
         });
 
-        // 切換 Tab
-        function switchTab(type, btnElement) {
+        // 处理下拉菜单选择
+        function handleTabChange(type) {
             currentType = type;
-            currentPage = 0; //  切換 Tab 時重置到第一頁
+            currentPage = 0; // 切换时重置到第一页
 
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            btnElement.classList.add('active');
+            // 更新下拉菜单的选中状态（可选的视觉反馈）
+            const select = document.getElementById('tabSelect');
+            select.value = type;
 
             loadData(type, 0);
+        }
+
+        // 保留原来的 switchTab 函数作为兼容（如果其他地方有调用）
+        function switchTab(type, btnElement) {
+            handleTabChange(type);
         }
 
         // 加載數據
@@ -717,7 +798,57 @@
                     typeLabel = `<span style="background:#e9ecef; padding:2px 6px; border-radius:4px; font-size:0.75rem; margin-right:5px;">樓中樓</span>`;
                 }
 
-                html += `
+                // ========== 修改开始：点赞我的特殊格式 ==========
+                if (type === 'LIKED_ME') {
+                    // 显示：谁点赞了 + 被赞的评论 + 评论时间 + 点赞时间
+                    html += `
+                <div class="review-card">
+                    <!-- 点赞者信息 -->
+                    <div style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(233, 69, 96, 0.1) 100%); padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.8rem; border-left: 4px solid var(--gold);">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--primary); font-weight: 600;">
+                            <i class="fas fa-heart" style="color: var(--accent);"></i>
+                            <span style="color: var(--gold);">${item.customer.username}</span>
+                            <span style="color: var(--gray); font-weight: 400;">点赞了您的评论</span>
+                        </div>
+                        <div style="margin-top: 0.3rem; font-size: 0.85rem; color: var(--gray);">
+                            <i class="fas fa-clock"></i> 点赞时间：${formatDate(item.updatedAt || item.createdAt)}
+                        </div>
+                    </div>
+
+                    <!-- 被点赞的评论内容 -->
+                    <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px dashed #e9ecef;">
+                        <div style="font-size: 0.85rem; color: var(--gray); margin-bottom: 0.5rem;">
+                            <i class="fas fa-quote-left" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                            您的评论（发表于 ${formatDate(item.createdAt)}）：
+                        </div>
+                        <div style="color: var(--primary); line-height: 1.6; font-size: 0.95rem;">
+                            ${displayContent}
+                        </div>
+                    </div>
+
+                    <!-- 底部操作栏 -->
+                    <div class="card-footer" style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px dashed #ddd;">
+                        <a href="/product/${item.product.id}" class="card-product" target="_blank">
+                            <i class="fas fa-link"></i> 商品：${item.product.desc}
+                        </a>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span style="color: var(--gold); font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem;">
+                                <i class="fas fa-thumbs-up"></i>
+                                <span>共 ${item.likeCount || 0} 个赞</span>
+                            </span>
+                            <button class="btn-delete-review" onclick="openDeleteModal(${item.id})">
+                                <i class="fas fa-trash-alt"></i> 刪除
+                            </button>
+                            <a href="/product/${item.product.id}" class="btn-view-detail">
+                                前往查看 <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+                } else {
+                    // ========== 其他类型的原有逻辑 ==========
+                    html += `
                 <div class="review-card">
                     <div class="card-header">
                         <div>
@@ -736,7 +867,12 @@
                         <span style="font-size:0.85rem; color:#6c757d;">
                             ${item.replyToUser ? '回復了 @' + item.replyToUser : '發表了評論'}
                         </span>
-                        <div>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <!-- 点赞数量和图标 -->
+                            <span style="color: var(--gold); font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem;">
+                                <i class="fas fa-thumbs-up"></i>
+                                <span>${item.likeCount || 0}</span>
+                            </span>
                             <button class="btn-delete-review" onclick="openDeleteModal(${item.id})">
                                 <i class="fas fa-trash-alt"></i> 刪除
                             </button>
@@ -747,6 +883,7 @@
                     </div>
                 </div>
             `;
+                }
             });
 
             html += '</div>';

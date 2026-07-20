@@ -15,10 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -49,6 +46,8 @@ public class PageController {
     private final AdminPenaltyRepository adminPenaltyRepository;
     private final AdminPenaltyService adminPenaltyService;
     private final CartService cartService;
+    private final ProductService productService;
+    private final SiteSettingService siteSettingService;
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
@@ -63,8 +62,8 @@ public class PageController {
                           SecurityQuestionRepository securityQuestionRepository,
                           AdminPenaltyRepository adminPenaltyRepository,
                           AdminPenaltyService adminPenaltyService,
-                                  CartService cartService,
-                          UserRepository userRepository) {
+                          CartService cartService, ProductService productService,
+                          UserRepository userRepository, SiteSettingService siteSettingService) {
         this.userService = userService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -80,11 +79,27 @@ public class PageController {
         this.adminPenaltyService = adminPenaltyService;
         this.cartService = cartService;
         this.userRepository = userRepository;
+        this.productService = productService;
+        this.siteSettingService = siteSettingService;
     }
 
     @GetMapping("/")
-    public String home() {
-        return "home";  // 對應 templates/home.html
+    public String home(Model model) {
+        List<Product> allProducts = productService.getAllProducts();
+
+        // 過濾出 homeDisplayOrder > 0 的商品，按數字升序排列 (已移除 limit(8) 限制)
+        List<Product> featuredProducts = allProducts.stream()
+                .filter(p -> p.getHomeDisplayOrder() != null && p.getHomeDisplayOrder() > 0)
+                .sorted(Comparator.comparing(Product::getHomeDisplayOrder))
+                .collect(Collectors.toList());
+
+        model.addAttribute("featuredProducts", featuredProducts);
+
+        // 【新增】獲取並傳遞卡片邊框主題 (day 或 night) 到前端
+        String cardTheme = siteSettingService.getCardBorderTheme();
+        model.addAttribute("cardTheme", cardTheme);
+
+        return "home";
     }
 
     @GetMapping("/test")
@@ -138,29 +153,31 @@ public class PageController {
     @GetMapping("/account/orders")
     public String myOrders(Model model, Authentication authentication) {
         String username = authentication.getName();
-
-        // 【修改處 1】：使用 UserService 獲取 User 實體
         User user = userService.findByUsername(username);
-
-        // 查詢當前用戶的訂單列表
         List<Order> orders = orderService.getUserOrders(username);
 
-
-        // 分離待付款和已支付訂單
+        // 【修改点 1】：待付款（仅包含线上支付 PayPal/信用卡，且状态为 UNPAID）
         List<Order> unpaidOrders = orders.stream()
-                .filter(order -> order.getPaymentStatus() == Order.PaymentStatus.UNPAID ||
+                .filter(order -> "PAYPAL_SIM".equals(order.getPaymentMethod()) &&
+                        order.getPaymentStatus() == Order.PaymentStatus.UNPAID)
+                .collect(Collectors.toList());
+
+        // 【修改点 2】：新增待线下付款列表（支付方式为 OFFLINE_STORE 且状态为 PENDING_OFFLINE）
+        List<Order> pendingOfflineOrders = orders.stream()
+                .filter(order -> "OFFLINE_STORE".equals(order.getPaymentMethod()) &&
                         order.getPaymentStatus() == Order.PaymentStatus.PENDING_OFFLINE)
                 .collect(Collectors.toList());
 
+        // 已支付订单逻辑保持不变
         List<Order> paidOrders = orders.stream()
                 .filter(order -> order.getPaymentStatus() == Order.PaymentStatus.PAID_SIMULATED ||
                         order.getPaymentStatus() == Order.PaymentStatus.PAID_REAL ||
                         order.getPaymentStatus() == Order.PaymentStatus.PAID_OFFLINE)
                 .collect(Collectors.toList());
 
-        // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
         model.addAttribute("user", user);
         model.addAttribute("unpaidOrders", unpaidOrders);
+        model.addAttribute("pendingOfflineOrders", pendingOfflineOrders); // 【修改点 3】：传入新列表
         model.addAttribute("paidOrders", paidOrders);
 
         return "orders";

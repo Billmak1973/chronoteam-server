@@ -1,7 +1,9 @@
 package org.example.website.config;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.website.entity.SiteSetting;
 import org.example.website.entity.User;
+import org.example.website.repository.SiteSettingRepository;
 import org.example.website.repository.UserRepository;
 import org.example.website.util.UidGenerator;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,11 +12,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Slf4j
 @Component
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
+    private final SiteSettingRepository siteSettingRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.init.admin-enabled:true}")
@@ -35,23 +40,60 @@ public class DataInitializer implements CommandLineRunner {
     @Value("${app.init.admin-name:系統超級管理員}")
     private String initName;
 
-    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public DataInitializer(UserRepository userRepository,
+                           SiteSettingRepository siteSettingRepository,
+                           PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.siteSettingRepository = siteSettingRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     @Transactional
     public void run(String... args) {
+        // 初始化站点设置
+        initializeSiteSettings();
+
+        // 初始化管理员
+        initializeAdmin();
+    }
+
+    /**
+     * 初始化站点设置
+     */
+    private void initializeSiteSettings() {
+        try {
+            // 产品卡片边框主题
+            if (!siteSettingRepository.existsByKey("card_border_theme")) {
+                SiteSetting themeSetting = new SiteSetting();
+                themeSetting.setKey("card_border_theme");
+                themeSetting.setValue("day"); // 默认白天主题
+                themeSetting.setDescription("產品卡片邊框主題: day(白天) 或 night(晚上)");
+                themeSetting.setUpdatedAt(LocalDateTime.now());
+
+                siteSettingRepository.save(themeSetting);
+                log.info(" [系統初始化] 成功創建站點設置: 產品卡片邊框主題 (默认: day)");
+            } else {
+                log.info(" [系統初始化] 站點設置 [card_border_theme] 已存在，跳過創建。");
+            }
+
+            // 你可以在这里添加更多站点设置
+            // 例如：网站名称、联系方式、SEO设置等
+
+        } catch (Exception e) {
+            log.error(" [系統初始化] 初始化站點設置失敗: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 初始化管理员账号
+     */
+    private void initializeAdmin() {
         if (!adminEnabled) {
             log.info(" [系統初始化] 管理員初始化已禁用 (app.init.admin-enabled=false)");
             return;
         }
 
-        // ==========================================
-        // 核心修復：直接判斷該用戶名是否已存在
-        // 如果已存在，直接 return，根本不執行 save()，絕對不會觸發 INSERT，不會消耗自增 ID！
-        // ==========================================
         if (userRepository.existsByUsername(initUsername)) {
             log.info(" [系統初始化] 管理員帳號 [{}] 已存在，跳過創建。", initUsername);
             return;
@@ -82,7 +124,6 @@ public class DataInitializer implements CommandLineRunner {
             log.info("==================================================");
 
         } catch (Exception e) {
-            // 捕獲異常即可，不要拋出 RuntimeException，以免導致整個 Spring Boot 啟動失敗
             log.error(" [系統初始化] 創建管理員 [{}] 失敗: {}", initUsername, e.getMessage(), e);
         }
     }

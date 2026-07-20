@@ -196,11 +196,75 @@
         }
 
         .status-COMPLETED {
-            background: #d1ecf1;
-            color: #0c5460;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 0.5rem 1.3rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(56, 239, 125, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            animation: completedBounce 0.6s ease-out;
         }
 
-        .status-CANCELLED {
+        .status-COMPLETED::after {
+            content: '✓';
+            position: absolute;
+            right: -8px;
+            top: -8px;
+            background: #38ef7d;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            border: 2px solid white;
+            animation: checkmarkPop 0.5s ease-out 0.3s both;
+        }
+
+        @keyframes completedBounce {
+            0% {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes checkmarkPop {
+            0% {
+                transform: scale(0);
+            }
+
+            50% {
+                transform: scale(1.3);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        < !-- .status-COMPLETED {
+            -->< !-- background: #d1ecf1;
+            -->< !-- color: #0c5460;
+            -->< !--
+        }
+
+        -->.status-CANCELLED {
             background: #f8d7da;
             color: #721c24;
         }
@@ -661,13 +725,21 @@
             <h2 class="page-title"><i class="fas fa-box"></i> 我的訂單</h2>
             <p class="page-subtitle">查看您的所有購買記錄與訂單狀態</p>
 
-            <!--  Tab 切换按钮 -->
+            <!-- Tab 切换按钮 (新增「待线下付款」) -->
             <div class="order-tabs">
                 <button class="tab-btn active" onclick="switchTab('unpaid')">
                     <i class="fas fa-clock"></i>
                     待付款
                     <span class="badge" th:text="${unpaidOrders.size()}">0</span>
                 </button>
+
+                <!-- 【新增】待线下付款 Tab -->
+                <button class="tab-btn" onclick="switchTab('pending-offline')">
+                    <i class="fas fa-store"></i>
+                    待线下付款
+                    <span class="badge" th:text="${pendingOfflineOrders.size()}">0</span>
+                </button>
+
                 <button class="tab-btn" onclick="switchTab('paid')">
                     <i class="fas fa-check-circle"></i>
                     已支付
@@ -675,7 +747,9 @@
                 </button>
             </div>
 
-            <!--  待付款订单（默认显示） -->
+            <!-- ========================================== -->
+            <!-- 1. 待付款订单（仅包含线上支付 PAYPAL_SIM） -->
+            <!-- ========================================== -->
             <div id="unpaid-tab" class="tab-content active">
                 <div th:if="${!unpaidOrders.isEmpty()}">
                     <div class="order-card" th:each="order : ${unpaidOrders}" th:data-order-no="${order.orderNo}">
@@ -699,28 +773,7 @@
                                         <span>待付款</span>
                                     </span>
                                 </p>
-
-                                <p>支付方式：
-                                    <strong>
-                                        <span th:if="${order.paymentMethod == 'OFFLINE_STORE'}">線下店鋪支付</span>
-                                        <span th:if="${order.paymentMethod == 'PAYPAL_SIM'}">線上支付 (PayPal/信用卡)</span>
-                                        <span
-                                            th:unless="${order.paymentMethod == 'OFFLINE_STORE' or order.paymentMethod == 'PAYPAL_SIM'}"
-                                            th:text="${order.paymentMethod}">其他</span>
-                                    </strong>
-
-                                    <span th:if="${order.offlineStoreId != null}"
-                                        style="color: var(--gold); font-size: 0.85rem; margin-left: 0.5rem; font-weight: 500;">
-                                        (<i class="fas fa-map-marker-alt"></i>
-                                        <span th:switch="${order.offlineStoreId}">
-                                            <span th:case="'store-central'">中環店</span>
-                                            <span th:case="'store-tsimsatsui'">尖沙咀店</span>
-                                            <span th:case="'store-causeway'">銅鑼灣店</span>
-                                            <span th:case="*">[[${order.offlineStoreId}]]</span>
-                                        </span>)
-                                    </span>
-                                </p>
-
+                                <p>支付方式：<strong>線上支付 (PayPal/信用卡)</strong></p>
                                 <p style="color: #dc3545; font-weight: 600;">
                                     <i class="fas fa-info-circle"></i> 請盡快完成付款，訂單將保留24小時
                                 </p>
@@ -732,23 +785,17 @@
                             </div>
 
                             <div class="order-actions">
+                                <!-- 仅保留线上支付的立即支付按钮 -->
                                 <a th:if="${order.paymentMethod == 'PAYPAL_SIM'}"
                                     th:href="@{/checkout(orderNo=${order.orderNo})}" class="btn-sm btn-pay">
                                     <i class="fas fa-credit-card"></i> 立即支付
                                 </a>
 
-                                <button th:if="${order.paymentMethod == 'OFFLINE_STORE'}" class="btn-sm btn-contact"
-                                    onclick="showNotification('📞 請前往選擇的店鋪完成付款，或聯繫客服：+852 1234 5678')">
-                                    <i class="fas fa-phone"></i> 聯繫店鋪
-                                </button>
-
-                                <!--  查看详情按钮改为切换按钮 -->
                                 <button class="btn-sm btn-view toggle-details-btn" th:data-order-no="${order.orderNo}"
                                     onclick="toggleOrderDetails(this)">
                                     <i class="fas fa-eye"></i> 查看詳情
                                 </button>
 
-                                <!--  刪除訂單按鈕改為打開自定義彈窗 -->
                                 <button class="btn-sm btn-delete-order" th:data-order-no="${order.orderNo}"
                                     onclick="openDeleteOrderModal(this)">
                                     <i class="fas fa-trash-alt"></i> 刪除訂單
@@ -760,7 +807,6 @@
                         <div class="order-details" th:id="'details-' + ${order.orderNo}">
                             <h4><i class="fas fa-shopping-bag"></i> 訂單商品明細</h4>
                             <div class="order-items-list">
-                                <!-- 这里会通过 JavaScript 动态加载商品 -->
                                 <div style="text-align: center; padding: 2rem; color: var(--gray);">
                                     <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
                                     <p>正在加載商品詳情...</p>
@@ -777,7 +823,99 @@
                 </div>
             </div>
 
-            <!--  已支付订单（点击后显示） -->
+            <!-- ========================================== -->
+            <!-- 2. 待线下付款订单 (OFFLINE_STORE)  -->
+            <!-- ========================================== -->
+            <div id="pending-offline-tab" class="tab-content">
+                <div th:if="${!pendingOfflineOrders.isEmpty()}">
+                    <div class="order-card" th:each="order : ${pendingOfflineOrders}"
+                        th:data-order-no="${order.orderNo}">
+                        <div class="order-header">
+                            <div class="order-no">
+                                <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                                訂單編號：<span th:text="${order.orderNo}">ORD-123456</span>
+                            </div>
+                            <div class="order-time">
+                                <i class="far fa-clock"></i>
+                                <span th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-01
+                                    12:00:00</span>
+                            </div>
+                        </div>
+
+                        <div class="order-body">
+                            <div class="order-info">
+                                <p>訂單狀態：
+                                    <span class="status-badge status-PENDING">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        <span>待线下付款</span>
+                                    </span>
+                                </p>
+                                <p>支付方式：
+                                    <strong>线下店铺支付</strong>
+                                    <span th:if="${order.offlineStoreId != null}"
+                                        style="color: var(--gold); font-size: 0.85rem; margin-left: 0.5rem; font-weight: 500;">
+                                        (<i class="fas fa-map-marker-alt"></i>
+                                        <span th:switch="${order.offlineStoreId}">
+                                            <span th:case="'store-central'">中環店</span>
+                                            <span th:case="'store-tsimsatsui'">尖沙咀店</span>
+                                            <span th:case="'store-causeway'">銅鑼灣店</span>
+                                            <span th:case="*">[[${order.offlineStoreId}]]</span>
+                                        </span>)
+                                    </span>
+                                </p>
+                                <p style="color: #dc3545; font-weight: 600;">
+                                    <i class="fas fa-info-circle"></i> 請盡快前往店鋪完成付款，訂單將保留24小時
+                                </p>
+                            </div>
+
+                            <div class="order-amount">
+                                HK$ <span
+                                    th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 0, 'POINT')}">0</span>
+                            </div>
+
+                            <div class="order-actions">
+                                <!-- 关键修改：这里只显示“联系店铺”，不显示“立即支付” -->
+                                <button class="btn-sm btn-contact"
+                                    onclick="showNotification('📞 請前往選擇的店鋪完成付款，或聯繫客服：+852 1234 5678')">
+                                    <i class="fas fa-phone"></i> 聯繫店鋪
+                                </button>
+
+                                <button class="btn-sm btn-view toggle-details-btn" th:data-order-no="${order.orderNo}"
+                                    onclick="toggleOrderDetails(this)">
+                                    <i class="fas fa-eye"></i> 查看詳情
+                                </button>
+
+                                <button class="btn-sm btn-delete-order" th:data-order-no="${order.orderNo}"
+                                    onclick="openDeleteOrderModal(this)">
+                                    <i class="fas fa-trash-alt"></i> 刪除訂單
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 订单详情展开区域 -->
+                        <div class="order-details" th:id="'details-' + ${order.orderNo}">
+                            <h4><i class="fas fa-shopping-bag"></i> 訂單商品明細</h4>
+                            <div class="order-items-list">
+                                <div style="text-align: center; padding: 2rem; color: var(--gray);">
+                                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                                    <p>正在加載商品詳情...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 空状态 -->
+                <div th:if="${pendingOfflineOrders.isEmpty()}" class="empty-state">
+                    <i class="fas fa-store"></i>
+                    <h3>暫無待线下付款訂單</h3>
+                    <p>您的线下付款订单将显示在这里</p>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 3. 已支付订单 (保持不变)                   -->
+            <!-- ========================================== -->
             <div id="paid-tab" class="tab-content">
                 <div th:if="${!paidOrders.isEmpty()}">
                     <div class="order-card" th:each="order : ${paidOrders}" th:data-order-no="${order.orderNo}">
@@ -797,18 +935,22 @@
                             <div class="order-info">
                                 <p>訂單狀態：
                                     <span class="status-badge" th:classappend="'status-' + ${order.status}">
-                                        <i class="fas"
-                                            th:class="${order.status.name() == 'PENDING'} ? 'fa-exclamation-circle' :
-                                                             (${order.status.name() == 'PAID'} ? 'fa-check-circle' :
-                                                             (${order.status.name() == 'SHIPPED'} ? 'fa-truck' :
-                                                             (${order.status.name() == 'COMPLETED'} ? 'fa-star' : 'fa-times-circle')))"></i>
-                                        <span th:text="${order.status.name() == 'PENDING'} ? '待付款' :
-                                                   (${order.status.name() == 'PAID'} ? '已付款/待發貨' :
-                                                   (${order.status.name() == 'SHIPPED'} ? '已發貨' :
-                                                   (${order.status.name() == 'COMPLETED'} ? '已完成' : '已取消')))">狀態</span>
+                                        <!-- 圖標 -->
+                                        <i class="fas" th:classappend="${order.status.name() == 'PENDING'} ? 'fa-exclamation-circle' :
+                                            (${order.status.name() == 'PAID'} ? 'fa-check-circle' :
+                                            (${order.status.name() == 'SHIPPED'} ? 'fa-truck' :
+                                            (${order.status.name() == 'COMPLETED'} ? 'fa-star' : 'fa-times-circle')))">
+                                        </i>
+
+                                        <!-- 中文文字 -->
+                                        <span th:text="${
+                                                        order.status.name() == 'PENDING' ? '待付款' :
+                                                        (order.status.name() == 'PAID' ? '已付款/待發貨' :
+                                                        (order.status.name() == 'SHIPPED' ? '已發貨' :
+                                                        (order.status.name() == 'COMPLETED' ? '已完成' : '已取消')))
+                                                       }">狀態</span>
                                     </span>
                                 </p>
-
                                 <p>支付方式：
                                     <strong>
                                         <span th:if="${order.paymentMethod == 'OFFLINE_STORE'}">線下店鋪支付</span>
@@ -817,7 +959,6 @@
                                             th:unless="${order.paymentMethod == 'OFFLINE_STORE' or order.paymentMethod == 'PAYPAL_SIM'}"
                                             th:text="${order.paymentMethod}">其他</span>
                                     </strong>
-
                                     <span th:if="${order.offlineStoreId != null}"
                                         style="color: var(--gold); font-size: 0.85rem; margin-left: 0.5rem; font-weight: 500;">
                                         (<i class="fas fa-map-marker-alt"></i>
@@ -829,7 +970,6 @@
                                         </span>)
                                     </span>
                                 </p>
-
                                 <p th:if="${order.paidAt != null}">付款時間：<strong
                                         th:text="${#temporals.format(order.paidAt, 'yyyy-MM-dd HH:mm')}">-</strong></p>
                             </div>
@@ -840,7 +980,6 @@
                             </div>
 
                             <div class="order-actions">
-                                <!-- 查看详情按钮改为切换按钮 -->
                                 <button class="btn-sm btn-view toggle-details-btn" th:data-order-no="${order.orderNo}"
                                     onclick="toggleOrderDetails(this)">
                                     <i class="fas fa-eye"></i> 查看詳情
@@ -848,11 +987,10 @@
                             </div>
                         </div>
 
-                        <!--订单详情展开区域 -->
+                        <!-- 订单详情展开区域 -->
                         <div class="order-details" th:id="'details-' + ${order.orderNo}">
                             <h4><i class="fas fa-shopping-bag"></i> 訂單商品明細</h4>
                             <div class="order-items-list">
-                                <!-- 这里会通过 JavaScript 动态加载商品 -->
                                 <div style="text-align: center; padding: 2rem; color: var(--gray);">
                                     <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
                                     <p>正在加載商品詳情...</p>
@@ -877,7 +1015,7 @@
             Rights Reserved.</p>
     </footer>
 
-    <!-- 刪除訂單確認彈窗 HTML -->
+    <!-- 刪除訂單確認彈窗 HTML (保持不变) -->
     <div id="deleteOrderModal" class="delete-order-overlay" style="display: none;">
         <div class="delete-order-modal-box">
             <div class="modal-icon">
@@ -953,20 +1091,20 @@
                             await renderOrderItems(itemsList, result.data, orderNo);
                         } else {
                             itemsList.innerHTML = `
-                            <div style="text-align: center; padding: 2rem; color: var(--accent);">
-                                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                                <p>加載失敗：${result.message || '請稍後重試'}</p>
-                            </div>
-                        `;
+                        <div style="text-align: center; padding: 2rem; color: var(--accent);">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <p>加載失敗：${result.message || '請稍後重試'}</p>
+                        </div>
+                    `;
                         }
                     } catch (error) {
                         console.error('加載訂單詳情失敗:', error);
                         itemsList.innerHTML = `
-                        <div style="text-align: center; padding: 2rem; color: var(--accent);">
-                            <i class="fas fa-times-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                            <p>網絡錯誤，請稍後重試</p>
-                        </div>
-                    `;
+                    <div style="text-align: center; padding: 2rem; color: var(--accent);">
+                        <i class="fas fa-times-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                        <p>網絡錯誤，請稍後重試</p>
+                    </div>
+                `;
                     }
                 }
 
@@ -982,11 +1120,11 @@
         async function renderOrderItems(container, orderItems, orderNo) {
             if (!orderItems || orderItems.length === 0) {
                 container.innerHTML = `
-            <div style="text-align: center; padding: 2rem; color: var(--gray);">
-                <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                <p>暫無商品</p>
-            </div>
-            `;
+        <div style="text-align: center; padding: 2rem; color: var(--gray);">
+            <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+            <p>暫無商品</p>
+        </div>
+        `;
                 return;
             }
 
@@ -1015,47 +1153,47 @@
                 if (status.reviewed) {
                     //  核心修改：如果已评价，显示灰色按钮，文字为"已評價"，并禁用
                     actionBtnHtml = `
-                <button class="btn-sm btn-review" disabled style="background: #6c757d; cursor: default; opacity: 0.8;">
-                    <i class="fas fa-check-circle"></i> 已評價
-                </button>`;
+            <button class="btn-sm btn-review" disabled style="background: #6c757d; cursor: default; opacity: 0.8;">
+                <i class="fas fa-check-circle"></i> 已評價
+            </button>`;
                 } else if (status.canReview) {
                     // 可评价：显示绿色按钮
                     actionBtnHtml = `
-                <button class="btn-sm btn-review" onclick="reviewProduct(${item.product.id}, '${orderNo}')">
-                    <i class="fas fa-star"></i> 評價商品
-                </button>`;
+            <button class="btn-sm btn-review" onclick="reviewProduct(${item.product.id}, '${orderNo}')">
+                <i class="fas fa-star"></i> 評價商品
+            </button>`;
                 } else {
                     // 不可评价（例如未付款，虽然这里通常是已支付列表，但防万一）
                     actionBtnHtml = `
-                <button class="btn-sm btn-review" disabled style="background: #e9ecef; color: #6c757d; cursor: not-allowed;">
-                    <i class="fas fa-lock"></i> 暫不可評價
-                </button>`;
+            <button class="btn-sm btn-review" disabled style="background: #e9ecef; color: #6c757d; cursor: not-allowed;">
+                <i class="fas fa-lock"></i> 暫不可評價
+            </button>`;
                 }
 
                 html += `
-            <div class="order-item">
-                <div class="order-item-image" onclick="window.location.href='/product/${item.product.id}'" title="查看商品詳情">
-                    <img src="/images/products/${item.product.image}"
-                    alt="${item.product.description}"
-                    onerror="this.src='/images/placeholder.png'">
+        <div class="order-item">
+            <div class="order-item-image" onclick="window.location.href='/product/${item.product.id}'" title="查看商品詳情">
+                <img src="/images/products/${item.product.image}"
+                alt="${item.product.description}"
+                onerror="this.src='/images/placeholder.png'">
+            </div>
+            <div class="order-item-info">
+                <div class="order-item-name">${item.product.description}</div>
+                <div class="order-item-meta">
+                    <i class="fas fa-tag"></i> ${item.product.category || '手錶'}
                 </div>
-                <div class="order-item-info">
-                    <div class="order-item-name">${item.product.description}</div>
-                    <div class="order-item-meta">
-                        <i class="fas fa-tag"></i> ${item.product.category || '手錶'}
-                    </div>
-                    <div class="order-item-meta">
-                        <i class="fas fa-box"></i> 數量：${item.quantity}
-                    </div>
-                    <div class="order-item-price">
-                        HK$ ${formatPrice(item.price)}
-                    </div>
+                <div class="order-item-meta">
+                    <i class="fas fa-box"></i> 數量：${item.quantity}
                 </div>
-                <div class="order-item-actions">
-                    ${actionBtnHtml}
+                <div class="order-item-price">
+                    HK$ ${formatPrice(item.price)}
                 </div>
             </div>
-            `;
+            <div class="order-item-actions">
+                ${actionBtnHtml}
+            </div>
+        </div>
+        `;
             });
             container.innerHTML = html;
         }
@@ -1159,12 +1297,12 @@
                         if (remainingOrders.length === 0) {
                             // 如果沒有訂單了，顯示空狀態
                             unpaidTab.innerHTML = `
-                            <div class="empty-state">
-                                <i class="fas fa-check-circle"></i>
-                                <h3>暫無待付款訂單</h3>
-                                <p>您的待付款訂單將顯示在這裡</p>
-                            </div>
-                        `;
+                        <div class="empty-state">
+                            <i class="fas fa-check-circle"></i>
+                            <h3>暫無待付款訂單</h3>
+                            <p>您的待付款訂單將顯示在這裡</p>
+                        </div>
+                    `;
                         }
 
                         // 更新待付款數量

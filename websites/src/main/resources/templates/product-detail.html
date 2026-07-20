@@ -3650,25 +3650,31 @@
     </div>
 
     <!-- ========================================== -->
-    <!--  🛡 管理員權限提示彈窗 (解除禁言限制)      -->
+    <!--   管理員權限提示彈窗 (修改为：重复封禁确认)      -->
     <!-- ========================================== -->
     <div id="adminPermissionModal" class="admin-permission-overlay" style="display: none;">
         <div class="admin-permission-box">
-            <div class="permission-icon">
-                <i class="fas fa-user-shield"></i>
+            <div class="permission-icon" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                <i class="fas fa-exclamation-triangle"></i>
             </div>
-            <h3 class="permission-title">操作權限提示</h3>
+            <h3 class="permission-title">⚠️ 重复封禁确认</h3>
             <p class="permission-message">
-                管理員不能在此頁面對用戶解除禁言。<br>
-                請前往 <strong>管理後台</strong> 進行處理！！！
+                该用户已经因为该言论被封禁一次了！<br>
+                确定再次封禁吗？？？
             </p>
             <div class="permission-actions">
-                <button class="btn-permission-confirm" onclick="closeAdminPermissionModal()">
-                    <i class="fas fa-check-circle"></i> 我知道了
+                <button class="btn-permission-confirm" onclick="closeAdminPermissionModal()"
+                    style="background: #6c757d; margin-right: 10px;">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <!-- 新增：确认再次封禁按钮，调用 confirmRepeatBan 函数 -->
+                <button class="btn-permission-confirm" onclick="confirmRepeatBan()">
+                    <i class="fas fa-gavel"></i> 确认再次封禁
                 </button>
             </div>
         </div>
     </div>
+
     <!-- ========================================== -->
     <!-- 1. 統一在這裡獲取所有 Thymeleaf 後端變量 -->
     <!-- ========================================== -->

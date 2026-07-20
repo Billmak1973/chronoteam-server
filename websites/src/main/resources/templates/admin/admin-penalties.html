@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>處罰與申訴管理 - ChronoTeam 管理中心</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <style>
+        /* Tab 切換樣式 */
+        .tabs-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .tab-btn {
+            padding: 0.8rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: -2px;
+        }
+        .tab-btn:hover { color: var(--primary); }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--gold);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 表格樣式優化 */
+        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+        .data-table th { background: #f8f9fa; padding: 1rem; text-align: left; font-size: 0.85rem; color: var(--gray); font-weight: 600; }
+        .data-table td { padding: 1rem; border-bottom: 1px solid #f1f3f5; font-size: 0.95rem; color: var(--primary); vertical-align: middle; }
+        .data-table tr:hover td { background: rgba(212, 175, 55, 0.03); }
+
+        /* 狀態標籤 */
+        .status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-block; }
+        .status-active { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+        .status-expired { background: rgba(108, 117, 125, 0.1); color: #6c757d; }
+        .status-revoked { background: rgba(40, 167, 69, 0.1); color: #28a745; }
+        .status-pending { background: rgba(255, 193, 7, 0.1); color: #856404; }
+        .status-approved { background: rgba(40, 167, 69, 0.1); color: #28a745; }
+        .status-rejected { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
+    </style>
+</head>
+<body>
+<!-- 引入公共導航欄 -->
+<div th:replace="~{fragments/common :: navbar}"></div>
+
+<div class="admin-layout">
+    <!-- 引入左側邊欄，並標記當前頁面為 'penalties' -->
+    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='penalties')}"></div>
+
+    <!-- 右側內容區 -->
+    <main class="admin-main">
+        <div class="content-header">
+            <h2><i class="fas fa-gavel"></i> <span id="pageTitle">處罰與申訴管理</span></h2>
+            <div class="breadcrumb">
+                <a href="/admin/dashboard">管理中心</a> / <span id="pageBreadcrumb">處罰與申訴管理</span>
+            </div>
+        </div>
+
+        <div class="content-body">
+            <!-- Tab 切換按鈕 -->
+            <div class="tabs-container">
+                <button class="tab-btn active" onclick="switchTab('penalties', this)">
+                    <i class="fas fa-ban"></i> 處罰記錄
+                </button>
+                <button class="tab-btn" onclick="switchTab('appeals', this)">
+                    <i class="fas fa-file-alt"></i> 用戶申訴
+                </button>
+            </div>
+
+            <!-- Tab 1: 處罰記錄 -->
+            <!-- 表格區域 -->
+            <div id="tab-penalties" class="tab-content active">
+                <div class="table-container">
+                    <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 60px;">ID</th>
+                        <th style="width: 100px;">目標用戶</th>
+                        <th style="width: 100px;">處罰類型</th>
+                        <th style="width: 120px;">處罰原因</th>
+                        <th style="min-width: 250px;">評論快照</th>
+                        <th style="width: 140px;">開始時間</th>
+                        <th style="width: 140px;">結束時間</th>
+                        <th style="width: 90px;">狀態</th>
+                        <th style="width: 100px;">操作管理員</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="penalty : ${penalties}">
+                        <td style="color: var(--gray); font-family: monospace;" th:text="${penalty.penaltyId}">1</td>
+                        <td th:text="${penalty.targetUser != null ? penalty.targetUser.username : '未知'}">user123</td>
+                        <td>
+                    <span th:if="${penalty.type.name() == 'BAN'}" style="color: #ffc107; font-weight: 600;">
+                        <i class="fas fa-clock"></i> 封禁
+                    </span>
+                            <span th:if="${penalty.type.name() == 'BLACKLIST'}" style="color: #dc3545; font-weight: 600;">
+                        <i class="fas fa-user-slash"></i> 永久拉黑
+                    </span>
+                        </td>
+                        <td th:text="${penalty.reason != null ? penalty.reason : '無'}" style="font-size: 0.9rem;">違規</td>
+
+                        <!--  新增：評論快照顯示邏輯 -->
+                        <td>
+                            <div th:if="${penalty.reviewContent != null and !#strings.isEmpty(penalty.reviewContent)}"
+                                 style="max-width: 300px; white-space: pre-wrap; word-break: break-word; font-size: 0.85rem; color: #495057; background: #f8f9fa; padding: 0.6rem; border-radius: 6px; border-left: 3px solid var(--gold);">
+                                <span th:text="${penalty.reviewContent}"></span>
+                            </div>
+                            <span th:unless="${penalty.reviewContent != null and !#strings.isEmpty(penalty.reviewContent)}" style="color: #adb5bd; font-size: 0.85rem;">
+                        <i class="fas fa-minus-circle"></i> 無快照
+                    </span>
+                        </td>
+
+                        <td th:text="${#temporals.format(penalty.startTime, 'yyyy-MM-dd HH:mm')}">2024-01-01</td>
+                        <td th:text="${penalty.endTime != null ? #temporals.format(penalty.endTime, 'yyyy-MM-dd HH:mm') : '永久'}">永久</td>
+                        <td>
+                            <span th:if="${penalty.status.name() == 'ACTIVE'}" class="status-badge status-active">生效中</span>
+                            <span th:if="${penalty.status.name() == 'EXPIRED'}" class="status-badge status-expired">已過期</span>
+                            <span th:if="${penalty.status.name() == 'REVOKED'}" class="status-badge status-revoked">已撤銷</span>
+                        </td>
+                        <td th:text="${penalty.adminUser != null ? penalty.adminUser.username : 'System'}">admin</td>
+                    </tr>
+                    <!-- 注意：這裡的 colspan 從原來的 8 改成了 9，因為我們增加了一列 -->
+                    <tr th:if="${#lists.isEmpty(penalties)}">
+                        <td colspan="9" style="text-align: center; padding: 2rem; color: var(--gray);">暫無處罰記錄</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            </div>
+
+            <!-- Tab 2: 用戶申訴-->
+            <div id="tab-appeals" class="tab-content">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>申訴ID</th>
+                            <th>申訴用戶</th>
+                            <th>申訴類型</th>
+                            <th>申訴原因</th>
+                            <th>狀態</th>
+                            <th>提交時間</th>
+                            <th>管理員回覆</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="appeal : ${appeals}">
+                            <td th:text="${appeal.appealId}">1</td>
+                            <td th:text="${appeal.user != null ? appeal.user.username : '未知'}">user123</td>
+                            <td>
+                                <span th:if="${appeal.appealType.name() == 'BAN'}">禁言申訴</span>
+                                <span th:if="${appeal.appealType.name() == 'BLACKLIST'}">黑名單申訴</span>
+                                <span th:if="${appeal.appealType.name() == 'DELETE_REVIEW'}">評論被刪申訴</span>
+                            </td>
+                            <td th:text="${appeal.reason}" style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" th:title="${appeal.reason}">我覺得處罰不合理...</td>
+                            <td>
+                                <span th:if="${appeal.status.name() == 'PENDING'}" class="status-badge status-pending">待處理</span>
+                                <span th:if="${appeal.status.name() == 'APPROVED'}" class="status-badge status-approved">申訴成功</span>
+                                <span th:if="${appeal.status.name() == 'REJECTED'}" class="status-badge status-rejected">申訴駁回</span>
+                            </td>
+                            <td th:text="${#temporals.format(appeal.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</td>
+                            <td th:text="${appeal.adminResponse != null ? appeal.adminResponse : '-'}" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(appeals)}">
+                            <td colspan="7" style="text-align: center; padding: 2rem; color: var(--gray);">暫無申訴記錄</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- 引入公共彈窗與腳本 -->
+<div th:replace="~{fragments/common :: modals}"></div>
+<script th:inline="javascript">
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+</script>
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+
+<!-- Tab 切換邏輯 -->
+<script>
+    function switchTab(tabName, btnElement) {
+        // 1. 移除所有 Tab 按鈕的 active 類
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        // 2. 隱藏所有 Tab 內容
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        // 3. 為當前點擊的按鈕添加 active 類
+        btnElement.classList.add('active');
+        // 4. 顯示對應的 Tab 內容
+        document.getElementById('tab-' + tabName).classList.add('active');
+    }
+</script>
+</body>
+</html>

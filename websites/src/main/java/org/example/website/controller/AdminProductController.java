@@ -48,11 +48,12 @@ public class AdminProductController {
 
     @GetMapping("/products")
     public String manageProducts(
-            @RequestParam(defaultValue = "1") int page, // 【新增】當前頁碼，默認第 1 頁
+            @RequestParam(defaultValue = "1") int page, // 當前頁碼，默認第 1 頁
             @RequestParam(required = false) String currentBrand,
             @RequestParam(required = false) String currentCategory,
             @RequestParam(required = false) String condition,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String currentFeatured, // 【新增】首頁推薦篩選參數
             @RequestParam(required = false) String sortField,
             @RequestParam(required = false) String sortDirection,
             @RequestParam(required = false) String conditionVisible,
@@ -78,6 +79,15 @@ public class AdminProductController {
                 .filter(p -> conditionVisible == null || conditionVisible.isEmpty() ||
                         (conditionVisible.equals("visible") && Boolean.TRUE.equals(p.getConditionVisible())) ||
                         (conditionVisible.equals("hidden") && Boolean.FALSE.equals(p.getConditionVisible())))
+
+                // ==========================================
+                // 首頁推薦內存過濾邏輯
+                // ==========================================
+                .filter(p -> currentFeatured == null || currentFeatured.isEmpty() ||
+                        (currentFeatured.equals("true") && p.getHomeDisplayOrder() != null && p.getHomeDisplayOrder() > 0) ||
+                        (currentFeatured.equals("false") && (p.getHomeDisplayOrder() == null || p.getHomeDisplayOrder() <= 0)))
+                // ==========================================
+
                 .collect(Collectors.toList());
 
         // 4. 應用排序邏輯
@@ -105,7 +115,7 @@ public class AdminProductController {
         }
 
         // ==========================================
-        // 5. 【核心新增】：內存分頁邏輯 (每頁 30 條)
+        // 5. 內存分頁邏輯 (每頁 30 條)
         // ==========================================
         int size = 30; // 每頁顯示 30 條
         int totalElements = filteredProducts.size();
@@ -121,23 +131,24 @@ public class AdminProductController {
         // 截取當前頁的數據
         List<Product> pagedProducts = (totalElements > 0) ? filteredProducts.subList(fromIndex, toIndex) : new ArrayList<>();
 
-        // 6. 【核心新增】：生成智能分頁列表 (例如: 1, ..., 3, 4, 5, ..., 10)
+        // 6. 生成智能分頁列表
         List<PageItem> smartPages = generateSmartPagination(page, totalPages);
 
         // 7. 將數據傳遞給前端 Thymeleaf
-        model.addAttribute("products", pagedProducts); // 注意：這裡改為傳遞分頁後的 pagedProducts
+        model.addAttribute("products", pagedProducts);
         model.addAttribute("allBrands", allBrands);
 
         // 傳遞分頁相關數據
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", totalPages);
-        model.addAttribute("smartPages", smartPages); // 傳遞智能頁碼列表
+        model.addAttribute("smartPages", smartPages);
 
         // 傳遞當前篩選條件，方便翻頁時保持狀態
         model.addAttribute("currentBrand", currentBrand);
         model.addAttribute("currentCategory", currentCategory);
         model.addAttribute("currentCondition", condition);
         model.addAttribute("currentStatus", status);
+        model.addAttribute("currentFeatured", currentFeatured); // 【新增】傳遞給前端保持選中狀態
         model.addAttribute("currentSortField", sortField);
         model.addAttribute("currentSortDirection", sortDirection);
         model.addAttribute("currentConditionVisible", conditionVisible);
