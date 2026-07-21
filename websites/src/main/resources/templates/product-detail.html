@@ -3168,6 +3168,152 @@
                 font-size: 0.95rem;
             }
         }
+
+        /* ========================================== */
+        /*   解除禁言确认弹窗样式 */
+        /* ========================================== */
+        .unblock-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 10001;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .unblock-modal-box {
+            background: #fff;
+            width: 92%;
+            max-width: 460px;
+            border-radius: 20px;
+            padding: 2.5rem 2rem 2rem;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(40, 167, 69, 0.1);
+            border-top: 5px solid #28a745;
+            animation: modalSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+        }
+
+        .unblock-modal-box::before {
+            content: '';
+            position: absolute;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 120px;
+            background: radial-gradient(ellipse, rgba(40, 167, 69, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .unblock-modal-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.2rem;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.35), 0 0 0 8px rgba(40, 167, 69, 0.08);
+            animation: iconPulse 2s ease-in-out infinite;
+        }
+
+        .unblock-modal-icon i {
+            font-size: 2.2rem;
+            color: #fff;
+        }
+
+        .unblock-modal-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #212529;
+            margin: 0 0 0.8rem;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .unblock-modal-message {
+            font-size: 1rem;
+            color: #555;
+            line-height: 1.7;
+            margin: 0 0 1.5rem;
+            text-align: center;
+        }
+
+        .unblock-modal-message strong {
+            color: #28a745;
+            font-weight: 700;
+            background: rgba(40, 167, 69, 0.1);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        .unblock-modal-actions {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f1f3f5;
+        }
+
+        .btn-unblock-cancel {
+            padding: 0.7rem 1.8rem;
+            background: #f1f3f5;
+            color: #495057;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-unblock-cancel:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .btn-unblock-confirm {
+            padding: 0.7rem 1.8rem;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.35);
+            letter-spacing: 0.5px;
+        }
+
+        .btn-unblock-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.5);
+            filter: brightness(1.05);
+        }
+
+        .btn-unblock-confirm:active {
+            transform: scale(0.96);
+        }
     </style>
 
     <!-- ========================================== -->
@@ -3657,19 +3803,40 @@
             <div class="permission-icon" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
-            <h3 class="permission-title">⚠️ 重复封禁确认</h3>
+            <h3 class="permission-title">⚠️ 重复封禁警告</h3>
             <p class="permission-message">
-                该用户已经因为该言论被封禁一次了！<br>
-                确定再次封禁吗？？？
+                该用户已经因为该言论被封禁了！<br>
+                <strong style="color: #dc3545;">不允许重复封禁同一条评论</strong>
             </p>
             <div class="permission-actions">
+                <!-- 只保留取消按钮 -->
                 <button class="btn-permission-confirm" onclick="closeAdminPermissionModal()"
-                    style="background: #6c757d; margin-right: 10px;">
+                        style="background: var(--gold); color: var(--primary);">
                     <i class="fas fa-times"></i> 取消
                 </button>
-                <!-- 新增：确认再次封禁按钮，调用 confirmRepeatBan 函数 -->
-                <button class="btn-permission-confirm" onclick="confirmRepeatBan()">
-                    <i class="fas fa-gavel"></i> 确认再次封禁
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!--   解除禁言确认弹窗 -->
+    <!-- ========================================== -->
+    <div id="unblockConfirmModal" class="unblock-modal-overlay" style="display: none;">
+        <div class="unblock-modal-box">
+            <div class="unblock-modal-icon">
+                <i class="fas fa-unlock"></i>
+            </div>
+            <h3 class="unblock-modal-title">确认解除禁言？</h3>
+            <p class="unblock-modal-message">
+                确定要解除对 <strong id="unblockTargetUsername"></strong> 的禁言吗？<br>
+                解除后双方可能可以互相回复。前提是對方沒有禁言
+            </p>
+            <div class="unblock-modal-actions">
+                <button class="btn-unblock-cancel" onclick="closeUnblockModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-unblock-confirm" onclick="confirmUnblockAction()">
+                    <i class="fas fa-unlock"></i> 确认解除
                 </button>
             </div>
         </div>
@@ -3691,7 +3858,7 @@
 
     <script>
         // ==========================================
-        //  全局彈窗 JS (普通禁言 + 管理員全局禁言 + 拉黑確認 + 未登入提示 + 自定義刪除)
+        //  全局彈窗 JS (普通禁言 + 管理員全局禁言 + 拉黑確認 + 未登入提示 + 自定義刪除 + 解除禁言)
         // ==========================================
 
         //  全局彈窗函數，供 React 評論區組件調用 (普通用戶互相禁言)
@@ -3888,6 +4055,34 @@
         };
 
         // ==========================================
+        //  🔓 解除禁言弹窗逻辑
+        // ==========================================
+        let unblockTargetUser = '';
+        let unblockCallback = null;
+
+        window.openUnblockModal = function (username, onConfirm) {
+            unblockTargetUser = username;
+            unblockCallback = onConfirm;
+            document.getElementById('unblockTargetUsername').textContent = username;
+            document.getElementById('unblockConfirmModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closeUnblockModal = function () {
+            document.getElementById('unblockConfirmModal').style.display = 'none';
+            document.body.style.overflow = '';
+            unblockTargetUser = '';
+            unblockCallback = null;
+        };
+
+        window.confirmUnblockAction = function () {
+            if (unblockCallback) {
+                unblockCallback(unblockTargetUser);
+            }
+            closeUnblockModal();
+        };
+
+        // ==========================================
         // 點擊遮罩層關閉 (整合所有彈窗，避免重複綁定)
         // ==========================================
         document.addEventListener('click', function (e) {
@@ -3910,6 +4105,10 @@
             // 5. 關閉自定義刪除確認彈窗
             const modal5 = document.getElementById('deleteConfirmModal');
             if (modal5 && e.target === modal5) closeDeleteModal();
+
+            // 6. 關閉解除禁言確認彈窗
+            const modal6 = document.getElementById('unblockConfirmModal');
+            if (modal6 && e.target === modal6) closeUnblockModal();
         });
 
         // ==========================================
@@ -3935,6 +4134,13 @@
                 const deleteModal = document.getElementById('deleteConfirmModal');
                 if (deleteModal && deleteModal.style.display === 'flex') {
                     closeDeleteModal();
+                    return;
+                }
+
+                // 關閉解除禁言確認彈窗
+                const unblockModal = document.getElementById('unblockConfirmModal');
+                if (unblockModal && unblockModal.style.display === 'flex') {
+                    closeUnblockModal();
                     return;
                 }
             }

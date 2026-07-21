@@ -314,6 +314,17 @@ const ReplySection = ({
                     { method: 'POST', credentials: 'same-origin' }
                 );
                 const result = await response.json();
+
+                            if (result.alreadyBanned) {
+                                // 弹出警告弹窗（复用 adminPermissionModal）
+                                const modal = document.getElementById('adminPermissionModal');
+                                if (modal) {
+                                    modal.style.display = 'flex';
+                                    document.body.style.overflow = 'hidden';
+                                }
+                                return; // 阻止后续操作
+                            }
+
                 if (response.ok) {
                     notify(`✅ 已全局禁言用戶 ${blockValue} ${blockUnit === 'day' ? '天' : blockUnit === 'week' ? '週' : '月'}`);
                     // 調用父組件的 onBlockUser 更新共享狀態
@@ -336,11 +347,6 @@ const ReplySection = ({
             return;
         }
         confirmBlock(val);
-
-        // 【新增】記錄封禁，以便下次檢查
-        if (isAdmin && targetBlockUser) {
-            adminBannedUsersRef.current.add(targetBlockUser);
-        }
     };
 
     // ==========================================
@@ -352,40 +358,41 @@ const ReplySection = ({
             const modal = document.getElementById('adminPermissionModal');
             if (modal) {
                 modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+                document.body.style.overflow = 'hidden';
             }
             return; // 攔截，不執行後續的解除禁言邏輯
         }
 
-        // 2. 普通用戶的解除禁言邏輯保持不變
-        if (!window.confirm('確定要解除禁言嗎？')) return;
-        const result = await onBlockUser(targetUsername, false);
-        if (result.success) {
-            notify('✅ 已解除禁言');
+        // 2. 普通用戶的解除禁言邏輯
+        if (typeof window.openUnblockModal === 'function') {
+            // 使用自定義彈窗
+            window.openUnblockModal(targetUsername, async (username) => {
+                const result = await onBlockUser(username, false);
+                if (result.success) {
+                    notify('✅ 已解除禁言');
+                } else {
+                    notify('❌ ' + result.message, true);
+                }
+            });
         } else {
-            notify('❌ ' + result.message, true);
+            // 降級處理：使用原生 confirm
+            if (!window.confirm('確定要解除禁言嗎？')) return;
+            const result = await onBlockUser(targetUsername, false);
+            if (result.success) {
+                notify('✅ 已解除禁言');
+            } else {
+                notify('❌ ' + result.message, true);
+            }
         }
+        // ❌ 刪除這裡的重複代碼！
     };
 
     // 【修改】禁言按鈕點擊處理
     const handleBlockClick = (targetUsername) => {
         setTargetBlockUser(targetUsername); // 僅用於管理員模態框顯示
-
         if (isAdmin) {
-            // 1. 檢查該用戶是否已經被封禁過 (這裡檢查本地記錄，實際應查後端)
-            const isAlreadyBanned = adminBannedUsersRef.current.has(targetUsername);
-
-            if (isAlreadyBanned) {
-                // 2. 如果已封禁，彈出確認框 (復用 adminPermissionModal)
-                const modal = document.getElementById('adminPermissionModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                    document.body.style.overflow = 'hidden';
-                }
-            } else {
-                // 3. 如果未封禁，直接彈出選時長模態框
                 setShowBlockModal(true);
-            }
+
         } else {
             // 普通用戶直接調用父組件的禁言函數
             onBlockUser(targetUsername, true).then(result => {
@@ -574,7 +581,6 @@ const ReplySection = ({
                                                             className="reply-action-btn btn-unblock"
                                                             onClick={() => handleUnblock(reply.customer.username)}
                                                             title="解除禁言"
-                                                            style={{ color: '#28a745', borderColor: '#28a745' }}
                                                         >
                                                             <i className="fas fa-unlock"></i> 解除禁言
                                                         </button>

@@ -72,6 +72,7 @@ public class Appeal {
     public enum AppealStatus {
         PENDING,    // 待處理
         APPROVED,   // 申訴成功
-        REJECTED    // 申訴駁回
+        REJECTED,    // 申訴駁回
+        EXPIRED
     }
 }

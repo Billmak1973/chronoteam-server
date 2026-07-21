@@ -4,6 +4,8 @@ import org.example.website.entity.AdminPenalty;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -28,4 +30,12 @@ public interface AdminPenaltyRepository extends JpaRepository<AdminPenalty, Long
     );
 
     Optional<AdminPenalty> findByNotificationId(Long notificationId);
+
+    Optional<AdminPenalty> findByReviewIdAndStatus(Long reviewId, AdminPenalty.PenaltyStatus status);
+
+    Optional<AdminPenalty> findByAppealId(Long appealId);
+
+    // 查找所有状态为 ACTIVE 且 结束时间早于当前时间 的记录
+    List<AdminPenalty> findByStatusAndEndTimeBefore(AdminPenalty.PenaltyStatus status, LocalDateTime endTime);
+
 }

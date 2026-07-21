@@ -46,8 +46,6 @@ const ReviewCard = ({
 
     // 【新增 2】用於記錄當前操作封禁的目標用戶名
     const [targetBlockUser, setTargetBlockUser] = useState('');
-    // 【新增 2】用於記錄管理員當前會話中已封禁的用戶 (模擬後端檢查)
-    const adminBannedUsersRef = useRef(new Set());
 
     // 不再需要本地 isBlocked 狀態，改用 props 中的 blockedUsers
     // 檢查當前評論作者是否被禁言
@@ -320,6 +318,15 @@ const ReviewCard = ({
                     { method: 'POST', credentials: 'same-origin' }
                 );
                 const result = await response.json();
+                            if (result.alreadyBanned) {
+                                // 彈出警告彈窗（復用 adminPermissionModal）
+                                const modal = document.getElementById('adminPermissionModal');
+                                if (modal) {
+                                    modal.style.display = 'flex';
+                                    document.body.style.overflow = 'hidden';
+                                }
+                                return; // 阻止後續操作，不關閉 showBlockModal，讓管理員看到警告
+                            }
                 if (response.ok) {
                     notify(`✅ 已全局禁言用戶 ${blockValue} ${blockUnit === 'day' ? '天' : blockUnit === 'week' ? '週' : '月'}`);
                     await onBlockUser(targetUsername, true);
@@ -349,13 +356,12 @@ const ReviewCard = ({
         }
         confirmBlock(val);
 
-        // 【新增 2】封禁成功後，記錄到臨時集合中，以便下次檢查
-        if (isAdmin && targetBlockUser) {
-            adminBannedUsersRef.current.add(targetBlockUser);
-        }
     };
 
     const handleUnblock = async () => {
+        // 0. 【關鍵修復】：必須在最開頭定義 targetUsername，否則後面會報錯！
+        const targetUsername = review.customer.username;
+
         // 1. 【核心攔截】：如果是管理員，直接彈出權限提示並阻止操作
         if (isAdmin) {
             const modal = document.getElementById('adminPermissionModal');
@@ -366,17 +372,29 @@ const ReviewCard = ({
             return; // 攔截，不執行後續的解除禁言邏輯
         }
 
-        // 2. 普通用戶的解除禁言邏輯保持不變
-        if (!window.confirm('確定要解除禁言嗎？')) return;
-
-        const targetUsername = review.customer.username;
-        const result = await onBlockUser(targetUsername, false);
-
-        if (result.success) {
-            notify('✅ 已解除禁言');
+        // 2. 普通用戶的解除禁言邏輯
+        if (typeof window.openUnblockModal === 'function') {
+            // 調用我們在 HTML 中定義的全局漂亮彈窗
+            window.openUnblockModal(targetUsername, async (username) => {
+                const result = await onBlockUser(username, false);
+                if (result.success) {
+                    notify('✅ 已解除禁言');
+                } else {
+                    notify('❌ ' + result.message, true);
+                }
+            });
         } else {
-            notify('❌ ' + result.message, true);
-        }
+            // 降級處理：萬一全局函數沒加載出來，使用原生 confirm
+            if (!window.confirm('確定要解除禁言嗎？')) return;
+            const result = await onBlockUser(targetUsername, false);
+            if (result.success) {
+                notify('✅ 已解除禁言');
+            } else {
+                notify('❌ ' + result.message, true);
+            }
+        };
+        // 3. 【關鍵修復】：執行完上面的邏輯後必須 return，防止代碼繼續往下跑造成重複請求！
+        return;
     };
 
     // 【修改 2】禁言/解除禁言按鈕點擊處理
@@ -384,21 +402,7 @@ const ReviewCard = ({
         setTargetBlockUser(targetUsername); // 僅用於管理員模態框顯示
 
         if (isAdmin) {
-            // 【核心修改】：管理員邏輯
-            // 1. 檢查該用戶是否已經被封禁過 (這裡檢查本地記錄，實際應查後端)
-            const isAlreadyBanned = adminBannedUsersRef.current.has(targetUsername);
-
-            if (isAlreadyBanned) {
-                // 2. 如果已封禁，彈出確認框 (復用 adminPermissionModal)
-                const modal = document.getElementById('adminPermissionModal');
-                if (modal) {
-                    modal.style.display = 'flex';
-                    document.body.style.overflow = 'hidden';
-                }
-            } else {
-                // 3. 如果未封禁，直接彈出選時長模態框
-                setShowBlockModal(true);
-            }
+                setShowBlockModal(true)
         } else {
             // 普通用戶邏輯保持不變 (雙向禁言)
             onBlockUser(targetUsername, true).then(result => {
@@ -682,7 +686,6 @@ const ReviewCard = ({
                                 className="btn-unblock"
                                 onClick={handleUnblock}
                                 title="解除禁言"
-                                style={{ color: '#28a745', borderColor: '#28a745' }}
                             >
                                 <i className="fas fa-unlock"></i> 解除禁言
                             </button>

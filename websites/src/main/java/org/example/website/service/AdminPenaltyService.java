@@ -3,9 +3,11 @@ package org.example.website.service;
 import org.example.website.entity.AdminPenalty;
 import org.example.website.entity.AdminPenalty.PenaltyStatus;
 import org.example.website.entity.AdminPenalty.PenaltyType;
+import org.example.website.entity.Appeal;
 import org.example.website.entity.Notification;
 import org.example.website.entity.User;
 import org.example.website.repository.AdminPenaltyRepository;
+import org.example.website.repository.AppealRepository;
 import org.example.website.repository.NotificationRepository;
 import org.example.website.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -23,12 +26,16 @@ public class AdminPenaltyService {
     private final AdminPenaltyRepository adminPenaltyRepository;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final AppealRepository appealRepository;
+
     public AdminPenaltyService(AdminPenaltyRepository adminPenaltyRepository,
                                NotificationRepository notificationRepository,
-                               UserRepository userRepository) {
+                               UserRepository userRepository,
+                               AppealRepository appealRepository) {
         this.adminPenaltyRepository = adminPenaltyRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.appealRepository = appealRepository;
     }
 
     // ==========================================
@@ -218,6 +225,20 @@ public class AdminPenaltyService {
                                             int durationMinutes, String reason, Long reviewId, String reviewContent) {
         Map<String, Object> response = new HashMap<>();
 
+        // 检查该评论是否已经被封禁（ACTIVE状态）
+        if (reviewId != null) {
+            Optional<AdminPenalty> existingPenalty = adminPenaltyRepository
+                    .findByReviewIdAndStatus(reviewId, AdminPenalty.PenaltyStatus.ACTIVE);
+
+            if (existingPenalty.isPresent()) {
+                // 已经封禁过了，返回错误信息
+                response.put("success", false);
+                response.put("message", "该评论已经被封禁，请勿重复封禁！");
+                response.put("alreadyBanned", true);  // 标记给前端
+                return response;
+            }
+        }
+
         //  核心修改 1：先查出對應的 User 實體
         User bannedUser = userRepository.findByUsername(bannedUsername)
                 .orElseThrow(() -> new RuntimeException("被禁言的用戶不存在"));
@@ -345,6 +366,54 @@ public class AdminPenaltyService {
                     LocalDateTime.now().isAfter(penalty.getEndTime())) {
                 penalty.setStatus(PenaltyStatus.EXPIRED);
                 adminPenaltyRepository.save(penalty);
+            }
+        }
+    }
+
+    @Transactional
+    public void updateExpiredStatus() {
+        // 找出所有应该过期的记录
+        List<AdminPenalty> expiredList = adminPenaltyRepository.findByStatusAndEndTimeBefore(
+                AdminPenalty.PenaltyStatus.ACTIVE,
+                LocalDateTime.now()
+        );
+
+        // 批量更新状态
+        for (AdminPenalty penalty : expiredList) {
+            penalty.setStatus(AdminPenalty.PenaltyStatus.EXPIRED);
+        }
+        // JpaRepository 的 saveAll 会批量更新
+        if (!expiredList.isEmpty()) {
+            adminPenaltyRepository.saveAll(expiredList);
+        }
+    }
+
+    /**
+     * 更新已過期的申訴狀態
+     * 當處罰已過期且申訴仍為 PENDING 時，將申訴狀態改為 EXPIRED
+     */
+    @Transactional
+    public void updateExpiredAppeals() {
+        // 1. 查找所有狀態為 PENDING 的申訴
+        List<Appeal> pendingAppeals = appealRepository.findByStatus(Appeal.AppealStatus.PENDING);
+
+        for (Appeal appeal : pendingAppeals) {
+            // 2. 根據 appealId 查找對應的處罰記錄
+            Optional<AdminPenalty> penaltyOpt = adminPenaltyRepository.findByAppealId(appeal.getAppealId());
+
+            if (penaltyOpt.isPresent()) {
+                AdminPenalty penalty = penaltyOpt.get();
+
+                // 3. 檢查處罰是否已過期
+                if (penalty.getStatus() == AdminPenalty.PenaltyStatus.EXPIRED) {
+                    // 4. 將申訴狀態更新為 EXPIRED
+                    appeal.setStatus(Appeal.AppealStatus.EXPIRED);
+                    appeal.setReviewedAt(LocalDateTime.now());
+                    appeal.setAdminResponse("處罰已過期，申訴自動關閉");
+                    appealRepository.save(appeal);
+
+                    System.out.println(" 申訴 ID " + appeal.getAppealId() + " 已自動更新為 EXPIRED（處罰已過期）");
+                }
             }
         }
     }
