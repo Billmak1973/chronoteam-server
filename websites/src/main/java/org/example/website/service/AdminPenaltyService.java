@@ -97,22 +97,85 @@ public class AdminPenaltyService {
     //  2. 管理員操作：處罰與解除
     // ==========================================
 
-    /**
-     * 管理員拉黑用戶 (永久)
-     */
     @Transactional
-    public void blacklistUser(String targetUsername, String adminUsername, String reason) {
+    public void blacklistUser(String targetUsername, String adminUsername, String reason, Long reviewId, String reviewContent) {
         if (isBlacklisted(targetUsername)) {
             throw new RuntimeException("該用戶已被拉黑，無需重複操作");
         }
 
-        // 創建處罰記錄
-        createPenalty(targetUsername, adminUsername, PenaltyType.BLACKLIST, reason, null);
+        // 1. 創建處罰記錄 (包含 reviewId 和 reviewContent)
+        AdminPenalty penalty = createPenalty(targetUsername, adminUsername, PenaltyType.BLACKLIST, reason, null, reviewId, reviewContent);
 
-        // 發送系統通知
-        sendBlacklistNotification(targetUsername, adminUsername, reason);
+        // 2. 發送系統通知，並獲取生成的 notificationId
+        Long notificationId = sendBlacklistNotification(targetUsername, adminUsername, reason);
+
+        // 3. 將 notificationId 綁定到處罰記錄中並更新保存
+        if (notificationId != null) {
+            penalty.setNotificationId(notificationId);
+            adminPenaltyRepository.save(penalty);
+        }
     }
 
+    /**
+     * 創建新的處罰記錄 (通用底層方法)
+     */
+    private AdminPenalty createPenalty(String targetUsername, String adminUsername,
+                                       PenaltyType type, String reason, LocalDateTime endTime,
+                                       Long reviewId, String reviewContent) {
+
+        User targetUser = userRepository.findByUsername(targetUsername)
+                .orElseThrow(() -> new RuntimeException("被處罰的用戶不存在: " + targetUsername));
+
+        User adminUser = userRepository.findByUsername(adminUsername)
+                .orElseThrow(() -> new RuntimeException("執行處罰的管理員不存在: " + adminUsername));
+
+        AdminPenalty penalty = new AdminPenalty();
+
+        penalty.setTargetUser(targetUser);
+        penalty.setAdminUser(adminUser);
+        penalty.setType(type);
+        penalty.setReason(reason != null ? reason : "違反社區規範");
+        penalty.setStartTime(LocalDateTime.now());
+        penalty.setEndTime(endTime); // 拉黑為 null，封禁為具體時間
+        penalty.setStatus(PenaltyStatus.ACTIVE);
+
+        // 【新增】記錄關聯的評論 ID 和內容快照
+        penalty.setReviewId(reviewId);
+        penalty.setReviewContent(reviewContent);
+
+        return adminPenaltyRepository.save(penalty);
+    }
+
+
+    /**
+     * 發送拉黑系統通知 (修改為返回 notificationId)
+     */
+    private Long sendBlacklistNotification(String targetUsername, String adminUsername, String reason) {
+        try {
+            User targetUser = userRepository.findByUsername(targetUsername)
+                    .orElseThrow(() -> new RuntimeException("目標用戶不存在"));
+            User adminUser = userRepository.findByUsername(adminUsername).orElse(null);
+
+            Notification notif = new Notification();
+            notif.setRecipient(targetUser);
+            notif.setSender(adminUser);
+            notif.setType(Notification.NotificationType.SYSTEM);
+            notif.setTitle("🚫 您的帳戶已被永久拉黑");
+            notif.setContent(String.format(
+                    "由於您嚴重違反社區規範，管理員已將您的帳戶永久拉黑。\n原因：%s\n您將無法再進行任何互動操作。",
+                    reason != null ? reason : "違反社區規範"
+            ));
+            notif.setDeleteReason(reason);
+            notif.setRead(false);
+
+            // 保存並返回生成的 ID
+            Notification savedNotif = notificationRepository.save(notif);
+            return savedNotif.getNotificationId();
+        } catch (Exception e) {
+            System.err.println("發送拉黑通知失敗: " + e.getMessage());
+            return null;
+        }
+    }
 
     /**
      * 管理員解除拉黑
@@ -153,68 +216,6 @@ public class AdminPenaltyService {
         }
     }
 
-    /**
-     * 創建新的處罰記錄 (通用底層方法)
-     */
-    private AdminPenalty createPenalty(String targetUsername, String adminUsername,
-                                       PenaltyType type, String reason, LocalDateTime endTime) {
-
-        User targetUser = userRepository.findByUsername(targetUsername)
-                .orElseThrow(() -> new RuntimeException("被處罰的用戶不存在: " + targetUsername));
-
-        User adminUser = userRepository.findByUsername(adminUsername)
-                .orElseThrow(() -> new RuntimeException("執行處罰的管理員不存在: " + adminUsername));
-
-        AdminPenalty penalty = new AdminPenalty();
-
-        penalty.setTargetUser(targetUser);
-        penalty.setAdminUser(adminUser);
-
-        penalty.setType(type);
-        penalty.setReason(reason != null ? reason : "違反社區規範");
-        penalty.setStartTime(LocalDateTime.now());
-        penalty.setEndTime(endTime); // 拉黑為 null，封禁為具體時間
-        penalty.setStatus(PenaltyStatus.ACTIVE);
-
-        return adminPenaltyRepository.save(penalty);
-    }
-
-    // ==========================================
-    //  4. 發送系統通知 (整合自版本 1)
-    // ==========================================
-
-    private void sendBlacklistNotification(String targetUsername, String adminUsername, String reason) {
-        try {
-            //  1. 透過 username 查出被拉黑用戶的 User 實體
-            User targetUser = userRepository.findByUsername(targetUsername)
-                    .orElseThrow(() -> new RuntimeException("目標用戶不存在"));
-
-            //  2. 查出管理員的 User 實體
-            // 注意：如果 adminUsername 是 "system" 且數據庫中沒有這個用戶，orElse(null) 會將其設為 null。
-            // 因為你的 Notification 實體中 sender 字段沒有設置 nullable=false，所以允許為 null，不會報外鍵錯誤。
-            User adminUser = userRepository.findByUsername(adminUsername).orElse(null);
-
-            Notification notif = new Notification();
-
-            //  3. 設置 User 關聯，取代原本的 setUsername
-            notif.setRecipient(targetUser);
-            notif.setSender(adminUser);
-
-            notif.setType(Notification.NotificationType.SYSTEM);
-            notif.setTitle("🚫 您的帳戶已被永久拉黑");
-            notif.setContent(String.format(
-                    "由於您嚴重違反社區規範，管理員已將您的帳戶永久拉黑。\n原因：%s\n您將無法再進行任何互動操作。",
-                    reason
-            ));
-            notif.setDeleteReason(reason);
-            // notif.setCreatedAt(LocalDateTime.now()); // 實體類已有 @CreationTimestamp，此行可省略
-            notif.setRead(false);
-
-            notificationRepository.save(notif);
-        } catch (Exception e) {
-            System.err.println("發送拉黑通知失敗: " + e.getMessage());
-        }
-    }
 
     /**
      * 管理員禁言（全局禁言，有期限）
@@ -227,14 +228,10 @@ public class AdminPenaltyService {
 
         // 检查该评论是否已经被封禁（ACTIVE状态）
         if (reviewId != null) {
-            Optional<AdminPenalty> existingPenalty = adminPenaltyRepository
-                    .findByReviewIdAndStatus(reviewId, AdminPenalty.PenaltyStatus.ACTIVE);
-
-            if (existingPenalty.isPresent()) {
-                // 已经封禁过了，返回错误信息
+            if (adminPenaltyRepository.existsByReviewId(reviewId)) {
                 response.put("success", false);
-                response.put("message", "该评论已经被封禁，请勿重复封禁！");
-                response.put("alreadyBanned", true);  // 标记给前端
+                response.put("message", "该评论已经被处理过（封禁或已过期），请勿重复封禁！");
+                response.put("alreadyBanned", true);
                 return response;
             }
         }
@@ -416,5 +413,18 @@ public class AdminPenaltyService {
                 }
             }
         }
+    }
+
+    @Transactional
+    public void revokePenalty(Long penaltyId) {
+        AdminPenalty penalty = adminPenaltyRepository.findById(penaltyId)
+                .orElseThrow(() -> new RuntimeException("處罰記錄不存在"));
+
+        if (penalty.getStatus() == AdminPenalty.PenaltyStatus.REVOKED) {
+            throw new RuntimeException("該處罰已經被解除");
+        }
+
+        penalty.setStatus(AdminPenalty.PenaltyStatus.REVOKED);
+        adminPenaltyRepository.save(penalty);
     }
 }

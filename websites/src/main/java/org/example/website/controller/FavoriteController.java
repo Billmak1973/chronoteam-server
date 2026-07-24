@@ -50,6 +50,7 @@ public class FavoriteController {
             if (existing != null) {
                 // 已收藏 -> 刪除記錄 (取消收藏)
                 favoriteRepository.delete(existing);
+                productRepository.decrementFavoriteCount(productId);
                 return ResponseEntity.ok(ApiResponse.ok("已取消收藏"));
             } else {
                 // 未收藏 -> 新增記錄
@@ -58,6 +59,7 @@ public class FavoriteController {
                 fav.setUser(user);
                 fav.setProduct(product);
                 favoriteRepository.save(fav);
+                productRepository.incrementFavoriteCount(productId);
                 return ResponseEntity.ok(ApiResponse.ok("已加入收藏"));
             }
         } catch (Exception e) {

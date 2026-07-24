@@ -108,15 +108,36 @@ public class AdminProductController {
                         double rating2 = (p2.getTotalReviewCount() != null && p2.getTotalReviewCount() > 0 && p2.getTotalScore() != null)
                                 ? p2.getTotalScore().doubleValue() / p2.getTotalReviewCount() : 0.0;
                         cmp = Double.compare(rating1, rating2); break;
+
+                    // === 新增：收藏數排序 ===
+                    case "favoritecount":
+                        Integer favCount1 = p1.getFavoriteCount() != null ? p1.getFavoriteCount() : 0;
+                        Integer favCount2 = p2.getFavoriteCount() != null ? p2.getFavoriteCount() : 0;
+                        cmp = Integer.compare(favCount1, favCount2);
+                        break;
+
+                    // === 新增：到貨通知數排序 ===
+                    case "stocknotificationcount":
+                        Integer notifCount1 = p1.getStockNotificationCount() != null ? p1.getStockNotificationCount() : 0;
+                        Integer notifCount2 = p2.getStockNotificationCount() != null ? p2.getStockNotificationCount() : 0;
+                        cmp = Integer.compare(notifCount1, notifCount2);
+                        break;
+
+                    // === 新增代碼開始：支持首頁推薦排序 ===
+                    case "homedisplayorder":
+                        // 處理 null 值，將 null 視為最大值排在最後，或者最小值排在最前，這裡設為 9999 排在後面
+                        Integer order1 = p1.getHomeDisplayOrder() != null ? p1.getHomeDisplayOrder() : 9999;
+                        Integer order2 = p2.getHomeDisplayOrder() != null ? p2.getHomeDisplayOrder() : 9999;
+                        cmp = Integer.compare(order1, order2);
+                        break;
+                    // === 新增代碼結束 ===
+
                     default: cmp = 0;
                 }
                 return isAsc ? cmp : -cmp;
             });
         }
 
-        // ==========================================
-        // 5. 內存分頁邏輯 (每頁 30 條)
-        // ==========================================
         int size = 30; // 每頁顯示 30 條
         int totalElements = filteredProducts.size();
         int totalPages = (int) Math.ceil((double) totalElements / size); // 計算總頁數

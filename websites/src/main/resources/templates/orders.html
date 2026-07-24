@@ -864,7 +864,7 @@
                                     </span>
                                 </p>
                                 <p style="color: #dc3545; font-weight: 600;">
-                                    <i class="fas fa-info-circle"></i> 請盡快前往店鋪完成付款，訂單將保留24小時
+                                    <i class="fas fa-info-circle"></i> 請盡快前往店鋪完成付款，訂單將保留72小時
                                 </p>
                             </div>
 
@@ -1151,12 +1151,20 @@
 
                 let actionBtnHtml = '';
                 if (status.reviewed) {
-                    //  核心修改：如果已评价，显示灰色按钮，文字为"已評價"，并禁用
+                    // 已评价：显示按钮和查看链接
                     actionBtnHtml = `
-            <button class="btn-sm btn-review" disabled style="background: #6c757d; cursor: default; opacity: 0.8;">
-                <i class="fas fa-check-circle"></i> 已評價
-            </button>`;
-                } else if (status.canReview) {
+<div style="display: flex; flex-direction: column; gap: 0.3rem; align-items: center;">
+    <button class="btn-sm btn-review" onclick="viewMyReview(${item.product.id})"
+            style="background: #6c757d; cursor: pointer; width: 100%;">
+        <i class="fas fa-check-circle"></i> 已評價
+    </button>
+    <div style="font-size: 0.8rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: 600;"
+         onclick="viewMyReview(${item.product.id})">
+        <i class="fas fa-eye"></i> 去查看評價！
+    </div>
+</div>`;
+                }
+                else if (status.canReview) {
                     // 可评价：显示绿色按钮
                     actionBtnHtml = `
             <button class="btn-sm btn-review" onclick="reviewProduct(${item.product.id}, '${orderNo}')">
@@ -1348,6 +1356,12 @@
                 currentCount += change;
                 badge.textContent = Math.max(0, currentCount);
             }
+        }
+
+        // 查看我的评价 - 跳转到商品详情页的评论区
+        function viewMyReview(productId) {
+            // 跳转到商品详情页，并定位到评论区
+            window.location.href = `/product/${productId}#reviews-section`;
         }
     </script>
 </body>

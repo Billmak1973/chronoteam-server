@@ -40,6 +40,10 @@ const ReplySection = ({
     const [blockValue, setBlockValue] = useState(1);
     const [blockUnit, setBlockUnit] = useState('day');
 
+    // 【新增】用於存儲當前要封禁的評論 ID 和內容快照
+    const [blockReviewId, setBlockReviewId] = useState(null);
+    const [blockReviewContent, setBlockReviewContent] = useState('');
+
     // ==========================================
     // 刪除回覆模態框相關狀態
     // ==========================================
@@ -305,8 +309,8 @@ const ReplySection = ({
             const params = new URLSearchParams();
             params.append('durationMinutes', totalMinutes);
             params.append('reason', '管理員禁言');
-            params.append('reviewId', reply.id);
-            params.append('reviewContent', reply.content);
+            params.append('reviewId', blockReviewId);  // ✅ 使用狀態變量
+            params.append('reviewContent', blockReviewContent);  // ✅ 使用狀態變量
 
             try {
                 const response = await fetch(
@@ -315,15 +319,15 @@ const ReplySection = ({
                 );
                 const result = await response.json();
 
-                            if (result.alreadyBanned) {
-                                // 弹出警告弹窗（复用 adminPermissionModal）
-                                const modal = document.getElementById('adminPermissionModal');
-                                if (modal) {
-                                    modal.style.display = 'flex';
-                                    document.body.style.overflow = 'hidden';
-                                }
-                                return; // 阻止后续操作
-                            }
+                if (result.alreadyBanned) {
+                    // 弹出警告弹窗（复用 adminPermissionModal）
+                    const modal = document.getElementById('adminPermissionModal');
+                    if (modal) {
+                        modal.style.display = 'flex';
+                        document.body.style.overflow = 'hidden';
+                    }
+                    return; // 阻止后续操作
+                }
 
                 if (response.ok) {
                     notify(`✅ 已全局禁言用戶 ${blockValue} ${blockUnit === 'day' ? '天' : blockUnit === 'week' ? '週' : '月'}`);
@@ -388,11 +392,13 @@ const ReplySection = ({
     };
 
     // 【修改】禁言按鈕點擊處理
-    const handleBlockClick = (targetUsername) => {
+    const handleBlockClick = (targetUsername, reviewId = null, reviewContent = '') => {
         setTargetBlockUser(targetUsername); // 僅用於管理員模態框顯示
-        if (isAdmin) {
-                setShowBlockModal(true);
+        setBlockReviewId(reviewId);  // 保存 reviewId
+        setBlockReviewContent(reviewContent);  // 保存 reviewContent
 
+        if (isAdmin) {
+            setShowBlockModal(true);
         } else {
             // 普通用戶直接調用父組件的禁言函數
             onBlockUser(targetUsername, true).then(result => {
@@ -421,10 +427,10 @@ const ReplySection = ({
     };
 
     //  管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗) 不是react自帶的
-    const handleBlacklist = (targetUsername) => {
+    const handleBlacklist = (targetUsername,reviewId,reviewContent) => {
         // 調用 HTML 中定義的全局函數，打開漂亮的自定義彈窗
         if (typeof window.openBlacklistConfirmModal === 'function') {
-            window.openBlacklistConfirmModal(targetUsername);
+            window.openBlacklistConfirmModal(targetUsername,reviewId,reviewContent);
         } else {
             // 降級處理：萬一 HTML 彈窗沒加載成功，給予提示
             notify('❌ 系統彈窗組件未加載，請刷新頁面後重試', true);
@@ -569,7 +575,7 @@ const ReplySection = ({
                                                     // 管理員永遠顯示「禁言」按鈕
                                                     <button
                                                         className="reply-action-btn btn-ban"
-                                                        onClick={() => handleBlockClick(reply.customer.username)}
+                                                        onClick={() => handleBlockClick(reply.customer.username, reply.id, reply.content)}
                                                         title="全局禁言"
                                                     >
                                                         <i className="fas fa-ban"></i> 禁言
@@ -615,7 +621,7 @@ const ReplySection = ({
                                             {currentUsername && isAdmin && (
                                                 <button
                                                     className="reply-action-btn btn-blacklist"
-                                                    onClick={() => handleBlacklist(reply.customer.username)}
+                                                    onClick={() => handleBlacklist(reply.customer.username,reply.id,reply.content)}
                                                     title="永久拉黑該用戶"
                                                 >
                                                     <i className="fas fa-user-slash"></i> 永久拉黑

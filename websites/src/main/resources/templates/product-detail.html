@@ -3858,10 +3858,17 @@
 
     <script>
         // ==========================================
-        //  全局彈窗 JS (普通禁言 + 管理員全局禁言 + 拉黑確認 + 未登入提示 + 自定義刪除 + 解除禁言)
+        // 全局變量聲明 (拉黑相關)
+        // ==========================================
+        let blacklistTargetUser = '';
+        let blacklistReviewId = null;
+        let blacklistReviewContent = null;
+
+        // ==========================================
+        // 1. 全局彈窗 JS (普通禁言 + 管理員全局禁言 + 拉黑確認 + 未登入提示 + 自定義刪除 + 解除禁言)
         // ==========================================
 
-        //  全局彈窗函數，供 React 評論區組件調用 (普通用戶互相禁言)
+        // 全局彈窗函數，供 React 評論區組件調用 (普通用戶互相禁言)
         window.showBlockedModal = function (message) {
             const modal = document.getElementById('blockedModal');
             const msgEl = document.getElementById('blockedModalMessage');
@@ -3876,7 +3883,7 @@
             document.body.style.overflow = '';
         };
 
-        //  新增：管理員全局禁言彈窗函數，供 React 評論區組件調用
+        // 新增：管理員全局禁言彈窗函數，供 React 評論區組件調用
         window.showGlobalBanModal = function (username, expiresAtStr) {
             const modal = document.getElementById('globalBanModal');
             const msgEl = document.getElementById('banMessageText');
@@ -3905,7 +3912,7 @@
             }
         };
 
-        //  關閉全局禁言彈窗
+        // 關閉全局禁言彈窗
         window.closeGlobalBanModal = function () {
             const modal = document.getElementById('globalBanModal');
             if (modal) {
@@ -3915,7 +3922,7 @@
         };
 
         // ==========================================
-        //  永久拉黑彈窗函數 (與全局禁言區分)
+        // 2. 永久拉黑彈窗函數 (與全局禁言區分)
         // ==========================================
         window.showBlacklistedModal = function (reason) {
             const modal = document.getElementById('blacklistedModal');
@@ -3942,14 +3949,15 @@
         };
 
         // ==========================================
-        // 永久拉黑確認彈窗邏輯 (管理員操作)
+        // 3. 永久拉黑確認彈窗邏輯 (管理員操作) - 【已更新支援 reviewId 與 reviewContent】
         // ==========================================
-        let blacklistTargetUser = '';
-
-        window.openBlacklistConfirmModal = function (username) {
+        window.openBlacklistConfirmModal = function (username, reviewId, reviewContent) {
             blacklistTargetUser = username;
+            blacklistReviewId = reviewId || null;
+            blacklistReviewContent = reviewContent || null;
+
             document.getElementById('blacklistTargetUsername').textContent = username;
-            document.getElementById('blacklistReason').value = '严重违反社区规范';
+            document.getElementById('blacklistReason').value = '嚴重違反社區規範';
             document.getElementById('blacklistConfirmModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
         };
@@ -3958,39 +3966,56 @@
             document.getElementById('blacklistConfirmModal').style.display = 'none';
             document.body.style.overflow = '';
             blacklistTargetUser = '';
+            blacklistReviewId = null;
+            blacklistReviewContent = null;
         };
 
         window.confirmBlacklistAction = async function () {
             const reason = document.getElementById('blacklistReason').value.trim();
-
             if (!reason) {
-                alert('请输入拉黑原因');
+                alert('請輸入拉黑原因');
                 return;
             }
 
+            // 構建 URL 參數
+            let url = `/api/admin/penalty/blacklist/${encodeURIComponent(blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`;
+            if (blacklistReviewId) {
+                url += `&reviewId=${blacklistReviewId}`;
+            }
+            if (blacklistReviewContent) {
+                url += `&reviewContent=${encodeURIComponent(blacklistReviewContent)}`;
+            }
+
             try {
-                const response = await fetch(
-                    `/api/admin/penalty/blacklist/${encodeURIComponent(blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`,
-                    { method: 'POST', credentials: 'same-origin' }
-                );
-
+                const response = await fetch(url, { method: 'POST', credentials: 'same-origin' });
                 const result = await response.json();
-
                 if (response.ok && result.success) {
-                    showNotification('✅ ' + result.message);
+                    if (typeof showNotification === 'function') {
+                        showNotification('✅ ' + result.message);
+                    } else {
+                        alert('✅ ' + result.message);
+                    }
                     closeBlacklistConfirmModal();
                     setTimeout(() => { window.location.reload(); }, 1000);
                 } else {
-                    showNotification('❌ ' + (result.message || '操作失败'), true);
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + (result.message || '操作失敗'), true);
+                    } else {
+                        alert('❌ ' + (result.message || '操作失敗'));
+                    }
                 }
             } catch (error) {
-                console.error('拉黑失败:', error);
-                showNotification('❌ 网络错误，请稍后重试', true);
+                console.error('拉黑失敗:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                } else {
+                    alert('❌ 網絡錯誤，請稍後重試');
+                }
             }
         };
 
         // ==========================================
-        //  未登入提示彈窗邏輯 (整合自代碼2)
+        // 4. 未登入提示彈窗邏輯
         // ==========================================
         window.showLoginRequiredModal = function () {
             const modal = document.getElementById('loginRequiredModal');
@@ -4019,7 +4044,7 @@
         };
 
         // ==========================================
-        //   自定義刪除確認彈窗邏輯 (主回復/樓中樓刪除)
+        // 5. 自定義刪除確認彈窗邏輯 (主回復/樓中樓刪除)
         // ==========================================
         let deleteConfirmCallback = null;
 
@@ -4055,7 +4080,7 @@
         };
 
         // ==========================================
-        //  🔓 解除禁言弹窗逻辑
+        // 6. 解除禁言彈窗邏輯
         // ==========================================
         let unblockTargetUser = '';
         let unblockCallback = null;
@@ -4083,7 +4108,7 @@
         };
 
         // ==========================================
-        // 點擊遮罩層關閉 (整合所有彈窗，避免重複綁定)
+        // 7. 點擊遮罩層關閉 (整合所有彈窗，避免重複綁定)
         // ==========================================
         document.addEventListener('click', function (e) {
             // 1. 關閉普通禁言彈窗
@@ -4112,7 +4137,7 @@
         });
 
         // ==========================================
-        // ESC鍵關閉彈窗 (整合所有需要ESC關閉的彈窗)
+        // 8. ESC鍵關閉彈窗 (整合所有需要ESC關閉的彈窗)
         // ==========================================
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {

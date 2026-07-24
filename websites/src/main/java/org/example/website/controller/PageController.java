@@ -427,89 +427,112 @@ public class PageController {
         return "reviews"; // 對應 templates/reviews.html
     }
 
-    @GetMapping("/account/notifications")
-    public String myNotifications(Model model, Authentication authentication) {
-        String username = authentication.getName();
+@GetMapping("/account/notifications")
+public String myNotifications(
+        @RequestParam(defaultValue = "0") int stockPage,   // 到貨通知當前頁
+        @RequestParam(defaultValue = "0") int adminPage,   // 管理通知當前頁
+        @RequestParam(defaultValue = "25") int size,       // 每頁 25 條
+        Model model, Authentication authentication) {
 
-        // 【修改處 1】：使用 UserService 獲取 User 實體
-        User user = userService.findByUsername(username);
+    String username = authentication.getName();
+    User user = userService.findByUsername(username);
 
-        // 1. 獲取所有通知
-        List<Notification> allNotifications = notificationRepository
-                .findByRecipient_UsernameOrderByCreatedAtDesc(username);
+    // 1. 構建分頁對象
+    Pageable stockPageable = org.springframework.data.domain.PageRequest.of(stockPage, size);
+    Pageable adminPageable = org.springframework.data.domain.PageRequest.of(adminPage, size);
 
-        // 2. 分類通知
-        List<Notification> stockNotifications = allNotifications.stream()
-                .filter(n -> n.getType() == Notification.NotificationType.STOCK)
-                .collect(Collectors.toList());
+    // 2. 分別進行分頁查詢
+    Page<Notification> stockPageResult = notificationRepository.findByTypeAndRecipient_UsernameOrderByCreatedAtDesc(
+            Notification.NotificationType.STOCK, username, stockPageable);
+    Page<Notification> adminPageResult = notificationRepository.findByTypeAndRecipient_UsernameOrderByCreatedAtDesc(
+            Notification.NotificationType.SYSTEM, username, adminPageable);
 
-        List<Notification> adminNotifications = allNotifications.stream()
-                .filter(n -> n.getType() == Notification.NotificationType.SYSTEM)
-                .collect(Collectors.toList());
+    List<Notification> stockNotifications = stockPageResult.getContent();
+    List<Notification> adminNotifications = adminPageResult.getContent();
 
-        // ==========================================
-        //  3. 核心重構：計算每條管理通知的「綜合狀態」
-        // ==========================================
-        Map<Long, String> notificationStatusMap = new HashMap<>();
+    // 3. 核心重構：計算每條管理通知的「綜合狀態」(支援禁言 + 永久拉黑)
+    Map<Long, String> notificationStatusMap = new HashMap<>();
+    Map<Long, Appeal> appealDataMap = new HashMap<>();
+    Map<Long, Integer> appealCountMap = new HashMap<>(); // 【新增】記錄申訴次數
 
-        for (Notification notif : adminNotifications) {
-            // 只處理「禁言相關」的通知 (根據標題包含"禁言"來判斷)
-            if (notif.getTitle() != null && notif.getTitle().contains("禁言")) {
+    for (Notification notif : adminNotifications) {
+        // 只處理「禁言相關」或「永久拉黑相關」的通知
+        if (notif.getTitle() != null &&
+                (notif.getTitle().contains("禁言") || notif.getTitle().contains("永久拉黑"))) {
 
-                // 1. 查找對應的處罰記錄 (透過 notificationId 精確綁定)
-                Optional<AdminPenalty> penaltyOpt = adminPenaltyRepository.findByNotificationId(notif.getNotificationId());
+            Optional<AdminPenalty> penaltyOpt = adminPenaltyRepository.findByNotificationId(notif.getNotificationId());
 
-                // 2. 查找對應的申訴記錄 (取最新的一條)
-                Optional<Appeal> appealOpt = appealRepository.findTopByNotificationIdOrderByCreatedAtDesc(notif.getNotificationId());
+            // 【修改】獲取該通知的所有申訴記錄 (按時間倒序)
+            List<Appeal> appeals = appealRepository.findByNotificationIdOrderByCreatedAtDesc(notif.getNotificationId());
 
-                if (appealOpt.isPresent()) {
-                    // 【情況 A：有申訴記錄】 -> 根據申訴狀態決定 UI 顯示
-                    Appeal appeal = appealOpt.get();
-                    if (appeal.getStatus() == Appeal.AppealStatus.PENDING) {
-                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_PENDING"); // 審核中
-                    } else if (appeal.getStatus() == Appeal.AppealStatus.APPROVED) {
-                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_APPROVED"); // 申訴成功
-                    } else if (appeal.getStatus() == Appeal.AppealStatus.REJECTED) {
-                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_REJECTED"); // 申訴失敗
+            // 【新增】記錄申訴總次數
+            appealCountMap.put(notif.getNotificationId(), appeals.size());
+
+            if (!appeals.isEmpty()) {
+                Appeal latestAppeal = appeals.get(0); // 獲取最新的一條申訴記錄
+                appealDataMap.put(notif.getNotificationId(), latestAppeal);
+
+                if (latestAppeal.getStatus() == Appeal.AppealStatus.PENDING) {
+                    notificationStatusMap.put(notif.getNotificationId(), "APPEAL_PENDING");
+                } else if (latestAppeal.getStatus() == Appeal.AppealStatus.APPROVED) {
+                    notificationStatusMap.put(notif.getNotificationId(), "APPEAL_APPROVED");
+                } else if (latestAppeal.getStatus() == Appeal.AppealStatus.REJECTED) {
+                    notificationStatusMap.put(notif.getNotificationId(), "APPEAL_REJECTED");
+                } else if (latestAppeal.getStatus() == Appeal.AppealStatus.EXPIRED) {
+                    notificationStatusMap.put(notif.getNotificationId(), "APPEAL_EXPIRED");
+                }
+            } else {
+                // 無申訴記錄 -> 根據處罰狀態決定 UI 顯示
+                if (penaltyOpt.isPresent()) {
+                    AdminPenalty penalty = penaltyOpt.get();
+
+                    // 觸發精確的懶檢查 (確保過期狀態被正確更新)
+                    adminPenaltyService.checkAndUpdatePenaltyStatus(penalty.getPenaltyId());
+
+                    // 重新獲取最新狀態
+                    penalty = adminPenaltyRepository.findById(penalty.getPenaltyId()).get();
+
+                    if (penalty.getStatus() == AdminPenalty.PenaltyStatus.ACTIVE) {
+                        notificationStatusMap.put(notif.getNotificationId(), "SHOW_APPEAL_BTN");
+                    } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.EXPIRED) {
+                        notificationStatusMap.put(notif.getNotificationId(), "EXPIRED_NO_APPEAL");
+                    } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.REVOKED) {
+                        notificationStatusMap.put(notif.getNotificationId(), "REVOKED_NO_APPEAL");
                     }
                 } else {
-                    // 【情況 B：無申訴記錄】 -> 根據處罰狀態決定 UI 顯示
-                    if (penaltyOpt.isPresent()) {
-                        AdminPenalty penalty = penaltyOpt.get();
-
-                        //  觸發精確的懶檢查，確保過期的記錄在資料庫中被標記為 EXPIRED
-                        adminPenaltyService.checkAndUpdatePenaltyStatus(penalty.getPenaltyId());
-
-                        // 重新獲取最新狀態 (因為懶檢查可能剛剛更新了資料庫)
-                        penalty = adminPenaltyRepository.findById(penalty.getPenaltyId()).get();
-
-                        if (penalty.getStatus() == AdminPenalty.PenaltyStatus.ACTIVE) {
-                            notificationStatusMap.put(notif.getNotificationId(), "SHOW_APPEAL_BTN"); // 生效中，可申訴
-                        } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.EXPIRED) {
-                            notificationStatusMap.put(notif.getNotificationId(), "EXPIRED_NO_APPEAL"); // 已過期
-                        } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.REVOKED) {
-                            notificationStatusMap.put(notif.getNotificationId(), "REVOKED_NO_APPEAL"); // 管理員手動解封
-                        }
-                    } else {
-                        notificationStatusMap.put(notif.getNotificationId(), "NO_PENALTY_RECORD"); // 歷史髒數據 (沒有對應的處罰記錄)
-                    }
+                    notificationStatusMap.put(notif.getNotificationId(), "NO_PENALTY_RECORD");
                 }
             }
         }
-
-        // 4. 進入頁面後，自動將所有通知標記為已讀
-        allNotifications.forEach(n -> n.setRead(true));
-        notificationRepository.saveAll(allNotifications);
-
-        // 5. 傳遞數據到前端 ( 傳遞新的狀態 Map 替換原來的 appealStatusMap)
-        // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
-        model.addAttribute("user", user);
-        model.addAttribute("stockNotifications", stockNotifications);
-        model.addAttribute("adminNotifications", adminNotifications);
-        model.addAttribute("notificationStatusMap", notificationStatusMap);
-
-        return "notifications";
     }
+
+    // 4. 進入頁面後，自動將所有通知標記為已讀 (優化：只查詢並更新未讀的，減少資料庫壓力)
+    List<Notification> unreadNotifications = notificationRepository.findByRecipient_UsernameAndIsReadFalse(username);
+    if (!unreadNotifications.isEmpty()) {
+        unreadNotifications.forEach(n -> n.setRead(true));
+        notificationRepository.saveAll(unreadNotifications);
+    }
+
+    // 5. 傳遞數據到前端
+    model.addAttribute("user", user);
+    model.addAttribute("stockNotifications", stockNotifications);
+    model.addAttribute("adminNotifications", adminNotifications);
+    model.addAttribute("notificationStatusMap", notificationStatusMap);
+    model.addAttribute("appealDataMap", appealDataMap);
+    model.addAttribute("appealCountMap", appealCountMap); // 【新增】傳遞申訴次數 Map
+
+    // 傳遞分頁相關數據
+    model.addAttribute("stockPage", stockPage);
+    model.addAttribute("stockTotalPages", stockPageResult.getTotalPages());
+    model.addAttribute("stockSmartPages", generateSmartPagination(stockPage, stockPageResult.getTotalPages()));
+
+    model.addAttribute("adminPage", adminPage);
+    model.addAttribute("adminTotalPages", adminPageResult.getTotalPages());
+    model.addAttribute("adminSmartPages", generateSmartPagination(adminPage, adminPageResult.getTotalPages()));
+
+    return "notifications";
+}
+
 
     @GetMapping("/account/stock-notifications")
     public String stockNotifications(Model model,

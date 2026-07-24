@@ -13,34 +13,33 @@ import java.util.List;
 
 @Repository
 public interface ViewHistoryRepository extends JpaRepository<ViewHistory, Long> {
+
     // 查詢用戶的瀏覽歷史，按時間倒序
     List<ViewHistory> findByUser_UsernameOrderByViewedAtDesc(String username);
 
     // 查找用戶是否已瀏覽過某個商品
     ViewHistory findByUser_UsernameAndProduct_ProductId(String username, Integer productId);
 
-    // 刪除半年前的記錄 (供定時任務使用，這裡保持 < 不變！)
+    // 刪除半年前的記錄 (供定時任務使用)
     @Modifying
     @Transactional
     @Query("DELETE FROM ViewHistory vh WHERE vh.viewedAt < :cutoffDate")
     void deleteOlderThan(@Param("cutoffDate") LocalDateTime cutoffDate);
 
-    // 刪除「最近」指定時間範圍內的記錄 (將 < 改為 >=)
-    // 注意：因為 Customer 實體的 @Id 就是 username，所以 vh.customer.username 是正確的寫法，千萬不要改成 id！
+    //  修改：刪除「最近」指定時間範圍內的記錄 (直接使用 userId，避免 JOIN 問題)
     @Modifying
     @Transactional
-    @Query("DELETE FROM ViewHistory vh WHERE vh.user.username = :username AND vh.viewedAt >= :cutoffDate")
-    void deleteRecentForUser(@Param("username") String username, @Param("cutoffDate") LocalDateTime cutoffDate);
+    @Query("DELETE FROM ViewHistory vh WHERE vh.user.id = :userId AND vh.viewedAt >= :cutoffDate")
+    void deleteRecentForUserId(@Param("userId") Long userId, @Param("cutoffDate") LocalDateTime cutoffDate);
 
-    // 刪除用戶的所有瀏覽記錄 (保持不變)
+    //  修改：刪除用戶的所有瀏覽記錄 (直接使用 userId，避免 JOIN 問題)
     @Modifying
     @Transactional
-    @Query("DELETE FROM ViewHistory vh WHERE vh.user.username = :username")
-    void deleteAllForUser(@Param("username") String username);
+    @Query("DELETE FROM ViewHistory vh WHERE vh.user.id = :userId")
+    void deleteAllForUserId(@Param("userId") Long userId);
 
     /**
      * 批量刪除：根據 ID 列表和用戶名刪除（防止越權刪除別人的記錄）
-     * 假設主鍵名為 historyId，如果是 id 請改為 deleteByIdInAndUser_Username
      */
     @Modifying
     void deleteByHistoryIdInAndUser_Username(List<Long> historyIds, String username);

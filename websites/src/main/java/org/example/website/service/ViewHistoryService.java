@@ -3,8 +3,8 @@ package org.example.website.service;
 import org.example.website.entity.Product;
 import org.example.website.entity.User;
 import org.example.website.entity.ViewHistory;
-import org.example.website.repository.UserRepository;
 import org.example.website.repository.ProductRepository;
+import org.example.website.repository.UserRepository;
 import org.example.website.repository.ViewHistoryRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -27,31 +27,24 @@ public class ViewHistoryService {
         this.productRepository = productRepository;
     }
 
-
     /**
      * 記錄瀏覽歷史（如果已存在則更新時間）
      */
     @Transactional
     public void recordView(String username, Integer productId) {
-        // 使用 UserRepository 查詢 User 實體
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
-
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("商品不存在"));
 
-        // 檢查是否已存在該商品的瀏覽記錄 (方法名已在 Repository 中修改為 User_Username)
         ViewHistory existingHistory = viewHistoryRepository
                 .findByUser_UsernameAndProduct_ProductId(username, productId);
 
         if (existingHistory != null) {
-            // 如果已存在，只更新瀏覽時間
             existingHistory.setViewedAt(LocalDateTime.now());
             viewHistoryRepository.save(existingHistory);
         } else {
-            // 如果不存在，創建新記錄
             ViewHistory history = new ViewHistory();
-            //設置 User 關聯，不再是 setCustomer
             history.setUser(user);
             history.setProduct(product);
             viewHistoryRepository.save(history);
@@ -61,7 +54,6 @@ public class ViewHistoryService {
         List<ViewHistory> allHistories = viewHistoryRepository
                 .findByUser_UsernameOrderByViewedAtDesc(username);
         if (allHistories.size() > 200) {
-            // 截取第 200 條之後的所有記錄（即最舊的記錄）
             List<ViewHistory> toDelete = allHistories.subList(200, allHistories.size());
             viewHistoryRepository.deleteAll(toDelete);
         }
@@ -74,12 +66,16 @@ public class ViewHistoryService {
         return viewHistoryRepository.findByUser_UsernameOrderByViewedAtDesc(username);
     }
 
-
     /**
      * 清除瀏覽歷史
      */
     @Transactional
     public void clearHistory(String username, String period) {
+        // ✅ 核心修復：先根據 username 獲取 User 實體，拿到主鍵 id
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用戶不存在"));
+        Long userId = user.getId();
+
         LocalDateTime cutoffDate = switch (period) {
             case "1day" -> LocalDateTime.now().minusDays(1);
             case "1week" -> LocalDateTime.now().minusWeeks(1);
@@ -89,10 +85,9 @@ public class ViewHistoryService {
         };
 
         if ("all".equals(period)) {
-            viewHistoryRepository.deleteAllForUser(username);
+            viewHistoryRepository.deleteAllForUserId(userId);
         } else {
-            //  【修改處】：調用新的方法名，刪除「最近」的記錄
-            viewHistoryRepository.deleteRecentForUser(username, cutoffDate);
+            viewHistoryRepository.deleteRecentForUserId(userId, cutoffDate);
         }
     }
 
@@ -104,13 +99,11 @@ public class ViewHistoryService {
     public void cleanOldHistory() {
         LocalDateTime cutoffDate = LocalDateTime.now().minusMonths(6);
         viewHistoryRepository.deleteOlderThan(cutoffDate);
-        System.out.println(" 已自動清理半年前的瀏覽歷史記錄");
+        System.out.println("✅ 已自動清理半年前的瀏覽歷史記錄");
     }
 
     /**
-     * 批量刪除瀏覽歷史 (新增)
-     * @param username 當前登錄用戶名 (用於權限校驗)
-     * @param historyIds 要刪除的歷史記錄 ID 列表
+     * 批量刪除瀏覽歷史
      */
     @Transactional
     public void batchDelete(String username, List<Long> historyIds) {

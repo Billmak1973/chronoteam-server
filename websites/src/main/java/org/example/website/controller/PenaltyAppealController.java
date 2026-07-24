@@ -1,5 +1,6 @@
 package org.example.website.controller;
 
+import org.example.website.dto.ApiResponse;
 import org.example.website.entity.AdminPenalty;
 import org.example.website.entity.Appeal;
 import org.example.website.repository.AdminPenaltyRepository;
@@ -9,14 +10,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin")
@@ -33,6 +32,7 @@ public class PenaltyAppealController {
         this.appealRepository = appealRepository;
         this.adminPenaltyService = adminPenaltyService;
     }
+
 
     @GetMapping("/penalties")
     public String managePenaltiesAndAppeals(
@@ -53,17 +53,28 @@ public class PenaltyAppealController {
         Pageable appealPageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Appeal> appealsPage = appealRepository.findAll(appealPageable);
 
+        //  修复后的正确写法（通过恒定的 notificationId 关联，完美解决多次申诉问题）
         Map<Long, String> reviewContentMap = new HashMap<>();
         for (Appeal appeal : appealsPage.getContent()) {
-            // 根据申诉ID去查找对应的处罚记录
-            Optional<AdminPenalty> penaltyOpt = adminPenaltyRepository.findByAppealId(appeal.getAppealId());
+            // 【核心修复】：不再使用 appealId 反查，而是使用 notificationId 关联！
+            // 因为同一个处罚产生的所有申诉（无论第1次还是第3次），它们的 notificationId 都是相同的。
+            // 这样即使 AdminPenalty 的 appealId 被更新为最新的申诉ID，旧的申诉依然能通过 notificationId 稳稳找到处罚记录和 reviewContent。
+            Optional<AdminPenalty> penaltyOpt = adminPenaltyRepository.findByNotificationId(appeal.getNotificationId());
 
             if (penaltyOpt.isPresent()) {
-                // 找到了，把评论内容放入 Map
+                // Map 的 Key 依然使用 appeal.getAppealId()，保证前端渲染时能正确匹配
                 reviewContentMap.put(appeal.getAppealId(), penaltyOpt.get().getReviewContent());
             } else {
-                // 没找到（可能是旧数据），放个空字符串或者提示
                 reviewContentMap.put(appeal.getAppealId(), "无关联处罚记录");
+            }
+        }
+        Map<Long, String> appealStatusMap = new HashMap<>();
+        for (AdminPenalty penalty : penaltiesPage.getContent()) {
+            if (penalty.getAppealId() != null) {
+                Optional<Appeal> appealOpt = appealRepository.findById(penalty.getAppealId());
+                if (appealOpt.isPresent()) {
+                    appealStatusMap.put(penalty.getAppealId(), appealOpt.get().getStatus().name());
+                }
             }
         }
 
@@ -75,8 +86,40 @@ public class PenaltyAppealController {
         model.addAttribute("appealTotalPages", appealsPage.getTotalPages());
         model.addAttribute("appealCurrentPage", page);
         model.addAttribute("reviewContentMap", reviewContentMap);
+        model.addAttribute("appealStatusMap", appealStatusMap);
 
         return "admin/admin-penalties";
     }
 
+    @GetMapping("/appeal/{appealId}")
+    @ResponseBody
+    public ResponseEntity<ApiResponse> getAppealDetail(@PathVariable Long appealId) {
+        try {
+            Appeal appeal = appealRepository.findById(appealId)
+                    .orElseThrow(() -> new RuntimeException("申訴記錄不存在"));
+
+            // 構建返回數據（包含用戶信息）
+            Map<String, Object> data = new HashMap<>();
+            data.put("appealId", appeal.getAppealId());
+            data.put("reason", appeal.getReason());
+            data.put("appealType", appeal.getAppealType().name());
+            data.put("status", appeal.getStatus().name());
+            data.put("createdAt", appeal.getCreatedAt());
+            data.put("adminResponse", appeal.getAdminResponse());
+
+            // 包含用戶信息
+            if (appeal.getUser() != null) {
+                Map<String, String> userInfo = new HashMap<>();
+                userInfo.put("username", appeal.getUser().getUsername());
+                userInfo.put("userId", appeal.getUser().getId().toString());
+                data.put("user", userInfo);
+            }
+
+            return ResponseEntity.ok(ApiResponse.okWithData("獲取成功", data));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("獲取失敗: " + e.getMessage()));
+        }
+    }
 }

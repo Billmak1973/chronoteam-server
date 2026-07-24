@@ -63,6 +63,20 @@ public class Product {
     private BigDecimal totalScore;
 
     /**
+     * 收藏人數 (喜歡的人數)
+     * 默認為 0，由後端在用戶收藏/取消收藏時原子更新
+     */
+    @Column(name = "favorite_count")
+    private Integer favoriteCount = 0;
+
+    /**
+     * 到貨通知訂閱人數 (想要買的數量)
+     * 默認為 0，由後端在用戶訂閱/取消訂閱時原子更新
+     */
+    @Column(name = "stock_notification_count")
+    private Integer stockNotificationCount = 0;
+
+    /**
      * 首頁展示排序權重
      * 數值越小越靠前 (例如: 1, 2, 3...)
      * null 或 0 表示不在首頁推薦列表中

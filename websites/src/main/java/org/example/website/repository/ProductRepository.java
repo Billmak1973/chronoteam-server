@@ -4,9 +4,11 @@ import org.example.website.entity.Product;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -113,4 +115,35 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     @Query("SELECT MAX(p.homeDisplayOrder) FROM Product p WHERE p.homeDisplayOrder IS NOT NULL AND p.homeDisplayOrder > 0")
     Integer findMaxHomeDisplayOrder();
+
+
+    // 原子增加收藏人數
+    @Modifying
+    @Transactional
+    @Query("UPDATE Product p SET p.favoriteCount = p.favoriteCount + 1 WHERE p.productId = :productId")
+    int incrementFavoriteCount(@Param("productId") Integer productId);
+
+    // 原子減少收藏人數 (防止減到負數)
+    @Modifying
+    @Transactional
+    @Query("UPDATE Product p SET p.favoriteCount = CASE WHEN p.favoriteCount > 0 THEN p.favoriteCount - 1 ELSE 0 END WHERE p.productId = :productId")
+    int decrementFavoriteCount(@Param("productId") Integer productId);
+
+    /**
+     * 原子增加訂閱人數
+     * 使用 nativeQuery = true 繞過 JPQL 解析，直接讓數據庫處理 COALESCE，徹底解決 NULL + 1 = NULL 的問題
+     */
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE product SET stock_notification_count = COALESCE(stock_notification_count, 0) + 1 WHERE prod_id = :productId", nativeQuery = true)
+    int incrementStockNotificationCount(@Param("productId") Integer productId);
+
+    /**
+     * 原子減少訂閱人數 (防止減到負數)
+     */
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE product SET stock_notification_count = CASE WHEN COALESCE(stock_notification_count, 0) > 0 THEN stock_notification_count - 1 ELSE 0 END WHERE prod_id = :productId", nativeQuery = true)
+    int decrementStockNotificationCount(@Param("productId") Integer productId);
+
 }

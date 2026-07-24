@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
         // 從 @Index(name = "idx_notification_recipient", columnList = "recipient_username")
         // 改成 @Index(name = "idx_notification_recipient", columnList = "recipient_user_id")
         @Index(name = "idx_notification_recipient", columnList = "recipient_user_id"),
-        @Index(name = "idx_notification_read", columnList = "is_read")
+        @Index(name = "idx_notification_read", columnList = "is_read"),
+        @Index(name = "idx_notification_broadcast", columnList = "is_broadcast, broadcast_target_type, broadcast_target_id")
 })
 @Data
 public class Notification {
@@ -24,7 +25,7 @@ public class Notification {
     // 從 @Column(name = "recipient_username", nullable = false, length = 50) private String recipientUsername;
     // 改成 @ManyToOne 關聯 User 實體的主鍵 id，字段名改為 recipient
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recipient_user_id",  nullable = false)
+    @JoinColumn(name = "recipient_user_id")
     private User recipient;
 
     // 從 @Column(name = "sender_username", length = 50) private String senderUsername;
@@ -61,6 +62,20 @@ public class Notification {
     @Column(name = "target_url", length = 255)
     private String targetUrl;
 
+
+    /** 是否為廣播通知 (默認 false) */
+    @Column(name = "is_broadcast", nullable = false)
+    private Boolean isBroadcast = false;
+
+    /** 廣播目標類型: ALL (全員), PRODUCT_SUBSCRIBERS (特定商品訂閱者) */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "broadcast_target_type", length = 30)
+    private BroadcastTargetType broadcastTargetType;
+
+    /** 廣播目標 ID (例如: 當 targetType 為 PRODUCT_SUBSCRIBERS 時，這裡存 productId) */
+    @Column(name = "broadcast_target_id")
+    private Integer broadcastTargetId;
+
     // 是否已讀
     @Column(name = "is_read", nullable = false)
     private boolean isRead = false;
@@ -76,5 +91,10 @@ public class Notification {
     public enum NotificationType {
         SYSTEM,     // 系統通知（評論被刪除、賬戶異常、封禁等）
         STOCK       // 到貨通知（關注的商品已補貨到貨）
+    }
+
+    public enum BroadcastTargetType {
+        ALL,                // 全員廣播
+        PRODUCT_SUBSCRIBERS // 特定商品的訂閱者
     }
 }

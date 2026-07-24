@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/css/common.css">
   <link rel="stylesheet" href="/css/sidebar.css">
   <style>
+    /* 在通知頁面的 <style> 標籤內加入這些樣式 */
     .dashboard-container {
       display: flex;
       min-height: calc(100vh - 150px);
@@ -16,6 +17,58 @@
       margin: 2rem auto;
       padding: 0 1rem;
       gap: 2rem;
+      align-items: flex-start;
+      /* 關鍵：防止子元素拉伸 */
+    }
+
+    .sidebar {
+      width: 280px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+      padding: 1.5rem;
+
+      /* 1. 啟用黏性定位 */
+      position: sticky;
+      top: 100px;
+
+      /* 2. 設定最大高度 */
+      max-height: calc(100vh - 120px);
+
+      /* 3. 允許內部滾動 */
+      overflow-y: auto;
+
+      /* 4. 滾動條樣式 */
+      scrollbar-width: thin;
+      scrollbar-color: var(--gold) transparent;
+    }
+
+    /* Webkit 瀏覽器滾動條美化 */
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: #e9ecef;
+      border-radius: 3px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb:hover {
+      background: var(--gold);
+    }
+
+    /* 響應式：手機版取消 sticky */
+    @media (max-width: 900px) {
+      .sidebar {
+        position: static;
+        max-height: none;
+        width: 100%;
+        margin-bottom: 2rem;
+      }
     }
 
     .main-content {
@@ -217,6 +270,149 @@
       }
     }
 
+    /* 新增：申訴信息樣式 */
+    .appeal-info-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      border-left: 4px solid var(--gold);
+    }
+
+    .appeal-info-box.pending {
+      background: #fff3cd;
+      border-color: #ffc107;
+    }
+
+    .appeal-info-box.approved {
+      background: #d4edda;
+      border-color: #28a745;
+    }
+
+    .appeal-info-box.rejected {
+      background: #f8d7da;
+      border-color: #dc3545;
+    }
+
+    .appeal-label {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .appeal-content {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      padding: 0.8rem;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 6px;
+      margin-top: 0.5rem;
+    }
+
+    .admin-response-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #e7f3ff;
+      border-left: 4px solid #0066cc;
+      border-radius: 8px;
+    }
+
+    .admin-response-label {
+      font-weight: 600;
+      color: #0066cc;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* 違規內容預覽框 */
+    .violation-content-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border: 1px dashed #dee2e6;
+      border-radius: 8px;
+    }
+
+    .violation-label {
+      font-size: 0.85rem;
+      color: #6c757d;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .violation-text {
+      font-style: italic;
+      color: #495057;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 4px;
+    }
+
+    /* ========================================== */
+    /* === 智能分頁組件樣式 (新增) === */
+    /* ========================================== */
+    .pagination-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #f1f3f5;
+    }
+
+    .page-btn {
+      padding: 0.6rem 1rem;
+      border: 1px solid #e9ecef;
+      background: white;
+      color: var(--primary);
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .page-btn:hover:not(.disabled) {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(212, 175, 55, 0.05);
+      transform: translateY(-1px);
+    }
+
+    .page-btn.active {
+      background: var(--gold);
+      color: white;
+      border-color: var(--gold);
+      font-weight: 600;
+      cursor: default;
+      box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+    }
+
+    .page-btn.disabled {
+      color: #ccc;
+      cursor: not-allowed;
+      background: #f8f9fa;
+      border-color: #e9ecef;
+    }
+
+    .page-ellipsis {
+      padding: 0.6rem 0.5rem;
+      color: var(--gray);
+      font-weight: bold;
+      letter-spacing: 2px;
+      user-select: none;
+    }
+
     @media (max-width: 900px) {
       .dashboard-container {
         flex-direction: column;
@@ -286,6 +482,30 @@
           <h3>暫無到貨通知</h3>
           <p>當您關注的商品補貨時，這裡會收到通知</p>
         </div>
+
+        <!--  到貨通知智能分頁 -->
+        <div th:if="${stockTotalPages > 1}" class="pagination-wrapper">
+          <!-- 上一頁 -->
+          <a th:href="@{/account/notifications(stockPage=${stockPage > 0 ? stockPage - 1 : 0}, adminPage=${adminPage})}"
+            th:class="${stockPage == 0} ? 'page-btn disabled' : 'page-btn'">
+            <i class="fas fa-chevron-left"></i> 上一頁
+          </a>
+
+          <!-- 智能頁碼遍歷 -->
+          <th:block th:each="item : ${stockSmartPages}">
+            <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
+            <a th:unless="${item.isEllipsis}"
+              th:href="@{/account/notifications(stockPage=${item.pageNumber}, adminPage=${adminPage})}"
+              th:class="${item.pageNumber == stockPage} ? 'page-btn active' : 'page-btn'"
+              th:text="${item.pageNumber + 1}">1</a>
+          </th:block>
+
+          <!-- 下一頁 -->
+          <a th:href="@{/account/notifications(stockPage=${stockPage < stockTotalPages - 1 ? stockPage + 1 : stockTotalPages - 1}, adminPage=${adminPage})}"
+            th:class="${stockPage == stockTotalPages - 1} ? 'page-btn disabled' : 'page-btn'">
+            下一頁 <i class="fas fa-chevron-right"></i>
+          </a>
+        </div>
       </div>
 
       <!-- 管理通知 -->
@@ -303,7 +523,18 @@
             </div>
             <div class="notif-content" th:text="${notif.content}">管理員對您的評論進行了處理。</div>
 
-            <!--  禁言通知專屬樣式 (已整合 6 種狀態) -->
+            <!-- 違規內容預覽 (從 admin_penalty.review_content) -->
+            <div th:if="${notif.deleteReason != null or (notif.title != null and #strings.contains(notif.title, '禁言'))}"
+              class="violation-content-box">
+              <div class="violation-label">
+                <i class="fas fa-quote-left"></i> 違規內容：
+              </div>
+              <div class="violation-text" th:text="${notif.deletedContent} ?: '無記錄'">
+                這裡顯示被刪除的評論內容...
+              </div>
+            </div>
+
+            <!-- 禁言通知專屬樣式 (已整合 6 種狀態) -->
             <div th:if="${notif.title != null and #strings.contains(notif.title, '禁言')}" class="delete-reason-box"
               style="background: #fff3cd; border-color: #ffc107;">
               <strong><i class="fas fa-gavel"></i> 禁言詳情：</strong>
@@ -329,23 +560,64 @@
 
                 <!-- 情況 2：申訴審核中 (PENDING) -> 灰色信息框 -->
                 <div th:if="${notificationStatusMap[notif.notificationId] == 'APPEAL_PENDING'}"
-                  style="background: #e9ecef; border: 1px solid #ced4da; border-radius: 8px; padding: 0.8rem 1rem; color: #6c757d; font-size: 0.95rem;">
-                  <i class="fas fa-hourglass-half" style="margin-right: 0.5rem;"></i>
-                  您的申訴已提交，管理員正在審核中，請耐心等待。
+                  class="appeal-info-box pending">
+                  <div class="appeal-label">
+                    <i class="fas fa-hourglass-half"></i>
+                    申訴審核中
+                  </div>
+                  <div class="appeal-content">
+                    <strong>您的申訴理由：</strong>
+                    <p th:text="${appealDataMap[notif.notificationId]?.reason} ?: '加載中...'">申訴理由...</p>
+                  </div>
+                  <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #856404;">
+                    <i class="fas fa-info-circle"></i> 管理員正在審核中，請耐心等待。
+                  </div>
                 </div>
 
                 <!-- 情況 3：申訴成功 (APPROVED) -> 綠色成功框 -->
                 <div th:if="${notificationStatusMap[notif.notificationId] == 'APPEAL_APPROVED'}"
-                  style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 0.8rem 1rem; color: #155724; font-size: 0.95rem; font-weight: 500;">
-                  <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i>
-                  <strong>申訴成功！</strong> 您的申訴已通過，禁言處罰已提前解除。
+                  class="appeal-info-box approved">
+                  <div class="appeal-label">
+                    <i class="fas fa-check-circle"></i>
+                    申訴成功！
+                  </div>
+                  <div class="appeal-content">
+                    <strong>您的申訴理由：</strong>
+                    <p th:text="${appealDataMap[notif.notificationId]?.reason} ?: '無記錄'">申訴理由...</p>
+                  </div>
+                  <div class="admin-response-box" th:if="${appealDataMap[notif.notificationId]?.adminResponse}">
+                    <div class="admin-response-label">
+                      <i class="fas fa-user-shield"></i>
+                      管理員回覆：
+                    </div>
+                    <p th:text="${appealDataMap[notif.notificationId]?.adminResponse}">管理員回覆內容...</p>
+                  </div>
+                  <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #155724;">
+                    <i class="fas fa-check-circle"></i> 您的申訴已通過，禁言處罰已提前解除。
+                  </div>
                 </div>
 
                 <!-- 情況 4：申訴失敗 (REJECTED) -> 紅色危險框 -->
                 <div th:if="${notificationStatusMap[notif.notificationId] == 'APPEAL_REJECTED'}"
-                  style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 0.8rem 1rem; color: #721c24; font-size: 0.95rem; font-weight: 500;">
-                  <i class="fas fa-times-circle" style="margin-right: 0.5rem;"></i>
-                  <strong>申訴被駁回。</strong> 管理員維持原判，請遵守社區規範。
+                  class="appeal-info-box rejected">
+                  <div class="appeal-label">
+                    <i class="fas fa-times-circle"></i>
+                    申訴被駁回
+                  </div>
+                  <div class="appeal-content">
+                    <strong>您的申訴理由：</strong>
+                    <p th:text="${appealDataMap[notif.notificationId]?.reason} ?: '無記錄'">申訴理由...</p>
+                  </div>
+                  <div class="admin-response-box" th:if="${appealDataMap[notif.notificationId]?.adminResponse}">
+                    <div class="admin-response-label">
+                      <i class="fas fa-user-shield"></i>
+                      管理員回覆：
+                    </div>
+                    <p th:text="${appealDataMap[notif.notificationId]?.adminResponse}">管理員回覆內容...</p>
+                  </div>
+                  <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #721c24;">
+                    <i class="fas fa-exclamation-triangle"></i> 管理員維持原判，請遵守社區規範。
+                  </div>
                 </div>
 
                 <!-- 情況 5：禁言已過期且未申訴 (EXPIRED) -> 淺灰色中性框 -->
@@ -366,16 +638,149 @@
 
             </div>
 
-            <!-- 一般刪除評論通知 -->
+            <!-- 拉黑通知專屬 （如果沒有原因就不顯示）-->
             <div
-              th:if="${notif.deleteReason != null and (notif.title == null or !#strings.contains(notif.title, '禁言'))}"
+              th:if="${notif.title != null and #strings.contains(notif.title, '永久拉黑')  and notif.deleteReason != null}"
+              class="delete-reason-box" style="background: #f8d7da; border-color: #dc3545; padding: 1.5rem;">
+
+              <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.8rem;">
+                <i class="fas fa-user-slash" style="color: #dc3545;"></i> 永久拉黑详情：
+              </strong>
+
+              <p th:if="${notif.deleteReason != null}" style="margin: 0.5rem 0; color: #721c24;">
+                <strong>原因：</strong><span th:text="${notif.deleteReason}">严重违反社区规范</span>
+              </p>
+
+              <!-- 永久拉黑的状态处理 -->
+              <div style="margin-top: 1.5rem;">
+
+                <!-- 情况 1：未申诉 -> 显示申诉按钮 -->
+                <div th:if="${notificationStatusMap[notif.notificationId] == 'SHOW_APPEAL_BTN'}"
+                  style="display: flex; align-items: center; justify-content: space-between; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+                  <div style="color: #856404; font-size: 0.95rem;">
+                    <i class="fas fa-exclamation-circle" style="margin-right: 0.5rem;"></i>
+                    您已被永久拉黑，如有异议可提交申诉。
+                  </div>
+                  <button class="btn-sm"
+                    style="background: var(--gold); color: var(--primary); border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap; flex-shrink: 0;"
+                    th:onclick="|openAppealModal(${notif.notificationId}, 'BLACKLIST')|">
+                    <i class="fas fa-file-alt"></i> 提交申诉
+                  </button>
+                </div>
+
+                <!-- 情况 2：申诉审核中 -->
+                <div th:if="${notificationStatusMap[notif.notificationId] == 'APPEAL_PENDING'}"
+                  class="appeal-info-box pending" style="margin-top: 1rem;">
+                  <div class="appeal-label">
+                    <i class="fas fa-hourglass-half"></i> 申诉审核中
+                  </div>
+                  <div class="appeal-content">
+                    <strong>您的申诉理由：</strong>
+                    <p th:text="${appealDataMap[notif.notificationId]?.reason} ?: '加载中...'">申诉理由...</p>
+                  </div>
+                  <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #856404;">
+                    <i class="fas fa-info-circle"></i> 管理员正在审核中，请耐心等待。
+                  </div>
+                </div>
+
+                <!-- 情况 3：申诉成功 -->
+                <div th:if="${notificationStatusMap[notif.notificationId] == 'APPEAL_APPROVED'}"
+                  class="appeal-info-box approved" style="margin-top: 1rem;">
+                  <div class="appeal-label">
+                    <i class="fas fa-check-circle"></i> 申诉成功！
+                  </div>
+                  <div class="appeal-content">
+                    <strong>您的申诉理由：</strong>
+                    <p th:text="${appealDataMap[notif.notificationId]?.reason} ?: '无记录'">申诉理由...</p>
+                  </div>
+                  <div class="admin-response-box" th:if="${appealDataMap[notif.notificationId]?.adminResponse}">
+                    <div class="admin-response-label">
+                      <i class="fas fa-user-shield"></i> 管理员回复：
+                    </div>
+                    <p th:text="${appealDataMap[notif.notificationId]?.adminResponse}">管理员回复内容...</p>
+                  </div>
+                  <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #155724;">
+                    <i class="fas fa-check-circle"></i> 您的申诉已通过，永久拉黑已解除。
+                  </div>
+                </div>
+
+                <!-- 情况 4：申诉被驳回 -->
+                <div th:if="${notificationStatusMap[notif.notificationId] == 'APPEAL_REJECTED'}"
+                  style="margin-top: 1rem;">
+
+                  <!-- 申诉被驳回标题 -->
+                  <div
+                    style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 0.8rem 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                    <strong style="color: #721c24; display: flex; align-items: center; gap: 0.5rem;">
+                      <i class="fas fa-times-circle"></i> 申诉被驳回
+                    </strong>
+                  </div>
+
+                  <!-- 申诉理由 -->
+                  <div
+                    style="background: rgba(255,255,255,0.5); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                    <strong style="color: #721c24; display: block; margin-bottom: 0.5rem;">您的申诉理由：</strong>
+                    <p th:text="${appealDataMap[notif.notificationId]?.reason} ?: '无记录'"
+                      style="margin: 0; color: #495057;">申诉理由...</p>
+                  </div>
+
+                  <!-- 管理员回复 -->
+                  <div th:if="${appealDataMap[notif.notificationId]?.adminResponse}"
+                    style="background: #e7f3ff; border-left: 4px solid #0066cc; padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
+                    <strong
+                      style="color: #0066cc; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                      <i class="fas fa-user-shield"></i> 管理员回复：
+                    </strong>
+                    <p th:text="${appealDataMap[notif.notificationId]?.adminResponse}"
+                      style="margin: 0; color: #495057;">管理员回复内容...</p>
+                  </div>
+
+                  <!-- 【核心修复】底部操作区：强制一行显示 -->
+                  <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px dashed #f5c6cb;
+                  display: flex; align-items: center; justify-content: space-between;
+                  flex-wrap: nowrap; overflow-x: auto; min-height: 50px;">
+
+                    <!-- 【核心修复】：弃用 th:text，改用 th:inline="text" 和 [[...]] 语法 -->
+                    <!--【核心修复】：通过内联Flex布局+Thymeleaf安全表达式实现强制单行显示
+                                     1. white-space: nowrap → 防止容器内部换行
+                                     2. display: inline-flex → 创建内联flex容器，保持文本在同一行
+                                     3. align-items: center → 垂直居中所有子元素
+                                     4. flex-shrink: 0 → 防止在父容器空间不足时被压缩
+                                     5. 使用三个独立span → 避免Thymeleaf解析导致的文本节点分裂
+                                     6. [[...]]语法 → Thymeleaf安全表达式，不会破坏HTML结构
+                                     7. margin控制间距 → 比&nbsp;更可靠，避免浏览器换行-->
+                    <span
+                      style="font-size: 0.9rem; color: #721c24; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center;">
+                      <span>(您還有</span>
+                      <strong th:inline="text"
+                        style="font-size: 1.1rem; color: #dc3545; font-weight: 700; margin: 0 0.3rem;">[[${3 -
+                        appealCountMap[notif.notificationId]}]]</strong>
+                      <span>次申訴機會)</span>
+                    </span>
+                    <!-- 右侧：再次申诉按钮 -->
+                    <button th:if="${appealCountMap[notif.notificationId] < 3}" class="btn-sm"
+                      style="background: var(--gold); color: var(--primary); border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap; flex-shrink: 0; margin-left: auto;"
+                      th:onclick="|openAppealModal(${notif.notificationId}, 'BLACKLIST')|">
+                      <i class="fas fa-redo"></i> 再次申诉
+                    </button>
+
+                    <!-- 次数用尽提示 -->
+                    <span th:if="${appealCountMap[notif.notificationId] >= 3}"
+                      style="font-size: 0.9rem; color: #721c24; white-space: nowrap; flex-shrink: 0; width: 100%; text-align: center;">
+                      <i class="fas fa-exclamation-triangle"></i> 管理员维持原判，您已用尽申诉机会。
+                    </span>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- 一般刪除評論通知  禁言和永久封禁不適用-->
+            <div
+              th:if="${notif.deleteReason != null and (notif.title == null or (!#strings.contains(notif.title, '禁言')  and !#strings.contains(notif.title, '永久拉黑')))}"
               class="delete-reason-box">
               <strong><i class="fas fa-exclamation-triangle"></i> 管理員處理原因：</strong>
               <p th:text="${notif.deleteReason}" style="margin:0;">該內容不符合社區規範，因此被移除。</p>
-              <div th:if="${notif.deletedContent != null}" class="deleted-content-preview">
-                <i class="fas fa-quote-left"></i>
-                <span th:text="${notif.deletedContent}"></span>
-              </div>
             </div>
           </div>
         </div>
@@ -383,6 +788,30 @@
           <i class="fas fa-shield-alt"></i>
           <h3>暫無管理通知</h3>
           <p>當您的評論被處理或帳戶有重要變動時，這裡會收到通知</p>
+        </div>
+
+        <!--  管理通知智能分頁 -->
+        <div th:if="${adminTotalPages > 1}" class="pagination-wrapper">
+          <!-- 上一頁 -->
+          <a th:href="@{/account/notifications(stockPage=${stockPage}, adminPage=${adminPage > 0 ? adminPage - 1 : 0})}"
+            th:class="${adminPage == 0} ? 'page-btn disabled' : 'page-btn'">
+            <i class="fas fa-chevron-left"></i> 上一頁
+          </a>
+
+          <!-- 智能頁碼遍歷 -->
+          <th:block th:each="item : ${adminSmartPages}">
+            <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
+            <a th:unless="${item.isEllipsis}"
+              th:href="@{/account/notifications(stockPage=${stockPage}, adminPage=${item.pageNumber})}"
+              th:class="${item.pageNumber == adminPage} ? 'page-btn active' : 'page-btn'"
+              th:text="${item.pageNumber + 1}">1</a>
+          </th:block>
+
+          <!-- 下一頁 -->
+          <a th:href="@{/account/notifications(stockPage=${stockPage}, adminPage=${adminPage < adminTotalPages - 1 ? adminPage + 1 : adminTotalPages - 1})}"
+            th:class="${adminPage == adminTotalPages - 1} ? 'page-btn disabled' : 'page-btn'">
+            下一頁 <i class="fas fa-chevron-right"></i>
+          </a>
         </div>
       </div>
 
@@ -423,6 +852,7 @@
   </footer>
 
   <div th:replace="~{fragments/common :: modals}"></div>
+
   <!-- 修改後：只傳遞布爾值，徹底解決 Hibernate 代理序列化報錯問題 -->
   <script th:inline="javascript">
     const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];

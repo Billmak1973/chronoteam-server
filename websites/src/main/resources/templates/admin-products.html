@@ -699,6 +699,52 @@
             letter-spacing: 2px;
             user-select: none;
         }
+
+        .btn-notify-stock {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    box-shadow: 0 3px 8px rgba(76, 175, 80, 0.3);
+    white-space: nowrap;
+    margin-left: 0.5rem; /* 与编辑按钮保持间距 */
+}
+
+.btn-notify-stock:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.5);
+    filter: brightness(1.1);
+}
+
+.btn-notify-stock:active {
+    transform: translateY(0);
+}
+
+      /* 操作按钮容器 */
+.action-buttons {
+    display: flex;
+    gap: 0.8rem;  /* 按钮之间的间距 */
+    flex-direction: column; /*改为垂直排列 */
+    justify-content: center;
+    align-items: center;
+}
+
+/* 统一按钮宽度 */
+.btn-edit-product,
+.btn-notify-stock {
+    min-width: 120px;  /* 设置最小宽度，确保两个按钮宽度一致 */
+    flex: 1;  /* 让按钮平均分配空间 */
+    max-width: 150px;  /* 设置最大宽度，防止按钮过宽 */
+}
     </style>
 </head>
 
@@ -847,10 +893,37 @@
                     </div>
                 </div>
 
+                <!-- 收藏數排序 -->
+                <div class="sort-group">
+                    <label><i class="fas fa-heart" style="color: var(--gold); margin-right: 0.3rem;"></i>收藏數排序</label>
+                    <div class="sort-buttons">
+                        <button class="sort-btn" onclick="setSort('favoriteCount', 'asc')" id="sortFavoriteCountAsc">
+                            <i class="fas fa-arrow-down"></i> 低到高
+                        </button>
+                        <button class="sort-btn" onclick="setSort('favoriteCount', 'desc')" id="sortFavoriteCountDesc">
+                            <i class="fas fa-arrow-up"></i> 高到低
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 到貨通知數排序 -->
+                <div class="sort-group">
+                    <label><i class="fas fa-bell" style="color: var(--gold); margin-right: 0.3rem;"></i>到貨通知數排序</label>
+                    <div class="sort-buttons">
+                        <button class="sort-btn" onclick="setSort('stockNotificationCount', 'asc')" id="sortStockNotificationCountAsc">
+                            <i class="fas fa-arrow-down"></i> 低到高
+                        </button>
+                        <button class="sort-btn" onclick="setSort('stockNotificationCount', 'desc')" id="sortStockNotificationCountDesc">
+                            <i class="fas fa-arrow-up"></i> 高到低
+                        </button>
+                    </div>
+                </div>
+
                 <!-- 首頁推薦篩選 -->
                 <div class="filter-group">
                     <label><i class="fas fa-crown" style="color: var(--gold); margin-right: 0.3rem;"></i>首頁推薦</label>
-                    <select id="featuredFilter">
+                    <!-- 添加了 onchange 事件 -->
+                    <select id="featuredFilter" onchange="handleFeaturedFilterChange(this.value)">
                         <option value="">全部商品</option>
                         <option value="true" th:selected="${currentFeatured == 'true'}">僅顯示首頁推薦</option>
                         <option value="false" th:selected="${currentFeatured == 'false'}">未推薦商品</option>
@@ -881,6 +954,8 @@
                         <th style="width: 100px;">評價</th>
                         <th style="width: 100px;">狀態</th>
                         <th style="width: 100px;">成色顯示</th>
+                        <th style="width: 100px;">收藏數</th>
+                        <th style="width: 120px;">到貨通知數</th>
                         <th style="width: 110px;">創建時間</th>
                         <th style="width: 120px; text-align: center;">操作</th>
                     </tr>
@@ -965,21 +1040,39 @@
                                         <i class="fas fa-times"></i> 隱藏
                                     </span>
                         </td>
+
+                        <td>
+                            <span th:text="${product.favoriteCount != null ? product.favoriteCount : 0}"
+                                     style="color: var(--primary); font-weight: 600;">0</span>
+                        </td>
+                        <td>
+                            <span th:text="${product.stockNotificationCount != null ? product.stockNotificationCount : 0}"
+                                  style="color: var(--gold); font-weight: 600;">0</span>
+                        </td>
                         <td style="color: var(--gray); font-size: 0.85rem; white-space: nowrap;"
                             th:text="${#temporals.format(product.createdAt, 'yyyy-MM-dd')}">2024-01-01</td>
                         <td style="text-align: center;">
-                            <button class="btn-edit-product" onclick="openEditModal(this)"
-                                    th:data-id="${product.productId}" th:data-brand="${product.brand}"
-                                    th:data-category="${product.category}" th:data-condition="${product.condition}"
-                                    th:data-description="${product.description}"
-                                    th:data-details="${product.details}" th:data-image="${product.image}"
-                                    th:data-price="${product.price}" th:data-stock="${product.stock}"
-                                    th:data-visible="${product.visible}"
-                                    th:data-condition-visible="${product.conditionVisible}"
-                                    th:data-group-code="${product.groupCode}"
-                                    th:data-home-order="${product.homeDisplayOrder}"> <!-- 【新增】這行 -->
-                                <i class="fas fa-edit"></i> 修改
-                            </button>
+                            <div class="action-buttons">
+                                <button class="btn-edit-product" onclick="openEditModal(this)"
+                                        th:data-id="${product.productId}" th:data-brand="${product.brand}"
+                                        th:data-category="${product.category}" th:data-condition="${product.condition}"
+                                        th:data-description="${product.description}"
+                                        th:data-details="${product.details}" th:data-image="${product.image}"
+                                        th:data-price="${product.price}" th:data-stock="${product.stock}"
+                                        th:data-visible="${product.visible}"
+                                        th:data-condition-visible="${product.conditionVisible}"
+                                        th:data-group-code="${product.groupCode}"
+                                        th:data-home-order="${product.homeDisplayOrder}">
+                                    <i class="fas fa-edit"></i> 修改
+                                </button>
+
+                                <!-- 僅當庫存>0 且 到貨通知數>0 時顯示通知按鈕 -->
+                                <button th:if="${product.stock != null and product.stock > 0 and product.stockNotificationCount != null and product.stockNotificationCount > 0}"
+                                        class="btn-notify-stock"
+                                        onclick="sendStockNotification(${product.productId})">
+                                    <i class="fas fa-bell"></i> 通知訂閱者
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(products)}">
@@ -1320,6 +1413,48 @@
 <div th:replace="~{fragments/common :: modals}"></div>
 
 <script th:inline="javascript">
+
+    // ==========================================
+// 页面加载时恢复筛选状态
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    // 从 URL 获取参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const sortField = urlParams.get('sortField');
+    const sortDirection = urlParams.get('sortDirection');
+
+    // 清除所有排序按钮的 active 状态
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // 根据 URL 参数恢复排序按钮的选中状态
+    if (sortField && sortDirection) {
+        const buttonId = 'sort' + sortField.charAt(0).toUpperCase() + sortField.slice(1) + (sortDirection === 'asc' ? 'Asc' : 'Desc');
+        const button = document.getElementById(buttonId);
+        if (button) {
+            button.classList.add('active');
+        }
+        // 更新 currentSort 状态
+        currentSort = { field: sortField, direction: sortDirection };
+    }
+
+    // 恢复下拉筛选框的值
+    const brand = urlParams.get('currentBrand');
+    const category = urlParams.get('currentCategory');
+    const condition = urlParams.get('condition');
+    const status = urlParams.get('status');
+    const conditionVisible = urlParams.get('conditionVisible');
+    const featured = urlParams.get('currentFeatured');
+
+    if (brand) document.getElementById('brandFilter').value = brand;
+    if (category) document.getElementById('categoryFilter').value = category;
+    if (condition) document.getElementById('conditionFilter').value = condition;
+    if (status) document.getElementById('statusFilter').value = status;
+    if (conditionVisible) document.getElementById('conditionVisibleFilter').value = conditionVisible;
+    if (featured) document.getElementById('featuredFilter').value = featured;
+});
+
     const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
 
     // 當前排序狀態
@@ -1693,30 +1828,100 @@ async function toggleFeaturedInput(prefix) {
         // 這裡將來會調用後端 API 進行排序
     }
 
-    // 應用篩選
-    function applyFilters() {
-        const brand = document.getElementById('brandFilter').value;
-        const category = document.getElementById('categoryFilter').value;
-        const condition = document.getElementById('conditionFilter').value;
-        const status = document.getElementById('statusFilter').value;
-        const conditionVisible = document.getElementById('conditionVisibleFilter').value;
-        const featured = document.getElementById('featuredFilter').value; // 【新增】
+    // 處理首頁推薦篩選的互斥邏輯
+function handleFeaturedFilterChange(value) {
+    const isFeaturedMode = (value === 'true');
+    // 獲取所有普通排序按鈕 (ID, 價格, 庫存, 評價)
+    const sortButtons = document.querySelectorAll('.sort-group:not(:has(#featuredFilter)) .sort-btn');
 
-        // 構建查詢參數
-        const params = new URLSearchParams();
-        if (brand) params.append('currentBrand', brand);
-        if (category) params.append('currentCategory', category);
-        if (condition) params.append('condition', condition);
-        if (status) params.append('status', status);
-        if (currentSort.field) {
-            params.append('sortField', currentSort.field);
-            params.append('sortDirection', currentSort.direction);
+    sortButtons.forEach(btn => {
+        if (isFeaturedMode) {
+            // 如果是首頁推薦模式，禁用其他排序按鈕
+            btn.style.opacity = '0.4';
+            btn.style.cursor = 'not-allowed';
+            btn.classList.remove('active'); // 移除高亮
+            // 移除點擊事件監聽器 (通過克隆節點實現，簡單粗暴有效)
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+        } else {
+            // 恢復其他排序按鈕
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            // 這裡需要重新綁定點擊事件，或者簡單地讓用戶點擊「應用篩選」來刷新頁面恢復狀態
+            // 為了簡單起見，我們主要依靠 applyFilters 裡的邏輯來確保後端不接收衝突參數
         }
-        if (conditionVisible) params.append('conditionVisible', conditionVisible);
-        if (featured) params.append('currentFeatured', featured); // 【新增】
-        // 跳轉到帶參數的頁面
-        window.location.href = '/admin/products?' + params.toString();
+    });
+
+    // 可選：如果選擇了首頁推薦，自動提示用戶將按推薦序號排序
+    if (isFeaturedMode) {
+        console.log("已啟用首頁推薦模式，將自動按推薦序號排序");
     }
+}
+
+    // 應用篩選
+function applyFilters() {
+    const brand = document.getElementById('brandFilter').value;
+    const category = document.getElementById('categoryFilter').value;
+    const condition = document.getElementById('conditionFilter').value;
+    const status = document.getElementById('statusFilter').value;
+    const conditionVisible = document.getElementById('conditionVisibleFilter').value;
+    const featured = document.getElementById('featuredFilter').value;
+
+    // 【核心修改】：獲取排序字段，但如果開啟了首頁推薦，則強制覆蓋
+    let sortField = currentSort.field;
+    let sortDirection = currentSort.direction;
+
+    if (featured === 'true') {
+        // 互斥邏輯：首頁推薦模式下，強制按 homeDisplayOrder 升序排列
+        sortField = 'homeDisplayOrder';
+        sortDirection = 'asc';
+
+        // 視覺反饋：清除其他排序按鈕的高亮
+        document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+    }
+
+    // 構建查詢參數
+    const params = new URLSearchParams();
+    if (brand) params.append('currentBrand', brand);
+    if (category) params.append('currentCategory', category);
+    if (condition) params.append('condition', condition);
+    if (status) params.append('status', status);
+
+    // 只有當 sortField 存在時才添加（或者始終添加，後端會處理 null）
+    if (sortField) {
+        params.append('sortField', sortField);
+        params.append('sortDirection', sortDirection);
+    }
+
+    if (conditionVisible) params.append('conditionVisible', conditionVisible);
+    if (featured) params.append('currentFeatured', featured);
+
+    // 跳轉到帶參數的頁面
+    window.location.href = '/admin/products?' + params.toString();
+}
+<!--    function applyFilters() {-->
+<!--        const brand = document.getElementById('brandFilter').value;-->
+<!--        const category = document.getElementById('categoryFilter').value;-->
+<!--        const condition = document.getElementById('conditionFilter').value;-->
+<!--        const status = document.getElementById('statusFilter').value;-->
+<!--        const conditionVisible = document.getElementById('conditionVisibleFilter').value;-->
+<!--        const featured = document.getElementById('featuredFilter').value; // 【新增】-->
+
+<!--        // 構建查詢參數-->
+<!--        const params = new URLSearchParams();-->
+<!--        if (brand) params.append('currentBrand', brand);-->
+<!--        if (category) params.append('currentCategory', category);-->
+<!--        if (condition) params.append('condition', condition);-->
+<!--        if (status) params.append('status', status);-->
+<!--        if (currentSort.field) {-->
+<!--            params.append('sortField', currentSort.field);-->
+<!--            params.append('sortDirection', currentSort.direction);-->
+<!--        }-->
+<!--        if (conditionVisible) params.append('conditionVisible', conditionVisible);-->
+<!--        if (featured) params.append('currentFeatured', featured); // 【新增】-->
+<!--        // 跳轉到帶參數的頁面-->
+<!--        window.location.href = '/admin/products?' + params.toString();-->
+<!--    }-->
 
     // 重置篩選
     function resetFilters() {

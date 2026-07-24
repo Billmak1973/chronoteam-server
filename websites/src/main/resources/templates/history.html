@@ -47,7 +47,7 @@
             font-size: 0.95rem;
         }
 
-        /*  清除按鈕區域 */
+        /* 清除按鈕區域 */
         .clear-actions {
             display: flex;
             gap: 1rem;
@@ -151,9 +151,7 @@
             transform: scale(1.08);
         }
 
-        /* ========================================== */
-        /*  新增：左上角选择框样式 */
-        /* ========================================== */
+        /* 左上角选择框样式 */
         .select-checkbox {
             position: absolute;
             top: 12px;
@@ -310,7 +308,7 @@
             margin-top: 3rem;
         }
 
-        /* === 智能分页组件样式 === */
+        /* 智能分页组件样式 */
         .pagination-wrapper {
             display: flex;
             justify-content: center;
@@ -368,9 +366,7 @@
             user-select: none;
         }
 
-        /* ========================================== */
-        /*  新增：底部批量操作栏 */
-        /* ========================================== */
+        /* 底部批量操作栏 */
         .batch-action-bar {
             position: fixed;
             bottom: 0;
@@ -495,9 +491,7 @@
             }
         }
 
-        /* ========================================== */
-        /*  自定義確認彈窗樣式 */
-        /* ========================================== */
+        /* 自定義確認彈窗樣式 */
         .custom-confirm-overlay {
             position: fixed;
             top: 0;
@@ -665,439 +659,435 @@
 </head>
 
 <body>
-    <div th:replace="~{fragments/common :: navbar}"></div>
-    <div class="dashboard-container">
-        <!--  引入側邊欄，高亮 'history' -->
-        <div th:replace="~{fragments/sidebar :: sidebar(activePage='history')}"></div>
-        <main class="main-content" id="mainContent">
-            <h2 class="page-title"><i class="fas fa-history"></i> 瀏覽歷史</h2>
-            <p class="page-subtitle">您最近瀏覽過的商品都在這裡，系統最多保留 200 條記錄，並自動清理半年前的數據</p>
+<div th:replace="~{fragments/common :: navbar}"></div>
+<div class="dashboard-container">
+    <!--  引入側邊欄，高亮 'history' -->
+    <div th:replace="~{fragments/sidebar :: sidebar(activePage='history')}"></div>
+    <main class="main-content" id="mainContent">
+        <h2 class="page-title"><i class="fas fa-history"></i> 瀏覽歷史</h2>
+        <p class="page-subtitle">您最近瀏覽過的商品都在這裡，系統最多保留 200 條記錄，並自動清理半年前的數據</p>
 
-            <!--  清除按鈕區域 -->
-            <div class="clear-actions" th:if="${!historyList.isEmpty()}">
+        <!--  清除按鈕區域 -->
+        <div class="clear-actions" th:if="${!historyList.isEmpty()}">
                 <span style="color: var(--gray); font-size: 0.9rem;">
                     <i class="fas fa-trash-alt"></i> 清除歷史：
                 </span>
-                <button class="btn-sm btn-clear-day" onclick="clearHistory('1day')">
-                    <i class="fas fa-calendar-day"></i> 1天內
-                </button>
-                <button class="btn-sm btn-clear-week" onclick="clearHistory('1week')">
-                    <i class="fas fa-calendar-week"></i> 1週內
-                </button>
-                <button class="btn-sm btn-clear-month" onclick="clearHistory('1month')">
-                    <i class="fas fa-calendar"></i> 1個月內
-                </button>
-                <button class="btn-sm btn-clear-all" onclick="clearHistory('all')">
-                    <i class="fas fa-trash"></i> 全部清除
-                </button>
-            </div>
+            <button class="btn-sm btn-clear-day" onclick="clearHistory('1day')">
+                <i class="fas fa-calendar-day"></i> 1天內
+            </button>
+            <button class="btn-sm btn-clear-week" onclick="clearHistory('1week')">
+                <i class="fas fa-calendar-week"></i> 1週內
+            </button>
+            <button class="btn-sm btn-clear-month" onclick="clearHistory('1month')">
+                <i class="fas fa-calendar"></i> 1個月內
+            </button>
+            <button class="btn-sm btn-clear-all" onclick="clearHistory('all')">
+                <i class="fas fa-trash"></i> 全部清除
+            </button>
+        </div>
 
-            <!--  歷史列表 -->
-            <div class="history-grid" th:if="${!historyList.isEmpty()}">
-                <div class="history-card" th:each="hist : ${historyList}" th:data-id="${hist.historyId}">
-                    <!-- 左上角选择框 -->
-                    <div class="select-checkbox" onclick="toggleSelect(this, event)">
-                        <i class="fas fa-check"></i>
-                    </div>
+        <!--  歷史列表 -->
+        <div class="history-grid" th:if="${!historyList.isEmpty()}">
+            <div class="history-card" th:each="hist : ${historyList}" th:data-id="${hist.historyId}">
+                <!-- 左上角选择框 -->
+                <div class="select-checkbox" onclick="toggleSelect(this, event)">
+                    <i class="fas fa-check"></i>
+                </div>
 
-                    <div class="hist-img" onclick="toggleSelectByImage(this, event)">
-                        <!-- 顯示圖片 -->
-                        <img th:src="@{/images/products/{img}(img=${hist.product.image})}"
-                            th:alt="${hist.product.description}" onerror="this.src='/images/placeholder.png'">
-                    </div>
-                    <div class="hist-info">
-                        <div class="hist-brand" th:text="${hist.product.brand} ?: 'ChronoTeam'">Brand</div>
-                        <!-- 顯示圖片名稱 (商品描述) -->
-                        <div class="hist-name" th:text="${hist.product.description}">Product Name</div>
-                        <!-- 顯示瀏覽時間 -->
-                        <div class="hist-time">
-                            <i class="far fa-clock"></i>
-                            <span th:text="${#temporals.format(hist.viewedAt, 'yyyy-MM-dd HH:mm')}">2024-01-01
+                <div class="hist-img" onclick="toggleSelectByImage(this, event)">
+                    <!-- 顯示圖片 -->
+                    <img th:src="@{/images/products/{img}(img=${hist.product.image})}"
+                         th:alt="${hist.product.description}" onerror="this.src='/images/placeholder.png'">
+                </div>
+                <div class="hist-info">
+                    <div class="hist-brand" th:text="${hist.product.brand} ?: 'ChronoTeam'">Brand</div>
+                    <!-- 顯示圖片名稱 (商品描述) -->
+                    <div class="hist-name" th:text="${hist.product.description}">Product Name</div>
+                    <!-- 顯示瀏覽時間 -->
+                    <div class="hist-time">
+                        <i class="far fa-clock"></i>
+                        <span th:text="${#temporals.format(hist.viewedAt, 'yyyy-MM-dd HH:mm')}">2024-01-01
                                 12:00</span>
-                        </div>
-                        <div class="hist-price">
-                            HK$ <span
-                                th:text="${#numbers.formatDecimal(hist.product.price, 1, 'COMMA', 0, 'POINT')}">0</span>
-                        </div>
-                        <div class="hist-actions">
-                            <!-- 顯示網址 (商品詳情頁連結) -->
-                            <a th:href="@{/product/{id}(id=${hist.product.productId})}" class="btn-sm btn-view">
-                                <i class="fas fa-eye"></i> 再次查看
-                            </a>
-                        </div>
+                    </div>
+                    <div class="hist-price">
+                        HK$ <span
+                            th:text="${#numbers.formatDecimal(hist.product.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                    </div>
+                    <div class="hist-actions">
+                        <!-- 顯示網址 (商品詳情頁連結) -->
+                        <a th:href="@{/product/{id}(id=${hist.product.productId})}" class="btn-sm btn-view">
+                            <i class="fas fa-eye"></i> 再次查看
+                        </a>
                     </div>
                 </div>
             </div>
-
-            <!--  空狀態 -->
-            <div th:if="${historyList.isEmpty()}" class="empty-state">
-                <i class="fas fa-history"></i>
-                <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有瀏覽記錄</h3>
-                <p style="color: var(--gray); margin-bottom: 1.5rem;">去瀏覽商品，您的瀏覽歷史將自動保存在這裡</p>
-                <a href="/browse" class="btn btn-gold"><i class="fas fa-search"></i> 瀏覽商品</a>
-            </div>
-
-            <!-- ==================== 智能分頁導航 ==================== -->
-            <!-- 只有当总页数大于1时才显示分页 -->
-            <div class="pagination-wrapper" th:if="${totalPages > 1}">
-
-                <!-- 上一頁按鈕 -->
-                <a th:href="@{/account/history(page=${currentPage - 1})}"
-                    th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'" th:if="${currentPage > 1}">
-                    <i class="fas fa-chevron-left"></i> 上一頁
-                </a>
-                <span th:if="${currentPage == 1}" class="page-btn disabled">
-                    <i class="fas fa-chevron-left"></i> 上一頁
-                </span>
-
-                <!-- 智能頁碼遍歷 (核心邏輯) -->
-                <th:block th:each="item : ${smartPages}">
-                    <!-- 如果是省略號 "..." -->
-                    <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
-
-                    <!-- 如果是數字頁碼 -->
-                    <a th:unless="${item.isEllipsis}" th:href="@{/account/history(page=${item.pageNumber})}"
-                        th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
-                        th:text="${item.pageNumber}">1</a>
-                </th:block>
-
-                <!-- 下一頁按鈕 -->
-                <a th:href="@{/account/history(page=${currentPage + 1})}"
-                    th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
-                    th:if="${currentPage < totalPages}">
-                    下一頁 <i class="fas fa-chevron-right"></i>
-                </a>
-                <span th:if="${currentPage == totalPages}" class="page-btn disabled">
-                    下一頁 <i class="fas fa-chevron-right"></i>
-                </span>
-
-            </div>
-            <!-- ==================== 智能分頁導航結束 ==================== -->
-
-        </main>
-    </div>
-
-    <!-- ========================================== -->
-    <!--  新增：底部批量操作栏 -->
-    <!-- ========================================== -->
-    <div class="batch-action-bar" id="batchActionBar">
-        <div class="batch-info">
-            <div class="batch-count" id="batchCount">0</div>
-            <div class="batch-text">已選擇 <span id="batchCountText">0</span> 項</div>
         </div>
-        <div class="batch-actions">
-            <button class="btn-batch btn-batch-cancel" onclick="cancelBatchSelect()">
+
+        <!--  空狀態 -->
+        <div th:if="${historyList.isEmpty()}" class="empty-state">
+            <i class="fas fa-history"></i>
+            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有瀏覽記錄</h3>
+            <p style="color: var(--gray); margin-bottom: 1.5rem;">去瀏覽商品，您的瀏覽歷史將自動保存在這裡</p>
+            <a href="/browse" class="btn btn-gold"><i class="fas fa-search"></i> 瀏覽商品</a>
+        </div>
+
+        <!-- ==================== 智能分頁導航 ==================== -->
+        <!-- 只有当总页数大于1时才显示分页 -->
+        <div class="pagination-wrapper" th:if="${totalPages > 1}">
+
+            <!-- 上一頁按鈕 -->
+            <a th:href="@{/account/history(page=${currentPage - 1})}"
+               th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'" th:if="${currentPage > 1}">
+                <i class="fas fa-chevron-left"></i> 上一頁
+            </a>
+            <span th:if="${currentPage == 1}" class="page-btn disabled">
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                </span>
+
+            <!-- 智能頁碼遍歷 (核心邏輯) -->
+            <th:block th:each="item : ${smartPages}">
+                <!-- 如果是省略號 "..." -->
+                <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
+
+                <!-- 如果是數字頁碼 -->
+                <a th:unless="${item.isEllipsis}" th:href="@{/account/history(page=${item.pageNumber})}"
+                   th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
+                   th:text="${item.pageNumber}">1</a>
+            </th:block>
+
+            <!-- 下一頁按鈕 -->
+            <a th:href="@{/account/history(page=${currentPage + 1})}"
+               th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
+               th:if="${currentPage < totalPages}">
+                下一頁 <i class="fas fa-chevron-right"></i>
+            </a>
+            <span th:if="${currentPage == totalPages}" class="page-btn disabled">
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                </span>
+
+        </div>
+        <!-- ==================== 智能分頁導航結束 ==================== -->
+
+    </main>
+</div>
+
+<!-- ========================================== -->
+<!--  新增：底部批量操作栏 -->
+<!-- ========================================== -->
+<div class="batch-action-bar" id="batchActionBar">
+    <div class="batch-info">
+        <div class="batch-count" id="batchCount">0</div>
+        <div class="batch-text">已選擇 <span id="batchCountText">0</span> 項</div>
+    </div>
+    <div class="batch-actions">
+        <button class="btn-batch btn-batch-cancel" onclick="cancelBatchSelect()">
+            <i class="fas fa-times"></i> 取消
+        </button>
+        <button class="btn-batch btn-batch-delete" onclick="batchDelete()">
+            <i class="fas fa-trash-alt"></i> 刪除所選
+        </button>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!--  自定義確認彈窗 -->
+<!-- ========================================== -->
+<div class="custom-confirm-overlay" id="customConfirmOverlay">
+    <div class="custom-confirm-modal">
+        <div class="custom-confirm-icon" id="confirmIcon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <h3 class="custom-confirm-title" id="confirmTitle">確認操作</h3>
+        <p class="custom-confirm-message" id="confirmMessage">您確定要執行此操作嗎？</p>
+        <div class="custom-confirm-warning" id="confirmWarning" style="display: none;">
+            <i class="fas fa-info-circle"></i>
+            <span id="confirmWarningText">此操作無法恢復！</span>
+        </div>
+        <div class="custom-confirm-actions">
+            <button class="btn-confirm btn-confirm-cancel" onclick="closeCustomConfirm()">
                 <i class="fas fa-times"></i> 取消
             </button>
-            <button class="btn-batch btn-batch-delete" onclick="batchDelete()">
-                <i class="fas fa-trash-alt"></i> 刪除所選
+            <button class="btn-confirm btn-confirm-ok" id="confirmOkBtn" onclick="executeConfirmAction()">
+                <i class="fas fa-check"></i> 確定
             </button>
         </div>
     </div>
+</div>
 
-    <!-- ========================================== -->
-    <!--  自定義確認彈窗 -->
-    <!-- ========================================== -->
-    <div class="custom-confirm-overlay" id="customConfirmOverlay">
-        <div class="custom-confirm-modal">
-            <div class="custom-confirm-icon" id="confirmIcon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <h3 class="custom-confirm-title" id="confirmTitle">確認操作</h3>
-            <p class="custom-confirm-message" id="confirmMessage">您確定要執行此操作嗎？</p>
-            <div class="custom-confirm-warning" id="confirmWarning" style="display: none;">
-                <i class="fas fa-info-circle"></i>
-                <span id="confirmWarningText">此操作無法恢復！</span>
-            </div>
-            <div class="custom-confirm-actions">
-                <button class="btn-confirm btn-confirm-cancel" onclick="closeCustomConfirm()">
-                    <i class="fas fa-times"></i> 取消
-                </button>
-                <button class="btn-confirm btn-confirm-ok" id="confirmOkBtn" onclick="executeConfirmAction()">
-                    <i class="fas fa-check"></i> 確定
-                </button>
-            </div>
-        </div>
-    </div>
+<footer class="footer">
+    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+        Rights Reserved.</p>
+</footer>
+<div th:replace="~{fragments/common :: modals}"></div>
+<script th:inline="javascript">
+    const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+</script>
+<script src="/js/common.js"></script>
 
-    <footer class="footer">
-        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
-            Rights Reserved.</p>
-    </footer>
-    <div th:replace="~{fragments/common :: modals}"></div>
-    <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-    </script>
-    <script src="/js/common.js"></script>
+<!--  清除歷史的 JS 函數 -->
+<script>
+    // ==========================================
+    //  1. 自定義確認彈窗功能 (取代原生 confirm)
+    // ==========================================
+    let confirmCallback = null;
 
-    <!--  清除歷史的 JS 函數 -->
-    <script>
-        // ==========================================
-        //  1. 自定義確認彈窗功能 (取代原生 confirm)
-        // ==========================================
-        let confirmCallback = null;
+    /**
+     * 顯示自定義確認彈窗
+     * @param {string} title - 標題
+     * @param {string} message - 消息內容
+     * @param {function} callback - 確認後的回調函數
+     * @param {boolean} isDanger - 是否為危險操作（紅色主題）
+     */
+    function showCustomConfirm(title, message, callback, isDanger = false) {
+        const overlay = document.getElementById('customConfirmOverlay');
+        const icon = document.getElementById('confirmIcon');
+        const confirmOkBtn = document.getElementById('confirmOkBtn');
+        const warning = document.getElementById('confirmWarning');
 
-        /**
-         * 顯示自定義確認彈窗
-         * @param {string} title - 標題
-         * @param {string} message - 消息內容
-         * @param {function} callback - 確認後的回調函數
-         * @param {boolean} isDanger - 是否為危險操作（紅色主題）
-         */
-        function showCustomConfirm(title, message, callback, isDanger = false) {
-            const overlay = document.getElementById('customConfirmOverlay');
-            const icon = document.getElementById('confirmIcon');
-            const confirmOkBtn = document.getElementById('confirmOkBtn');
-            const warning = document.getElementById('confirmWarning');
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMessage').textContent = message;
 
-            document.getElementById('confirmTitle').textContent = title;
-            document.getElementById('confirmMessage').textContent = message;
-
-            // 設置圖標和按鈕樣式
-            if (isDanger) {
-                icon.classList.add('danger');
-                icon.innerHTML = '<i class="fas fa-trash-alt"></i>';
-                confirmOkBtn.classList.add('danger');
-                confirmOkBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 確認刪除';
-                warning.style.display = 'block';
-            } else {
-                icon.classList.remove('danger');
-                icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-                confirmOkBtn.classList.remove('danger');
-                confirmOkBtn.innerHTML = '<i class="fas fa-check"></i> 確定';
-                warning.style.display = 'none';
-            }
-
-            // 保存回調函數
-            confirmCallback = callback;
-
-            // 顯示彈窗
-            overlay.classList.add('show');
-            document.body.style.overflow = 'hidden'; // 禁止背景滾動
+        // 設置圖標和按鈕樣式
+        if (isDanger) {
+            icon.classList.add('danger');
+            icon.innerHTML = '<i class="fas fa-trash-alt"></i>';
+            confirmOkBtn.classList.add('danger');
+            confirmOkBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 確認刪除';
+            warning.style.display = 'block';
+        } else {
+            icon.classList.remove('danger');
+            icon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+            confirmOkBtn.classList.remove('danger');
+            confirmOkBtn.innerHTML = '<i class="fas fa-check"></i> 確定';
+            warning.style.display = 'none';
         }
 
-        /**
-         * 關閉自定義確認彈窗
-         */
-        function closeCustomConfirm() {
-            const overlay = document.getElementById('customConfirmOverlay');
-            overlay.classList.remove('show');
-            document.body.style.overflow = ''; // 恢復背景滾動
-            confirmCallback = null;
-        }
+        // 保存回調函數
+        confirmCallback = callback;
 
-        /**
-         * 執行確認操作
-         */
-        function executeConfirmAction() {
-            if (confirmCallback) {
-                confirmCallback();
-            }
-            closeCustomConfirm();
-        }
-
-        // 點擊遮罩層關閉
-        document.getElementById('customConfirmOverlay')?.addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeCustomConfirm();
-            }
-        });
-
-        // ESC 鍵關閉
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                const overlay = document.getElementById('customConfirmOverlay');
-                if (overlay && overlay.classList.contains('show')) {
-                    closeCustomConfirm();
-                }
-            }
-        });
-
-        // ==========================================
-        //  2. 批量選擇功能
-        // ==========================================
-
-        // 切換單個項目的選擇狀態
-        function toggleSelect(checkbox, event) {
-            if (event) {
-                event.stopPropagation();
-            }
-            const card = checkbox.closest('.history-card');
-            card.classList.toggle('selected');
-            updateBatchActionBar();
-        }
-
-        // 點擊圖片區域也能切換選擇
-        function toggleSelectByImage(imgContainer, event) {
-            if (event) {
-                event.stopPropagation();
-            }
-            const card = imgContainer.closest('.history-card');
-            const checkbox = card.querySelector('.select-checkbox');
-            card.classList.toggle('selected');
-
-            // 更新復選框狀態
-            if (card.classList.contains('selected')) {
-                checkbox.style.color = 'white';
-            } else {
-                checkbox.style.color = 'transparent';
-            }
-            updateBatchActionBar();
-        }
-
-        // 更新底部操作欄
-        function updateBatchActionBar() {
-            const selectedCards = document.querySelectorAll('.history-card.selected');
-            const count = selectedCards.length;
-            const batchBar = document.getElementById('batchActionBar');
-            const batchCount = document.getElementById('batchCount');
-            const batchCountText = document.getElementById('batchCountText');
-            const mainContent = document.getElementById('mainContent');
-
-            if (count > 0) {
-                batchBar.classList.add('show');
-                batchCount.textContent = count;
-                batchCountText.textContent = count;
-                mainContent.classList.add('has-batch-bar');
-            } else {
-                batchBar.classList.remove('show');
-                mainContent.classList.remove('has-batch-bar');
-            }
-        }
-
-        // 取消批量選擇
-        function cancelBatchSelect() {
-            const selectedCards = document.querySelectorAll('.history-card.selected');
-            selectedCards.forEach(card => {
-                card.classList.remove('selected');
-                const checkbox = card.querySelector('.select-checkbox');
-                checkbox.style.color = 'transparent';
-            });
-            updateBatchActionBar();
-        }
-
-        // ==========================================
-        //  3. 核心業務邏輯 (清除歷史 & 批量刪除)
-        // ==========================================
-
-        /**
-         * 清除歷史 (按時間範圍)
-         */
-        async function clearHistory(period) {
-            const periodText = {
-                '1day': '1 天內',
-                '1week': '1 週內',
-                '1month': '1 個月內',
-                'all': '所有'
-            };
-
-            // 使用自定義彈窗替換 confirm
-            showCustomConfirm(
-                '確認清除歷史',
-                `確定要清除 ${periodText[period]} 的瀏覽歷史嗎？`,
-                async () => {
-                    // 確認後的執行邏輯
-                    try {
-                        const response = await fetch(`/api/history/clear?period=${period}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-
-                        const result = await response.json();
-
-                        if (response.ok && result.success) {
-                            showNotification('✅ ' + result.message);
-                            setTimeout(() => location.reload(), 1000);
-                        } else {
-                            showNotification('❌ ' + (result.message || '清除失敗'), true);
-                        }
-                    } catch (error) {
-                        console.error('清除歷史錯誤:', error);
-                        showNotification('❌ 網絡錯誤，請稍後重試', true);
-                    }
-                },
-                true // isDanger = true (危險操作，顯示紅色主題)
-            );
-        }
-
-        /**
-         * 批量刪除選中的歷史記錄
-         */
-        async function batchDelete() {
-            const selectedCards = document.querySelectorAll('.history-card.selected');
-            const count = selectedCards.length;
-
-            if (count === 0) {
-                showNotification('❌ 請先選擇要刪除的項目', true);
-                return;
-            }
-
-<!--  if (!confirm(`⚠️ 確定要刪除這 ${count} 項瀏覽歷史嗎？\n此操作無法恢復！`)) {-->
-< !--            return; -->
-< !--        } -->
-
-            // 使用自定義彈窗替換 confirm
-            showCustomConfirm(
-                '確認刪除',
-                `確定要刪除這 ${count} 項瀏覽歷史嗎？`,
-                async () => {
-                    // 確認後的執行邏輯
-                    const historyIds = [];
-                    selectedCards.forEach(card => {
-                        const id = card.getAttribute('data-id');
-                        if (id) {
-                            historyIds.push(id);
-                        }
-                    });
-
-                    try {
-                        const response = await fetch('/api/history/batch-delete', {
-                            method: 'DELETE',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(historyIds)
-                        });
-
-                        const result = await response.json();
-
-                        if (response.ok && result.success) {
-                            showNotification('✅ 成功刪除 ' + count + ' 項歷史記錄');
-
-                            // 從頁面移除選中的卡片 (帶淡出動畫)
-                            selectedCards.forEach(card => {
-                                card.style.transition = 'all 0.3s ease';
-                                card.style.opacity = '0';
-                                card.style.transform = 'scale(0.9)';
-                                setTimeout(() => card.remove(), 300);
-                            });
-
-                            // 隱藏操作欄
-                            setTimeout(() => {
-                                cancelBatchSelect();
-                                // 檢查是否還有剩餘項目，若無則刷新頁面顯示空狀態
-                                const remainingCards = document.querySelectorAll('.history-card');
-                                if (remainingCards.length === 0) {
-                                    setTimeout(() => location.reload(), 500);
-                                }
-                            }, 300);
-                        } else {
-                            showNotification('❌ ' + (result.message || '刪除失敗'), true);
-                        }
-                    } catch (error) {
-                        console.error('批量刪除錯誤:', error);
-                        showNotification('❌ 網絡錯誤，請稍後重試', true);
-                    }
-                },
-                true // isDanger = true (危險操作，顯示紅色主題)
-            );
+        // 顯示彈窗
+        overlay.classList.add('show');
+        document.body.style.overflow = 'hidden'; // 禁止背景滾動
     }
 
-        // 點擊頁面其他地方取消選擇（可選功能，目前已註解）
-        document.addEventListener('click', function (event) {
-            if (!event.target.closest('.history-card') && !event.target.closest('.select-checkbox')) {
-                // cancelBatchSelect();
+    /**
+     * 關閉自定義確認彈窗
+     */
+    function closeCustomConfirm() {
+        const overlay = document.getElementById('customConfirmOverlay');
+        overlay.classList.remove('show');
+        document.body.style.overflow = ''; // 恢復背景滾動
+        confirmCallback = null;
+    }
+
+    /**
+     * 執行確認操作
+     */
+    function executeConfirmAction() {
+        if (confirmCallback) {
+            confirmCallback();
+        }
+        closeCustomConfirm();
+    }
+
+    // 點擊遮罩層關閉
+    document.getElementById('customConfirmOverlay')?.addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeCustomConfirm();
+        }
+    });
+
+    // ESC 鍵關閉
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            const overlay = document.getElementById('customConfirmOverlay');
+            if (overlay && overlay.classList.contains('show')) {
+                closeCustomConfirm();
             }
+        }
+    });
+
+    // ==========================================
+    //  2. 批量選擇功能
+    // ==========================================
+
+    // 切換單個項目的選擇狀態
+    function toggleSelect(checkbox, event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        const card = checkbox.closest('.history-card');
+        card.classList.toggle('selected');
+        updateBatchActionBar();
+    }
+
+    // 點擊圖片區域也能切換選擇
+    function toggleSelectByImage(imgContainer, event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        const card = imgContainer.closest('.history-card');
+        const checkbox = card.querySelector('.select-checkbox');
+        card.classList.toggle('selected');
+
+        // 更新復選框狀態
+        if (card.classList.contains('selected')) {
+            checkbox.style.color = 'white';
+        } else {
+            checkbox.style.color = 'transparent';
+        }
+        updateBatchActionBar();
+    }
+
+    // 更新底部操作欄
+    function updateBatchActionBar() {
+        const selectedCards = document.querySelectorAll('.history-card.selected');
+        const count = selectedCards.length;
+        const batchBar = document.getElementById('batchActionBar');
+        const batchCount = document.getElementById('batchCount');
+        const batchCountText = document.getElementById('batchCountText');
+        const mainContent = document.getElementById('mainContent');
+
+        if (count > 0) {
+            batchBar.classList.add('show');
+            batchCount.textContent = count;
+            batchCountText.textContent = count;
+            mainContent.classList.add('has-batch-bar');
+        } else {
+            batchBar.classList.remove('show');
+            mainContent.classList.remove('has-batch-bar');
+        }
+    }
+
+    // 取消批量選擇
+    function cancelBatchSelect() {
+        const selectedCards = document.querySelectorAll('.history-card.selected');
+        selectedCards.forEach(card => {
+            card.classList.remove('selected');
+            const checkbox = card.querySelector('.select-checkbox');
+            checkbox.style.color = 'transparent';
         });
-    </script>
+        updateBatchActionBar();
+    }
+
+    // ==========================================
+    //  3. 核心業務邏輯 (清除歷史 & 批量刪除)
+    // ==========================================
+
+    /**
+     * 清除歷史 (按時間範圍)
+     */
+    async function clearHistory(period) {
+        const periodText = {
+            '1day': '1 天內',
+            '1week': '1 週內',
+            '1month': '1 個月內',
+            'all': '所有'
+        };
+
+        // 使用自定義彈窗替換 confirm
+        showCustomConfirm(
+            '確認清除歷史',
+            `確定要清除 ${periodText[period]} 的瀏覽歷史嗎？`,
+            async () => {
+                // 確認後的執行邏輯
+                try {
+                    const response = await fetch(`/api/history/clear?period=${period}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        showNotification('✅ ' + result.message);
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showNotification('❌ ' + (result.message || '清除失敗'), true);
+                    }
+                } catch (error) {
+                    console.error('清除歷史錯誤:', error);
+                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                }
+            },
+            true // isDanger = true (危險操作，顯示紅色主題)
+        );
+    }
+
+    /**
+     * 批量刪除選中的歷史記錄
+     */
+    async function batchDelete() {
+        const selectedCards = document.querySelectorAll('.history-card.selected');
+        const count = selectedCards.length;
+
+        if (count === 0) {
+            showNotification('❌ 請先選擇要刪除的項目', true);
+            return;
+        }
+
+        // 使用自定義彈窗替換 confirm
+        showCustomConfirm(
+            '確認刪除',
+            `確定要刪除這 ${count} 項瀏覽歷史嗎？`,
+            async () => {
+                // 確認後的執行邏輯
+                const historyIds = [];
+                selectedCards.forEach(card => {
+                    const id = card.getAttribute('data-id');
+                    if (id) {
+                        historyIds.push(id);
+                    }
+                });
+
+                try {
+                    const response = await fetch('/api/history/batch-delete', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(historyIds)
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        showNotification('✅ 成功刪除 ' + count + ' 項歷史記錄');
+
+                        // 從頁面移除選中的卡片 (帶淡出動畫)
+                        selectedCards.forEach(card => {
+                            card.style.transition = 'all 0.3s ease';
+                            card.style.opacity = '0';
+                            card.style.transform = 'scale(0.9)';
+                            setTimeout(() => card.remove(), 300);
+                        });
+
+                        // 隱藏操作欄
+                        setTimeout(() => {
+                            cancelBatchSelect();
+                            // 檢查是否還有剩餘項目，若無則刷新頁面顯示空狀態
+                            const remainingCards = document.querySelectorAll('.history-card');
+                            if (remainingCards.length === 0) {
+                                setTimeout(() => location.reload(), 500);
+                            }
+                        }, 300);
+                    } else {
+                        showNotification('❌ ' + (result.message || '刪除失敗'), true);
+                    }
+                } catch (error) {
+                    console.error('批量刪除錯誤:', error);
+                    showNotification(' 網絡錯誤，請稍後重試', true);
+                }
+            },
+            true // isDanger = true (危險操作，顯示紅色主題)
+        );
+    }
+
+    // 點擊頁面其他地方取消選擇（可選功能，目前已註解）
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.history-card') && !event.target.closest('.select-checkbox')) {
+            // cancelBatchSelect();
+        }
+    });
+</script>
 </body>
 
 </html>

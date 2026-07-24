@@ -430,10 +430,10 @@ const ReviewCard = ({
         setShowBlockModal(true);
     };
 
-    // 管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗)
-    const handleBlacklist = (targetUsername) => {
+    // 管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗) 傳遞參數
+    const handleBlacklist = (targetUsername, reviewId, reviewContent) => {
         if (typeof window.openBlacklistConfirmModal === 'function') {
-            window.openBlacklistConfirmModal(targetUsername);
+            window.openBlacklistConfirmModal(targetUsername, reviewId, reviewContent);
         } else {
             notify('❌ 系統彈窗組件未加載，請刷新頁面後重試', true);
         }
@@ -720,7 +720,7 @@ const ReviewCard = ({
                 {isAdmin && (
                     <button
                         className="btn-blacklist"
-                        onClick={() => handleBlacklist(review.customer.username)}
+                        onClick={() => handleBlacklist(review.customer.username, review.id,review.content )}
                         title="永久拉黑該用戶（加入黑名單）"
                     >
                         <i className="fas fa-user-slash"></i> 永久拉黑
