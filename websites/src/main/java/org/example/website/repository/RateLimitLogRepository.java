@@ -1,38 +1,40 @@
 package org.example.website.repository;
 
 import org.example.website.entity.RateLimitLog;
+import org.example.website.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface RateLimitLogRepository extends JpaRepository<RateLimitLog, Long> {
 
-    //  核心修改：將 r.username 改為 r.user.username
-    // 查找用户在过去1分钟内的记录（不区分操作类型！）
-    @Query("SELECT r FROM RateLimitLog r WHERE r.user.username = :username " +
-            "AND r.actionTime > :oneMinuteAgo " +
-            "ORDER BY r.actionTime DESC")
-    Optional<RateLimitLog> findRecentAction(
-            @Param("username") String username,
-            @Param("oneMinuteAgo") LocalDateTime oneMinuteAgo
+    /**
+     * 查找用戶當前有效的封禁記錄
+     * 條件：狀態為 BANNED 且 解封時間大於當前時間
+     */
+    Optional<RateLimitLog> findTopByUserAndStatusAndBannedUntilAfter(
+            User user,
+            RateLimitLog.LimitStatus status,
+            LocalDateTime now
     );
 
-    //  核心修改：將 r.username 改為 r.user.username
-    // 检查用户是否被封禁（不区分操作类型！）
-    @Query("SELECT r FROM RateLimitLog r WHERE r.user.username = :username " +
-            "AND r.bannedUntil IS NOT NULL " +
-            "AND r.bannedUntil > :now")
-    Optional<RateLimitLog> findBannedAction(
-            @Param("username") String username,
-            @Param("now") LocalDateTime now
-    );
+    /**
+     * 查找用戶最新的一條限流記錄 (用於更新現有記錄)
+     */
+    Optional<RateLimitLog> findTopByUserOrderByActionTimeDesc(User user);
 
-    // 清理旧记录 (此處未使用 username，保持不變)
+    /**
+     * 核心邏輯：將已經過期的 BANNED 狀態批量更新為 EXPIRED
+     * 【修復】：使用 @Param 綁定枚舉值，避免 Hibernate 6 將其誤解析為路徑表達式
+     */
     @Modifying
-    @Query("DELETE FROM RateLimitLog r WHERE r.actionTime < :cutoffTime")
-    void deleteOldRecords(@Param("cutoffTime") LocalDateTime cutoffTime);
+    @Transactional
+    @Query("UPDATE RateLimitLog r SET r.status = :expiredStatus WHERE r.status = :bannedStatus AND r.bannedUntil < CURRENT_TIMESTAMP")
+    int updateExpiredBans(@Param("expiredStatus") RateLimitLog.LimitStatus expiredStatus,
+                          @Param("bannedStatus") RateLimitLog.LimitStatus bannedStatus);
 }

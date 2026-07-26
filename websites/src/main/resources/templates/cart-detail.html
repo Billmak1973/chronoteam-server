@@ -597,6 +597,14 @@
             letter-spacing: 2px;
             user-select: none;
         }
+
+        .footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
     </style>
 </head>
 
@@ -766,6 +774,11 @@
             </div>
         </div>
     </div>
+
+    <footer class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.</p>
+    </footer>
 
     <!-- 引入公共彈窗 -->
     <div th:replace="~{fragments/common :: modals}"></div>

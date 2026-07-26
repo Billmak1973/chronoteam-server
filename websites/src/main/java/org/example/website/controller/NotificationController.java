@@ -1,26 +1,38 @@
 package org.example.website.controller;
 
+import org.example.website.entity.Announcement;
+import org.example.website.entity.User;
+import org.example.website.repository.AnnouncementReceiptRepository;
 import org.example.website.repository.NotificationRepository;
+import org.example.website.repository.UserRepository; // 確保引入
 import org.example.website.service.NotificationService;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/notifications")
 public class NotificationController {
+
     private final NotificationRepository notificationRepository;
     private final NotificationService notificationService;
+    private final AnnouncementReceiptRepository announcementReceiptRepository;
+    private final UserRepository userRepository; // 【新增】注入 UserRepository
 
-    // 修改構造函數，注入 NotificationService
-    public NotificationController(NotificationRepository notificationRepository, NotificationService notificationService) {
+    public NotificationController(NotificationRepository notificationRepository,
+                                  NotificationService notificationService,
+                                  AnnouncementReceiptRepository announcementReceiptRepository,
+                                  UserRepository userRepository) { // 【新增】構造函數參數
         this.notificationRepository = notificationRepository;
         this.notificationService = notificationService;
+        this.announcementReceiptRepository = announcementReceiptRepository;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/unread-count")
@@ -38,17 +50,26 @@ public class NotificationController {
 
         String username = authentication.getName();
 
-        // 1. 系统通知未读数
-        long systemCount = notificationRepository.countByRecipient_UsernameAndIsReadFalse(username);
+        // 1. 原本的系統通知未讀數
+        long oldSystemCount = notificationRepository.countByRecipient_UsernameAndIsReadFalse(username);
 
-        // 2. 各类互动消息未读数
+        // 2. 【新增】全新的公告未讀數
+        long announcementCount = announcementReceiptRepository.countByUser_UsernameAndAnnouncement_TypeAndIsReadFalse(
+                username,
+                Announcement.AnnouncementType.STOCK
+        );
+
+        // 3. 總系統通知數 = 原本的 + 新的公告
+        long totalSystemCount = oldSystemCount + announcementCount;
+
+        // 4. 各類互動消息未讀數
         long replyCount = notificationService.getUnreadCount(username, NotificationService.TYPE_REVIEW_REPLY);
         long mentionCount = notificationService.getUnreadCount(username, NotificationService.TYPE_REVIEW_MENTION);
         long likeCount = notificationService.getUnreadCount(username, NotificationService.TYPE_LIKED_ME);
-
         long messageCount = replyCount + mentionCount + likeCount;
 
-        response.put("systemCount", systemCount);
+        // 5. 返回給前端
+        response.put("systemCount", totalSystemCount);
         response.put("messageCount", messageCount);
         response.put("replyCount", replyCount);
         response.put("mentionCount", mentionCount);
@@ -57,7 +78,6 @@ public class NotificationController {
         return ResponseEntity.ok(response);
     }
 
-    //  新增：標記所有互動消息為已讀 (解決紅點不消失問題)
     @PutMapping("/read-all")
     public ResponseEntity<?> markAllAsRead(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
@@ -66,11 +86,17 @@ public class NotificationController {
 
         String username = authentication.getName();
 
-        // 核心：更新「回復我的」和「提到我的」最後查看時間
-        // 這樣後端計算未讀數量時，就會把這些視為已讀
+        // 標記原本的互動消息為已讀
         notificationService.markAsRead(username, NotificationService.TYPE_REVIEW_REPLY);
         notificationService.markAsRead(username, NotificationService.TYPE_REVIEW_MENTION);
-        notificationService.markAsRead(username, NotificationService.TYPE_LIKED_ME);  //
+        notificationService.markAsRead(username, NotificationService.TYPE_LIKED_ME);
+
+        // 【核心修復】：先獲取 User 實體拿到 ID，再傳給 Repository 進行 UPDATE
+        // 這樣完美避開了 Hibernate 6 在 UPDATE 語句中解析 ar.user.username 的 Bug
+        userRepository.findByUsername(username).ifPresent(user -> {
+            announcementReceiptRepository.markAllAsReadByUserAndType(user.getId(), Announcement.AnnouncementType.STOCK);
+        });
+
         return ResponseEntity.ok().body("標記成功");
     }
 }

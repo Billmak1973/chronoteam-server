@@ -3314,6 +3314,14 @@
         .btn-unblock-confirm:active {
             transform: scale(0.96);
         }
+
+        .footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
     </style>
 
     <!-- ========================================== -->
@@ -3811,7 +3819,7 @@
             <div class="permission-actions">
                 <!-- 只保留取消按钮 -->
                 <button class="btn-permission-confirm" onclick="closeAdminPermissionModal()"
-                        style="background: var(--gold); color: var(--primary);">
+                    style="background: var(--gold); color: var(--primary);">
                     <i class="fas fa-times"></i> 取消
                 </button>
             </div>
@@ -4492,7 +4500,7 @@
             if (isAdmin) {
                 if (productStock <= 0) {
                     // 情況 A：庫存 = 0，攔截並提示
-                    alert('⚠️ 當前庫存為 0，無法發送通知！\n請先修改庫存後再操作。');
+                    showNotification(' 當前庫存為 0，無法發送通知！請先修改庫存後再操作。', true);
                     return;
                 } else {
                     // 情況 B：庫存 > 0，彈出等待名單模態框

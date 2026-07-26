@@ -1,10 +1,7 @@
 package org.example.website.controller;
 
 import org.example.website.dto.ApiResponse;
-import org.example.website.entity.Notification;
-import org.example.website.entity.Product;
-import org.example.website.entity.StockNotification;
-import org.example.website.entity.User;
+import org.example.website.entity.*;
 import org.example.website.repository.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -20,17 +17,18 @@ public class StockNotificationController {
 
     private final StockNotificationRepository stockNotificationRepository;
     private final ProductRepository productRepository;
-    private final NotificationRepository notificationRepository;
+    private final AnnouncementRepository announcementRepository;
     private final UserRepository userRepository;
-
+    private final AnnouncementReceiptRepository announcementReceiptRepository;
     public StockNotificationController(StockNotificationRepository stockNotificationRepository,
                                        ProductRepository productRepository,
                                        UserRepository userRepository,
-                                       NotificationRepository notificationRepository) {
+                                       AnnouncementRepository announcementRepository, AnnouncementReceiptRepository announcementReceiptRepository) {
         this.stockNotificationRepository = stockNotificationRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
-        this.notificationRepository = notificationRepository;
+        this.announcementRepository = announcementRepository;
+        this.announcementReceiptRepository = announcementReceiptRepository;
     }
 
     /**
@@ -151,8 +149,9 @@ public class StockNotificationController {
         return ResponseEntity.ok(ApiResponse.okWithData("成功", result));
     }
 
+
     /**
-     * 2. 一鍵發送系統通知 (僅管理員)
+     * 2. 一鍵發送系統通知 (僅管理員) - 【核心重構版】
      */
     @PostMapping("/notify/{productId}")
     @Transactional
@@ -161,7 +160,8 @@ public class StockNotificationController {
             return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
         }
 
-        Product product = productRepository.findById(productId).orElseThrow(() -> new RuntimeException("商品不存在"));
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("商品不存在"));
 
         // 防呆校驗：如果庫存依然為0，不允許發送
         if (product.getStock() <= 0) {
@@ -174,30 +174,69 @@ public class StockNotificationController {
             return ResponseEntity.ok(ApiResponse.ok("暫無需要通知的用戶"));
         }
 
-        User adminUser = userRepository.findByUsername("admin").orElse(null);
+        // ==========================================
+        // 【核心變更】：使用 Announcement + AnnouncementReceipt 架構
+        // ==========================================
 
-        String title = "🔔 您關注的商品已到貨！";
-        String content = String.format("您關注的 %s 已補貨到庫（當前庫存: %d 隻）。庫存緊張，請立即前往搶購！",
-                product.getDescription(), product.getStock());
-        String targetUrl = "/product/" + productId;
+        // 1. 創建 1 條公告主記錄 (Announcement)
+        Announcement announcement = new Announcement();
+        announcement.setTitle("🔔 您關注的商品已到貨！");
+        announcement.setContent(String.format("您關注的 %s 已補貨到庫（當前庫存: %d 隻）。庫存緊張，請立即前往搶購！",
+                product.getDescription(), product.getStock()));
+        announcement.setType(Announcement.AnnouncementType.STOCK); // 使用 STOCK 類型
+        announcement.setTargetType("SPECIFIC_PRODUCT");            // 標記為特定商品訂閱者
+        announcement.setTargetId(productId.longValue());           // 關聯商品 ID
+        announcement.setIsActive(true);
 
-        // 批量插入系統通知並更新訂閱狀態
+        Announcement savedAnnouncement = announcementRepository.save(announcement);//类型形参 'S' 的推断类型 'S' 不在其界限内；应扩展 'org.example.website.entity.AnnouncementReceipt'
+
+        // 2. 批量創建接收記錄 (AnnouncementReceipt) 並標記 StockNotification 為已通知
+        List<AnnouncementReceipt> receipts = new ArrayList<>();
         for (StockNotification notif : waitlist) {
-            Notification sysNotif = new Notification();
-            sysNotif.setRecipient(notif.getUser());
-            sysNotif.setSender(adminUser);
-            sysNotif.setType(Notification.NotificationType.STOCK);
-            sysNotif.setTitle(title);
-            sysNotif.setContent(content);
-            sysNotif.setTargetUrl(targetUrl);
-            sysNotif.setRead(false);
-            notificationRepository.save(sysNotif);
+            // 創建接收記錄，實現一對多
+            AnnouncementReceipt receipt = new AnnouncementReceipt();
+            receipt.setAnnouncement(savedAnnouncement);
+            receipt.setUser(notif.getUser());
+            receipt.setIsRead(false); // 初始為未讀
+            receipts.add(receipt);
 
-            // 標記該訂閱記錄為已通知 (注意：這裡不減少 stockNotificationCount，因為用戶依然想要該商品，只是已收到通知)
+            // 標記該訂閱記錄為已通知 (不減少 stockNotificationCount，因為用戶依然想要該商品)
             notif.setNotified(true);
-            stockNotificationRepository.save(notif);
         }
 
-        return ResponseEntity.ok(ApiResponse.ok(String.format("已成功向 %d 位用戶發送到貨通知！", waitlist.size())));
+        // 3. 批量保存，提升資料庫效能
+        announcementReceiptRepository.saveAll(receipts);
+        stockNotificationRepository.saveAll(waitlist);
+
+        product.setStockNotificationCount(0);
+        productRepository.save(product);
+        return ResponseEntity.ok(ApiResponse.ok(String.format("已成功向 %d 位用戶發送到貨公告！", waitlist.size())));
+    }
+
+    /**
+     * 用戶點擊查看商品詳情時，自動清除該商品的到貨通知訂閱記錄
+     */
+    @DeleteMapping("/clear-on-view/{productId}")
+    @Transactional
+    public ResponseEntity<?> clearNotificationOnView(@PathVariable Integer productId, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+        }
+
+        String username = authentication.getName();
+
+        // 1. 查找該用戶對該商品的訂閱記錄
+        Optional<StockNotification> existing = stockNotificationRepository.findByProduct_ProductIdAndUser_Username(productId, username);
+
+        if (existing.isPresent()) {
+            // 2. 刪除記錄
+            stockNotificationRepository.delete(existing.get());
+
+            // 3. 原子減少商品的訂閱人數 (Repository 中已做防護，不會減到負數)
+            productRepository.decrementStockNotificationCount(productId);
+        }
+
+        // 無論是否存在，都返回成功，不阻塞用戶跳轉
+        return ResponseEntity.ok(ApiResponse.ok("已清除通知記錄"));
     }
 }

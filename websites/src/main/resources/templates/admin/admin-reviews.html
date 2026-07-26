@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>評論與舉報管理 - ChronoTeam 管理中心</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <style>
+        /* ==========================================
+           1. Tab 切換樣式優化 (確保內容絕對隔離，互不干擾)
+           ========================================== */
+        .tabs-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e9ecef;
+            position: relative;
+        }
+
+        .tab-btn {
+            padding: 0.9rem 1.8rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #6c757d;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: -2px; /* 完美覆蓋底邊框 */
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary, #1a1a2e);
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .tab-btn.active {
+            color: var(--primary, #1a1a2e);
+            border-bottom-color: var(--gold, #d4af37);
+            background: rgba(212, 175, 55, 0.08);
+        }
+
+        /* 核心：強制隱藏非活躍 Tab，防止內容重疊或混亂 */
+        .tab-content {
+            display: none !important;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        /* 核心：僅當擁有 active 類時才顯示，並帶有平滑進場動畫 */
+        .tab-content.active {
+            display: block !important;
+            opacity: 1;
+            transform: translateY(0);
+            animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ==========================================
+           2. 現代化表格樣式 (防止擠壓混亂、美觀、響應式)
+           ========================================== */
+        .table-container {
+            width: 100%;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            overflow-x: auto; /* 防止表格撐破容器，允許橫向滾動 */
+            overflow-y: hidden;
+        }
+
+        /* 自定義滾動條美化 */
+        .table-container::-webkit-scrollbar { height: 8px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f3f5; border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb { background: var(--gold, #d4af37); border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: #b8972b; }
+
+        .data-table {
+            width: 100%;
+            min-width: 1000px; /* 確保表格有最小寬度，防止內容過度擠壓導致混亂 */
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.95rem;
+        }
+
+        /* 表頭樣式 (帶粘性定位，滾動時不消失) */
+        .data-table thead th {
+            background: #f8f9fa;
+            color: #495057;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            padding: 1.2rem 1rem;
+            text-align: left;
+            border-bottom: 2px solid #e9ecef;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        /* 單元格樣式 */
+        .data-table tbody td {
+            padding: 1.2rem 1rem;
+            border-bottom: 1px solid #f1f3f5;
+            color: #212529;
+            vertical-align: middle;
+            transition: background-color 0.2s ease;
+        }
+
+        /* 行懸停微光效果 */
+        .data-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .data-table tbody tr:hover td {
+            background-color: rgba(212, 175, 55, 0.04);
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ==========================================
+           3. 狀態徽章與文本截斷優化
+           ========================================== */
+        .status-badge {
+            padding: 0.35rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .status-pending {
+            background: rgba(255, 193, 7, 0.15);
+            color: #856404;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+        .status-resolved {
+            background: rgba(40, 167, 69, 0.15);
+            color: #155724;
+            border: 1px solid rgba(40, 167, 69, 0.3);
+        }
+        .status-dismissed {
+            background: rgba(108, 117, 125, 0.15);
+            color: #383d41;
+            border: 1px solid rgba(108, 117, 125, 0.3);
+        }
+
+        .text-truncate {
+            display: inline-block;
+            max-width: 250px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+            line-height: 1.4;
+        }
+
+        /* ==========================================
+           4. 表格內按鈕樣式優化
+           ========================================== */
+        .btn-sm {
+            padding: 0.45rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            text-decoration: none;
+        }
+
+        .btn-view {
+            background: rgba(23, 162, 184, 0.1);
+            color: #17a2b8;
+            border-color: rgba(23, 162, 184, 0.2);
+        }
+        .btn-view:hover {
+            background: #17a2b8;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+        }
+
+        .btn-delete {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+            border-color: rgba(220, 53, 69, 0.2);
+        }
+        .btn-delete:hover {
+            background: #dc3545;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-approve {
+            background: linear-gradient(135deg, var(--gold, #d4af37) 0%, #b8972b 100%);
+            color: white !important;
+            box-shadow: 0 2px 5px rgba(212, 175, 55, 0.3);
+        }
+        .btn-approve:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(212, 175, 55, 0.4);
+            filter: brightness(1.1);
+        }
+    </style>
+</head>
+<body>
+<!-- 1. 引入公共導航欄 -->
+<div th:replace="~{fragments/common :: navbar}"></div>
+
+<div class="admin-layout">
+    <!-- 2. 引入左側邊欄 (activePage='reviews' 用於高亮菜單) -->
+    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='reviews')}"></div>
+
+    <!-- 3. 右側主內容區 -->
+    <main class="admin-main">
+        <div class="content-header">
+            <h2><i class="fas fa-comments"></i> <span id="pageTitle">評論與舉報管理</span></h2>
+            <div class="breadcrumb">
+                <a href="/admin/dashboard">管理中心</a> / <span id="pageBreadcrumb">評論審核</span>
+            </div>
+        </div>
+
+        <div class="content-body">
+            <!-- Tab 切換按鈕 -->
+            <div class="tabs-container">
+                <button class="tab-btn active" onclick="switchTab('reviews', this)">
+                    <i class="fas fa-list"></i> 所有評論
+                </button>
+                <button class="tab-btn" onclick="switchTab('archives', this)">
+                    <i class="fas fa-archive"></i> 刪除歸檔
+                </button>
+                <button class="tab-btn" onclick="switchTab('reports', this)">
+                    <i class="fas fa-flag"></i> 舉報管理
+                </button>
+            </div>
+
+            <!-- ================= Tab 1: 所有評論 ================= -->
+            <div id="tab-reviews" class="tab-content active">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th style="width: 60px;">ID</th>
+                            <th style="width: 100px;">用戶</th>
+                            <th style="width: 150px;">關聯商品</th>
+                            <th style="width: 60px;">評分</th>
+                            <th>評論內容</th>
+                            <th style="width: 80px;">互動</th>
+                            <th style="width: 60px;">置頂</th>
+                            <th style="width: 140px;">創建時間</th>
+                            <th style="width: 120px; text-align: center;">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!-- 遍歷 Review 列表 (需後端傳遞 reviews 變量) -->
+                        <tr th:each="review : ${reviews}">
+                            <td th:text="${review.reviewId}">1</td>
+                            <td th:text="${review.user != null ? review.user.username : '未知'}">user123</td>
+                            <td>
+                                <span class="text-truncate" th:text="${review.product != null ? review.product.description : '未知商品'}" th:title="${review.product != null ? review.product.description : ''}">商品名稱</span>
+                            </td>
+                            <td>
+                                        <span th:if="${review.rating != null}" style="color: var(--gold); font-weight: 600;">
+                                            <i class="fas fa-star"></i> <span th:text="${review.rating}">5.0</span>
+                                        </span>
+                                <span th:unless="${review.rating != null}" style="color: var(--gray);">-</span>
+                            </td>
+                            <td>
+                                <span class="text-truncate" th:text="${review.content}" th:title="${review.content}">評論內容...</span>
+                            </td>
+                            <td>
+                                <span style="color: #4facfe;"><i class="fas fa-thumbs-up"></i> <span th:text="${review.likeCount}">0</span></span> /
+                                <span style="color: #11998e;"><i class="fas fa-thumbs-down"></i> <span th:text="${review.dislikeCount}">0</span></span>
+                            </td>
+                            <td>
+                                <span th:if="${review.pinned}" style="color: #17a2b8; font-weight: 600;"><i class="fas fa-thumbtack"></i> 是</span>
+                                <span th:unless="${review.pinned}" style="color: var(--gray);">否</span>
+                            </td>
+                            <td th:text="${#temporals.format(review.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01</td>
+                            <td style="text-align: center;">
+                                <button class="btn-sm btn-view" title="查看詳情"><i class="fas fa-eye"></i></button>
+                                <button class="btn-sm btn-delete" title="刪除" style="color: var(--accent);"><i class="fas fa-trash-alt"></i></button>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(reviews)}">
+                            <td colspan="9" style="text-align: center; padding: 2rem; color: var(--gray);">暫無評論數據</td>
+                        </tr>
+                        </tbody>
+                        <!-- 可在此處添加分頁組件 -->
+                    </table>
+                </div>
+            </div>
+
+            <!-- ================= Tab 2: 刪除歸檔 ================= -->
+            <div id="tab-archives" class="tab-content">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th style="width: 60px;">歸檔ID</th>
+                            <th style="width: 80px;">原評論ID</th>
+                            <th style="width: 100px;">原作者</th>
+                            <th style="width: 80px;">商品ID</th>
+                            <th>刪除原因</th>
+                            <th style="width: 100px;">執行刪除者</th>
+                            <th style="width: 140px;">刪除時間</th>
+                            <th style="width: 100px; text-align: center;">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!-- 遍歷 ReviewArchive 列表 (需後端傳遞 archives 變量) -->
+                        <tr th:each="archive : ${archives}">
+                            <td th:text="${archive.archiveId}">1</td>
+                            <td th:text="${archive.originalReviewId}">101</td>
+                            <td th:text="${archive.author != null ? archive.author.username : '未知'}">user123</td>
+                            <td th:text="${archive.productId}">12</td>
+                            <td>
+                                <span class="text-truncate" th:text="${archive.deleteReason != null ? archive.deleteReason : '無原因'}" th:title="${archive.deleteReason}">違反社區規範</span>
+                            </td>
+                            <td th:text="${archive.deletedById != null ? 'Admin(ID:' + archive.deletedById + ')' : '系統'}">Admin</td>
+                            <td th:text="${#temporals.format(archive.deletedAt, 'yyyy-MM-dd HH:mm')}">2024-01-02</td>
+                            <td style="text-align: center;">
+                                <button class="btn-sm btn-view" title="查看內容快照"><i class="fas fa-file-alt"></i></button>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(archives)}">
+                            <td colspan="8" style="text-align: center; padding: 2rem; color: var(--gray);">暫無刪除歸檔數據</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ================= Tab 3: 舉報管理 ================= -->
+            <div id="tab-reports" class="tab-content">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th style="width: 60px;">舉報ID</th>
+                            <th style="width: 100px;">舉報人</th>
+                            <th style="width: 100px;">被舉報人</th>
+                            <th style="width: 80px;">評論ID</th>
+                            <th style="width: 120px;">舉報類別</th>
+                            <th style="width: 100px;">狀態</th>
+                            <th style="width: 140px;">創建時間</th>
+                            <th style="width: 150px; text-align: center;">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!-- 遍歷 Report 列表 (需後端傳遞 reports 變量) -->
+                        <tr th:each="report : ${reports}">
+                            <td th:text="${report.reportId}">1</td>
+                            <td th:text="${report.reporter != null ? report.reporter.username : '未知'}">userA</td>
+                            <td th:text="${report.reportedUser != null ? report.reportedUser.username : '未知'}">userB</td>
+                            <td th:text="${report.reviewId}">101</td>
+                            <td th:text="${report.category}">人身攻擊</td>
+                            <td>
+                                <span th:if="${report.status.name() == 'PENDING'}" class="status-badge status-pending">待處理</span>
+                                <span th:if="${report.status.name() == 'RESOLVED'}" class="status-badge status-resolved">已處理</span>
+                                <span th:if="${report.status.name() == 'DISMISSED'}" class="status-badge status-dismissed">已駁回</span>
+                            </td>
+                            <td th:text="${#temporals.format(report.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-03</td>
+                            <td style="text-align: center;">
+                                <button th:if="${report.status.name() == 'PENDING'}" class="btn-sm btn-approve" title="處理舉報" style="background: var(--gold); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer;">
+                                    <i class="fas fa-gavel"></i> 處理
+                                </button>
+                                <span th:unless="${report.status.name() == 'PENDING'}" style="color: var(--gray); font-size: 0.85rem;">已結案</span>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(reports)}">
+                            <td colspan="8" style="text-align: center; padding: 2rem; color: var(--gray);">暫無舉報數據</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- 引入公共 JS -->
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+
+<!-- Tab 切換邏輯 -->
+<script>
+    function switchTab(tabName, btnElement) {
+        // 移除所有 active 類
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        // 為當前點擊的按鈕和對應的內容添加 active 類
+        btnElement.classList.add('active');
+        document.getElementById('tab-' + tabName).classList.add('active');
+    }
+</script>
+</body>
+</html>

@@ -48,6 +48,7 @@ public class PageController {
     private final CartService cartService;
     private final ProductService productService;
     private final SiteSettingService siteSettingService;
+    private final AnnouncementReceiptRepository announcementReceiptRepository;
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
@@ -62,7 +63,7 @@ public class PageController {
                           SecurityQuestionRepository securityQuestionRepository,
                           AdminPenaltyRepository adminPenaltyRepository,
                           AdminPenaltyService adminPenaltyService,
-                          CartService cartService, ProductService productService,
+                          CartService cartService, ProductService productService,AnnouncementReceiptRepository announcementReceiptRepository,
                           UserRepository userRepository, SiteSettingService siteSettingService) {
         this.userService = userService;
         this.loginLogRepository = loginLogRepository;
@@ -81,6 +82,7 @@ public class PageController {
         this.userRepository = userRepository;
         this.productService = productService;
         this.siteSettingService = siteSettingService;
+        this.announcementReceiptRepository = announcementReceiptRepository;
     }
 
     @GetMapping("/")
@@ -427,112 +429,108 @@ public class PageController {
         return "reviews"; // 對應 templates/reviews.html
     }
 
-@GetMapping("/account/notifications")
-public String myNotifications(
-        @RequestParam(defaultValue = "0") int stockPage,   // 到貨通知當前頁
-        @RequestParam(defaultValue = "0") int adminPage,   // 管理通知當前頁
-        @RequestParam(defaultValue = "25") int size,       // 每頁 25 條
-        Model model, Authentication authentication) {
+    @GetMapping("/account/notifications")
+    public String myNotifications(
+            @RequestParam(defaultValue = "0") int stockPage,   // 到貨通知當前頁
+            @RequestParam(defaultValue = "0") int adminPage,   // 管理通知當前頁
+            @RequestParam(defaultValue = "25") int size,       // 每頁 25 條
+            Model model, Authentication authentication) {
 
-    String username = authentication.getName();
-    User user = userService.findByUsername(username);
+        String username = authentication.getName();
+        // 1. 獲取完整的 User 實體 (包含 ID)
+        User user = userService.findByUsername(username);
 
-    // 1. 構建分頁對象
-    Pageable stockPageable = org.springframework.data.domain.PageRequest.of(stockPage, size);
-    Pageable adminPageable = org.springframework.data.domain.PageRequest.of(adminPage, size);
+        // 2. 構建分頁對象
+        Pageable stockPageable = org.springframework.data.domain.PageRequest.of(
+                stockPage, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")
+        );
+        Pageable adminPageable = org.springframework.data.domain.PageRequest.of(adminPage, size);
 
-    // 2. 分別進行分頁查詢
-    Page<Notification> stockPageResult = notificationRepository.findByTypeAndRecipient_UsernameOrderByCreatedAtDesc(
-            Notification.NotificationType.STOCK, username, stockPageable);
-    Page<Notification> adminPageResult = notificationRepository.findByTypeAndRecipient_UsernameOrderByCreatedAtDesc(
-            Notification.NotificationType.SYSTEM, username, adminPageable);
+        // 3. 【核心修復】：使用 user.getId() 進行查詢
+        Page<AnnouncementReceipt> stockReceiptPage = announcementReceiptRepository
+                .findByUser_IdAndAnnouncement_TypeOrderByCreatedAtDesc(user.getId(), Announcement.AnnouncementType.STOCK, stockPageable);
 
-    List<Notification> stockNotifications = stockPageResult.getContent();
-    List<Notification> adminNotifications = adminPageResult.getContent();
+        // 進入頁面時，自動將該用戶的到貨通知標記為已讀 (使用 user.getId())
+        announcementReceiptRepository.markAllAsReadByUserAndType(user.getId(), Announcement.AnnouncementType.STOCK);
 
-    // 3. 核心重構：計算每條管理通知的「綜合狀態」(支援禁言 + 永久拉黑)
-    Map<Long, String> notificationStatusMap = new HashMap<>();
-    Map<Long, Appeal> appealDataMap = new HashMap<>();
-    Map<Long, Integer> appealCountMap = new HashMap<>(); // 【新增】記錄申訴次數
+        // ==========================================
+        // 【保持原樣】：管理通知依然從 Notification 查詢
+        // ==========================================
+        Page<Notification> adminPageResult = notificationRepository.findByTypeAndRecipient_UsernameOrderByCreatedAtDesc(
+                Notification.NotificationType.SYSTEM, username, adminPageable);
+        List<Notification> adminNotifications = adminPageResult.getContent();
 
-    for (Notification notif : adminNotifications) {
-        // 只處理「禁言相關」或「永久拉黑相關」的通知
-        if (notif.getTitle() != null &&
-                (notif.getTitle().contains("禁言") || notif.getTitle().contains("永久拉黑"))) {
+        // ==========================================
+        // 【核心重構】：計算每條管理通知的「綜合狀態」(支援禁言 + 永久拉黑)
+        // ==========================================
+        Map<Long, String> notificationStatusMap = new HashMap<>();
+        Map<Long, Appeal> appealDataMap = new HashMap<>();
+        Map<Long, Integer> appealCountMap = new HashMap<>();
 
-            Optional<AdminPenalty> penaltyOpt = adminPenaltyRepository.findByNotificationId(notif.getNotificationId());
+        for (Notification notif : adminNotifications) {
+            if (notif.getTitle() != null &&
+                    (notif.getTitle().contains("禁言") || notif.getTitle().contains("永久拉黑"))) {
 
-            // 【修改】獲取該通知的所有申訴記錄 (按時間倒序)
-            List<Appeal> appeals = appealRepository.findByNotificationIdOrderByCreatedAtDesc(notif.getNotificationId());
+                Optional<AdminPenalty> penaltyOpt = adminPenaltyRepository.findByNotificationId(notif.getNotificationId());
+                List<Appeal> appeals = appealRepository.findByNotificationIdOrderByCreatedAtDesc(notif.getNotificationId());
 
-            // 【新增】記錄申訴總次數
-            appealCountMap.put(notif.getNotificationId(), appeals.size());
+                appealCountMap.put(notif.getNotificationId(), appeals.size());
 
-            if (!appeals.isEmpty()) {
-                Appeal latestAppeal = appeals.get(0); // 獲取最新的一條申訴記錄
-                appealDataMap.put(notif.getNotificationId(), latestAppeal);
+                if (!appeals.isEmpty()) {
+                    Appeal latestAppeal = appeals.get(0);
+                    appealDataMap.put(notif.getNotificationId(), latestAppeal);
 
-                if (latestAppeal.getStatus() == Appeal.AppealStatus.PENDING) {
-                    notificationStatusMap.put(notif.getNotificationId(), "APPEAL_PENDING");
-                } else if (latestAppeal.getStatus() == Appeal.AppealStatus.APPROVED) {
-                    notificationStatusMap.put(notif.getNotificationId(), "APPEAL_APPROVED");
-                } else if (latestAppeal.getStatus() == Appeal.AppealStatus.REJECTED) {
-                    notificationStatusMap.put(notif.getNotificationId(), "APPEAL_REJECTED");
-                } else if (latestAppeal.getStatus() == Appeal.AppealStatus.EXPIRED) {
-                    notificationStatusMap.put(notif.getNotificationId(), "APPEAL_EXPIRED");
-                }
-            } else {
-                // 無申訴記錄 -> 根據處罰狀態決定 UI 顯示
-                if (penaltyOpt.isPresent()) {
-                    AdminPenalty penalty = penaltyOpt.get();
-
-                    // 觸發精確的懶檢查 (確保過期狀態被正確更新)
-                    adminPenaltyService.checkAndUpdatePenaltyStatus(penalty.getPenaltyId());
-
-                    // 重新獲取最新狀態
-                    penalty = adminPenaltyRepository.findById(penalty.getPenaltyId()).get();
-
-                    if (penalty.getStatus() == AdminPenalty.PenaltyStatus.ACTIVE) {
-                        notificationStatusMap.put(notif.getNotificationId(), "SHOW_APPEAL_BTN");
-                    } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.EXPIRED) {
-                        notificationStatusMap.put(notif.getNotificationId(), "EXPIRED_NO_APPEAL");
-                    } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.REVOKED) {
-                        notificationStatusMap.put(notif.getNotificationId(), "REVOKED_NO_APPEAL");
+                    if (latestAppeal.getStatus() == Appeal.AppealStatus.PENDING) {
+                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_PENDING");
+                    } else if (latestAppeal.getStatus() == Appeal.AppealStatus.APPROVED) {
+                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_APPROVED");
+                    } else if (latestAppeal.getStatus() == Appeal.AppealStatus.REJECTED) {
+                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_REJECTED");
+                    } else if (latestAppeal.getStatus() == Appeal.AppealStatus.EXPIRED) {
+                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_EXPIRED");
                     }
                 } else {
-                    notificationStatusMap.put(notif.getNotificationId(), "NO_PENALTY_RECORD");
+                    if (penaltyOpt.isPresent()) {
+                        AdminPenalty penalty = penaltyOpt.get();
+                        adminPenaltyService.checkAndUpdatePenaltyStatus(penalty.getPenaltyId());
+                        penalty = adminPenaltyRepository.findById(penalty.getPenaltyId()).get();
+
+                        if (penalty.getStatus() == AdminPenalty.PenaltyStatus.ACTIVE) {
+                            notificationStatusMap.put(notif.getNotificationId(), "SHOW_APPEAL_BTN");
+                        } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.EXPIRED) {
+                            notificationStatusMap.put(notif.getNotificationId(), "EXPIRED_NO_APPEAL");
+                        } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.REVOKED) {
+                            notificationStatusMap.put(notif.getNotificationId(), "REVOKED_NO_APPEAL");
+                        }
+                    } else {
+                        notificationStatusMap.put(notif.getNotificationId(), "NO_PENALTY_RECORD");
+                    }
                 }
             }
         }
+
+        // ==========================================
+        // 傳遞數據到前端
+        // ==========================================
+        model.addAttribute("user", user);
+        model.addAttribute("stockReceipts", stockReceiptPage.getContent()); // 注意變數名是 stockReceipts
+        model.addAttribute("adminNotifications", adminNotifications);
+
+        model.addAttribute("notificationStatusMap", notificationStatusMap);
+        model.addAttribute("appealDataMap", appealDataMap);
+        model.addAttribute("appealCountMap", appealCountMap);
+
+        // 傳遞分頁相關數據
+        model.addAttribute("stockPage", stockPage);
+        model.addAttribute("stockTotalPages", stockReceiptPage.getTotalPages());
+        model.addAttribute("stockSmartPages", generateSmartPagination(stockPage, stockReceiptPage.getTotalPages()));
+
+        model.addAttribute("adminPage", adminPage);
+        model.addAttribute("adminTotalPages", adminPageResult.getTotalPages());
+        model.addAttribute("adminSmartPages", generateSmartPagination(adminPage, adminPageResult.getTotalPages()));
+
+        return "notifications";
     }
-
-    // 4. 進入頁面後，自動將所有通知標記為已讀 (優化：只查詢並更新未讀的，減少資料庫壓力)
-    List<Notification> unreadNotifications = notificationRepository.findByRecipient_UsernameAndIsReadFalse(username);
-    if (!unreadNotifications.isEmpty()) {
-        unreadNotifications.forEach(n -> n.setRead(true));
-        notificationRepository.saveAll(unreadNotifications);
-    }
-
-    // 5. 傳遞數據到前端
-    model.addAttribute("user", user);
-    model.addAttribute("stockNotifications", stockNotifications);
-    model.addAttribute("adminNotifications", adminNotifications);
-    model.addAttribute("notificationStatusMap", notificationStatusMap);
-    model.addAttribute("appealDataMap", appealDataMap);
-    model.addAttribute("appealCountMap", appealCountMap); // 【新增】傳遞申訴次數 Map
-
-    // 傳遞分頁相關數據
-    model.addAttribute("stockPage", stockPage);
-    model.addAttribute("stockTotalPages", stockPageResult.getTotalPages());
-    model.addAttribute("stockSmartPages", generateSmartPagination(stockPage, stockPageResult.getTotalPages()));
-
-    model.addAttribute("adminPage", adminPage);
-    model.addAttribute("adminTotalPages", adminPageResult.getTotalPages());
-    model.addAttribute("adminSmartPages", generateSmartPagination(adminPage, adminPageResult.getTotalPages()));
-
-    return "notifications";
-}
-
 
     @GetMapping("/account/stock-notifications")
     public String stockNotifications(Model model,

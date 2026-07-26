@@ -565,6 +565,13 @@
                 max-width: 100%;
             }
         }
+        .footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
     </style>
 </head>
 
@@ -626,6 +633,12 @@
             </div>
         </div>
     </div>
+
+
+    <footer class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.</p>
+    </footer>
 
     <script th:inline="javascript">
         const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];

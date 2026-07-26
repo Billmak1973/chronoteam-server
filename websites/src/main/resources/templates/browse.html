@@ -226,6 +226,13 @@
                 left: 0;
             }
         }
+        .footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
     </style>
 </head>
 
@@ -413,6 +420,11 @@
             </div>
         </section>
     </div>
+
+    <footer class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.</p>
+    </footer>
 
     <!--  4. 引入公共登入/註冊彈窗 HTML -->
     <div th:replace="~{fragments/common :: modals}"></div>
