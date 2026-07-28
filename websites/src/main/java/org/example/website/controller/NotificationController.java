@@ -1,10 +1,9 @@
 package org.example.website.controller;
 
 import org.example.website.entity.Announcement;
-import org.example.website.entity.User;
 import org.example.website.repository.AnnouncementReceiptRepository;
 import org.example.website.repository.NotificationRepository;
-import org.example.website.repository.UserRepository; // 確保引入
+import org.example.website.repository.UserRepository;
 import org.example.website.service.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -51,7 +50,7 @@ public class NotificationController {
         String username = authentication.getName();
 
         // 1. 原本的系統通知未讀數
-        long oldSystemCount = notificationRepository.countByRecipient_UsernameAndIsReadFalse(username);
+        long oldSystemCount = notificationRepository.countByRecipient_UsernameAndIsReadFalse(username);//完全沒用
 
         // 2. 【新增】全新的公告未讀數
         long announcementCount = announcementReceiptRepository.countByUser_UsernameAndAnnouncement_TypeAndIsReadFalse(

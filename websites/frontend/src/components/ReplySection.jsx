@@ -11,9 +11,14 @@ const ReplySection = ({
     showReplyForm,
     setShowReplyForm,
     blockedUsers,        // 從父組件接收禁言列表 (實現全局同步)
-    onBlockUser          // 從父組件接收禁言處理函數
+    onBlockUser,         // 從父組件接收禁言處理函數
+    targetReviewId       // 【新增】接收參數
 }) => {
     // 輔助函數：解決 React 組件中無法直接調用 common.js 全局函數的問題
+    //核心作用：安全調用全局函數 showNotification
+    //而這裡的 ? : 是用來做二選一賦值的（如果 A 成立就選左邊，否則選右邊）。所以它非常適合用來根據狀態動態切換 CSS 樣式！
+    //情況 A：當你傳入 true 時（代表這是一個錯誤提示）
+    //情況 B：當你傳入 false 或 不傳參數（默認）時（代表這是一個成功/普通提示）
     const notify = (message, isError = false) => {
         if (typeof window.showNotification === 'function') {
             window.showNotification(message, isError);
@@ -89,6 +94,59 @@ const ReplySection = ({
             }
         }
     }, [showReplyForm, rootUsername, initialReplyCount, replyParentId]);
+
+    // ==========================================
+    // 【新增修復】：如果帶有 targetReviewId，強制加載回覆並展開
+    // ==========================================
+    useEffect(() => {
+        if (targetReviewId && !isOpen && initialReplyCount > 0) {
+            setIsOpen(true);
+            fetchReplies(0, sort);
+        }
+    }, [targetReviewId, initialReplyCount, sort]);
+
+    // ==========================================
+    // 【修改修復】：樓中樓分步定位邏輯 (依賴 replies 加載完成)
+    // ==========================================
+    useEffect(() => {
+        // 必須確保 replies 已經加載出來，否則找不到目標
+        if (targetReviewId && replies.length > 0) {
+            const isTargetInReplies = replies.some(r => r.id.toString() === targetReviewId);
+
+            if (isTargetInReplies) {
+                // 1. 確保列表處於展開狀態 (雙重保險)
+                setIsOpen(true);
+
+                // 2. 等待 DOM 渲染完成後，執行分步滾動
+                setTimeout(() => {
+                    // 2.1 先定位並滾動到主回復（根評論卡片）
+                    const rootCardEl = document.getElementById(`review-card-${reviewId}`);
+                    if (rootCardEl) {
+                        rootCardEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+
+                    // 2.2 延遲 600ms，讓根評論的滾動視覺上先發生，然後再定位到具體的樓中樓並高亮
+                    setTimeout(() => {
+                        const targetEl = document.getElementById(`reply-item-${targetReviewId}`);
+                        if (targetEl) {
+                            // 平滑滾動到視圖中央
+                            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                            // 添加金色高亮動畫，持續 3 秒後消失
+                            targetEl.style.transition = 'box-shadow 0.5s, background-color 0.5s';
+                            targetEl.style.boxShadow = '0 0 0 4px rgba(212, 175, 55, 0.6)';
+                            targetEl.style.backgroundColor = 'rgba(212, 175, 55, 0.15)';
+
+                            setTimeout(() => {
+                                targetEl.style.boxShadow = '';
+                                targetEl.style.backgroundColor = '';
+                            }, 3000);
+                        }
+                    }, 600);
+                }, 300); // 300ms 確保 setIsOpen(true) 觸發的 DOM 已經渲染
+            }
+        }
+    }, [replies, targetReviewId, reviewId]);
 
     const fetchReplies = useCallback(async (targetPage = 0, targetSort = sort) => {
         setLoading(true);
@@ -260,12 +318,15 @@ const ReplySection = ({
             }
             return;
         }
+
         const api = isDislike ? `/api/review/${replyId}/dislike` : `/api/review/${replyId}/like`;
+
         try {
             const res = await fetch(api, { method: 'POST', credentials: 'same-origin' });
             const result = await res.json();
 
             if (result.success) {
+                // 成功：更新 UI (只更新被點擊的那一條回覆)
                 setReplies(prev => prev.map(r =>
                     r.id === replyId ? {
                         ...r,
@@ -277,21 +338,31 @@ const ReplySection = ({
                     } : r
                 ));
             } else {
-                // ================= 失敗情況下的攔截邏輯 =================
+                // ================= 失敗情況下的截邏輯 =================
 
-                // 1. 最高優先級：攔截「永久拉黑」錯誤，彈出紅色警告框
+                // 1. 最高優先級：攔截「永久拉黑」錯誤
                 if (result.message === "BLACKLISTED" || result.blacklisted) {
                     if (window.showBlacklistedModal) {
-                        window.showBlacklistedModal(); // 調用 HTML 中定義的紅色彈窗
+                        window.showBlacklistedModal();
                     }
-                    return; // 攔截，不執行後續的普通錯誤提示
+                    return;
                 }
 
-                // 2. 普通錯誤提示 (例如：網絡錯誤、評論不存在等)
+                // 2. 【新增】攔截「速率限制 / 操作頻繁」錯誤 關鍵詞
+                //后端抛出(RateLimitService) → 异常处理器捕获 → 返回JSON → 前端检查关键词 → 显示提示
+                if (result.message && (result.message.includes('1分鐘內操作達到') || result.message.includes('限制'))) {
+                    notify('❌ ' + result.message, true);
+                    return;
+                }
+
+                // 3. 普通錯誤提示 (僅打印日誌，不打擾用戶，因為樓中樓操作頻繁)
                 console.error('點贊/踩失敗:', result.message);
+                // 可選：如果希望提示用戶，可以取消下面這行的註釋
+                // notify('❌ ' + result.message, true);
             }
         } catch (err) {
             console.error('網絡請求錯誤:', err);
+            notify('網絡錯誤', true);
         }
     };
 
@@ -427,10 +498,10 @@ const ReplySection = ({
     };
 
     //  管理員專屬：永久拉黑用戶 (調用 HTML 中的自定義漂亮彈窗) 不是react自帶的
-    const handleBlacklist = (targetUsername,reviewId,reviewContent) => {
+    const handleBlacklist = (targetUsername, reviewId, reviewContent) => {
         // 調用 HTML 中定義的全局函數，打開漂亮的自定義彈窗
         if (typeof window.openBlacklistConfirmModal === 'function') {
-            window.openBlacklistConfirmModal(targetUsername,reviewId,reviewContent);
+            window.openBlacklistConfirmModal(targetUsername, reviewId, reviewContent);
         } else {
             // 降級處理：萬一 HTML 彈窗沒加載成功，給予提示
             notify('❌ 系統彈窗組件未加載，請刷新頁面後重試', true);
@@ -500,7 +571,8 @@ const ReplySection = ({
                     ) : (
                         <div className="reply-items">
                             {replies.map(reply => (
-                                <div key={reply.id}>
+                                // 【修改處】：加入 id={`reply-item-${reply.id}`} 供定位使用
+                                <div key={reply.id} id={`reply-item-${reply.id}`}>
                                     <div className="reply-item">
                                         <div className="reply-header">
                                             <div className="reply-user">
@@ -621,7 +693,7 @@ const ReplySection = ({
                                             {currentUsername && isAdmin && (
                                                 <button
                                                     className="reply-action-btn btn-blacklist"
-                                                    onClick={() => handleBlacklist(reply.customer.username,reply.id,reply.content)}
+                                                    onClick={() => handleBlacklist(reply.customer.username, reply.id, reply.content)}
                                                     title="永久拉黑該用戶"
                                                 >
                                                     <i className="fas fa-user-slash"></i> 永久拉黑

@@ -6,6 +6,7 @@ import org.example.website.entity.ReviewArchive;
 import org.example.website.repository.ReportRepository;
 import org.example.website.repository.ReviewArchiveRepository;
 import org.example.website.repository.ReviewRepository;
+import org.example.website.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,13 +24,14 @@ public class AdminReviewController {
     private final ReviewRepository reviewRepository;
     private final ReviewArchiveRepository archiveRepository;
     private final ReportRepository reportRepository;
-
+    private final UserRepository userRepository;
     public AdminReviewController(ReviewRepository reviewRepository,
                                  ReviewArchiveRepository archiveRepository,
-                                 ReportRepository reportRepository) {
+                                 ReportRepository reportRepository, UserRepository userRepository) {
         this.reviewRepository = reviewRepository;
         this.archiveRepository = archiveRepository;
         this.reportRepository = reportRepository;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/reviews")
@@ -59,8 +61,6 @@ public class AdminReviewController {
         // 傳遞分頁信息供前端渲染分頁器
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", Math.max(reviews.getTotalPages(), Math.max(archives.getTotalPages(), reports.getTotalPages())));
-
-        // 【核心修復點 2】：如果您的 HTML 文件放在 templates/admin/ 目錄下，必須加上 "admin/" 前綴
         return "admin/admin-reviews";
     }
 }

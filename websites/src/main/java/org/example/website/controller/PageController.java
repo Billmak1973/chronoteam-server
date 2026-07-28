@@ -452,6 +452,7 @@ public class PageController {
 
         // 進入頁面時，自動將該用戶的到貨通知標記為已讀 (使用 user.getId())
         announcementReceiptRepository.markAllAsReadByUserAndType(user.getId(), Announcement.AnnouncementType.STOCK);
+        notificationRepository.markAllAsReadByRecipientUserId(user.getId());
 
         // ==========================================
         // 【保持原樣】：管理通知依然從 Notification 查詢

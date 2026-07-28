@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ReplySection from './ReplySection';
 
 const ReviewCard = ({
@@ -10,9 +10,14 @@ const ReviewCard = ({
     onReviewDeleted,
     onReviewUpdated,
     blockedUsers,        // 從父組件接收禁言列表
-    onBlockUser          // 從父組件接收禁言處理函數
+    onBlockUser,         // 從父組件接收禁言處理函數
+    targetReviewId       // 【新增】接收參數
 }) => {
-    // 輔助函數：安全調用全局 showNotification，若不存在則降級為 alert
+    // 輔助函數：解決 React 組件中無法直接調用 common.js 全局函數的問題
+    //核心作用：安全調用全局函數 showNotification
+    //而這裡的 ? : 是用來做二選一賦值的（如果 A 成立就選左邊，否則選右邊）。所以它非常適合用來根據狀態動態切換 CSS 樣式！
+    //情況 A：當你傳入 true 時（代表這是一個錯誤提示）
+    //情況 B：當你傳入 false 或 不傳參數（默認）時（代表這是一個成功/普通提示）
     const notify = (message, isError = false) => {
         if (typeof window.showNotification === 'function') {
             window.showNotification(message, isError);
@@ -63,8 +68,28 @@ const ReviewCard = ({
         return false;
     }, [likeCount, dislikeCount, review.replyCount]);
 
+    // 【核心新增】：如果目標 ID 就是當前根評論，則執行滾動和高亮
+    useEffect(() => {
+        if (targetReviewId && review.id.toString() === targetReviewId) {
+            setTimeout(() => {
+                const targetEl = document.getElementById(`review-card-${review.id}`);
+                if (targetEl) {
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetEl.style.transition = 'box-shadow 0.5s, background-color 0.5s';
+                    targetEl.style.boxShadow = '0 0 0 4px rgba(212, 175, 55, 0.6)';
+                    targetEl.style.backgroundColor = 'rgba(212, 175, 55, 0.15)';
+                    setTimeout(() => {
+                        targetEl.style.boxShadow = '';
+                        targetEl.style.backgroundColor = '';
+                    }, 3000);
+                }
+            }, 500);
+        }
+    }, [targetReviewId, review.id]);
+
     // --- 現有函數 ---
     const handleLike = async () => {
+        // 1. 未登入截
         if (!currentUsername || currentUsername === 'anonymousUser') {
             if (typeof window.showLoginRequiredModal === 'function') {
                 window.showLoginRequiredModal();
@@ -75,27 +100,42 @@ const ReviewCard = ({
         try {
             const res = await fetch(`/api/review/${review.id}/like`, { method: 'POST', credentials: 'same-origin' });
             const result = await res.json();
+
             if (result.success) {
+                // 成功：更新 UI
                 setLikeCount(result.likeCount);
                 setDislikeCount(result.dislikeCount);
                 setIsLiked(result.liked);
                 setIsDisliked(result.disliked);
             } else {
+                // ================= 失敗情況下的攔截邏輯 =================
+
+                // 1. 最高優先級：攔截「永久拉黑」錯誤
                 if (result.message === "BLACKLISTED" || result.blacklisted) {
                     if (window.showBlacklistedModal) {
                         window.showBlacklistedModal();
                     }
-                    return;
+                    return; // 攔截，不執行後續邏輯
                 }
-                alert(result.message || '點贊失敗');
+
+                // 2. 【新增】攔截「速率限制 / 操作頻繁」錯誤
+                // 檢查後端返回的消息是否包含「1分鐘」或「限制」等關鍵字
+                if (result.message && (result.message.includes('1分鐘內操作達到') || result.message.includes('限制'))) {
+                    notify('❌ ' + result.message, true); // 使用統一的 notify 提示錯誤
+                    return; // 截，不執行後續的 alert
+                }
+
+                // 3. 其他普通錯誤（使用 notify 代替 alert，體驗更好）
+                notify(result.message || '點贊失敗', true);
             }
         } catch (error) {
             console.error('點贊網絡錯誤:', error);
-            alert('網絡錯誤');
+            notify('網絡錯誤', true);
         }
     };
 
     const handleDislike = async () => {
+        // 1. 未登入攔截
         if (!currentUsername || currentUsername === 'anonymousUser') {
             if (typeof window.showLoginRequiredModal === 'function') {
                 window.showLoginRequiredModal();
@@ -106,23 +146,36 @@ const ReviewCard = ({
         try {
             const res = await fetch(`/api/review/${review.id}/dislike`, { method: 'POST', credentials: 'same-origin' });
             const result = await res.json();
+
             if (result.success) {
+                // 成功：更新 UI
                 setLikeCount(result.likeCount);
                 setDislikeCount(result.dislikeCount);
                 setIsLiked(result.liked);
                 setIsDisliked(result.disliked);
             } else {
+                // ================= 失敗情況下的攔截邏輯 =================
+
+                // 1. 最高優先級：攔截「永久拉黑」錯誤
                 if (result.message === "BLACKLISTED" || result.blacklisted) {
                     if (window.showBlacklistedModal) {
                         window.showBlacklistedModal();
                     }
                     return;
                 }
-                alert(result.message || '踩失敗');
+
+                // 2. 【新增】攔截「速率限制 / 操作頻繁」錯誤
+                if (result.message && (result.message.includes('1分鐘內操作達到') || result.message.includes('限制'))) {
+                    notify('❌ ' + result.message, true);
+                    return;
+                }
+
+                // 3. 其他普通錯誤
+                notify(result.message || '踩失敗', true);
             }
         } catch (error) {
             console.error('踩網絡錯誤:', error);
-            alert('網絡錯誤');
+            notify('網絡錯誤', true);
         }
     };
 
@@ -170,7 +223,7 @@ const ReviewCard = ({
                     });
                     const result = await res.json();
                     if (result.success) {
-                        if(window.showNotification) {
+                        if (window.showNotification) {
                             window.showNotification('✅ 評論已刪除，頁面將刷新...');
                         }
                         setTimeout(() => {
@@ -310,23 +363,23 @@ const ReviewCard = ({
             const params = new URLSearchParams();
             params.append('durationMinutes', totalMinutes);
             params.append('reason', '管理員禁言');
-             params.append('reviewId', review.id);
-             params.append('reviewContent', review.content); // 這裡的 content 是純文本，長度適中，適合 URL 傳遞
+            params.append('reviewId', review.id);
+            params.append('reviewContent', review.content); // 這裡的 content 是純文本，長度適中，適合 URL 傳遞
             try {
                 const response = await fetch(
                     `/api/user/${targetUsername}/toggle-block?${params}`,
                     { method: 'POST', credentials: 'same-origin' }
                 );
                 const result = await response.json();
-                            if (result.alreadyBanned) {
-                                // 彈出警告彈窗（復用 adminPermissionModal）
-                                const modal = document.getElementById('adminPermissionModal');
-                                if (modal) {
-                                    modal.style.display = 'flex';
-                                    document.body.style.overflow = 'hidden';
-                                }
-                                return; // 阻止後續操作，不關閉 showBlockModal，讓管理員看到警告
-                            }
+                if (result.alreadyBanned) {
+                    // 彈出警告彈窗（復用 adminPermissionModal）
+                    const modal = document.getElementById('adminPermissionModal');
+                    if (modal) {
+                        modal.style.display = 'flex';
+                        document.body.style.overflow = 'hidden';
+                    }
+                    return; // 阻止後續操作，不關閉 showBlockModal，讓管理員看到警告
+                }
                 if (response.ok) {
                     notify(`✅ 已全局禁言用戶 ${blockValue} ${blockUnit === 'day' ? '天' : blockUnit === 'week' ? '週' : '月'}`);
                     await onBlockUser(targetUsername, true);
@@ -402,7 +455,7 @@ const ReviewCard = ({
         setTargetBlockUser(targetUsername); // 僅用於管理員模態框顯示
 
         if (isAdmin) {
-                setShowBlockModal(true)
+            setShowBlockModal(true)
         } else {
             // 普通用戶邏輯保持不變 (雙向禁言)
             onBlockUser(targetUsername, true).then(result => {
@@ -483,7 +536,8 @@ const ReviewCard = ({
     };
 
     return (
-        <div className={`review-card ${review.pinned ? 'pinned' : ''}`}>
+        // 【修改處】：加入 id={`review-card-${review.id}`} 供定位使用
+        <div id={`review-card-${review.id}`} className={`review-card ${review.pinned ? 'pinned' : ''}`}>
             {/* 頭部：左邊是用戶信息，右邊是點贊/踩/回復/置頂 */}
             <div className="review-header">
                 <div className="reviewer-info">
@@ -567,8 +621,8 @@ const ReviewCard = ({
                             <button type="button" onClick={() => formatText('italic')} style={toolbarBtnStyle} title="斜體"><i>I</i></button>
                             <button type="button" onClick={() => formatText('underline')} style={toolbarBtnStyle} title="下劃線"><u>U</u></button>
                             <div style={{ width: '1px', backgroundColor: '#ddd', margin: '0 0.25rem' }}></div>
-                            <button type="button" onClick={() => formatText('foreColor', '#e94560')} style={{...toolbarBtnStyle, color: '#e94560'}} title="紅色字體">A</button>
-                            <button type="button" onClick={() => formatText('hiliteColor', '#fff3cd')} style={{...toolbarBtnStyle, backgroundColor: '#fff3cd'}} title="背景色">A</button>
+                            <button type="button" onClick={() => formatText('foreColor', '#e94560')} style={{ ...toolbarBtnStyle, color: '#e94560' }} title="紅色字體">A</button>
+                            <button type="button" onClick={() => formatText('hiliteColor', '#fff3cd')} style={{ ...toolbarBtnStyle, backgroundColor: '#fff3cd' }} title="背景色">A</button>
                             <div style={{ width: '1px', backgroundColor: '#ddd', margin: '0 0.25rem' }}></div>
                             <button type="button" onClick={() => formatText('insertUnorderedList')} style={toolbarBtnStyle} title="列表">• List</button>
                             <button type="button" onClick={insertLink} style={toolbarBtnStyle} title="插入連結">🔗</button>
@@ -720,7 +774,7 @@ const ReviewCard = ({
                 {isAdmin && (
                     <button
                         className="btn-blacklist"
-                        onClick={() => handleBlacklist(review.customer.username, review.id,review.content )}
+                        onClick={() => handleBlacklist(review.customer.username, review.id, review.content)}
                         title="永久拉黑該用戶（加入黑名單）"
                     >
                         <i className="fas fa-user-slash"></i> 永久拉黑
@@ -740,6 +794,7 @@ const ReviewCard = ({
                 setShowReplyForm={setShowReplyForm}
                 blockedUsers={blockedUsers}
                 onBlockUser={onBlockUser}
+                targetReviewId={targetReviewId} // 【新增】傳遞給樓中樓組件
             />
 
             {/* 管理員刪除確認模態框 */}
@@ -796,7 +851,7 @@ const ReviewCard = ({
                             管理員禁言
                         </h3>
                         <p style={{ marginBottom: '1rem', color: 'var(--gray)' }}>
-                            請輸入禁言時長，用戶 <strong>{targetBlockUser}</strong> 在期間內將無法在任何評論區回復：
+                            請輸入禁言時長，用戶 <strong>{targetBlockUser}</strong> 在期間內將無法在任何評論區回覆：
                         </p>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', margin: '1.5rem 0' }}>
                             <input

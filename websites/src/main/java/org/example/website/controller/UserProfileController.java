@@ -1,14 +1,20 @@
 package org.example.website.controller;
 
+import org.example.website.dto.ApiResponse;
 import org.example.website.entity.User;
 import org.example.website.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;  // 新增导入
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/user")
@@ -65,5 +71,27 @@ public class UserProfileController {
 
         // 5. 返回成功響應
         return ResponseEntity.ok(Map.of("success", true, "message", "更新成功"));
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllUsers(Authentication authentication) {
+        // 1. 權限校驗 (根據你的項目邏輯調整，這裡假設只有 admin 能調用)
+        if (authentication == null || !"admin".equals(authentication.getName())) {
+            return ResponseEntity.status(403).body(ApiResponse.error("無權操作，僅限管理員"));
+        }
+
+        // 2. 查詢所有用戶
+        List<User> users = userRepository.findAll();
+
+        // 3. 轉換為簡單的 Map，只返回前端需要的字段 (避免洩露密碼等敏感信息)
+        List<Map<String, Object>> simpleUsers = users.stream().map(user -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", user.getId());
+            map.put("username", user.getUsername());
+            map.put("name", user.getName()); // 如果有 name 字段也可以加上
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.okWithData("獲取成功", simpleUsers));
     }
 }

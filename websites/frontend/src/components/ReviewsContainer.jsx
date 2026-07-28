@@ -15,6 +15,17 @@ const ReviewsContainer = ({ productId, currentUsername, isAdmin, canReview, revi
     // 統一管理禁言用戶列表（在所有評論和回覆中共享）
     const [blockedUsers, setBlockedUsers] = useState([]);
 
+    // 【新增】獲取 URL 中的 reviewId 參數 (可能是根評論，也可能是樓中樓)
+    const [targetReviewId, setTargetReviewId] = useState(null);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const reviewId = params.get('reviewId');
+        if (reviewId) {
+            setTargetReviewId(reviewId);
+        }
+    }, []);
+
     const fetchReviews = useCallback(async (targetPage = 0, targetSort = sort) => {
         setLoading(true);
         try {
@@ -217,6 +228,7 @@ const ReviewsContainer = ({ productId, currentUsername, isAdmin, canReview, revi
                             onReviewUpdated={handleReviewUpdated}
                             blockedUsers={blockedUsers}
                             onBlockUser={handleBlockUser}
+                            targetReviewId={targetReviewId} // 【核心修改】傳遞給所有子組件，讓它們自己判斷是否需要展開
                         />
                     ))}
                 </div>

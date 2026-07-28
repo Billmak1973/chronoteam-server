@@ -4,13 +4,14 @@ import org.example.website.entity.Notification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
-
-    List<Notification> findByRecipient_UsernameOrderByCreatedAtDesc(String username);
 
     long countByRecipient_UsernameAndIsReadFalse(String username);
 
@@ -18,6 +19,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Page<Notification> findByTypeAndRecipient_UsernameOrderByCreatedAtDesc(
             Notification.NotificationType type, String username, Pageable pageable);
 
-    // 查詢用戶所有未讀通知 (用於進入頁面時全部標記為已讀)
-    List<Notification> findByRecipient_UsernameAndIsReadFalse(String username);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Notification n SET n.isRead = true WHERE n.recipient.id = :userId AND n.isRead = false")
+    int markAllAsReadByRecipientUserId(@Param("userId") Long userId);
 }
