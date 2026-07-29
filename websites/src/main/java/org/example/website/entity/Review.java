@@ -69,4 +69,6 @@ public class Review {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    //最好的辦法是加個Boolean，就可以代表該評論的狀態，而不需要ReviewArchive
 }

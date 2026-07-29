@@ -267,15 +267,15 @@ const ReviewCard = ({
     };
 
     const handleEditClick = () => {
-        if (isAdmin) {
+      //  if (isAdmin) {
             setEditMode('rich');
             setEditContent(review.formattedContent || review.content);
             setIsEditing(true);
-        } else {
-            setEditMode('text');
-            setEditContent(review.content);
-            setIsEditing(true);
-        }
+      //  } else {
+     //       setEditMode('text');
+     //       setEditContent(review.content);
+     //       setIsEditing(true);
+     //   }
     };
 
     const handleSaveEdit = async () => {

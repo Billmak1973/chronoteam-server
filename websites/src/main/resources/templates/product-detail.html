@@ -4333,6 +4333,7 @@
             const reviewId = document.getElementById('reportReviewId').value;
             const reportedUsername = document.getElementById('reportReportedUsername').value;
             const targetType = document.getElementById('reportTargetTypeVal').value;
+            const reportedContent = document.getElementById('reportedContentText')?.textContent?.trim() || null;
 
             const submitBtn = document.getElementById('submitReportBtn');
             const originalText = submitBtn.innerHTML;
@@ -4349,7 +4350,8 @@
                         reportedUsername: reportedUsername,
                         targetType: targetType,
                         category: selectedCategory,
-                        reason: selectedReason
+                        reason: selectedReason,
+                        reportContent: reportedContent // 將內容快照傳遞給後端
                     })
                 });
 
@@ -4607,9 +4609,9 @@
                         let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
                         list.forEach(item => {
                             html += `<li style="padding: 0.8rem 1rem; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center;">
-                              <span><i class="fas fa-user" style="color: var(--gold); margin-right: 0.5rem;"></i> ${item.username}</span>
-                              <span style="font-size: 0.8rem; color: var(--gray);">${item.createdAt}</span>
-                           </li>`;
+                          <span><i class="fas fa-user" style="color: var(--gold); margin-right: 0.5rem;"></i> ${item.username}</span>
+                          <span style="font-size: 0.8rem; color: var(--gray);">${item.createdAt}</span>
+                       </li>`;
                         });
                         html += '</ul>';
                         body.innerHTML = html;
@@ -4817,10 +4819,10 @@
                 alreadyReviewed = document.createElement('div');
                 alreadyReviewed.className = 'already-reviewed';
                 alreadyReviewed.innerHTML = `
-                <p style="margin: 0; color: #155724; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
-                    <i class="fas fa-check-circle"></i><strong>您已評價過該商品，感謝您的反饋！</strong>
-                </p>
-            `;
+            <p style="margin: 0; color: #155724; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
+                <i class="fas fa-check-circle"></i><strong>您已評價過該商品，感謝您的反饋！</strong>
+            </p>
+        `;
                 // 插入到評論區上方
                 const reviewsSection = document.querySelector('.reviews-section') || document.querySelector('#reviews-react-root');
                 if (reviewsSection) {

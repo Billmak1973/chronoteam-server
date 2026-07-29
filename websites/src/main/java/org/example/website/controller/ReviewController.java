@@ -5,7 +5,7 @@ import org.example.website.entity.*;
 import org.example.website.repository.*;
 import org.example.website.service.AdminPenaltyService;
 import org.example.website.service.ReviewReactionService;
-import org.example.website.repository.*; // 確保引入了 ReviewReactionRepository
+import org.example.website.repository.*;
 import org.example.website.service.UserBlockService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,6 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
@@ -142,6 +143,18 @@ public class ReviewController {
                 return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
             }
 
+            // ================= 新增：智能判斷是否為富文本 =================
+            // 只有當內容包含特定的格式標籤時，才視為富文本
+            boolean hasRichTextTags = safeHtml.contains("<ul") ||
+                    safeHtml.contains("<li") ||
+                    safeHtml.contains("<b>") || safeHtml.contains("<strong") ||
+                    safeHtml.contains("<u>") ||
+                    safeHtml.contains("<i>") || safeHtml.contains("<em") ||
+                    safeHtml.contains("<font") ||
+                    safeHtml.contains("<span") || safeHtml.contains("<div") ||
+                    safeHtml.contains("<s>") || safeHtml.contains("<mark");
+            // ============================================================
+
             // 解析樓中樓參數 (parentId)
             // 注意：replyToUser 已在上方解析，此處直接使用即可
             Long parentId = request.get("parentId") != null ? Long.valueOf(request.get("parentId").toString()) : null;
@@ -157,10 +170,18 @@ public class ReviewController {
             review.setUser(user); // 修改：設置 User 關聯
             review.setProduct(product);
 
-            // 【核心修復 3】：分別設置純文本和富文本字段
-            review.setContent(plainText);           // 存純文本 (用於通知、搜索)
-            review.setFormattedContent(safeHtml);   // 存安全的 HTML (用於前端渲染)
-            review.setIsFormatted(true);            // 標記為富文本
+            // 【核心修復 3】：根據判斷結果分別設置字段
+            review.setContent(plainText); // 始終保存純文本（用於搜索和通知）
+
+            if (hasRichTextTags) {
+                // 情況 A：是富文本 -> 保存 HTML 並標記為 1
+                review.setFormattedContent(safeHtml);
+                review.setIsFormatted(true);
+            } else {
+                // 情況 B：是純文本 -> formatted_content 留空，標記為 0
+                review.setFormattedContent(null);
+                review.setIsFormatted(false);
+            }
 
             if (parentId != null) {
                 // ================= 樓中樓回覆邏輯 =================
@@ -355,37 +376,53 @@ public class ReviewController {
                         .body(new ApiResponse(false, "BLACKLISTED", "您已被管理員永久拉黑，無法修改評論"));
             }
 
-            // ================= 【核心修改 2】：像 submitReview 一樣處理富文本 =================
 
-            // 1. 配置 Jsoup 白名單 (與 submitReview 完全一致，允許 style 等屬性)
-            Safelist safelist = Safelist.relaxed()
-                    .addTags("span", "div", "ul", "ol", "li", "u", "s", "font", "b", "i", "strong", "em", "mark")
-                    .addAttributes(":all", "style", "class", "id") // 關鍵：允許所有標籤攜帶 style 屬性
-                    .addAttributes("span", "style", "class")
-                    .addAttributes("div", "style", "class")
-                    .addAttributes("font", "color", "size", "face") // 兼容舊版字體標籤
-                    .addProtocols("img", "src", "https", "http")
-                    .preserveRelativeLinks(true);
+            // ================= 【核心修改 2】：精準處理「富文本」與「純文本」的轉換 =================
 
-            // 2. 清理 HTML，防止 XSS 攻擊
-            String safeHtml = Jsoup.clean(rawContent, safelist);
+            // 1. 獲取前端傳來的格式標誌 (前端 ReviewCard 會根據 editMode 傳遞 true/false)
+            boolean isFormatted = request.containsKey("isFormatted")
+                    ? Boolean.parseBoolean(request.get("isFormatted").toString())
+                    : true; // 默認視為富文本，兼容舊版前端
 
-            // 3. 提取純文本 (用於後台搜索、發送系統通知時不帶 HTML 標籤)
-            String plainText = Jsoup.parse(safeHtml).text();
+            String plainText; // 用於存儲純文本 (搜索、通知、純文本渲染)
+            String safeHtml;  // 用於存儲安全的 HTML (富文本渲染)
 
-            if (plainText.trim().isEmpty()) {
+            if (isFormatted) {
+                // 【情況 A / C】：當前為「富文本」模式 (前端傳來的是 HTML 代碼)
+                // 包含：富文本 ➡️ 富文本 (保持不變)
+
+                // 配置 Jsoup 白名單，清理 HTML 防止 XSS
+                Safelist safelist = Safelist.relaxed()
+                        .addTags("span", "div", "ul", "ol", "li", "u", "s", "font", "b", "i", "strong", "em", "mark", "br")
+                        .addAttributes(":all", "style", "class", "id")
+                        .addAttributes("span", "style", "class")
+                        .addAttributes("div", "style", "class")
+                        .addAttributes("font", "color", "size", "face")
+                        .addProtocols("img", "src", "https", "http")
+                        .preserveRelativeLinks(true);
+
+                safeHtml = Jsoup.clean(rawContent, safelist);
+                // 提取純文本 (去除所有 HTML 標籤，用於後台搜索和系統通知)
+                plainText = Jsoup.parse(safeHtml).text();
+            } else {
+                // 【情況 B / D】：當前為「純文本」模式 (前端傳來的是純文本字符串)
+                // 包含：純文本 ➡️ 純文本 (保持不變)，或 富文本 ➡️ 純文本 (降級)
+
+                // 直接保留原始純文本，確保換行符等格式不丟失 (Jsoup 會吃掉換行符)
+                plainText = rawContent.trim();
+                // 純文本模式下，不需要存儲 HTML，設為 null 節省空間並避免前端誤用
+                safeHtml = null;
+            }
+
+            // 2. 校驗純文本是否為空
+            if (plainText.isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
             }
 
-            // 4. 判斷前端是否明確指示這是富文本 (如果前端沒傳，默認視為富文本)
-            boolean isFormatted = request.containsKey("isFormatted")
-                    ? Boolean.parseBoolean(request.get("isFormatted").toString())
-                    : true;
-
-            // 5. 更新 Review 實體的字段
-            review.setContent(plainText);           // 存純文本
-            review.setFormattedContent(safeHtml);   // 存安全的 HTML (用於前端渲染顏色/格式)
-            review.setIsFormatted(isFormatted);     // 標記是否為富文本
+            // 3. 更新 Review 實體的字段
+            review.setContent(plainText);           // 始終存儲純文本 (用於後台搜索、系統通知、純文本渲染)
+            review.setFormattedContent(safeHtml);   // 富文本存 HTML，純文本存 null
+            review.setIsFormatted(isFormatted);     // 更新格式標誌，前端據此決定渲染方式
 
             // =====================================================================
 
@@ -455,6 +492,9 @@ public class ReviewController {
             archive.setParentId(review.getParentId());
             archive.setReplyToUser(review.getReplyToUser());
             archive.setOriginalCreatedAt(review.getCreatedAt());
+            archive.setOrderNo(review.getOrderNo());
+            archive.setFormattedContent(review.getFormattedContent());
+            archive.setIsFormatted(review.getIsFormatted());
 
             // 查找執行刪除操作的 User 實體 (如果是 admin 字符串，需查詢對應 User，若為系統自動刪除可為 null)
             User operatorUser = userRepository.findByUsername(username).orElse(null);
@@ -907,5 +947,187 @@ public class ReviewController {
         }
 
         return ResponseEntity.ok(ApiResponse.okWithData("成功", data));
+    }
+
+    @PostMapping("/restore/{archiveId}")
+    @Transactional
+    public ResponseEntity<ApiResponse> restoreReview(
+            @PathVariable Long archiveId,
+            Authentication authentication) {
+        try {
+            // 1. 驗證管理員權限
+            if (!"admin".equals(authentication.getName())) {
+                return ResponseEntity.status(403)
+                        .body(ApiResponse.error("無權操作，僅限管理員"));
+            }
+
+            // 2. 查找歸檔記錄
+            ReviewArchive archive = reviewArchiveRepository.findById(archiveId)
+                    .orElseThrow(() -> new RuntimeException("歸檔記錄不存在"));
+
+            // 3. 檢查原評論是否已存在（防止重複恢復）
+            if (reviewRepository.findById(archive.getOriginalReviewId()).isPresent()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("該評論已經存在，無需恢復"));
+            }
+
+            // ==========================================
+            // 【核心新增】：檢查樓中樓的父評論是否存在
+            // ==========================================
+            if (archive.getParentId() != null) {
+                // 如果是樓中樓回覆，必須確保其父評論（根評論）仍然存在于 review 表中
+                boolean parentExists = reviewRepository.existsById(archive.getParentId());
+                if (!parentExists) {
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("無法恢復：該回覆的父評論已被刪除，無法單獨恢復樓中樓回覆！"));
+                }
+            }
+            // ==========================================
+
+            // 4. 判斷是否為「根評論」且「非管理員發表」，若是則需要恢復商品統計數據
+            boolean isRootReview = (archive.getParentId() == null);
+            boolean isAdminReview = "ADMIN_COMMENT".equals(archive.getOrderNo());
+
+            if (isRootReview && !isAdminReview && archive.getRating() != null) {
+                Product product = productRepository.findById(archive.getProductId())
+                        .orElseThrow(() -> new RuntimeException("商品不存在"));
+
+                // 恢復評論總數
+                Integer currentCount = product.getTotalReviewCount();
+                product.setTotalReviewCount(currentCount == null ? 1 : currentCount + 1);
+
+                // 恢復總評分
+                BigDecimal currentScore = product.getTotalScore();
+                BigDecimal ratingValue = BigDecimal.valueOf(archive.getRating());
+                product.setTotalScore(currentScore == null ? ratingValue : currentScore.add(ratingValue));
+
+                productRepository.save(product);
+            }
+
+            // 5. 恢復評論到 Review 表
+            Review restoredReview = new Review();
+            restoredReview.setReviewId(archive.getOriginalReviewId());
+            restoredReview.setUser(archive.getAuthor());
+            restoredReview.setProduct(productRepository.findById(archive.getProductId())
+                    .orElseThrow(() -> new RuntimeException("商品不存在")));
+            restoredReview.setOrderNo(archive.getOrderNo());
+            restoredReview.setContent(archive.getContent());
+            restoredReview.setFormattedContent(archive.getFormattedContent());
+            restoredReview.setIsFormatted(archive.getIsFormatted());
+            restoredReview.setRating(archive.getRating());
+
+            // 樓中樓相關字段會在此處被正確恢復
+            restoredReview.setParentId(archive.getParentId());
+            restoredReview.setReplyToUser(archive.getReplyToUser());
+
+            restoredReview.setLikeCount(archive.getLikeCountAtDelete() != null ? archive.getLikeCountAtDelete() : 0);
+            restoredReview.setDislikeCount(archive.getDislikeCountAtDelete() != null ? archive.getDislikeCountAtDelete() : 0);
+            restoredReview.setPinned(false); // 恢復後取消置頂
+            restoredReview.setCreatedAt(archive.getOriginalCreatedAt());
+
+//            reviewRepository.save(restoredReview);
+            // 5. 恢復評論到 Review 表 (使用原生 SQL 強制復用原 ID)
+            reviewRepository.insertReviewWithOriginalId(
+                    archive.getOriginalReviewId(),
+                    archive.getOrderNo(),
+                    archive.getAuthor().getId(),
+                    archive.getProductId(),
+                    archive.getRating(),
+                    archive.getContent(),
+                    archive.getParentId(),
+                    archive.getReplyToUser(),
+                    archive.getLikeCountAtDelete() != null ? archive.getLikeCountAtDelete() : 0,
+                    archive.getDislikeCountAtDelete() != null ? archive.getDislikeCountAtDelete() : 0,
+                    false, // 恢復後取消置頂
+                    archive.getFormattedContent(),
+                    archive.getIsFormatted(),
+                    archive.getOriginalCreatedAt()
+            );
+
+            // 6. 發送通知給用戶 (動態調整文案)
+            Notification notification = new Notification();
+            notification.setRecipient(archive.getAuthor());
+            notification.setSender(userRepository.findByUsername("admin").orElse(null));
+            notification.setType(Notification.NotificationType.SYSTEM);
+
+            String targetType = isRootReview ? "評論" : "回覆";
+            notification.setTitle("🎉 您的" + targetType + "已被恢復");
+            notification.setContent(
+                    "您好，\n\n" +
+                            "您之前發表的" + targetType + "已被管理員恢復。\n\n" +
+                            "內容：" + archive.getContent() + "\n\n" +
+                            "感謝您對社區的貢獻！\n\n" +
+                            "ChronoTeam 管理團隊"
+            );
+            notification.setRead(false);
+            notificationRepository.save(notification);
+
+            // 7. 刪除歸檔記錄
+            reviewArchiveRepository.delete(archive);
+
+            return ResponseEntity.ok(ApiResponse.ok(targetType + "已成功恢復"));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("恢復失敗: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/restore/{archiveId}/check")
+    public ResponseEntity<ApiResponse> checkRestore(
+            @PathVariable Long archiveId,
+            Authentication authentication) {
+        try {
+            // 1. 驗證管理員權限
+            if (!"admin".equals(authentication.getName())) {
+                return ResponseEntity.status(403).body(ApiResponse.error("無權操作，僅限管理員"));
+            }
+
+            // 2. 查找歸檔記錄
+            ReviewArchive archive = reviewArchiveRepository.findById(archiveId)
+                    .orElseThrow(() -> new RuntimeException("歸檔記錄不存在"));
+
+            Map<String, Object> data = new HashMap<>();
+
+            // 3. 檢查父評論是否存在 (針對樓中樓)
+            boolean parentExists = true;
+            if (archive.getParentId() != null) {
+                parentExists = reviewRepository.existsById(archive.getParentId());
+            }
+            data.put("parentExists", parentExists);
+
+            // 如果父評論不存在，直接返回，前端會根據此字段直接報錯
+            if (!parentExists) {
+                return ResponseEntity.ok(ApiResponse.okWithData("預檢完成", data));
+            }
+
+            // 4. 檢查刪除者是否為 ADMIN
+            boolean isDeletedByAdmin = false;
+            String deletedByUsername = "未知用戶";
+
+            if (archive.getDeletedById() != null) {
+                User deleter = userRepository.findById(archive.getDeletedById()).orElse(null);
+                if (deleter != null) {
+                    deletedByUsername = deleter.getUsername();
+                    if (deleter.getRole() == User.Role.ADMIN) {
+                        isDeletedByAdmin = true;
+                    }
+                }
+            } else {
+                deletedByUsername = "系統";
+            }
+
+            data.put("isDeletedByAdmin", isDeletedByAdmin);
+            data.put("deletedByUsername", deletedByUsername);
+            data.put("authorUsername", archive.getAuthor() != null ? archive.getAuthor().getUsername() : "未知用戶");
+
+            return ResponseEntity.ok(ApiResponse.okWithData("預檢完成", data));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.error("預檢失敗: " + e.getMessage()));
+        }
     }
 }

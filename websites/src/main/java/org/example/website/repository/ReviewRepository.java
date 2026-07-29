@@ -5,8 +5,10 @@ import org.example.website.entity.Review;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,9 +23,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     //  3. 统计某条评论的回复总数
     long countByParentId(Long parentId);
 
-    // 分頁查詢根評論（支持動態排序）
-    @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.parentId IS NULL")
-    Page<Review> findByProduct_IdAndParentIdIsNull(@Param("productId") Integer productId, Pageable pageable);
 
     @Query("SELECT r FROM Review r WHERE r.product.productId = :productId AND r.parentId IS NULL")
     Page<Review> findByProduct_ProductIdAndParentIdIsNull(@Param("productId") Integer productId, Pageable pageable);
@@ -115,4 +114,29 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             @Param("excludeUsername") String excludeUsername,
             Pageable pageable
     );
+
+    // 使用原生 SQL 強制指定 review_id 插入
+    @Modifying
+    @Transactional
+    @Query(value = "INSERT INTO review (review_id, order_no, user_id, prod_id, rating, content, " +
+            "parent_id, reply_to_user, like_count, dislike_count, pinned, formatted_content, " +
+            "is_formatted, created_at) " +
+            "VALUES (:reviewId, :orderNo, :userId, :prodId, :rating, :content, " +
+            ":parentId, :replyToUser, :likeCount, :dislikeCount, :pinned, :formattedContent, " +
+            ":isFormatted, :createdAt)", nativeQuery = true)
+    void insertReviewWithOriginalId(
+            @org.springframework.data.repository.query.Param("reviewId") Long reviewId,
+            @org.springframework.data.repository.query.Param("orderNo") String orderNo,
+            @org.springframework.data.repository.query.Param("userId") Long userId,
+            @org.springframework.data.repository.query.Param("prodId") Integer prodId,
+            @org.springframework.data.repository.query.Param("rating") Double rating,
+            @org.springframework.data.repository.query.Param("content") String content,
+            @org.springframework.data.repository.query.Param("parentId") Long parentId,
+            @org.springframework.data.repository.query.Param("replyToUser") String replyToUser,
+            @org.springframework.data.repository.query.Param("likeCount") Integer likeCount,
+            @org.springframework.data.repository.query.Param("dislikeCount") Integer dislikeCount,
+            @org.springframework.data.repository.query.Param("pinned") Boolean pinned,
+            @org.springframework.data.repository.query.Param("formattedContent") String formattedContent,
+            @org.springframework.data.repository.query.Param("isFormatted") Boolean isFormatted,
+            @org.springframework.data.repository.query.Param("createdAt") LocalDateTime createdAt);
 }

@@ -37,6 +37,15 @@ public class Report {
     @Column(name = "review_id")
     private Long reviewId;
 
+    // 【修改處】：將 reviewId 改為 notificationId
+    @Column(name = "notification_id")
+    private Long notificationId;
+
+    // 【新增處】：被舉報的內容快照 (讓管理員知道當時舉報的是什麼內容)
+    @Column(name = "report_content", columnDefinition = "TEXT")
+    private String reportContent;
+
+
     @Column(name = "target_type", nullable = false, length = 20)
     private String targetType;
 
