@@ -1892,6 +1892,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="reviews-pagination"></div>
             </div>
 
 
@@ -2018,6 +2019,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="archives-pagination"></div>
             </div>
 
             <!-- ================= Tab 3: 舉報管理 ================= -->
@@ -2192,6 +2194,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="reports-pagination"></div>
             </div>
 
         </div>
@@ -2529,8 +2532,17 @@
 
 <script>
     // ==========================================
-    // 全局變量聲明
+    // 0. 全局變量聲明 (核心狀態與彈窗狀態)
     // ==========================================
+    const tabState = {
+        reviews: { page: 0, size: 25, username: '', reviewType: 'all', keywordMode: 'no' },
+        archives: { page: 0, size: 25, author: '', deletedBy: '' },
+        reports: { page: 0, size: 25, reporter: '', reportedUser: '' }
+    };
+
+    let currentActiveTab = 'reviews'; // 默認激活的 Tab
+
+    // 彈窗與業務全局變量
     let currentDeleteId = null;
     let currentBanTarget = '';
     let currentBanReviewId = null;
@@ -2540,35 +2552,415 @@
     let blacklistReviewContent = null;
     let editingKeywordId = null;
     let pendingDeleteKeywordId = null;
-
-    // 篩選功能專用：存儲所有用戶列表
     let allUsers = [];
-    // 篩選功能專用：存儲所有關鍵詞列表
     let allKeywords = [];
-
-    //  恢復評論專用變量（只在这里声明一次）
     let currentRestoreArchiveId = null;
     let currentRestoreAuthorUsername = '';
+    let currentReportId = null;
+    let currentReportData = null;
 
     // ==========================================
-    // 1. Tab 切換邏輯
+    // 1. 全局篩選輔助函數 (Toggle 顯示/隱藏輸入框)
+    // ==========================================
+    function toggleUserSearch() {
+        const mode = document.getElementById('userFilterMode').value;
+        const input = document.getElementById('userSearchInput');
+        if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
+        else { input.style.display = 'none'; input.value = ''; }
+    }
+
+    function toggleArchiveAuthorSearch() {
+        const mode = document.getElementById('archiveAuthorFilterMode').value;
+        const input = document.getElementById('archiveAuthorSearchInput');
+        if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
+        else { input.style.display = 'none'; input.value = ''; }
+    }
+
+    function toggleArchiveDeletedBySearch() {
+        const mode = document.getElementById('archiveDeletedByFilterMode').value;
+        const input = document.getElementById('archiveDeletedBySearchInput');
+        if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
+        else { input.style.display = 'none'; input.value = ''; }
+    }
+
+    function toggleReporterSearch() {
+        const mode = document.getElementById('reporterFilterMode').value;
+        const input = document.getElementById('reporterSearchInput');
+        if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
+        else { input.style.display = 'none'; input.value = ''; }
+    }
+
+    function toggleReportedUserSearch() {
+        const mode = document.getElementById('reportedUserFilterMode').value;
+        const input = document.getElementById('reportedUserSearchInput');
+        if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
+        else { input.style.display = 'none'; input.value = ''; }
+    }
+
+    // ==========================================
+    // 2. 全局篩選與重置函數 (更新 State 並觸發加載)
+    // ==========================================
+    function filterReviews() {
+        const userMode = document.getElementById('userFilterMode').value;
+        const targetUsername = document.getElementById('userSearchInput').value.trim();
+        const reviewType = document.getElementById('reviewTypeFilter').value;
+        const keywordMode = document.getElementById('keywordFilterMode').value;
+
+        tabState.reviews.username = userMode === 'specific' ? targetUsername : '';
+        tabState.reviews.reviewType = reviewType;
+        tabState.reviews.keywordMode = keywordMode;
+        tabState.reviews.page = 0;
+        loadReviewsData();
+    }
+
+    function resetReviewsFilter() {
+        document.getElementById('userFilterMode').value = 'all';
+        document.getElementById('userSearchInput').value = '';
+        document.getElementById('userSearchInput').style.display = 'none';
+        document.getElementById('reviewTypeFilter').value = 'all';
+        document.getElementById('keywordFilterMode').value = 'no';
+
+        tabState.reviews.username = '';
+        tabState.reviews.reviewType = 'all';
+        tabState.reviews.keywordMode = 'no';
+        tabState.reviews.page = 0;
+        loadReviewsData();
+    }
+
+    function filterArchives() {
+        const authorMode = document.getElementById('archiveAuthorFilterMode').value;
+        const authorUsername = document.getElementById('archiveAuthorSearchInput').value.trim();
+        const deletedByMode = document.getElementById('archiveDeletedByFilterMode').value;
+        const deletedByUsername = document.getElementById('archiveDeletedBySearchInput').value.trim();
+
+        tabState.archives.author = authorMode === 'specific' ? authorUsername : '';
+        tabState.archives.deletedBy = deletedByMode === 'specific' ? deletedByUsername : (deletedByMode === 'admin' ? 'admin' : '');
+        tabState.archives.page = 0;
+        loadArchivesData();
+    }
+
+    function resetArchivesFilter() {
+        document.getElementById('archiveAuthorFilterMode').value = 'all';
+        document.getElementById('archiveAuthorSearchInput').value = '';
+        document.getElementById('archiveAuthorSearchInput').style.display = 'none';
+        document.getElementById('archiveDeletedByFilterMode').value = 'all';
+        document.getElementById('archiveDeletedBySearchInput').value = '';
+        document.getElementById('archiveDeletedBySearchInput').style.display = 'none';
+
+        tabState.archives.author = '';
+        tabState.archives.deletedBy = '';
+        tabState.archives.page = 0;
+        loadArchivesData();
+    }
+
+    function filterReports() {
+        const reporterMode = document.getElementById('reporterFilterMode').value;
+        const reporterName = document.getElementById('reporterSearchInput').value.trim();
+        const reportedMode = document.getElementById('reportedUserFilterMode').value;
+        const reportedName = document.getElementById('reportedUserSearchInput').value.trim();
+
+        tabState.reports.reporter = reporterMode === 'specific' ? reporterName : '';
+        tabState.reports.reportedUser = reportedMode === 'specific' ? reportedName : '';
+        tabState.reports.page = 0;
+        loadReportsData();
+    }
+
+    function resetReportsFilter() {
+        document.getElementById('reporterFilterMode').value = 'all';
+        document.getElementById('reporterSearchInput').value = '';
+        document.getElementById('reporterSearchInput').style.display = 'none';
+        document.getElementById('reportedUserFilterMode').value = 'all';
+        document.getElementById('reportedUserSearchInput').value = '';
+        document.getElementById('reportedUserSearchInput').style.display = 'none';
+
+        tabState.reports.reporter = '';
+        tabState.reports.reportedUser = '';
+        tabState.reports.page = 0;
+        loadReportsData();
+    }
+
+    // ==========================================
+    // 3. Tab 切換與數據加載函數 (AJAX)
     // ==========================================
     function switchTab(tabName, btnElement) {
+        currentActiveTab = tabName;
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         btnElement.classList.add('active');
         document.getElementById('tab-' + tabName).classList.add('active');
+
+        if (tabName === 'reviews') { tabState.reviews.page = 0; loadReviewsData(); }
+        else if (tabName === 'archives') { tabState.archives.page = 0; loadArchivesData(); }
+        else if (tabName === 'reports') { tabState.reports.page = 0; loadReportsData(); }
+    }
+
+
+
+    async function loadReviewsData() {
+        const state = tabState.reviews;
+        const tbody = document.querySelector('#tab-reviews .data-table tbody');
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
+        try {
+            const params = new URLSearchParams({ page: state.page, size: state.size, username: state.username, reviewType: state.reviewType, keywordMode: state.keywordMode });
+            const response = await fetch(`/admin/api/reviews/list?${params.toString()}`);
+            const data = await response.json();
+            if (data.content && data.content.length > 0) {
+                renderReviewsTable(data.content);
+                renderPagination(data.currentPage, data.totalPages, 'reviews');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">暫無評論數據</td></tr>';
+                document.getElementById('reviews-pagination').innerHTML = '';
+            }
+        } catch (error) {
+            console.error('加載評論失敗:', error);
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem; color: red;">加載失敗，請重試</td></tr>';
+        }
+    }
+
+    async function loadArchivesData() {
+        const state = tabState.archives;
+        const tbody = document.querySelector('#tab-archives .data-table tbody');
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
+        try {
+            const params = new URLSearchParams({ page: state.page, size: state.size, authorUsername: state.author, deletedByUsername: state.deletedBy });
+            const response = await fetch(`/admin/api/reviews/archives?${params.toString()}`);
+            const data = await response.json();
+            if (data.content && data.content.length > 0) {
+                renderArchivesTable(data.content);
+                renderPagination(data.currentPage, data.totalPages, 'archives');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;">暫無刪除歸檔數據</td></tr>';
+                document.getElementById('archives-pagination').innerHTML = '';
+            }
+        } catch (error) {
+            console.error('加載歸檔失敗:', error);
+        }
+    }
+
+    async function loadReportsData() {
+        const state = tabState.reports;
+        const tbody = document.querySelector('#tab-reports .data-table tbody');
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
+        try {
+            const params = new URLSearchParams({ page: state.page, size: state.size, reporterUsername: state.reporter, reportedUsername: state.reportedUser });
+            const response = await fetch(`/admin/api/reviews/reports?${params.toString()}`);
+            const data = await response.json();
+            if (data.content && data.content.length > 0) {
+                renderReportsTable(data.content);
+                renderPagination(data.currentPage, data.totalPages, 'reports');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">暫無舉報數據</td></tr>';
+                document.getElementById('reports-pagination').innerHTML = '';
+            }
+        } catch (error) {
+            console.error('加載舉報失敗:', error);
+        }
     }
 
     // ==========================================
-    // 2. 刪除評論邏輯
+    // 4. 動態渲染表格與分頁函數
+    // ==========================================
+    function renderReviewsTable(reviews) {
+        const tbody = document.querySelector('#tab-reviews .data-table tbody');
+        let html = '';
+        reviews.forEach(review => {
+            const user = review.user || {};
+            const product = review.product || {};
+            html += `<tr data-username="${user.username || ''}" data-userid="${user.id || ''}" data-parentid="${review.parentId ? 'reply' : 'root'}">
+                <td style="color: var(--gray); font-family: monospace;">${review.reviewId}</td>
+                <td>${user.username || '未知'}</td>
+                <td><span class="text-truncate" title="${product.description || ''}">${product.description || '未知商品'}</span></td>
+                <td>${review.rating != null ? `<span style="color: var(--gold); font-weight: 600;"><i class="fas fa-star"></i> ${review.rating}</span>` : '<span style="color: var(--gray);">-</span>'}</td>
+                <td><span class="text-truncate" title="${review.content}">${review.content}</span></td>
+                <td>
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem; color: #4facfe; font-weight: 600; background: rgba(79, 172, 254, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px;">
+                            <i class="fas fa-thumbs-up" style="font-size: 0.85rem;"></i> ${review.likeCount || 0}
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; color: #6c757d; font-weight: 600; background: rgba(108, 117, 125, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px;">
+                            <i class="fas fa-thumbs-down" style="font-size: 0.85rem;"></i> ${review.dislikeCount || 0}
+                        </div>
+                    </div>
+                </td>
+                <td>${review.pinned ? '<span style="color: #17a2b8; font-weight: 600;"><i class="fas fa-thumbtack"></i> 是</span>' : '<span style="color: var(--gray);">否</span>'}</td>
+                <td>${formatDate(review.createdAt)}</td>
+                <td style="text-align: center;">
+                    <div class="action-buttons-grid">
+                        <a href="/product/${product.productId}?reviewId=${review.reviewId}" class="btn-sm btn-view" target="_blank"><i class="fas fa-external-link-alt"></i></a>
+                        <button class="btn-sm btn-delete" data-review-id="${review.reviewId}" data-username="${user.username || '未知'}"><i class="fas fa-trash-alt"></i></button>
+                        <button class="btn-sm btn-ban" data-username="${user.username || '未知'}" data-review-id="${review.reviewId}" data-review-content="${review.content}"><i class="fas fa-ban"></i></button>
+                        <button class="btn-sm btn-blacklist" data-username="${user.username || '未知'}" data-review-id="${review.reviewId}" data-review-content="${review.content}" onclick="openBlacklistConfirmModalFromBtn(this)"><i class="fas fa-user-slash"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+        bindDynamicEvents();
+    }
+
+    function renderArchivesTable(archives) {
+        const tbody = document.querySelector('#tab-archives .data-table tbody');
+        let html = '';
+        archives.forEach(item => {
+            const archiveId = item.archiveId || '未知';
+            const content = item.content || '無內容';
+            const authorUsername = item.author ? item.author.username : '未知';
+            const product = item.product || {};
+            const productDesc = product.description || '未知商品';
+            const deleteReason = item.deleteReason || ' ';
+            const deletedBy = item.deletedBy || {};
+            const deletedByUsername = deletedBy.username || '系統';
+            const deletedAt = item.deletedAt ? formatDate(item.deletedAt) : '未知';
+            html += `<tr>
+                <td style="color: var(--gray); font-family: monospace;">${archiveId}</td>
+                <td><span class="text-truncate" title="${content}">${content}</span></td>
+                <td>${authorUsername}</td>
+                <td><span class="text-truncate" title="${productDesc}">${productDesc}</span></td>
+                <td><span class="text-truncate" title="${deleteReason}">${deleteReason}</span></td>
+                <td style="font-family: monospace; font-size: 0.9rem; color: var(--primary);">
+                    ${deletedByUsername !== '系統' ? `<i class="fas fa-user-cog" style="color: var(--gold); margin-right: 4px;"></i>${deletedByUsername}` : '<i class="fas fa-robot" style="margin-right: 4px;"></i>系統'}
+                </td>
+                <td>${deletedAt}</td>
+                <td style="text-align: center;">
+                    <button class="btn-sm btn-restore" title="恢復評論" data-archive-id="${archiveId}" data-username="${authorUsername}"><i class="fas fa-undo"></i> 恢復</button>
+                </td>
+            </tr>`;
+        });
+        tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center; padding: 2rem;">暫無刪除歸檔數據</td></tr>';
+        bindDynamicEvents();
+    }
+
+    function renderReportsTable(reports) {
+        const tbody = document.querySelector('#tab-reports .data-table tbody');
+        let html = '';
+        reports.forEach(item => {
+            const reportId = item.reportId || 'undefined';
+            const category = item.category || '無';
+            const reason = item.reason || '無';
+            const status = item.status || 'UNKNOWN';
+            const createdAt = item.createdAt || '';
+            const content = item.content || '無內容快照';
+            const isDel = item.isDeleted || false;
+            const isBanned = item.isAlreadyBanned || false;
+            const reporterUsername = (item.reporter && item.reporter.username) ? item.reporter.username : '未知';
+            const reportedUsername = (item.reportedUser && item.reportedUser.username) ? item.reportedUser.username : '未知';
+
+            let statusBadge = '';
+            if (status === 'PENDING') statusBadge = '<span class="status-badge status-pending">待處理</span>';
+            else if (status === 'RESOLVED') statusBadge = '<span class="status-badge status-resolved">已處理</span>';
+            else if (status === 'DISMISSED') statusBadge = '<span class="status-badge status-dismissed">已駁回</span>';
+
+            let actionBtn1 = status === 'PENDING'
+                ? `<button class="btn-sm btn-approve" title="處理舉報" onclick="openReportDetailModal('${reportId}')"><i class="fas fa-gavel"></i> 處理</button>`
+                : `<span class="btn-sm ${status === 'RESOLVED' ? 'status-resolved' : 'status-dismissed'}" style="cursor: default; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">${status === 'RESOLVED' ? '已處理' : '已駁回'}</span>`;
+
+            let actionBtn2 = !isDel
+                ? `<button class="btn-sm btn-delete" title="刪除被舉報的評論" data-report-id="${reportId}" data-review-id="${item.reviewId || ''}" data-username="${reportedUsername}"><i class="fas fa-trash-alt"></i> 刪除</button>`
+                : `<span class="btn-sm" style="background: #e9ecef; color: #6c757d; cursor: not-allowed; border: 1px solid #dee2e6; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;" title="該評論已被刪除或無相關評論，無法再次刪除"><i class="fas fa-trash-alt"></i> 已刪除</span>`;
+
+            let actionBtn3 = isBanned
+                ? `<button class="btn-sm btn-ban btn-disabled" title="封禁被舉報人" disabled style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-ban"></i> 已封禁</button>`
+                : `<button class="btn-sm btn-ban" title="封禁被舉報人" data-username="${reportedUsername}" data-review-id="${item.reviewId || ''}" data-review-content="${content}" onclick="openAdminBanModal(this.dataset.username, this.dataset.reviewId, this.dataset.reviewContent)"><i class="fas fa-ban"></i> 封禁</button>`;
+
+            const actionBtn4 = `<button class="btn-sm btn-blacklist" title="永久拉黑被舉報人" data-username="${reportedUsername}" data-review-id="${item.reviewId || ''}" data-review-content="${content}" onclick="openBlacklistConfirmModalFromBtn(this)"><i class="fas fa-user-slash"></i> 拉黑</button>`;
+
+            html += `<tr>
+                <td style="color: var(--gray); font-family: monospace;">${reportId}</td>
+                <td>${reporterUsername}</td>
+                <td>${reportedUsername}</td>
+                <td style="font-size: 0.9rem; color: #555;">${content}</td>
+                <td>${category}</td>
+                <td style="font-size: 0.85rem; color: var(--gray);">${reason}</td>
+                <td>${statusBadge}</td>
+                <td>${formatDate(createdAt)}</td>
+                <td style="text-align: center; vertical-align: middle;">
+                    <div class="action-buttons-grid">${actionBtn1}${actionBtn2}${actionBtn3}${actionBtn4}</div>
+                </td>
+            </tr>`;
+        });
+        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align:center; padding: 2rem;">暫無舉報數據</td></tr>';
+        bindDynamicEvents();
+    }
+
+
+    function renderPagination(currentPage, totalPages, tabName) {
+        const containerId = `${tabName}-pagination`;
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        if (totalPages === 0) { container.innerHTML = ''; return; }
+
+        let html = '<div class="pagination-wrapper">';
+        if (totalPages === 1) {
+            html += `<button class="page-btn active">1</button></div>`;
+            container.innerHTML = html;
+            return;
+        }
+
+        if (currentPage > 0) html += `<button class="page-btn" onclick="changePage('${tabName}', ${currentPage - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+        else html += `<button class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+
+        let start = Math.max(0, currentPage - 2);
+        let end = Math.min(totalPages - 1, currentPage + 2);
+        if (start > 0) html += `<span class="page-ellipsis">...</span>`;
+        for (let i = start; i <= end; i++) {
+            if (i === currentPage) html += `<button class="page-btn active">${i + 1}</button>`;
+            else html += `<button class="page-btn" onclick="changePage('${tabName}', ${i})">${i + 1}</button>`;
+        }
+        if (end < totalPages - 1) html += `<span class="page-ellipsis">...</span>`;
+
+        if (currentPage < totalPages - 1) html += `<button class="page-btn" onclick="changePage('${tabName}', ${currentPage + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
+        else html += `<button class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
+
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    function changePage(tabName, newPage) {
+        tabState[tabName].page = newPage;
+        if (tabName === 'reviews') loadReviewsData();
+        else if (tabName === 'archives') loadArchivesData();
+        else if (tabName === 'reports') loadReportsData();
+    }
+
+    // ==========================================
+    // 5. 輔助函數與事件委託
+    // ==========================================
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toLocaleString('zh-TW', { hour12: false });
+    }
+
+    function bindDynamicEvents() {
+        document.querySelectorAll('.data-table tbody').forEach(tbody => {
+            tbody.addEventListener('click', function(e) {
+                const deleteBtn = e.target.closest('.btn-delete');
+                if (deleteBtn) openDeleteModal(deleteBtn.dataset.reviewId, deleteBtn.dataset.username);
+
+                const banBtn = e.target.closest('.btn-ban');
+                if (banBtn && !banBtn.disabled) openAdminBanModal(banBtn.dataset.username, banBtn.dataset.reviewId, banBtn.dataset.reviewContent);
+
+                const restoreBtn = e.target.closest('.btn-restore');
+                if (restoreBtn) openRestoreModal(restoreBtn.dataset.archiveId, restoreBtn.dataset.username);
+            });
+        });
+    }
+
+    // ==========================================
+    // 6. 頁面初始化 (DOMContentLoaded)
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function () {
+        loadReviewsData(); // 首次加載默認 Tab 數據
+        bindDynamicEvents(); // 綁定全局事件委託
+    });
+
+    // ==========================================
+    // 7. 保留您原有的全局彈窗與業務邏輯 (完整保留)
     // ==========================================
     function openDeleteModal(reviewId, username) {
         currentDeleteId = reviewId;
         const targetUserEl = document.getElementById('targetUsername');
-        if (targetUserEl && username) {
-            targetUserEl.textContent = username;
-        }
+        if (targetUserEl && username) targetUserEl.textContent = username;
         const defaultRadio = document.querySelector('input[value="該內容不符合社區規範，因此被移除。"]');
         if (defaultRadio) defaultRadio.checked = true;
         const customReasonEl = document.getElementById('customReasonText');
@@ -2577,39 +2969,25 @@
         const modal = document.getElementById('deleteReviewModal');
         if (modal) modal.style.display = 'flex';
     }
-
     function closeDeleteModal() {
         const modal = document.getElementById('deleteReviewModal');
         if (modal) modal.style.display = 'none';
         currentDeleteId = null;
     }
-
     function handleReasonChange(type) {
         const customWrapper = document.getElementById('customInputWrapper');
         if (type === 'custom') {
-            if (customWrapper) {
-                customWrapper.style.display = 'block';
-                setTimeout(() => {
-                    const input = document.getElementById('customReasonText');
-                    if (input) input.focus();
-                }, 100);
-            }
+            if (customWrapper) { customWrapper.style.display = 'block'; setTimeout(() => { const input = document.getElementById('customReasonText'); if (input) input.focus(); }, 100); }
         } else {
             if (customWrapper) customWrapper.style.display = 'none';
         }
     }
-
     async function confirmDeleteReview() {
-        if (!currentDeleteId) {
-            console.error('錯誤：沒有找到要刪除的評論 ID');
-            return;
-        }
+        if (!currentDeleteId) return;
         const btn = document.querySelector('#deleteReviewModal .btn-confirm-delete');
         if (!btn) return;
         const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
         try {
             let deleteReason = '';
             const selectedRadio = document.querySelector('input[name="deleteReason"]:checked');
@@ -2619,1267 +2997,256 @@
                     if (!deleteReason) {
                         if (typeof showNotification === 'function') showNotification('❌ 請輸入自定義刪除原因', true);
                         else alert('請輸入自定義刪除原因');
-                        btn.disabled = false;
-                        btn.innerHTML = originalText;
-                        return;
+                        btn.disabled = false; btn.innerHTML = originalText; return;
                     }
-                } else {
-                    deleteReason = selectedRadio.value;
-                }
+                } else { deleteReason = selectedRadio.value; }
             }
-
-            const response = await fetch(`/api/review/${currentDeleteId}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deleteReason: deleteReason })
-            });
+            const response = await fetch(`/api/review/${currentDeleteId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deleteReason: deleteReason }) });
             const result = await response.json();
-
             if (response.ok && result.success) {
                 closeDeleteModal();
                 if (typeof showNotification === 'function') showNotification('✅ 該評論已成功刪除！');
                 else alert('✅ 該評論已成功刪除！');
-                setTimeout(() => { window.location.reload(); }, 1000);
+                if (currentActiveTab === 'reviews') loadReviewsData();
+                else if (currentActiveTab === 'reports') loadReportsData();
             } else {
                 if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '刪除失敗'), true);
                 else alert('❌ ' + (result.message || '刪除失敗'));
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                btn.disabled = false; btn.innerHTML = originalText;
             }
         } catch (error) {
             console.error('刪除評論錯誤:', error);
             if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
             else alert('❌ 網絡錯誤，請稍後重試');
-            btn.disabled = false;
-            btn.innerHTML = originalText;
+            btn.disabled = false; btn.innerHTML = originalText;
         }
     }
 
-    // ==========================================
-    // 3. 管理員禁言邏輯
-    // ==========================================
     function openAdminBanModal(username, reviewId, reviewContent) {
-        currentBanTarget = username;
-        currentBanReviewId = reviewId;
-        currentBanReviewContent = reviewContent;
+        currentBanTarget = username; currentBanReviewId = reviewId; currentBanReviewContent = reviewContent;
         const targetUserEl = document.getElementById('banTargetUsername');
         if (targetUserEl) targetUserEl.textContent = username;
-        const durationEl = document.getElementById('banDuration');
-        const unitEl = document.getElementById('banUnit');
-        const reasonEl = document.getElementById('banReason');
-        if (durationEl) durationEl.value = '1';
-        if (unitEl) unitEl.value = 'day';
-        if (reasonEl) reasonEl.value = '違反社區規範';
+        document.getElementById('banDuration').value = '1';
+        document.getElementById('banUnit').value = 'day';
+        document.getElementById('banReason').value = '違反社區規範';
         const modal = document.getElementById('adminBanModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
+        if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
     }
-
     function closeAdminBanModal() {
         const modal = document.getElementById('adminBanModal');
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-        currentBanTarget = '';
-        currentBanReviewId = null;
-        currentBanReviewContent = '';
+        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+        currentBanTarget = ''; currentBanReviewId = null; currentBanReviewContent = '';
     }
-
     async function confirmAdminBan() {
-        const durationEl = document.getElementById('banDuration');
-        const unitEl = document.getElementById('banUnit');
-        const reasonEl = document.getElementById('banReason');
-        const duration = durationEl ? parseInt(durationEl.value) : 0;
-        const unit = unitEl ? unitEl.value : 'day';
-        const reason = reasonEl ? reasonEl.value.trim() : '';
-
-        if (!duration || duration <= 0) {
-            if (typeof showNotification === 'function') showNotification('❌ 請輸入有效的禁言時長', true);
+        const duration = parseInt(document.getElementById('banDuration').value) || 0;
+        const unit = document.getElementById('banUnit').value;
+        const reason = document.getElementById('banReason').value.trim();
+        if (!duration || duration <= 0 || !reason) {
+            if (typeof showNotification === 'function') showNotification('❌ 請輸入有效的禁言時長與原因', true);
             return;
         }
-        if (!reason) {
-            if (typeof showNotification === 'function') showNotification('❌ 請輸入禁言原因', true);
-            return;
-        }
-
-        let durationMinutes = 0;
-        if (unit === 'day') durationMinutes = duration * 24 * 60;
-        else if (unit === 'week') durationMinutes = duration * 7 * 24 * 60;
-        else if (unit === 'month') durationMinutes = duration * 30 * 24 * 60;
-
+        let durationMinutes = unit === 'day' ? duration * 24 * 60 : (unit === 'week' ? duration * 7 * 24 * 60 : duration * 30 * 24 * 60);
         const confirmBtn = document.querySelector('#adminBanModal .btn-confirm');
-        if (!confirmBtn) return;
         const originalText = confirmBtn.innerHTML;
-        confirmBtn.disabled = true;
-        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-
+        confirmBtn.disabled = true; confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
         try {
-            const params = new URLSearchParams();
-            params.append('durationMinutes', durationMinutes);
-            params.append('reason', reason);
+            const params = new URLSearchParams({ durationMinutes, reason });
             if (currentBanReviewId) params.append('reviewId', currentBanReviewId);
             if (currentBanReviewContent) params.append('reviewContent', currentBanReviewContent);
-
-            const response = await fetch(`/api/user/${encodeURIComponent(currentBanTarget)}/toggle-block?${params.toString()}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
+            const response = await fetch(`/api/user/${encodeURIComponent(currentBanTarget)}/toggle-block?${params.toString()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
             const result = await response.json();
-
             if (response.ok && result.success) {
                 if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
                 closeAdminBanModal();
-                setTimeout(() => { location.reload(); }, 1500);
+                if (currentActiveTab === 'reviews') loadReviewsData();
+                else if (currentActiveTab === 'reports') loadReportsData();
             } else if (result.alreadyBanned) {
                 closeAdminBanModal();
                 const permModal = document.getElementById('adminPermissionModal');
-                if (permModal) {
-                    permModal.style.display = 'flex';
-                    document.body.style.overflow = 'hidden';
-                }
+                if (permModal) { permModal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
             } else {
                 if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '禁言失敗'), true);
-                confirmBtn.disabled = false;
-                confirmBtn.innerHTML = originalText;
+                confirmBtn.disabled = false; confirmBtn.innerHTML = originalText;
             }
         } catch (error) {
             console.error('禁言錯誤:', error);
             if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
-            confirmBtn.disabled = false;
-            confirmBtn.innerHTML = originalText;
+            confirmBtn.disabled = false; confirmBtn.innerHTML = originalText;
         }
     }
-
     function closeAdminPermissionModal() {
         const modal = document.getElementById('adminPermissionModal');
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
+        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
     }
 
-    // ==========================================
-    // 4. 永久拉黑邏輯
-    // ==========================================
     window.openBlacklistConfirmModalFromBtn = function (btn) {
-        const username = btn.getAttribute('data-username');
-        const reviewId = btn.getAttribute('data-review-id');
-        const reviewContent = btn.getAttribute('data-review-content') || '';
-        window.openBlacklistConfirmModal(username, reviewId, reviewContent);
+        window.openBlacklistConfirmModal(btn.getAttribute('data-username'), btn.getAttribute('data-review-id'), btn.getAttribute('data-review-content') || '');
     };
-
     window.openBlacklistConfirmModal = function (username, reviewId, reviewContent) {
-        blacklistTargetUser = username;
-        blacklistReviewId = reviewId ? parseInt(reviewId) : null;
-        blacklistReviewContent = reviewContent || null;
+        blacklistTargetUser = username; blacklistReviewId = reviewId ? parseInt(reviewId) : null; blacklistReviewContent = reviewContent || null;
         document.getElementById('blacklistTargetUsername').textContent = username;
         document.getElementById('blacklistReason').value = '嚴重違反社區規範';
         document.getElementById('blacklistConfirmModal').style.display = 'flex';
         document.body.style.overflow = 'hidden';
     };
-
     window.closeBlacklistConfirmModal = function () {
         document.getElementById('blacklistConfirmModal').style.display = 'none';
         document.body.style.overflow = '';
-        blacklistTargetUser = '';
-        blacklistReviewId = null;
-        blacklistReviewContent = null;
+        blacklistTargetUser = ''; blacklistReviewId = null; blacklistReviewContent = null;
     };
-
     window.confirmBlacklistAction = async function () {
         const reason = document.getElementById('blacklistReason').value.trim();
-        if (!reason) {
-            if (typeof showNotification === 'function') showNotification('❌ 請輸入拉黑原因', true);
-            else alert('❌ 請輸入拉黑原因');
-            return;
-        }
-
+        if (!reason) { if (typeof showNotification === 'function') showNotification('❌ 請輸入拉黑原因', true); return; }
         let url = `/api/admin/penalty/blacklist/${encodeURIComponent(blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`;
         if (blacklistReviewId) url += `&reviewId=${blacklistReviewId}`;
         if (blacklistReviewContent) url += `&reviewContent=${encodeURIComponent(blacklistReviewContent)}`;
-
         try {
             const response = await fetch(url, { method: 'POST', credentials: 'same-origin' });
             const result = await response.json();
-
             if (response.ok && result.success) {
                 if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
-                else alert('✅ ' + result.message);
                 window.closeBlacklistConfirmModal();
-                setTimeout(() => { window.location.reload(); }, 1000);
+                if (currentActiveTab === 'reviews') loadReviewsData();
+                else if (currentActiveTab === 'reports') loadReportsData();
             } else {
                 if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
-                else alert('❌ ' + (result.message || '操作失敗'));
             }
         } catch (error) {
             console.error('拉黑失敗:', error);
-            if (typeof showNotification === 'function') showNotification(' 網絡錯誤，請稍後重試', true);
-            else alert('❌ 網絡錯誤，請稍後重試');
+            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
         }
     };
 
-    // ==========================================
-    // 5. 關鍵詞管理功能
-    // ==========================================
-    function openKeywordModal() {
-        document.getElementById('keywordModal').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        loadKeywords();
-    }
-
-    function closeKeywordModal() {
-        document.getElementById('keywordModal').style.display = 'none';
-        document.body.style.overflow = '';
-        editingKeywordId = null;
-    }
-
-    async function loadKeywords() {
-        const listEl = document.getElementById('keywordList');
-        listEl.innerHTML = '<li class="keyword-loading"><i class="fas fa-spinner fa-spin"></i> 加載中...</li>';
-        try {
-            const response = await fetch('/api/admin/keywords');
-            const result = await response.json();
-            if (result.success && result.data) {
-                renderKeywordList(result.data);
-            } else {
-                listEl.innerHTML = '<li class="keyword-empty">加載失敗</li>';
-            }
-        } catch (error) {
-            console.error('加載關鍵詞失敗:', error);
-            listEl.innerHTML = '<li class="keyword-empty">網絡錯誤，請重試</li>';
-        }
-    }
-
-    function renderKeywordList(keywords) {
-        const listEl = document.getElementById('keywordList');
-        if (keywords.length === 0) {
-            listEl.innerHTML = '<li class="keyword-empty"><i class="fas fa-inbox"></i> 暫無關鍵詞，請添加</li>';
-            return;
-        }
-        listEl.innerHTML = keywords.map(kw => `
-    <li class="keyword-item" id="kw-item-${kw.keywordId}">
-        <span class="keyword-text" id="kw-text-${kw.keywordId}">${escapeHtml(kw.keyword)}</span>
-        <div class="keyword-actions">
-            <button class="keyword-action-btn btn-edit" onclick="startEdit(${kw.keywordId}, '${escapeHtml(kw.keyword)}')" title="編輯">
-                <i class="fas fa-pen"></i>
-            </button>
-            <button class="keyword-action-btn btn-delete" onclick="deleteKeyword(${kw.keywordId})" title="刪除">
-                <i class="fas fa-trash-alt"></i>
-            </button>
-        </div>
-    </li>
-`).join('');
-    }
-
-    async function addKeyword() {
-        const input = document.getElementById('newKeywordInput');
-        const keyword = input.value.trim();
-        if (!keyword) {
-            if (typeof showNotification === 'function') showNotification('❌ 關鍵詞不能為空', true);
-            return;
-        }
-        const btn = document.querySelector('.keyword-btn.btn-add');
-        if (!btn) return;
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-        try {
-            const response = await fetch('/api/admin/keywords', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ keyword: keyword })
-            });
-            const result = await response.json();
-            if (result.success) {
-                if (typeof showNotification === 'function') showNotification('✅ 添加成功');
-                input.value = '';
-                loadKeywords();
-            } else {
-                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '添加失敗'), true);
-            }
-        } catch (error) {
-            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤', true);
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }
-    }
-
-    function startEdit(id, currentText) {
-        editingKeywordId = id;
-        const itemEl = document.getElementById(`kw-item-${id}`);
-        if (!itemEl) return;
-        itemEl.innerHTML = `
-    <input type="text" class="keyword-edit-input" id="kw-edit-input-${id}" value="${currentText}" maxlength="50" onkeypress="if(event.key === 'Enter') saveEdit(${id})">
-    <div class="keyword-actions">
-        <button class="keyword-action-btn btn-save" onclick="saveEdit(${id})" title="保存">
-            <i class="fas fa-check"></i>
-        </button>
-        <button class="keyword-action-btn btn-cancel" onclick="loadKeywords()" title="取消">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-`;
-        const input = document.getElementById(`kw-edit-input-${id}`);
-        if (input) {
-            input.focus();
-            input.select();
-        }
-    }
-
-    async function saveEdit(id) {
-        const input = document.getElementById(`kw-edit-input-${id}`);
-        if (!input) return;
-        const newKeyword = input.value.trim();
-        if (!newKeyword) {
-            if (typeof showNotification === 'function') showNotification('❌ 關鍵詞不能為空', true);
-            return;
-        }
-        try {
-            const response = await fetch(`/api/admin/keywords/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ keyword: newKeyword })
-            });
-            const result = await response.json();
-            if (result.success) {
-                if (typeof showNotification === 'function') showNotification('✅ 修改成功');
-                loadKeywords();
-            } else {
-                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '修改失敗'), true);
-            }
-        } catch (error) {
-            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤', true);
-        }
-    }
-
-    function deleteKeyword(id) {
-        pendingDeleteKeywordId = id;
-        const modal = document.getElementById('deleteKeywordModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-    }
-
-    function closeDeleteKeywordModal() {
-        const modal = document.getElementById('deleteKeywordModal');
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-        pendingDeleteKeywordId = null;
-    }
-
-    async function executeDeleteKeyword() {
-        if (!pendingDeleteKeywordId) return;
-        const id = pendingDeleteKeywordId;
-        const deleteBtn = document.querySelector('.btn-confirm-delete');
-        const originalText = deleteBtn.innerHTML;
-        deleteBtn.disabled = true;
-        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-
-        try {
-            const response = await fetch(`/api/admin/keywords/${id}`, { method: 'DELETE' });
-            const result = await response.json();
-            if (result.success) {
-                if (typeof showNotification === 'function') showNotification('✅ 刪除成功');
-                closeDeleteKeywordModal();
-                loadKeywords();
-            } else {
-                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '刪除失敗'), true);
-                deleteBtn.disabled = false;
-                deleteBtn.innerHTML = originalText;
-            }
-        } catch (error) {
-            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤', true);
-            deleteBtn.disabled = false;
-            deleteBtn.innerHTML = originalText;
-        }
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    // ==========================================
-    // 6. 篩選與重置功能 (評論 Tab 專屬)
-    // ==========================================
-
-    // 頁面加載時獲取所有用戶列表
-    async function loadAllUsers() {
-        try {
-            const response = await fetch('/api/user/all');
-            const result = await response.json();
-            if (result.success && result.data) {
-                allUsers = result.data;
-            }
-        } catch (error) {
-            console.error('加載用戶列表失敗:', error);
-        }
-    }
-
-    // 新增：頁面加載時獲取所有關鍵詞列表
-    async function loadAllKeywords() {
-        try {
-            const response = await fetch('/api/admin/keywords');
-            const result = await response.json();
-            if (result.success && result.data) {
-                allKeywords = result.data.map(k => k.keyword);
-            }
-        } catch (error) {
-            console.error('加載關鍵詞列表失敗:', error);
-        }
-    }
-
-    function filterReviews() {
-        const userMode = document.getElementById('userFilterMode').value;
-        const targetUsername = document.getElementById('userSearchInput').value.trim();
-        const reviewType = document.getElementById('reviewTypeFilter').value;
-        const keywordFilterMode = document.getElementById('keywordFilterMode').value;
-
-        const tableBody = document.querySelector('#tab-reviews .data-table tbody');
-        const rows = tableBody.querySelectorAll('tr');
-        let visibleCount = 0;
-
-        // 1. 如果選擇了「指定用戶」，先在校驗用戶是否存在
-        if (userMode === 'specific') {
-            if (!targetUsername) {
-                if (typeof showNotification === 'function') showNotification('️ 請輸入要篩選的用戶名', true);
-                return;
-            }
-
-            const targetUser = Array.isArray(allUsers) ? allUsers.find(u => u.username === targetUsername) : null;
-
-            if (!targetUser) {
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ 該用戶不存在！', true);
-                } else {
-                    alert('該用戶不存在！');
-                }
-                resetReviewsFilter(); // 重置回默認狀態
-                return;
-            }
-
-            const targetUserId = String(targetUser.id);
-
-            rows.forEach(row => {
-                if (row.cells.length === 1) return; // 跳過 empty state 行
-
-                const rowUserId = row.getAttribute('data-userid') || '';
-                const rowParentId = row.getAttribute('data-parentid') || 'root';
-                //  獲取評論內容 (第5列)
-                const rowContent = row.querySelector('td:nth-child(5)') ? row.querySelector('td:nth-child(5)').textContent.trim() : '';
-
-                let showRow = true;
-
-                // 檢查 user_id 是否匹配
-                if (rowUserId !== targetUserId) {
-                    showRow = false;
-                }
-
-                // 評論類型篩選
-                if (showRow && reviewType !== 'all') {
-                    if (reviewType === 'root' && rowParentId !== 'root') showRow = false;
-                    if (reviewType === 'reply' && rowParentId !== 'reply') showRow = false;
-                }
-
-                //  關鍵詞篩選邏輯
-                if (showRow && keywordFilterMode === 'yes') {
-                    if (allKeywords.length === 0) {
-                        showRow = false; // 沒有設置關鍵詞，自然沒有違規評論
-                    } else {
-                        const hasKeyword = allKeywords.some(kw => rowContent.includes(kw));
-                        if (!hasKeyword) {
-                            showRow = false;
-                        }
-                    }
-                }
-
-                if (showRow) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            //  如果匹配失敗（該用戶沒有評論或沒有違規評論）
-            if (visibleCount === 0) {
-                if (typeof showNotification === 'function') {
-                    showNotification('⚠️ 沒有發現違規評論！', true);
-                } else {
-                    alert('沒有發現違規評論！');
-                }
-            }
-
-        } else {
-            // 默認「所有用戶」，應用評論類型和關鍵詞篩選
-            rows.forEach(row => {
-                if (row.cells.length === 1) return;
-
-                const rowParentId = row.getAttribute('data-parentid') || 'root';
-                //  獲取評論內容 (第5列)
-                const rowContent = row.querySelector('td:nth-child(5)') ? row.querySelector('td:nth-child(5)').textContent.trim() : '';
-                let showRow = true;
-
-                if (reviewType !== 'all') {
-                    if (reviewType === 'root' && rowParentId !== 'root') showRow = false;
-                    if (reviewType === 'reply' && rowParentId !== 'reply') showRow = false;
-                }
-
-                //  關鍵詞篩選邏輯
-                if (showRow && keywordFilterMode === 'yes') {
-                    if (allKeywords.length === 0) {
-                        showRow = false;
-                    } else {
-                        const hasKeyword = allKeywords.some(kw => rowContent.includes(kw));
-                        if (!hasKeyword) {
-                            showRow = false;
-                        }
-                    }
-                }
-
-                if (showRow) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            //  如果篩選後沒有結果
-            if (visibleCount === 0) {
-                if (typeof showNotification === 'function') {
-                    showNotification('️ 沒有發現違規評論！', true);
-                } else {
-                    alert('沒有發現違規評論！');
-                }
-            }
-        }
-
-        // 處理空狀態行的顯示/隱藏
-        const emptyRow = tableBody.querySelector('tr td[colspan]')?.parentElement;
-        if (emptyRow) {
-            emptyRow.style.display = visibleCount === 0 ? '' : 'none';
-        }
-    }
-
-    function resetReviewsFilter() {
-        // 1. 重置表單控件為默認值
-        document.getElementById('userFilterMode').value = 'all';
-        document.getElementById('userSearchInput').value = '';
-        document.getElementById('userSearchInput').style.display = 'none';
-        document.getElementById('reviewTypeFilter').value = 'all';
-        document.getElementById('keywordFilterMode').value = 'no'; // 🟢 新增：重置關鍵詞篩選
-
-        // 2. 恢復所有行顯示
-        const tableBody = document.querySelector('#tab-reviews .data-table tbody');
-        const rows = tableBody.querySelectorAll('tr');
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            if (row.cells.length > 1) { // 跳過 empty state 行
-                row.style.display = '';
-                visibleCount++;
-            }
-        });
-
-        // 3. 確保 empty state 行被隱藏
-        const emptyRow = tableBody.querySelector('tr td[colspan]')?.parentElement;
-        if (emptyRow) {
-            emptyRow.style.display = 'none';
-        }
-    }
-
-    function toggleUserSearch() {
-        const mode = document.getElementById('userFilterMode').value;
-        const input = document.getElementById('userSearchInput');
-        if (mode === 'specific') {
-            input.style.display = 'block';
-            input.focus();
-        } else {
-            input.style.display = 'none';
-            input.value = '';
-        }
-    }
-
-    // ==========================================
-    // 7. 恢復評論邏輯 (修復版 - 不依賴 event 對象)
-    // ==========================================
-
-    /**
-     * 打開恢復確認彈窗 (先進行後端預檢)
-     * 修復：直接接收 archiveId 和 authorUsername 參數，不依賴 event 對象
-     */
     async function openRestoreModal(archiveId, authorUsername) {
-        currentRestoreArchiveId = archiveId;
-        currentRestoreAuthorUsername = authorUsername;
-
-        // 找到觸發按鈕（通過 archiveId 查找）
+        currentRestoreArchiveId = archiveId; currentRestoreAuthorUsername = authorUsername;
         const btn = document.querySelector(`button[data-archive-id="${archiveId}"]`);
         const originalHtml = btn ? btn.innerHTML : '';
-
-        // 1. 按鈕進入 Loading 狀態
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 檢查中...';
-        }
-
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 檢查中...'; }
         try {
-            // 2. 發送預檢請求
-            const response = await fetch(`/api/review/restore/${archiveId}/check`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
-            });
+            const response = await fetch(`/api/review/restore/${archiveId}/check`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
             const result = await response.json();
-
             if (!response.ok || !result.success) {
-                showNotification('❌ ' + (result.message || '預檢失敗'), true);
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = originalHtml;
-                }
+                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '預檢失敗'), true);
+                if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
                 return;
             }
-
             const data = result.data;
-
-            // 3. 檢查父評論是否存在 (針對樓中樓)
             if (data.parentExists === false) {
-                showNotification('❌ 無法恢復：該回覆的父評論已被刪除，無法單獨恢復樓中樓回覆！', true);
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = originalHtml;
-                }
-                return; // 直接攔截，不彈窗
+                if (typeof showNotification === 'function') showNotification('❌ 無法恢復：該回覆的父評論已被刪除，無法單獨恢復樓中樓回覆！', true);
+                if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+                return;
             }
-
-            // 4. 根據刪除者身份決定顯示哪個彈窗
             if (data.isDeletedByAdmin) {
-                // 情況 A：管理員刪除的 ➔ 顯示綠色標準恢復彈窗
                 document.getElementById('restoreTargetUsername').textContent = authorUsername;
                 document.getElementById('restoreReviewModal').style.display = 'flex';
                 document.body.style.overflow = 'hidden';
             } else {
-                // 情況 B：普通用戶/系統刪除的  顯示黃色警告彈窗
                 document.getElementById('restoreDeletedByUsername').textContent = data.deletedByUsername;
                 document.getElementById('restoreAuthorUsername').textContent = authorUsername;
                 document.getElementById('restoreUserDeletedModal').style.display = 'flex';
                 document.body.style.overflow = 'hidden';
             }
-
         } catch (error) {
             console.error('預檢錯誤:', error);
-            showNotification('❌ 網絡錯誤，請稍後重試', true);
+            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
         } finally {
-            // 恢復按鈕狀態
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
+            if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
         }
     }
-
-    /**
-     * 關閉非管理員刪除警告彈窗 (黃色)
-     */
     function closeRestoreUserDeletedModal() {
         const modal = document.getElementById('restoreUserDeletedModal');
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = ''; // 恢復背景滾動
-        }
+        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
         currentRestoreArchiveId = null;
     }
-
-    /**
-     * 關閉標準恢復確認彈窗 (綠色)
-     */
     function closeRestoreModal() {
         const modal = document.getElementById('restoreReviewModal');
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = ''; // 恢復背景滾動
-        }
+        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
         currentRestoreArchiveId = null;
     }
-
-    /**
-     * 執行恢復操作 (AJAX) - 兩個彈窗共用此函數
-     */
     async function executeRestoreReview() {
         if (!currentRestoreArchiveId) return;
-
-        // 判斷是哪個彈窗觸發的，以獲取正確的按鈕 ID
         const isUserDeletedModal = document.getElementById('restoreUserDeletedModal').style.display === 'flex';
         const btnId = isUserDeletedModal ? 'confirmForceRestoreBtn' : 'confirmRestoreBtn';
         const btn = document.getElementById(btnId);
         const originalHtml = btn.innerHTML;
-
-        // 1. 進入 Loading 狀態，防止重複點擊
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
         try {
-            // 2. 發送恢復請求到後端
-            const response = await fetch(`/api/review/restore/${currentRestoreArchiveId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-
+            const response = await fetch(`/api/review/restore/${currentRestoreArchiveId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
             const result = await response.json();
-
-            // 3. 處理後端響應
             if (response.ok && result.success) {
-                // 關閉所有相關彈窗
-                closeRestoreModal();
-                closeRestoreUserDeletedModal();
-
-                // 顯示成功通知
-                if (typeof showNotification === 'function') {
-                    showNotification('✅ 評論已成功恢復，並已發送通知給用戶！');
-                } else {
-                    alert('✅ 評論已成功恢復！');
-                }
-
-                // 延遲後刷新頁面，讓後端數據更新並從歸檔列表中移除該記錄
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-
+                closeRestoreModal(); closeRestoreUserDeletedModal();
+                if (typeof showNotification === 'function') showNotification('✅ 評論已成功恢復，並已發送通知給用戶！');
+                loadArchivesData();
             } else {
-                // 處理業務錯誤
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ ' + (result.message || '恢復失敗'), true);
-                } else {
-                    alert('❌ ' + (result.message || '恢復失敗'));
-                }
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
+                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '恢復失敗'), true);
+                btn.disabled = false; btn.innerHTML = originalHtml;
             }
-
         } catch (error) {
             console.error('恢復評論錯誤:', error);
-            if (typeof showNotification === 'function') {
-                showNotification('❌ 網絡錯誤，請稍後重試', true);
-            } else {
-                alert('❌ 網絡錯誤，請稍後重試');
-            }
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
+            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
+            btn.disabled = false; btn.innerHTML = originalHtml;
         }
     }
 
-    // ==========================================
-    // 举报处理相关变量
-    // ==========================================
-    let currentReportId = null;
-    let currentReportData = null;
-
-    /**
-     * 打开举报处理模态框
-     */
     function openReportDetailModal(reportId) {
         currentReportId = reportId;
-
-        // 找到对应的举报数据
         const reportRow = document.querySelector(`button[onclick*="openReportDetailModal(${reportId})"]`)?.closest('tr');
         if (!reportRow) return;
-
-        // 提取数据
-        const reporter = reportRow.cells[1].textContent.trim();
-        const reportedUser = reportRow.cells[2].textContent.trim();
-        const category = reportRow.cells[4].textContent.trim();
-        const reason = reportRow.cells[5].textContent.trim();
-
-        // 填充模态框
-        document.getElementById('reportReporter').textContent = reporter;
-        document.getElementById('reportReportedUser').textContent = reportedUser;
-        document.getElementById('reportCategory').textContent = category;
-        document.getElementById('reportReason').textContent = reason || '未填写';
-
-        // 显示模态框
+        document.getElementById('reportReporter').textContent = reportRow.cells[1].textContent.trim();
+        document.getElementById('reportReportedUser').textContent = reportRow.cells[2].textContent.trim();
+        document.getElementById('reportCategory').textContent = reportRow.cells[4].textContent.trim();
+        document.getElementById('reportReason').textContent = reportRow.cells[5].textContent.trim() || '未填寫';
         const modal = document.getElementById('reportDecisionModal');
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+        if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
     }
-
-    /**
-     * 处理举报决策
-     * @param {boolean} isSuccessful - 举报是否成立
-     */
     async function handleReportDecision(isSuccessful) {
         if (!currentReportId) return;
-
         const btn = event.target.closest('.btn-decision');
         const originalHtml = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
-
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
         try {
-            const response = await fetch(`/api/report/${currentReportId}/decision`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    successful: isSuccessful
-                })
-            });
-
+            const response = await fetch(`/api/report/${currentReportId}/decision`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ successful: isSuccessful }) });
             const result = await response.json();
-
             if (response.ok && result.success) {
-                // 关闭模态框
                 closeReportDecisionModal();
-
-                // 显示成功通知
-                if (typeof showNotification === 'function') {
-                    showNotification('✅ ' + result.message);
-                } else {
-                    alert('✅ ' + result.message);
-                }
-
-                // 刷新页面
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
+                loadReportsData();
             } else {
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ ' + (result.message || '处理失败'), true);
-                } else {
-                    alert('❌ ' + (result.message || '处理失败'));
-                }
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
+                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '處理失敗'), true);
+                btn.disabled = false; btn.innerHTML = originalHtml;
             }
         } catch (error) {
-            console.error('处理举报错误:', error);
-            if (typeof showNotification === 'function') {
-                showNotification('❌ 网络错误，请稍后重试', true);
-            } else {
-                alert('❌ 网络错误，请稍后重试');
-            }
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
+            console.error('處理舉報錯誤:', error);
+            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
+            btn.disabled = false; btn.innerHTML = originalHtml;
         }
     }
-
-    /**
-     * 关闭举报处理模态框
-     */
     function closeReportDecisionModal() {
         const modal = document.getElementById('reportDecisionModal');
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-        currentReportId = null;
-        currentReportData = null;
+        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+        currentReportId = null; currentReportData = null;
     }
-    // ==========================================
-    // 8. 全局事件監聽 (遮罩層與 ESC 鍵)
-    // ==========================================
+
     document.addEventListener('click', function (e) {
-        const deleteModal = document.getElementById('deleteReviewModal');
-        if (deleteModal && e.target === deleteModal) closeDeleteModal();
-
-        const banModal = document.getElementById('adminBanModal');
-        if (banModal && e.target === banModal) closeAdminBanModal();
-
-        const permModal = document.getElementById('adminPermissionModal');
-        if (permModal && e.target === permModal) closeAdminPermissionModal();
-
-        const blacklistModal = document.getElementById('blacklistConfirmModal');
-        if (blacklistModal && e.target === blacklistModal) window.closeBlacklistConfirmModal();
-
-        const keywordModal = document.getElementById('keywordModal');
-        if (keywordModal && e.target === keywordModal) closeKeywordModal();
-
-        const deleteKwModal = document.getElementById('deleteKeywordModal');
-        if (deleteKwModal && e.target === deleteKwModal) closeDeleteKeywordModal();
-
-        const reportModal = document.getElementById('reportDecisionModal');
-        if (reportModal && e.target === reportModal) closeReportDecisionModal();
-
-        // 恢復評論彈窗遮罩層關閉邏輯
-        const restoreModal = document.getElementById('restoreReviewModal');
-        if (restoreModal && e.target === restoreModal) {
-            closeRestoreModal();
-        }
-
-        const userDeletedModal = document.getElementById('restoreUserDeletedModal');
-        if (userDeletedModal && e.target === userDeletedModal) {
-            closeRestoreUserDeletedModal();
-        }
+        const modals = ['deleteReviewModal', 'adminBanModal', 'adminPermissionModal', 'blacklistConfirmModal', 'restoreReviewModal', 'restoreUserDeletedModal', 'reportDecisionModal'];
+        modals.forEach(id => {
+            const modal = document.getElementById(id);
+            if (modal && e.target === modal) {
+                if (id === 'deleteReviewModal') closeDeleteModal();
+                else if (id === 'adminBanModal') closeAdminBanModal();
+                else if (id === 'adminPermissionModal') closeAdminPermissionModal();
+                else if (id === 'blacklistConfirmModal') window.closeBlacklistConfirmModal();
+                else if (id === 'restoreReviewModal') closeRestoreModal();
+                else if (id === 'restoreUserDeletedModal') closeRestoreUserDeletedModal();
+                else if (id === 'reportDecisionModal') closeReportDecisionModal();
+            }
+        });
     });
-
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
-            closeDeleteModal();
-            closeAdminBanModal();
-            closeAdminPermissionModal();
-            window.closeBlacklistConfirmModal();
-            closeKeywordModal();
-            closeDeleteKeywordModal();
-            closeReportDecisionModal();
-
-            //  恢復評論彈窗 ESC 關閉邏輯
-            closeRestoreModal();
-            closeRestoreUserDeletedModal();
+            closeDeleteModal(); closeAdminBanModal(); closeAdminPermissionModal();
+            window.closeBlacklistConfirmModal(); closeRestoreModal(); closeRestoreUserDeletedModal(); closeReportDecisionModal();
         }
-    });
-
-    document.addEventListener('click', function (e) {
-        const deleteButton = e.target.closest('.btn-delete');
-        if (deleteButton) {
-            const reviewId = deleteButton.dataset.reviewId;
-            const username = deleteButton.dataset.username;
-            if (reviewId) openDeleteModal(reviewId, username);
-        }
-
-        const banButton = e.target.closest('.btn-ban');
-        if (banButton) {
-            const username = banButton.dataset.username;
-            const reviewId = banButton.dataset.reviewId;
-            const reviewContent = banButton.dataset.reviewContent;
-            if (username) openAdminBanModal(username, reviewId, reviewContent);
-        }
-    });
-
-    // ==========================================
-    // 10. 歸檔篩選功能
-    // ==========================================
-
-    /**
-    * 切換原作者搜索輸入框顯示/隱藏
-    */
-    function toggleArchiveAuthorSearch() {
-        const mode = document.getElementById('archiveAuthorFilterMode').value;
-        const input = document.getElementById('archiveAuthorSearchInput');
-        if (mode === 'specific') {
-            input.style.display = 'block';
-            input.focus();
-        } else {
-            input.style.display = 'none';
-            input.value = '';
-        }
-    }
-
-    /**
-    * 切換執行刪除者搜索輸入框顯示/隱藏
-    */
-    function toggleArchiveDeletedBySearch() {
-        const mode = document.getElementById('archiveDeletedByFilterMode').value;
-        const input = document.getElementById('archiveDeletedBySearchInput');
-        if (mode === 'specific') {
-            input.style.display = 'block';
-            input.focus();
-        } else {
-            input.style.display = 'none';
-            input.value = '';
-        }
-    }
-
-    /**
-    * 執行歸檔篩選
-    */
-    function filterArchives() {
-        const authorMode = document.getElementById('archiveAuthorFilterMode').value;
-        const authorUsername = document.getElementById('archiveAuthorSearchInput').value.trim();
-        const deletedByMode = document.getElementById('archiveDeletedByFilterMode').value;
-        const deletedByUsername = document.getElementById('archiveDeletedBySearchInput').value.trim();
-
-        const tableBody = document.querySelector('#tab-archives .data-table tbody');
-        const rows = tableBody.querySelectorAll('tr');
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            if (row.cells.length === 1) return; // 跳過 empty state 行
-
-            // 獲取原作者用戶名 (第3列)
-            const authorCell = row.querySelector('td:nth-child(3)');
-            const rowAuthor = authorCell ? authorCell.textContent.trim() : '';
-
-            // 獲取執行刪除者用戶名 (第6列)
-            const deletedByCell = row.querySelector('td:nth-child(6)');
-            const rowDeletedBy = deletedByCell ? deletedByCell.textContent.trim() : '';
-            // 如果是"系统"，提取出實際的用戶名
-            const deletedByUser = rowDeletedBy.includes('系统') ? '系统' : rowDeletedBy.replace(/<[^>]*>/g, '').trim();
-
-            let showRow = true;
-
-            // 原作者篩選
-            if (authorMode === 'specific') {
-                if (!authorUsername) {
-                    if (typeof showNotification === 'function') showNotification('⚠️ 請輸入原作者用戶名', true);
-                    return;
-                }
-                if (rowAuthor !== authorUsername) {
-                    showRow = false;
-                }
-            }
-
-            // 執行刪除者篩選
-            if (deletedByMode === 'admin') {
-                if (deletedByUser !== 'Admin' && deletedByUser !== 'admin') {
-                    showRow = false;
-                }
-            } else if (deletedByMode === 'specific') {
-                if (!deletedByUsername) {
-                    if (typeof showNotification === 'function') showNotification('️ 請輸入執行刪除者用戶名', true);
-                    return;
-                }
-                if (deletedByUser !== deletedByUsername) {
-                    showRow = false;
-                }
-            }
-
-            if (showRow) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-
-        // 處理空狀態行的顯示/隱藏
-        const emptyRow = tableBody.querySelector('tr td[colspan]')?.parentElement;
-        if (emptyRow) {
-            emptyRow.style.display = visibleCount === 0 ? '' : 'none';
-        }
-
-        if (visibleCount === 0) {
-            if (typeof showNotification === 'function') {
-                showNotification('⚠️ 沒有符合條件的歸檔記錄！', true);
-            } else {
-                alert('沒有符合條件的歸檔記錄！');
-            }
-        }
-    }
-
-    /**
-    * 重置歸檔篩選
-    */
-    function resetArchivesFilter() {
-        // 1. 重置表單控件為默認值
-        document.getElementById('archiveAuthorFilterMode').value = 'all';
-        document.getElementById('archiveAuthorSearchInput').value = '';
-        document.getElementById('archiveAuthorSearchInput').style.display = 'none';
-        document.getElementById('archiveDeletedByFilterMode').value = 'all';
-        document.getElementById('archiveDeletedBySearchInput').value = '';
-        document.getElementById('archiveDeletedBySearchInput').style.display = 'none';
-
-        // 2. 恢復所有行顯示
-        const tableBody = document.querySelector('#tab-archives .data-table tbody');
-        const rows = tableBody.querySelectorAll('tr');
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            if (row.cells.length > 1) { // 跳過 empty state 行
-                row.style.display = '';
-                visibleCount++;
-            }
-        });
-
-        // 3. 確保 empty state 行被隱藏
-        const emptyRow = tableBody.querySelector('tr td[colspan]')?.parentElement;
-        if (emptyRow) {
-            emptyRow.style.display = 'none';
-        }
-    }
-
-    // ==========================================
-    // 舉報管理：打開刪除被舉報評論的模態框 (復用現有精美 DIV)
-    // ==========================================
-    function openDeleteReportedReviewModal(reviewId, username) {
-        // 1. 檢查是否有 reviewId (防止舉報的是用戶個人資料而非評論)
-        if (!reviewId || reviewId === 'null' || reviewId === '') {
-            if (typeof showNotification === 'function') {
-                showNotification('⚠️ 該舉報沒有關聯的評論，無法執行刪除', true);
-            } else {
-                alert('⚠️ 該舉報沒有關聯的評論，無法執行刪除');
-            }
-            return;
-        }
-
-        // 2. 設置全局變量 (與現有刪除邏輯共用 currentDeleteId)
-        currentDeleteId = reviewId;
-
-        // 3. 更新模態框中的用戶名顯示
-        const targetUserEl = document.getElementById('targetUsername');
-        if (targetUserEl) {
-            targetUserEl.textContent = username || '未知用戶';
-        }
-
-        // 4. 重置單選框和自定義輸入框狀態
-        const defaultRadio = document.querySelector('input[name="deleteReason"][value="該內容不符合社區規範，因此被移除。"]');
-        if (defaultRadio) defaultRadio.checked = true;
-
-        const customReasonEl = document.getElementById('customReasonText');
-        if (customReasonEl) customReasonEl.value = '';
-
-        handleReasonChange('default');
-
-        // 5. 顯示模態框
-        const modal = document.getElementById('deleteReviewModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden'; // 禁止背景滾動
-        }
-    }
-
-    // ==========================================
-    // 举报管理 Tab 专属筛选逻辑
-    // ==========================================
-
-    /**
-     * 切换“举报者”输入框的显示/隐藏
-     */
-    function toggleReporterSearch() {
-        const mode = document.getElementById('reporterFilterMode').value;
-        const input = document.getElementById('reporterSearchInput');
-        if (mode === 'specific') {
-            input.style.display = 'block';
-            input.focus();
-        } else {
-            input.style.display = 'none';
-            input.value = ''; // 重置时清空内容
-        }
-    }
-
-    /**
-     * 切换“被举报者”输入框的显示/隐藏
-     */
-    function toggleReportedUserSearch() {
-        const mode = document.getElementById('reportedUserFilterMode').value;
-        const input = document.getElementById('reportedUserSearchInput');
-        if (mode === 'specific') {
-            input.style.display = 'block';
-            input.focus();
-        } else {
-            input.style.display = 'none';
-            input.value = ''; // 重置时清空内容
-        }
-    }
-
-    /**
-     * 执行筛选 (两个条件互相搭配，同时生效)
-     */
-    function filterReports() {
-        const reporterMode = document.getElementById('reporterFilterMode').value;
-        const reporterName = document.getElementById('reporterSearchInput').value.trim();
-
-        const reportedMode = document.getElementById('reportedUserFilterMode').value;
-        const reportedName = document.getElementById('reportedUserSearchInput').value.trim();
-
-        // 基础校验：如果选了指定用户但没填名字，提示用户
-        if (reporterMode === 'specific' && !reporterName) {
-            if (typeof showNotification === 'function') showNotification('⚠️ 请输入举报者用户名', true);
-            else alert('请输入举报者用户名');
-            return;
-        }
-        if (reportedMode === 'specific' && !reportedName) {
-            if (typeof showNotification === 'function') showNotification('⚠️ 请输入被举报者用户名', true);
-            else alert('请输入被举报者用户名');
-            return;
-        }
-
-        const tableBody = document.querySelector('#tab-reports .data-table tbody');
-        const rows = tableBody.querySelectorAll('tr');
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            // 跳过空状态行 (colspan="9")
-            if (row.cells.length === 1) return;
-
-            // 获取表格中的文本内容
-            // 注意：根据你的 HTML 结构，举报人在第2列(index 1)，被举报人在第3列(index 2)
-            const rowReporter = row.cells[1].textContent.trim();
-            const rowReported = row.cells[2].textContent.trim();
-
-            let isMatchReporter = true;
-            let isMatchReported = true;
-
-            // 1. 匹配举报者
-            if (reporterMode === 'specific') {
-                // 这里使用完全匹配，如果需要模糊匹配可以改为 includes
-                isMatchReporter = (rowReporter === reporterName);
-            }
-
-            // 2. 匹配被举报者
-            if (reportedMode === 'specific') {
-                isMatchReported = (rowReported === reportedName);
-            }
-
-            // 3. 两个条件必须同时满足 (AND 逻辑)
-            if (isMatchReporter && isMatchReported) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-
-        // 处理空状态行的显示
-        const emptyRow = tableBody.querySelector('tr td[colspan]')?.parentElement;
-        if (emptyRow) {
-            // 如果筛选后没有数据，显示空状态；否则隐藏
-            emptyRow.style.display = visibleCount === 0 ? '' : 'none';
-        }
-
-        // 如果筛选后没数据，给个提示
-        if (visibleCount === 0 && (reporterMode === 'specific' || reportedMode === 'specific')) {
-            if (typeof showNotification === 'function') showNotification('⚠️ 没有找到符合条件的举报记录', true);
-        }
-    }
-
-    /**
-     * 重置筛选条件
-     */
-    function resetReportsFilter() {
-        // 1. 重置下拉框和输入框
-        document.getElementById('reporterFilterMode').value = 'all';
-        document.getElementById('reporterSearchInput').value = '';
-        document.getElementById('reporterSearchInput').style.display = 'none';
-
-        document.getElementById('reportedUserFilterMode').value = 'all';
-        document.getElementById('reportedUserSearchInput').value = '';
-        document.getElementById('reportedUserSearchInput').style.display = 'none';
-
-        // 2. 恢复所有行显示
-        const tableBody = document.querySelector('#tab-reports .data-table tbody');
-        const rows = tableBody.querySelectorAll('tr');
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            if (row.cells.length > 1) { // 跳过空状态行
-                row.style.display = '';
-                visibleCount++;
-            }
-        });
-
-        // 3. 确保空状态行被隐藏
-        const emptyRow = tableBody.querySelector('tr td[colspan]')?.parentElement;
-        if (emptyRow) {
-            emptyRow.style.display = 'none';
-        }
-    }
-
-    // ==========================================
-    // 9. 頁面初始化
-    // ==========================================
-    document.addEventListener('DOMContentLoaded', function () {
-        // 頁面加載時獲取用戶列表，供篩選功能使用
-        loadAllUsers();
-        //  頁面加載時獲取關鍵詞列表，供關鍵詞篩選使用
-        loadAllKeywords();
     });
 </script>
 </body>

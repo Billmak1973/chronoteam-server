@@ -35,7 +35,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Page<Review> findRepliesByParentId(@Param("parentId") Long parentId, Pageable pageable);
 
 
-    // 1. 【我的评论】：只要是我发出的 (cust_username = 我)，按时间倒序
+    // 1. 【我的评论】：只要是我发出的 (cust_username = 我)，按时间倒序 這個要保留
     Page<Review> findByUser_UsernameOrderByCreatedAtDesc(String username, Pageable pageable);
 
     // 2. 【回复我的】：别人回复我 (reply_to_user = 我 且 cust_username != 我)
@@ -139,4 +139,26 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             @org.springframework.data.repository.query.Param("formattedContent") String formattedContent,
             @org.springframework.data.repository.query.Param("isFormatted") Boolean isFormatted,
             @org.springframework.data.repository.query.Param("createdAt") LocalDateTime createdAt);
+
+    // 根据用户名和评论类型筛选
+    // ==========================================
+    // 根據用戶名和評論類型篩選 (支持分頁)
+    // ==========================================
+    @Query("SELECT r FROM Review r WHERE r.user.username = :username AND r.parentId IS NULL ORDER BY r.createdAt DESC")
+    Page<Review> findByUser_UsernameAndParentIdIsNull(@Param("username") String username, Pageable pageable);
+
+    @Query("SELECT r FROM Review r WHERE r.user.username = :username AND r.parentId IS NOT NULL ORDER BY r.createdAt DESC")
+    Page<Review> findByUser_UsernameAndParentIdIsNotNull(@Param("username") String username, Pageable pageable);
+
+//    @Query("SELECT r FROM Review r WHERE r.user.username = :username ORDER BY r.createdAt DESC")
+//    Page<Review> findByUser_UsernameOrderByCreatedAtDesc(@Param("username") String username, Pageable pageable);
+
+    // ==========================================
+    // 根據評論類型篩選所有用戶 (支持分頁)
+    // =================================اffect
+    @Query("SELECT r FROM Review r WHERE r.parentId IS NULL ORDER BY r.createdAt DESC")
+    Page<Review> findByParentIdIsNullOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("SELECT r FROM Review r WHERE r.parentId IS NOT NULL ORDER BY r.createdAt DESC")
+    Page<Review> findByParentIdIsNotNullOrderByCreatedAtDesc(Pageable pageable);
 }
