@@ -1701,1072 +1701,1252 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ========================================== */
+        /*   分页组件样式 */
+        /* ========================================== */
+        .pagination-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            padding: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .page-btn {
+            padding: 0.6rem 1.2rem;
+            border: 2px solid #e9ecef;
+            background: white;
+            color: var(--primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 悬停效果 */
+        .page-btn:hover:not(:disabled):not(.disabled) {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
+        }
+
+        /* 激活状态（当前页） */
+        .page-btn.active {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            border-color: var(--gold);
+            cursor: default;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* 禁用状态 */
+        .page-btn.disabled,
+        .page-btn:disabled {
+            background: #f8f9fa;
+            color: #adb5bd;
+            border-color: #e9ecef;
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* 省略号样式 */
+        .page-ellipsis {
+            padding: 0.6rem 0.5rem;
+            color: var(--gray);
+            font-weight: bold;
+            letter-spacing: 2px;
+            user-select: none;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .pagination-wrapper {
+                gap: 0.4rem;
+                padding: 1rem 0;
+            }
+
+            .page-btn {
+                padding: 0.5rem 0.9rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* 添加动画效果 */
+        @keyframes pageBtnPulse {
+
+            0%,
+            100% {
+                transform: translateY(-2px);
+            }
+
+            50% {
+                transform: translateY(-3px);
+            }
+        }
+
+        .page-btn:hover:not(:disabled):not(.disabled) {
+            animation: pageBtnPulse 1.5s ease-in-out infinite;
+        }
+
+        .footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
     </style>
 </head>
 
 <body>
-<!-- 1. 引入公共導航欄 -->
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <!-- 1. 引入公共導航欄 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="admin-layout">
-    <!-- 2. 引入左側邊欄 (activePage='reviews' 用於高亮菜單) -->
-    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='reviews')}"></div>
+    <div class="admin-layout">
+        <!-- 2. 引入左側邊欄 (activePage='reviews' 用於高亮菜單) -->
+        <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='reviews')}"></div>
 
-    <!-- 3. 右側主內容區 -->
-    <main class="admin-main">
-        <div class="content-header">
-            <h2><i class="fas fa-comments"></i> <span id="pageTitle">評論與舉報管理</span></h2>
-            <div class="breadcrumb">
-                <a href="/admin/dashboard">管理中心</a> / <span id="pageBreadcrumb">評論審核</span>
-            </div>
-        </div>
-
-        <div class="content-body">
-            <!-- Tab 切換按鈕 -->
-            <div class="tabs-container">
-                <button class="tab-btn active" onclick="switchTab('reviews', this)">
-                    <i class="fas fa-list"></i> 所有評論
-                </button>
-                <button class="tab-btn" onclick="switchTab('archives', this)">
-                    <i class="fas fa-archive"></i> 刪除歸檔
-                </button>
-                <button class="tab-btn" onclick="switchTab('reports', this)">
-                    <i class="fas fa-flag"></i> 舉報管理
-                </button>
+        <!-- 3. 右側主內容區 -->
+        <main class="admin-main">
+            <div class="content-header">
+                <h2><i class="fas fa-comments"></i> <span id="pageTitle">評論與舉報管理</span></h2>
+                <div class="breadcrumb">
+                    <a href="/admin/dashboard">管理中心</a> / <span id="pageBreadcrumb">評論審核</span>
+                </div>
             </div>
 
-            <!-- ================= Tab 1: 所有評論 ================= -->
-            <div id="tab-reviews" class="tab-content active">
-                <!-- 篩選工具欄 -->
-                <div class="filter-bar">
-                    <!-- 1. 用戶篩選 -->
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-user"></i> 用戶篩選</label>
-                        <div class="filter-control-group">
-                            <select id="userFilterMode" class="filter-select" onchange="toggleUserSearch()">
-                                <option value="all">所有用戶</option>
-                                <option value="specific">指定用戶</option>
+            <div class="content-body">
+                <!-- Tab 切換按鈕 -->
+                <div class="tabs-container">
+                    <button class="tab-btn active" onclick="switchTab('reviews', this)">
+                        <i class="fas fa-list"></i> 所有評論
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('archives', this)">
+                        <i class="fas fa-archive"></i> 刪除歸檔
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('reports', this)">
+                        <i class="fas fa-flag"></i> 舉報管理
+                    </button>
+                </div>
+
+                <!-- ================= Tab 1: 所有評論 ================= -->
+                <div id="tab-reviews" class="tab-content active">
+                    <!-- 篩選工具欄 -->
+                    <div class="filter-bar">
+                        <!-- 1. 用戶篩選 -->
+                        <div class="filter-item">
+                            <label class="filter-label"><i class="fas fa-user"></i> 用戶篩選</label>
+                            <div class="filter-control-group">
+                                <select id="userFilterMode" class="filter-select" onchange="toggleUserSearch()">
+                                    <option value="all">所有用戶</option>
+                                    <option value="specific">指定用戶</option>
+                                </select>
+                                <input type="text" id="userSearchInput" class="filter-input" placeholder="輸入用戶名..."
+                                    style="display: none;">
+                            </div>
+                        </div>
+
+                        <!-- 2. 評論類型篩選 -->
+                        <div class="filter-item">
+                            <label class="filter-label"><i class="fas fa-comments"></i> 評論類型</label>
+                            <select id="reviewTypeFilter" class="filter-select">
+                                <option value="all">全部評論</option>
+                                <option value="root">主評論 (根評論)</option>
+                                <option value="reply">樓中樓回復</option>
                             </select>
-                            <input type="text" id="userSearchInput" class="filter-input" placeholder="輸入用戶名..."
-                                   style="display: none;">
+                        </div>
+
+                        <!-- 3. 關鍵詞篩選 -->
+                        <div class="filter-item">
+                            <label class="filter-label"><i class="fas fa-key"></i> 關鍵詞篩選</label>
+                            <select id="keywordFilterMode" class="filter-select">
+                                <option value="no">否</option>
+                                <option value="yes">是</option>
+                            </select>
+                        </div>
+
+                        <!-- 【新增】确定与重新筛选按钮 -->
+                        <div class="filter-item"
+                            style="flex: 0 0 auto; display: flex; gap: 0.5rem; align-items: flex-end; margin: 0 1rem 0 0;">
+                            <button type="button" class="btn-filter-action btn-confirm" onclick="filterReviews()">
+                                <i class="fas fa-check"></i> 確定
+                            </button>
+                            <button type="button" class="btn-filter-action btn-reset" onclick="resetReviewsFilter()">
+                                <i class="fas fa-redo"></i> 重新篩選
+                            </button>
+                        </div>
+
+                        <!-- 4. 添加關鍵詞按鈕 (最右側) -->
+                        <div class="filter-item filter-action">
+                            <button class="btn-add-keyword" onclick="openKeywordModal()">
+                                <i class="fas fa-plus-circle"></i> 管理關鍵詞
+                            </button>
                         </div>
                     </div>
 
-                    <!-- 2. 評論類型篩選 -->
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-comments"></i> 評論類型</label>
-                        <select id="reviewTypeFilter" class="filter-select">
-                            <option value="all">全部評論</option>
-                            <option value="root">主評論 (根評論)</option>
-                            <option value="reply">樓中樓回復</option>
-                        </select>
-                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">ID</th>
+                                    <th style="width: 100px;">用戶</th>
+                                    <th style="width: 150px;">關聯商品</th>
+                                    <th style="width: 60px;">評分</th>
+                                    <th>評論內容</th>
+                                    <th style="width: 140px; text-align: center;">反饋 (贊/踩)</th>
+                                    <th style="width: 60px;">置頂</th>
+                                    <th style="width: 140px;">創建時間</th>
+                                    <th style="width: 140px; text-align: center;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 遍歷 Review 列表，並綁定 data 屬性供前端篩選使用 -->
+                                <tr th:each="review : ${reviews}"
+                                    th:data-username="${review.user != null ? review.user.username : ''}"
+                                    th:data-userid="${review.user != null ? review.user.id : ''}"
+                                    th:data-parentid="${review.parentId != null ? 'reply' : 'root'}">
 
-                    <!-- 3. 關鍵詞篩選 -->
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-key"></i> 關鍵詞篩選</label>
-                        <select id="keywordFilterMode" class="filter-select">
-                            <option value="no">否</option>
-                            <option value="yes">是</option>
-                        </select>
-                    </div>
-
-                    <!-- 【新增】确定与重新筛选按钮 -->
-                    <div class="filter-item"
-                         style="flex: 0 0 auto; display: flex; gap: 0.5rem; align-items: flex-end; margin: 0 1rem 0 0;">
-                        <button type="button" class="btn-filter-action btn-confirm" onclick="filterReviews()">
-                            <i class="fas fa-check"></i> 確定
-                        </button>
-                        <button type="button" class="btn-filter-action btn-reset" onclick="resetReviewsFilter()">
-                            <i class="fas fa-redo"></i> 重新篩選
-                        </button>
-                    </div>
-
-                    <!-- 4. 添加關鍵詞按鈕 (最右側) -->
-                    <div class="filter-item filter-action">
-                        <button class="btn-add-keyword" onclick="openKeywordModal()">
-                            <i class="fas fa-plus-circle"></i> 管理關鍵詞
-                        </button>
-                    </div>
-                </div>
-
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                        <tr>
-                            <th style="width: 60px;">ID</th>
-                            <th style="width: 100px;">用戶</th>
-                            <th style="width: 150px;">關聯商品</th>
-                            <th style="width: 60px;">評分</th>
-                            <th>評論內容</th>
-                            <th style="width: 140px; text-align: center;">反饋 (贊/踩)</th>
-                            <th style="width: 60px;">置頂</th>
-                            <th style="width: 140px;">創建時間</th>
-                            <th style="width: 140px; text-align: center;">操作</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <!-- 遍歷 Review 列表，並綁定 data 屬性供前端篩選使用 -->
-                        <tr th:each="review : ${reviews}"
-                            th:data-username="${review.user != null ? review.user.username : ''}"
-                            th:data-userid="${review.user != null ? review.user.id : ''}"
-                            th:data-parentid="${review.parentId != null ? 'reply' : 'root'}">
-
-                            <td style="color: var(--gray); font-family: monospace;"
-                                th:text="${review.reviewId}">1</td>
-                            <td th:text="${review.user != null ? review.user.username : '未知'}">user123</td>
-                            <td>
+                                    <td style="color: var(--gray); font-family: monospace;"
+                                        th:text="${review.reviewId}">1</td>
+                                    <td th:text="${review.user != null ? review.user.username : '未知'}">user123</td>
+                                    <td>
                                         <span class="text-truncate"
-                                              th:text="${review.product != null ? review.product.description : '未知商品'}"
-                                              th:title="${review.product != null ? review.product.description : ''}">商品名稱</span>
-                            </td>
-                            <td>
+                                            th:text="${review.product != null ? review.product.description : '未知商品'}"
+                                            th:title="${review.product != null ? review.product.description : ''}">商品名稱</span>
+                                    </td>
+                                    <td>
                                         <span th:if="${review.rating != null}"
-                                              style="color: var(--gold); font-weight: 600;">
+                                            style="color: var(--gold); font-weight: 600;">
                                             <i class="fas fa-star"></i> <span th:text="${review.rating}">5.0</span>
                                         </span>
-                                <span th:unless="${review.rating != null}" style="color: var(--gray);">-</span>
-                            </td>
-                            <td>
+                                        <span th:unless="${review.rating != null}" style="color: var(--gray);">-</span>
+                                    </td>
+                                    <td>
                                         <span class="text-truncate" th:text="${review.content}"
-                                              th:title="${review.content}">評論內容...</span>
-                            </td>
-                            <td>
-                                <div
-                                        style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 0.5rem;">
-                                    <div
-                                            style="display: flex; align-items: center; gap: 0.4rem; color: #4facfe; font-weight: 600; background: rgba(79, 172, 254, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px;">
-                                        <i class="fas fa-thumbs-up" style="font-size: 0.85rem;"></i>
-                                        <span th:text="${review.likeCount}">0</span>
-                                    </div>
-                                    <div
-                                            style="display: flex; align-items: center; gap: 0.4rem; color: #6c757d; font-weight: 600; background: rgba(108, 117, 125, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px;">
-                                        <i class="fas fa-thumbs-down" style="font-size: 0.85rem;"></i>
-                                        <span th:text="${review.dislikeCount}">0</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
+                                            th:title="${review.content}">評論內容...</span>
+                                    </td>
+                                    <td>
+                                        <div
+                                            style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 0.5rem;">
+                                            <div
+                                                style="display: flex; align-items: center; gap: 0.4rem; color: #4facfe; font-weight: 600; background: rgba(79, 172, 254, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px;">
+                                                <i class="fas fa-thumbs-up" style="font-size: 0.85rem;"></i>
+                                                <span th:text="${review.likeCount}">0</span>
+                                            </div>
+                                            <div
+                                                style="display: flex; align-items: center; gap: 0.4rem; color: #6c757d; font-weight: 600; background: rgba(108, 117, 125, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px;">
+                                                <i class="fas fa-thumbs-down" style="font-size: 0.85rem;"></i>
+                                                <span th:text="${review.dislikeCount}">0</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
                                         <span th:if="${review.pinned}" style="color: #17a2b8; font-weight: 600;"><i
                                                 class="fas fa-thumbtack"></i> 是</span>
-                                <span th:unless="${review.pinned}" style="color: var(--gray);">否</span>
-                            </td>
-                            <td th:text="${#temporals.format(review.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01
-                            </td>
-                            <td style="text-align: center;">
-                                <div class="action-buttons-grid">
-                                    <a th:href="@{/product/{id}(id=${review.product.productId}, reviewId=${review.reviewId})}"
-                                       class="btn-sm btn-view" title="查看詳情" target="_blank"
-                                       style="text-decoration: none;">
-                                        <i class="fas fa-external-link-alt"></i>
-                                    </a>
-                                    <button class="btn-sm btn-delete" title="刪除"
-                                            th:data-review-id="${review.reviewId}"
-                                            th:data-username="${review.user != null ? review.user.username : '未知用戶'}">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                    <button class="btn-sm btn-ban" title="封禁用戶"
-                                            th:data-username="${review.user != null ? review.user.username : '未知'}"
-                                            th:data-review-id="${review.reviewId}"
-                                            th:data-review-content="${review.content}">
-                                        <i class="fas fa-ban"></i>
-                                    </button>
-                                    <button class="btn-sm btn-blacklist" title="永久拉黑"
-                                            th:data-username="${review.user != null ? review.user.username : '未知'}"
-                                            th:data-review-id="${review.reviewId}"
-                                            th:data-review-content="${review.content}"
-                                            onclick="openBlacklistConfirmModalFromBtn(this)">
-                                        <i class="fas fa-user-slash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr th:if="${#lists.isEmpty(reviews)}">
-                            <td colspan="9">
-                                <div class="empty-state-text">
-                                    <i class="fas fa-inbox"></i>
-                                    暫無評論數據
-                                </div>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
+                                        <span th:unless="${review.pinned}" style="color: var(--gray);">否</span>
+                                    </td>
+                                    <td th:text="${#temporals.format(review.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-01
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <div class="action-buttons-grid">
+                                            <a th:href="@{/product/{id}(id=${review.product.productId}, reviewId=${review.reviewId})}"
+                                                class="btn-sm btn-view" title="查看詳情" target="_blank"
+                                                style="text-decoration: none;">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                            <button class="btn-sm btn-delete" title="刪除"
+                                                th:data-review-id="${review.reviewId}"
+                                                th:data-username="${review.user != null ? review.user.username : '未知用戶'}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                            <button class="btn-sm btn-ban" title="封禁用戶"
+                                                th:data-username="${review.user != null ? review.user.username : '未知'}"
+                                                th:data-review-id="${review.reviewId}"
+                                                th:data-review-content="${review.content}">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                            <button class="btn-sm btn-blacklist" title="永久拉黑"
+                                                th:data-username="${review.user != null ? review.user.username : '未知'}"
+                                                th:data-review-id="${review.reviewId}"
+                                                th:data-review-content="${review.content}"
+                                                onclick="openBlacklistConfirmModalFromBtn(this)">
+                                                <i class="fas fa-user-slash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(reviews)}">
+                                    <td colspan="9">
+                                        <div class="empty-state-text">
+                                            <i class="fas fa-inbox"></i>
+                                            暫無評論數據
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!--這是一個 分頁導航容器。-->
+                    <div id="reviews-pagination"></div>
                 </div>
-                <div id="reviews-pagination"></div>
-            </div>
 
 
-            <div id="tab-archives" class="tab-content">
-                <!-- 篩選工具欄 -->
-                <div class="filter-bar">
-                    <!-- 1. 原作者篩選 -->
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-user"></i> 原作者</label>
-                        <div class="filter-control-group">
-                            <select id="archiveAuthorFilterMode" class="filter-select"
+                <div id="tab-archives" class="tab-content">
+                    <!-- 篩選工具欄 -->
+                    <div class="filter-bar">
+                        <!-- 1. 原作者篩選 -->
+                        <div class="filter-item">
+                            <label class="filter-label"><i class="fas fa-user"></i> 原作者</label>
+                            <div class="filter-control-group">
+                                <select id="archiveAuthorFilterMode" class="filter-select"
                                     onchange="toggleArchiveAuthorSearch()">
-                                <option value="all">全部用戶</option>
-                                <option value="specific">指定用戶</option>
-                            </select>
-                            <input type="text" id="archiveAuthorSearchInput" class="filter-input"
-                                   placeholder="輸入用戶名..." style="display: none;">
+                                    <option value="all">全部用戶</option>
+                                    <option value="specific">指定用戶</option>
+                                </select>
+                                <input type="text" id="archiveAuthorSearchInput" class="filter-input"
+                                    placeholder="輸入用戶名..." style="display: none;">
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- 2. 執行刪除者篩選 -->
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-user-cog"></i> 執行刪除者</label>
-                        <div class="filter-control-group">
-                            <select id="archiveDeletedByFilterMode" class="filter-select"
+                        <!-- 2. 執行刪除者篩選 -->
+                        <div class="filter-item">
+                            <label class="filter-label"><i class="fas fa-user-cog"></i> 執行刪除者</label>
+                            <div class="filter-control-group">
+                                <select id="archiveDeletedByFilterMode" class="filter-select"
                                     onchange="toggleArchiveDeletedBySearch()">
-                                <option value="all">全部用戶</option>
-                                <option value="admin">Admin</option>
-                                <option value="specific">指定用戶</option>
-                            </select>
-                            <input type="text" id="archiveDeletedBySearchInput" class="filter-input"
-                                   placeholder="輸入用戶名..." style="display: none;">
+                                    <option value="all">全部用戶</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="specific">指定用戶</option>
+                                </select>
+                                <input type="text" id="archiveDeletedBySearchInput" class="filter-input"
+                                    placeholder="輸入用戶名..." style="display: none;">
+                            </div>
+                        </div>
+
+                        <!-- 3. 確定與重新篩選按鈕 -->
+                        <div class="filter-item filter-action" style="display: flex; gap: 0.5rem;">
+                            <button type="button" class="btn-filter-action btn-confirm" onclick="filterArchives()">
+                                <i class="fas fa-check"></i> 確定
+                            </button>
+                            <button type="button" class="btn-filter-action btn-reset" onclick="resetArchivesFilter()">
+                                <i class="fas fa-redo"></i> 重新篩選
+                            </button>
                         </div>
                     </div>
 
-                    <!-- 3. 確定與重新篩選按鈕 -->
-                    <div class="filter-item filter-action" style="display: flex; gap: 0.5rem;">
-                        <button type="button" class="btn-filter-action btn-confirm" onclick="filterArchives()">
-                            <i class="fas fa-check"></i> 確定
-                        </button>
-                        <button type="button" class="btn-filter-action btn-reset" onclick="resetArchivesFilter()">
-                            <i class="fas fa-redo"></i> 重新篩選
-                        </button>
-                    </div>
-                </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">歸檔ID</th>
+                                    <!-- 【修改】表头改为：原评论内容 -->
+                                    <th style="width: 200px;">原评论内容</th>
+                                    <th style="width: 100px;">原作者</th>
+                                    <!-- 【修改】表头改为：关联商品 -->
+                                    <th style="width: 150px;">关联商品</th>
+                                    <th>刪除原因</th>
+                                    <!-- 【修改】表头改为：执行删除者 -->
+                                    <th style="width: 120px;">执行删除者</th>
+                                    <th style="width: 140px;">刪除時間</th>
+                                    <th style="width: 100px; text-align: center;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 【修改】遍历组装后的列表，变量名为 item -->
+                                <tr th:each="item : ${archives}">
+                                    <td style="color: var(--gray); font-family: monospace;"
+                                        th:text="${item.archive.archiveId}">1</td>
 
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                        <tr>
-                            <th style="width: 60px;">歸檔ID</th>
-                            <!-- 【修改】表头改为：原评论内容 -->
-                            <th style="width: 200px;">原评论内容</th>
-                            <th style="width: 100px;">原作者</th>
-                            <!-- 【修改】表头改为：关联商品 -->
-                            <th style="width: 150px;">关联商品</th>
-                            <th>刪除原因</th>
-                            <!-- 【修改】表头改为：执行删除者 -->
-                            <th style="width: 120px;">执行删除者</th>
-                            <th style="width: 140px;">刪除時間</th>
-                            <th style="width: 100px; text-align: center;">操作</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <!-- 【修改】遍历组装后的列表，变量名为 item -->
-                        <tr th:each="item : ${archives}">
-                            <td style="color: var(--gray); font-family: monospace;"
-                                th:text="${item.archive.archiveId}">1</td>
-
-                            <!-- 【修改】显示原评论内容 (content)，并截断 -->
-                            <td>
+                                    <!-- 【修改】显示原评论内容 (content)，并截断 -->
+                                    <td>
                                         <span class="text-truncate" th:text="${item.archive.content}"
-                                              th:title="${item.archive.content}">评论内容...</span>
-                            </td>
+                                            th:title="${item.archive.content}">评论内容...</span>
+                                    </td>
 
-                            <td th:text="${item.archive.author != null ? item.archive.author.username : '未知'}">
-                                user123</td>
+                                    <td th:text="${item.archive.author != null ? item.archive.author.username : '未知'}">
+                                        user123</td>
 
-                            <!-- 【修改】显示商品描述 (product.description) -->
-                            <td>
+                                    <!-- 【修改】显示商品描述 (product.description) -->
+                                    <td>
                                         <span class="text-truncate"
-                                              th:text="${item.product != null ? item.product.description : '未知商品'}"
-                                              th:title="${item.product != null ? item.product.description : ''}">商品名称</span>
-                            </td>
+                                            th:text="${item.product != null ? item.product.description : '未知商品'}"
+                                            th:title="${item.product != null ? item.product.description : ''}">商品名称</span>
+                                    </td>
 
-                            <td>
+                                    <td>
                                         <span class="text-truncate"
-                                              th:text="${item.archive.deleteReason != null ? item.archive.deleteReason : ' '}"
-                                              th:title="${item.archive.deleteReason}">违反社区规范</span>
-                            </td>
+                                            th:text="${item.archive.deleteReason != null ? item.archive.deleteReason : ' '}"
+                                            th:title="${item.archive.deleteReason}">违反社区规范</span>
+                                    </td>
 
-                            <!-- 【修改】显示执行删除者的用户名 (deletedBy.username) -->
-                            <td style="font-family: monospace; font-size: 0.9rem; color: var(--primary);">
+                                    <!-- 【修改】显示执行删除者的用户名 (deletedBy.username) -->
+                                    <td style="font-family: monospace; font-size: 0.9rem; color: var(--primary);">
                                         <span th:if="${item.deletedBy != null}">
                                             <i class="fas fa-user-cog"
-                                               style="color: var(--gold); margin-right: 4px;"></i>
+                                                style="color: var(--gold); margin-right: 4px;"></i>
                                             <span th:text="${item.deletedBy.username}">Admin</span>
                                         </span>
-                                <span th:unless="${item.deletedBy != null}" style="color: var(--gray);">
+                                        <span th:unless="${item.deletedBy != null}" style="color: var(--gray);">
                                             <i class="fas fa-robot" style="margin-right: 4px;"></i>系统
                                         </span>
-                            </td>
+                                    </td>
 
-                            <td th:text="${#temporals.format(item.archive.deletedAt, 'yyyy-MM-dd HH:mm')}">
-                                2024-01-02</td>
-                            <!-- 找到這個部分並修改 -->
-                            <td style="text-align: center;">
-                                <button class="btn-sm btn-restore" title="恢復評論"
-                                        th:data-archive-id="${item.archive.archiveId}"
-                                        th:data-username="${item.archive.author != null ? item.archive.author.username : '未知用戶'}"
-                                        onclick="openRestoreModal(this.dataset.archiveId, this.dataset.username)">
-                                    <i class="fas fa-undo"></i> 恢復
-                                </button>
-                            </td>
-                        </tr>
-                        <tr th:if="${#lists.isEmpty(archives)}">
-                            <td colspan="8">
-                                <div class="empty-state-text">
-                                    <i class="fas fa-archive"></i>
-                                    暫無刪除歸檔數據
-                                </div>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div id="archives-pagination"></div>
-            </div>
-
-            <!-- ================= Tab 3: 舉報管理 ================= -->
-            <div id="tab-reports" class="tab-content">
-
-                <!-- ================= 新增：举报管理筛选工具栏 ================= -->
-                <div class="filter-bar">
-                    <!-- 1. 举报者筛选 -->
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-user"></i> 举报者</label>
-                        <div class="filter-control-group">
-                            <select id="reporterFilterMode" class="filter-select" onchange="toggleReporterSearch()">
-                                <option value="all">全部用户</option>
-                                <option value="specific">指定用户</option>
-                            </select>
-                            <input type="text" id="reporterSearchInput" class="filter-input" placeholder="输入用户名..."
-                                   style="display: none;">
-                        </div>
+                                    <td th:text="${#temporals.format(item.archive.deletedAt, 'yyyy-MM-dd HH:mm')}">
+                                        2024-01-02</td>
+                                    <!-- 找到這個部分並修改 -->
+                                    <td style="text-align: center;">
+                                        <button class="btn-sm btn-restore" title="恢復評論"
+                                            th:data-archive-id="${item.archive.archiveId}"
+                                            th:data-username="${item.archive.author != null ? item.archive.author.username : '未知用戶'}"
+                                            onclick="openRestoreModal(this.dataset.archiveId, this.dataset.username)">
+                                            <i class="fas fa-undo"></i> 恢復
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(archives)}">
+                                    <td colspan="8">
+                                        <div class="empty-state-text">
+                                            <i class="fas fa-archive"></i>
+                                            暫無刪除歸檔數據
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+                    <div id="archives-pagination"></div>
+                </div>
 
-                    <!-- 2. 被举报者筛选 -->
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-user-shield"></i> 被举报者</label>
-                        <div class="filter-control-group">
-                            <select id="reportedUserFilterMode" class="filter-select"
+                <!-- ================= Tab 3: 舉報管理 ================= -->
+                <div id="tab-reports" class="tab-content">
+
+                    <!-- ================= 新增：举报管理筛选工具栏 ================= -->
+                    <div class="filter-bar">
+                        <!-- 1. 举报者筛选 -->
+                        <div class="filter-item">
+                            <label class="filter-label"><i class="fas fa-user"></i> 举报者</label>
+                            <div class="filter-control-group">
+                                <select id="reporterFilterMode" class="filter-select" onchange="toggleReporterSearch()">
+                                    <option value="all">全部用户</option>
+                                    <option value="specific">指定用户</option>
+                                </select>
+                                <input type="text" id="reporterSearchInput" class="filter-input" placeholder="输入用户名..."
+                                    style="display: none;">
+                            </div>
+                        </div>
+
+                        <!-- 2. 被举报者筛选 -->
+                        <div class="filter-item">
+                            <label class="filter-label"><i class="fas fa-user-shield"></i> 被举报者</label>
+                            <div class="filter-control-group">
+                                <select id="reportedUserFilterMode" class="filter-select"
                                     onchange="toggleReportedUserSearch()">
-                                <option value="all">全部用户</option>
-                                <option value="specific">指定用户</option>
-                            </select>
-                            <input type="text" id="reportedUserSearchInput" class="filter-input"
-                                   placeholder="输入用户名..." style="display: none;">
+                                    <option value="all">全部用户</option>
+                                    <option value="specific">指定用户</option>
+                                </select>
+                                <input type="text" id="reportedUserSearchInput" class="filter-input"
+                                    placeholder="输入用户名..." style="display: none;">
+                            </div>
+                        </div>
+
+                        <!-- 3. 操作按钮 -->
+                        <div class="filter-item"
+                            style="flex: 0 0 auto; display: flex; gap: 0.5rem; align-items: flex-end; margin: 0 1rem 0 0;">
+                            <button type="button" class="btn-filter-action btn-confirm" onclick="filterReports()">
+                                <i class="fas fa-check"></i> 确定
+                            </button>
+                            <button type="button" class="btn-filter-action btn-reset" onclick="resetReportsFilter()">
+                                <i class="fas fa-redo"></i> 重新筛选
+                            </button>
                         </div>
                     </div>
 
-                    <!-- 3. 操作按钮 -->
-                    <div class="filter-item"
-                         style="flex: 0 0 auto; display: flex; gap: 0.5rem; align-items: flex-end; margin: 0 1rem 0 0;">
-                        <button type="button" class="btn-filter-action btn-confirm" onclick="filterReports()">
-                            <i class="fas fa-check"></i> 确定
-                        </button>
-                        <button type="button" class="btn-filter-action btn-reset" onclick="resetReportsFilter()">
-                            <i class="fas fa-redo"></i> 重新筛选
-                        </button>
-                    </div>
-                </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 60px;">舉報ID</th>
+                                    <th style="width: 100px;">舉報人</th>
+                                    <th style="width: 100px;">被舉報人</th>
+                                    <th style="width: 200px;">評論內容</th>
+                                    <th style="width: 120px;">舉報類別</th>
+                                    <th style="width: 150px;">舉報原因</th>
+                                    <th style="width: 100px;">狀態</th>
+                                    <th style="width: 140px;">創建時間</th>
+                                    <!-- 操作列寬度稍微放大以容納 2x2 網格 -->
+                                    <th style="width: 150px; text-align: center;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- 遍歷 reportDataList (Map類型) -->
+                                <tr th:each="item : ${reportDataList}">
+                                    <!-- 獲取 Map 中的 report 對象 -->
+                                    <td th:with="report=${item.report}"
+                                        style="color: var(--gray); font-family: monospace;"
+                                        th:text="${report.reportId}">1</td>
 
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                        <tr>
-                            <th style="width: 60px;">舉報ID</th>
-                            <th style="width: 100px;">舉報人</th>
-                            <th style="width: 100px;">被舉報人</th>
-                            <th style="width: 200px;">評論內容</th>
-                            <th style="width: 120px;">舉報類別</th>
-                            <th style="width: 150px;">舉報原因</th>
-                            <th style="width: 100px;">狀態</th>
-                            <th style="width: 140px;">創建時間</th>
-                            <!-- 操作列寬度稍微放大以容納 2x2 網格 -->
-                            <th style="width: 150px; text-align: center;">操作</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <!-- 遍歷 reportDataList (Map類型) -->
-                        <tr th:each="item : ${reportDataList}">
-                            <!-- 獲取 Map 中的 report 對象 -->
-                            <td th:with="report=${item.report}"
-                                style="color: var(--gray); font-family: monospace;"
-                                th:text="${report.reportId}">1</td>
+                                    <td th:with="report=${item.report}"
+                                        th:text="${report.reporter != null ? report.reporter.username : '未知'}">userA
+                                    </td>
 
-                            <td th:with="report=${item.report}"
-                                th:text="${report.reporter != null ? report.reporter.username : '未知'}">userA
-                            </td>
+                                    <td th:with="report=${item.report}"
+                                        th:text="${report.reportedUser != null ? report.reportedUser.username : '未知'}">
+                                        userB</td>
 
-                            <td th:with="report=${item.report}"
-                                th:text="${report.reportedUser != null ? report.reportedUser.username : '未知'}">
-                                userB</td>
+                                    <!-- 顯示評論內容 -->
+                                    <td th:with="report=${item.report}" style="font-size: 0.9rem; color: #555;"
+                                        th:text="${item.content}">評論內容...</td>
 
-                            <!-- 顯示評論內容 -->
-                            <td th:with="report=${item.report}" style="font-size: 0.9rem; color: #555;"
-                                th:text="${item.content}">評論內容...</td>
+                                    <!-- 顯示舉報類別 -->
+                                    <td th:with="report=${item.report}" th:text="${report.category}">人身攻擊</td>
 
-                            <!-- 顯示舉報類別 -->
-                            <td th:with="report=${item.report}" th:text="${report.category}">人身攻擊</td>
+                                    <!-- 顯示舉報原因 -->
+                                    <td th:with="report=${item.report}" style="font-size: 0.85rem; color: var(--gray);"
+                                        th:text="${report.reason} ?: '無'">具體原因...</td>
 
-                            <!-- 顯示舉報原因 -->
-                            <td th:with="report=${item.report}" style="font-size: 0.85rem; color: var(--gray);"
-                                th:text="${report.reason} ?: '無'">具體原因...</td>
-
-                            <!-- 顯示狀態 -->
-                            <td th:with="report=${item.report}">
+                                    <!-- 顯示狀態 -->
+                                    <td th:with="report=${item.report}">
                                         <span th:if="${report.status.name() == 'PENDING'}"
-                                              class="status-badge status-pending">待處理</span>
-                                <span th:if="${report.status.name() == 'RESOLVED'}"
-                                      class="status-badge status-resolved">已處理</span>
-                                <span th:if="${report.status.name() == 'DISMISSED'}"
-                                      class="status-badge status-dismissed">已駁回</span>
-                            </td>
+                                            class="status-badge status-pending">待處理</span>
+                                        <span th:if="${report.status.name() == 'RESOLVED'}"
+                                            class="status-badge status-resolved">已處理</span>
+                                        <span th:if="${report.status.name() == 'DISMISSED'}"
+                                            class="status-badge status-dismissed">已駁回</span>
+                                    </td>
 
-                            <!-- 顯示時間 -->
-                            <td th:with="report=${item.report}"
-                                th:text="${#temporals.format(report.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-03
-                            </td>
+                                    <!-- 顯示時間 -->
+                                    <td th:with="report=${item.report}"
+                                        th:text="${#temporals.format(report.createdAt, 'yyyy-MM-dd HH:mm')}">2024-01-03
+                                    </td>
 
-                            <!--  核心修改：2x2 網格操作按鈕 (完美融合版本2的狀態判斷邏輯)  -->
-                            <td th:with="report=${item.report}, isDel=${item.isDeleted}, isBanned=${item.isAlreadyBanned}"
-                                style="text-align: center; vertical-align: middle;">
-                                <div class="action-buttons-grid">
+                                    <!--  核心修改：2x2 網格操作按鈕 (完美融合版本2的狀態判斷邏輯)  -->
+                                    <td th:with="report=${item.report}, isDel=${item.isDeleted}, isBanned=${item.isAlreadyBanned}"
+                                        style="text-align: center; vertical-align: middle;">
+                                        <div class="action-buttons-grid">
 
-                                    <!-- 1. 處理 / 已結案 (融合版本2的 th:if / th:unless 邏輯) -->
-                                    <button th:if="${report.status.name() == 'PENDING'}"
-                                            class="btn-sm btn-approve" title="處理舉報"
-                                            th:onclick="'openReportDetailModal(' + ${report.reportId} + ')'">
-                                        <i class="fas fa-gavel"></i> 處理
-                                    </button>
-                                    <span th:unless="${report.status.name() == 'PENDING'}" class="btn-sm"
-                                          th:classappend="${report.status.name() == 'RESOLVED'} ? 'status-resolved' : 'status-dismissed'"
-                                          th:text="${report.status.name() == 'RESOLVED'} ? '已處理' : '已駁回'"
-                                          style="cursor: default; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                                            <!-- 1. 處理 / 已結案 (融合版本2的 th:if / th:unless 邏輯) -->
+                                            <button th:if="${report.status.name() == 'PENDING'}"
+                                                class="btn-sm btn-approve" title="處理舉報"
+                                                th:onclick="'openReportDetailModal(' + ${report.reportId} + ')'">
+                                                <i class="fas fa-gavel"></i> 處理
+                                            </button>
+                                            <span th:unless="${report.status.name() == 'PENDING'}" class="btn-sm"
+                                                th:classappend="${report.status.name() == 'RESOLVED'} ? 'status-resolved' : 'status-dismissed'"
+                                                th:text="${report.status.name() == 'RESOLVED'} ? '已處理' : '已駁回'"
+                                                style="cursor: default; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
                                             </span>
 
-                                    <!-- 2. 刪除被舉報的評論 (情況 A：未被刪除) -->
-                                    <button th:if="${!isDel}" class="btn-sm btn-delete" title="刪除被舉報的評論"
-                                            th:data-report-id="${report.reportId}"
-                                            th:data-review-id="${report.reviewId}"
-                                            th:data-username="${report.reportedUser != null ? report.reportedUser.username : '未知'}"
-                                            onclick="openDeleteReportedReviewModal(this.dataset.reviewId, this.dataset.username)">
-                                        <i class="fas fa-trash-alt"></i> 刪除
-                                    </button>
+                                            <!-- 2. 刪除被舉報的評論 (情況 A：未被刪除) -->
+                                            <button th:if="${!isDel}" class="btn-sm btn-delete" title="刪除被舉報的評論"
+                                                th:data-report-id="${report.reportId}"
+                                                th:data-review-id="${report.reviewId}"
+                                                th:data-username="${report.reportedUser != null ? report.reportedUser.username : '未知'}"
+                                                onclick="openDeleteReportedReviewModal(this.dataset.reviewId, this.dataset.username)">
+                                                <i class="fas fa-trash-alt"></i> 刪除
+                                            </button>
 
-                                    <!-- 2. 刪除被舉報的評論 (情況 B：已被刪除，顯示灰色標籤) -->
-                                    <span th:if="${isDel}" class="btn-sm"
-                                          style="background: #e9ecef; color: #6c757d; cursor: not-allowed; border: 1px solid #dee2e6; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;"
-                                          title="該評論已被刪除或無相關評論，無法再次刪除">
+                                            <!-- 2. 刪除被舉報的評論 (情況 B：已被刪除，顯示灰色標籤) -->
+                                            <span th:if="${isDel}" class="btn-sm"
+                                                style="background: #e9ecef; color: #6c757d; cursor: not-allowed; border: 1px solid #dee2e6; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;"
+                                                title="該評論已被刪除或無相關評論，無法再次刪除">
                                                 <i class="fas fa-trash-alt"></i> 已刪除
                                             </span>
 
-                                    <!-- 3. 封禁被舉報人 (帶 isAlreadyBanned 狀態判斷) -->
-                                    <button class="btn-sm btn-ban" title="封禁被舉報人"
-                                            th:data-username="${report.reportedUser != null ? report.reportedUser.username : '未知'}"
-                                            th:data-review-id="${report.reviewId}"
-                                            th:data-review-content="${item.content}" th:disabled="${isBanned}"
-                                            th:classappend="${isBanned} ? 'btn-disabled' : ''"
-                                            style="${isBanned} ? 'opacity: 0.5; cursor: not-allowed;' : ''"
-                                            th:onclick="${!isBanned} ? '|openAdminBanModal(' + ${report.reportedUser.username} + ', ' + ${report.reviewId} + ', \'' + ${item.content} + '\')|' : 'return false;'">
-                                        <i class="fas fa-ban"></i>
-                                        <span th:text="${isBanned} ? '已封禁' : '封禁'">封禁</span>
-                                    </button>
+                                            <!-- 3. 封禁被舉報人 (帶 isAlreadyBanned 狀態判斷) -->
+                                            <button class="btn-sm btn-ban" title="封禁被舉報人"
+                                                th:data-username="${report.reportedUser != null ? report.reportedUser.username : '未知'}"
+                                                th:data-review-id="${report.reviewId}"
+                                                th:data-review-content="${item.content}" th:disabled="${isBanned}"
+                                                th:classappend="${isBanned} ? 'btn-disabled' : ''"
+                                                style="${isBanned} ? 'opacity: 0.5; cursor: not-allowed;' : ''"
+                                                th:onclick="${!isBanned} ? '|openAdminBanModal(' + ${report.reportedUser.username} + ', ' + ${report.reviewId} + ', \'' + ${item.content} + '\')|' : 'return false;'">
+                                                <i class="fas fa-ban"></i>
+                                                <span th:text="${isBanned} ? '已封禁' : '封禁'">封禁</span>
+                                            </button>
 
-                                    <!-- 4. 永久拉黑被舉報人 -->
-                                    <button class="btn-sm btn-blacklist" title="永久拉黑被舉報人"
-                                            th:data-username="${report.reportedUser != null ? report.reportedUser.username : '未知'}"
-                                            th:data-review-id="${report.reviewId}"
-                                            th:data-review-content="${item.content}"
-                                            onclick="openBlacklistConfirmModalFromBtn(this)">
-                                        <i class="fas fa-user-slash"></i> 拉黑
-                                    </button>
+                                            <!-- 4. 永久拉黑被舉報人 -->
+                                            <button class="btn-sm btn-blacklist" title="永久拉黑被舉報人"
+                                                th:data-username="${report.reportedUser != null ? report.reportedUser.username : '未知'}"
+                                                th:data-review-id="${report.reviewId}"
+                                                th:data-review-content="${item.content}"
+                                                onclick="openBlacklistConfirmModalFromBtn(this)">
+                                                <i class="fas fa-user-slash"></i> 拉黑
+                                            </button>
 
-                                </div>
-                            </td>
-                        </tr>
+                                        </div>
+                                    </td>
+                                </tr>
 
-                        <!-- 空狀態 -->
-                        <tr th:if="${#lists.isEmpty(reportDataList)}">
-                            <td colspan="9">
-                                <div class="empty-state-text">
-                                    <i class="fas fa-shield-alt"></i>
-                                    暫無舉報數據
-                                </div>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
+                                <!-- 空狀態 -->
+                                <tr th:if="${#lists.isEmpty(reportDataList)}">
+                                    <td colspan="9">
+                                        <div class="empty-state-text">
+                                            <i class="fas fa-shield-alt"></i>
+                                            暫無舉報數據
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="reports-pagination"></div>
                 </div>
-                <div id="reports-pagination"></div>
+
             </div>
 
-        </div>
-    </main>
-</div>
+            <footer class="admin-footer" style="
+        margin-top: 3rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        border-radius: 12px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.7);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    ">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
+                    ChronoTeam Admin Panel. All Rights Reserved.
+                </p>
+                <p style="margin: 0.5rem 0 0; font-size: 0.8rem; opacity: 0.8;">
+                    專業二手名錶管理平台
+                </p>
+            </footer>
+        </main>
+    </div>
 
-<div th:replace="~{fragments/common :: modals}"></div>
+    <div th:replace="~{fragments/common :: modals}"></div>
 
-<!-- ========================================== -->
-<!--   刪除評論確認彈窗 (美化版) -->
-<!-- ========================================== -->
-<div id="deleteReviewModal" class="delete-modal-overlay" style="display: none;">
-    <div class="delete-modal-box">
-        <div class="modal-header">
-            <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
-            <h3>刪除回覆確認</h3>
-        </div>
-
-        <div class="modal-body">
-            <p class="modal-desc">請選擇刪除原因，這將發送通知給用戶 <strong id="targetUsername"
-                                                                            style="color: var(--gold);">cust1</strong>：</p>
-
-            <!-- 單選框區域 -->
-            <div class="radio-group">
-                <label class="radio-item">
-                    <input type="radio" name="deleteReason" value="該內容不符合社區規範，因此被移除。" checked
-                           onchange="handleReasonChange('default')">
-                    <span class="radio-custom"></span>
-                    <span class="radio-text">內容不合規 (默認)</span>
-                </label>
-
-                <label class="radio-item">
-                    <input type="radio" name="deleteReason" value="檢測到廣告或推廣信息，因此被移除。"
-                           onchange="handleReasonChange('default')">
-                    <span class="radio-custom"></span>
-                    <span class="radio-text">廣告或推廣信息</span>
-                </label>
-
-                <label class="radio-item">
-                    <input type="radio" name="deleteReason" value="該評論與商品無關，因此被移除。"
-                           onchange="handleReasonChange('default')">
-                    <span class="radio-custom"></span>
-                    <span class="radio-text">與商品無關</span>
-                </label>
-
-                <label class="radio-item">
-                    <input type="radio" name="deleteReason" value="custom" id="customReasonRadio"
-                           onchange="handleReasonChange('custom')">
-                    <span class="radio-custom"></span>
-                    <span class="radio-text">自定義原因</span>
-                </label>
+    <!-- ========================================== -->
+    <!--   刪除評論確認彈窗 (美化版) -->
+    <!-- ========================================== -->
+    <div id="deleteReviewModal" class="delete-modal-overlay" style="display: none;">
+        <div class="delete-modal-box">
+            <div class="modal-header">
+                <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
+                <h3>刪除回覆確認</h3>
             </div>
 
-            <!-- 自定義輸入框 (初始隱藏或禁用) -->
-            <div class="custom-input-wrapper" id="customInputWrapper" style="display: none; margin-top: 1rem;">
+            <div class="modal-body">
+                <p class="modal-desc">請選擇刪除原因，這將發送通知給用戶 <strong id="targetUsername"
+                        style="color: var(--gold);">cust1</strong>：</p>
+
+                <!-- 單選框區域 -->
+                <div class="radio-group">
+                    <label class="radio-item">
+                        <input type="radio" name="deleteReason" value="該內容不符合社區規範，因此被移除。" checked
+                            onchange="handleReasonChange('default')">
+                        <span class="radio-custom"></span>
+                        <span class="radio-text">內容不合規 (默認)</span>
+                    </label>
+
+                    <label class="radio-item">
+                        <input type="radio" name="deleteReason" value="檢測到廣告或推廣信息，因此被移除。"
+                            onchange="handleReasonChange('default')">
+                        <span class="radio-custom"></span>
+                        <span class="radio-text">廣告或推廣信息</span>
+                    </label>
+
+                    <label class="radio-item">
+                        <input type="radio" name="deleteReason" value="該評論與商品無關，因此被移除。"
+                            onchange="handleReasonChange('default')">
+                        <span class="radio-custom"></span>
+                        <span class="radio-text">與商品無關</span>
+                    </label>
+
+                    <label class="radio-item">
+                        <input type="radio" name="deleteReason" value="custom" id="customReasonRadio"
+                            onchange="handleReasonChange('custom')">
+                        <span class="radio-custom"></span>
+                        <span class="radio-text">自定義原因</span>
+                    </label>
+                </div>
+
+                <!-- 自定義輸入框 (初始隱藏或禁用) -->
+                <div class="custom-input-wrapper" id="customInputWrapper" style="display: none; margin-top: 1rem;">
                     <textarea id="customReasonText" rows="3" placeholder="請輸入具體的刪除原因..."
-                              style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; resize: vertical;"></textarea>
+                        style="width: 100%; padding: 0.8rem; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; resize: vertical;"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-cancel" onclick="closeDeleteModal()">取消</button>
+                <button class="btn btn-confirm-delete" onclick="confirmDeleteReview()">確認刪除</button>
             </div>
         </div>
-
-        <div class="modal-footer">
-            <button class="btn btn-cancel" onclick="closeDeleteModal()">取消</button>
-            <button class="btn btn-confirm-delete" onclick="confirmDeleteReview()">確認刪除</button>
-        </div>
     </div>
-</div>
 
-<!-- 管理员禁言时长选择模态框 -->
-<div id="adminBanModal" class="custom-modal-overlay" style="display: none;">
-    <div class="custom-modal-box">
-        <div class="modal-icon"
-             style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); margin-bottom: 1rem;">
-            <i class="fas fa-gavel" style="font-size: 2.5rem; color: white;"></i>
-        </div>
-        <h3 class="modal-title" style="color: var(--primary); margin-bottom: 1rem;">
-            <i class="fas fa-gavel" style="color: var(--gold); margin-right: 0.5rem;"></i>
-            管理员禁言
-        </h3>
-        <p class="modal-message" style="color: var(--gray); margin-bottom: 1.5rem;">
-            请输入禁言时长，用户 <strong id="banTargetUsername" style="color: var(--primary);"></strong>
-            在期间内将无法在任何评论区回覆：
-        </p>
-
-        <div style="display: flex; gap: 1rem; align-items: center; margin: 1.5rem 0;">
-            <input type="number" id="banDuration" min="1" value="1"
-                   style="flex: 1; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;"
-                   placeholder="请输入数字">
-            <select id="banUnit"
-                    style="padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; min-width: 80px; cursor: pointer;">
-                <option value="day">天</option>
-                <option value="week">週</option>
-                <option value="month">月</option>
-            </select>
-        </div>
-
-        <div style="margin-bottom: 1.5rem;">
-            <input type="text" id="banReason" placeholder="请输入禁言原因（将发送通知给用户）" value="违反社区规范"
-                   style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 0.95rem;">
-        </div>
-
-        <div class="modal-actions" style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
-            <button class="btn-cancel" onclick="closeAdminBanModal()"
-                    style="padding: 0.7rem 1.5rem; background: #e9ecef; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                <i class="fas fa-times"></i> 取消
-            </button>
-            <button class="btn-confirm" onclick="confirmAdminBan()"
-                    style="padding: 0.7rem 2rem; background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%); color: var(--primary); border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                <i class="fas fa-gavel"></i> 确认禁言
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- ========================================== -->
-<!--   管理員權限提示彈窗 (修改为：重复封禁确认)      -->
-<!-- ========================================== -->
-<div id="adminPermissionModal" class="admin-permission-overlay" style="display: none;">
-    <div class="admin-permission-box">
-        <div class="permission-icon" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
-            <i class="fas fa-exclamation-triangle"></i>
-        </div>
-        <h3 class="permission-title">⚠️ 重复封禁警告</h3>
-        <p class="permission-message">
-            该用户已经因为该言论被封禁了！<br>
-            <strong style="color: #dc3545;">不允许重复封禁同一条评论</strong>
-        </p>
-        <div class="permission-actions">
-            <!-- 只保留取消按钮 -->
-            <button class="btn-permission-confirm" onclick="closeAdminPermissionModal()"
-                    style="background: var(--gold); color: var(--primary);">
-                <i class="fas fa-times"></i> 取消
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- 🚫 永久拉黑確認彈窗 -->
-<div id="blacklistConfirmModal" class="custom-modal-overlay" style="display: none;">
-    <div class="custom-modal-content blacklist-modal">
-        <div class="modal-icon warning-icon">
-            <i class="fas fa-exclamation-triangle"></i>
-        </div>
-        <h3 class="modal-title">確認永久拉黑用戶？</h3>
-        <div class="modal-body">
-            <p class="modal-message">
-                您確定要永久拉黑用戶 <strong id="blacklistTargetUsername" class="username-highlight"></strong> 嗎？
+    <!-- 管理员禁言时长选择模态框 -->
+    <div id="adminBanModal" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal-box">
+            <div class="modal-icon"
+                style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); margin-bottom: 1rem;">
+                <i class="fas fa-gavel" style="font-size: 2.5rem; color: white;"></i>
+            </div>
+            <h3 class="modal-title" style="color: var(--primary); margin-bottom: 1rem;">
+                <i class="fas fa-gavel" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                管理员禁言
+            </h3>
+            <p class="modal-message" style="color: var(--gray); margin-bottom: 1.5rem;">
+                请输入禁言时长，用户 <strong id="banTargetUsername" style="color: var(--primary);"></strong>
+                在期间内将无法在任何评论区回覆：
             </p>
-            <div class="warning-box">
-                <i class="fas fa-shield-alt"></i>
-                <p>拉黑後該用戶將<strong>永遠無法</strong>進行以下操作：</p>
-                <ul class="restriction-list">
-                    <li><i class="fas fa-times-circle"></i> 點贊 / 踩</li>
-                    <li><i class="fas fa-times-circle"></i> 發表評論</li>
-                    <li><i class="fas fa-times-circle"></i> 回覆評論</li>
-                    <li><i class="fas fa-times-circle"></i> 任何互動操作</li>
+
+            <div style="display: flex; gap: 1rem; align-items: center; margin: 1.5rem 0;">
+                <input type="number" id="banDuration" min="1" value="1"
+                    style="flex: 1; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;"
+                    placeholder="请输入数字">
+                <select id="banUnit"
+                    style="padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem; min-width: 80px; cursor: pointer;">
+                    <option value="day">天</option>
+                    <option value="week">週</option>
+                    <option value="month">月</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <input type="text" id="banReason" placeholder="请输入禁言原因（将发送通知给用户）" value="违反社区规范"
+                    style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 0.95rem;">
+            </div>
+
+            <div class="modal-actions" style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+                <button class="btn-cancel" onclick="closeAdminBanModal()"
+                    style="padding: 0.7rem 1.5rem; background: #e9ecef; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-confirm" onclick="confirmAdminBan()"
+                    style="padding: 0.7rem 2rem; background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%); color: var(--primary); border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <i class="fas fa-gavel"></i> 确认禁言
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!--   管理員權限提示彈窗 (修改为：重复封禁确认)      -->
+    <!-- ========================================== -->
+    <div id="adminPermissionModal" class="admin-permission-overlay" style="display: none;">
+        <div class="admin-permission-box">
+            <div class="permission-icon" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="permission-title">⚠️ 重复封禁警告</h3>
+            <p class="permission-message">
+                该用户已经因为该言论被封禁了！<br>
+                <strong style="color: #dc3545;">不允许重复封禁同一条评论</strong>
+            </p>
+            <div class="permission-actions">
+                <!-- 只保留取消按钮 -->
+                <button class="btn-permission-confirm" onclick="closeAdminPermissionModal()"
+                    style="background: var(--gold); color: var(--primary);">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🚫 永久拉黑確認彈窗 -->
+    <div id="blacklistConfirmModal" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal-content blacklist-modal">
+            <div class="modal-icon warning-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="modal-title">確認永久拉黑用戶？</h3>
+            <div class="modal-body">
+                <p class="modal-message">
+                    您確定要永久拉黑用戶 <strong id="blacklistTargetUsername" class="username-highlight"></strong> 嗎？
+                </p>
+                <div class="warning-box">
+                    <i class="fas fa-shield-alt"></i>
+                    <p>拉黑後該用戶將<strong>永遠無法</strong>進行以下操作：</p>
+                    <ul class="restriction-list">
+                        <li><i class="fas fa-times-circle"></i> 點贊 / 踩</li>
+                        <li><i class="fas fa-times-circle"></i> 發表評論</li>
+                        <li><i class="fas fa-times-circle"></i> 回覆評論</li>
+                        <li><i class="fas fa-times-circle"></i> 任何互動操作</li>
+                    </ul>
+                </div>
+                <div class="reason-input-group">
+                    <label for="blacklistReason">
+                        <i class="fas fa-edit"></i> 拉黑原因（將發送通知給用戶）：
+                    </label>
+                    <input type="text" id="blacklistReason" placeholder="請輸入拉黑原因..." value="嚴重違反社區規範"
+                        class="reason-input">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeBlacklistConfirmModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn btn-confirm" onclick="confirmBlacklistAction()">
+                    <i class="fas fa-user-slash"></i> 確認拉黑
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!--  關鍵詞管理彈窗 (精美版) -->
+    <!-- ========================================== -->
+    <div id="keywordModal" class="keyword-modal-overlay" style="display: none;">
+        <div class="keyword-modal-box">
+            <div class="keyword-modal-header">
+                <h3><i class="fas fa-tags" style="color: var(--gold);"></i> 關鍵詞管理</h3>
+                <button class="keyword-modal-close" onclick="closeKeywordModal()">&times;</button>
+            </div>
+
+            <!-- 添加區域 -->
+            <div class="keyword-add-section">
+                <input type="text" id="newKeywordInput" class="keyword-input" placeholder="輸入新關鍵詞 (最多50個字符)..."
+                    maxlength="50" onkeypress="if(event.key === 'Enter') addKeyword()">
+                <button class="keyword-btn btn-add" onclick="addKeyword()">
+                    <i class="fas fa-plus"></i> 添加
+                </button>
+            </div>
+
+            <!-- 列表區域 -->
+            <div class="keyword-list-container">
+                <ul id="keywordList" class="keyword-list">
+                    <!-- JS 動態渲染 -->
+                    <li class="keyword-loading"><i class="fas fa-spinner fa-spin"></i> 加載中...</li>
                 </ul>
             </div>
-            <div class="reason-input-group">
-                <label for="blacklistReason">
-                    <i class="fas fa-edit"></i> 拉黑原因（將發送通知給用戶）：
-                </label>
-                <input type="text" id="blacklistReason" placeholder="請輸入拉黑原因..." value="嚴重違反社區規範"
-                       class="reason-input">
+        </div>
+    </div>
+
+    <!-- 刪除關鍵詞確認彈窗 -->
+    <div id="deleteKeywordModal" class="custom-confirm-overlay" style="display: none;">
+        <div class="custom-confirm-box">
+            <div class="confirm-icon danger">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+            <h3 class="confirm-title">確認刪除關鍵詞？</h3>
+            <p class="confirm-message">此操作將永久刪除該關鍵詞，且無法恢復。確定要繼續嗎？</p>
+            <div class="confirm-actions">
+                <button class="btn-confirm-cancel" onclick="closeDeleteKeywordModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-confirm-delete" onclick="executeDeleteKeyword()">
+                    <i class="fas fa-trash-alt"></i> 確認刪除
+                </button>
             </div>
         </div>
-        <div class="modal-actions">
-            <button class="btn btn-cancel" onclick="closeBlacklistConfirmModal()">
-                <i class="fas fa-times"></i> 取消
-            </button>
-            <button class="btn btn-confirm" onclick="confirmBlacklistAction()">
-                <i class="fas fa-user-slash"></i> 確認拉黑
-            </button>
+    </div>
+
+    <!-- 恢復評論確認彈窗 (放在 </body> 之前) -->
+    <div id="restoreReviewModal" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal-box restore-modal">
+            <div class="modal-icon" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <i class="fas fa-undo" style="font-size: 2rem; color: white;"></i>
+            </div>
+            <h3 class="modal-title" style="color: var(--primary); margin-bottom: 0.5rem;">確認恢復評論？</h3>
+            <p class="modal-message" style="color: var(--gray); margin-bottom: 1.5rem; line-height: 1.6;">
+                確定要將這條評論恢復到商品頁面嗎？<br>
+                系統將自動發送通知給用戶 <strong id="restoreTargetUsername"
+                    style="color: var(--gold); font-weight: 700;"></strong>，告知其評論已被恢復。
+            </p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeRestoreModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-confirm-restore" id="confirmRestoreBtn" onclick="executeRestoreReview()">
+                    <i class="fas fa-check"></i> 確認恢復
+                </button>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- ========================================== -->
-<!--  關鍵詞管理彈窗 (精美版) -->
-<!-- ========================================== -->
-<div id="keywordModal" class="keyword-modal-overlay" style="display: none;">
-    <div class="keyword-modal-box">
-        <div class="keyword-modal-header">
-            <h3><i class="fas fa-tags" style="color: var(--gold);"></i> 關鍵詞管理</h3>
-            <button class="keyword-modal-close" onclick="closeKeywordModal()">&times;</button>
-        </div>
-
-        <!-- 添加區域 -->
-        <div class="keyword-add-section">
-            <input type="text" id="newKeywordInput" class="keyword-input" placeholder="輸入新關鍵詞 (最多50個字符)..."
-                   maxlength="50" onkeypress="if(event.key === 'Enter') addKeyword()">
-            <button class="keyword-btn btn-add" onclick="addKeyword()">
-                <i class="fas fa-plus"></i> 添加
-            </button>
-        </div>
-
-        <!-- 列表區域 -->
-        <div class="keyword-list-container">
-            <ul id="keywordList" class="keyword-list">
-                <!-- JS 動態渲染 -->
-                <li class="keyword-loading"><i class="fas fa-spinner fa-spin"></i> 加載中...</li>
-            </ul>
-        </div>
-    </div>
-</div>
-
-<!-- 刪除關鍵詞確認彈窗 -->
-<div id="deleteKeywordModal" class="custom-confirm-overlay" style="display: none;">
-    <div class="custom-confirm-box">
-        <div class="confirm-icon danger">
-            <i class="fas fa-trash-alt"></i>
-        </div>
-        <h3 class="confirm-title">確認刪除關鍵詞？</h3>
-        <p class="confirm-message">此操作將永久刪除該關鍵詞，且無法恢復。確定要繼續嗎？</p>
-        <div class="confirm-actions">
-            <button class="btn-confirm-cancel" onclick="closeDeleteKeywordModal()">
-                <i class="fas fa-times"></i> 取消
-            </button>
-            <button class="btn-confirm-delete" onclick="executeDeleteKeyword()">
-                <i class="fas fa-trash-alt"></i> 確認刪除
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- 恢復評論確認彈窗 (放在 </body> 之前) -->
-<div id="restoreReviewModal" class="custom-modal-overlay" style="display: none;">
-    <div class="custom-modal-box restore-modal">
-        <div class="modal-icon" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
-            <i class="fas fa-undo" style="font-size: 2rem; color: white;"></i>
-        </div>
-        <h3 class="modal-title" style="color: var(--primary); margin-bottom: 0.5rem;">確認恢復評論？</h3>
-        <p class="modal-message" style="color: var(--gray); margin-bottom: 1.5rem; line-height: 1.6;">
-            確定要將這條評論恢復到商品頁面嗎？<br>
-            系統將自動發送通知給用戶 <strong id="restoreTargetUsername"
-                                             style="color: var(--gold); font-weight: 700;"></strong>，告知其評論已被恢復。
-        </p>
-        <div class="modal-actions">
-            <button class="btn-cancel" onclick="closeRestoreModal()">
-                <i class="fas fa-times"></i> 取消
-            </button>
-            <button class="btn-confirm-restore" id="confirmRestoreBtn" onclick="executeRestoreReview()">
-                <i class="fas fa-check"></i> 確認恢復
-            </button>
-        </div>
-    </div>
-</div>
-
-<!--  非管理員刪除警告彈窗 (普通用戶刪除時使用) -->
-<div id="restoreUserDeletedModal" class="custom-modal-overlay" style="display: none;">
-    <div class="custom-modal-box" style="border-top: 5px solid #ffc107;">
-        <div class="modal-icon" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
-            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: white;"></i>
-        </div>
-        <h3 class="modal-title" style="color: var(--primary); margin-bottom: 0.5rem;">注意：非管理員刪除</h3>
-        <p class="modal-message" style="color: var(--gray); margin-bottom: 1.5rem; line-height: 1.6;">
-            該言論是由用戶 <strong id="restoreDeletedByUsername" style="color: #ff9800; font-weight: 700;"></strong>
-            所刪除。<br>
-            您確定要強制恢復用戶 <strong id="restoreAuthorUsername" style="color: var(--gold); font-weight: 700;"></strong>
-            的評論嗎？
-        </p>
-        <div class="modal-actions">
-            <button class="btn-cancel" onclick="closeRestoreUserDeletedModal()">
-                <i class="fas fa-times"></i> 取消
-            </button>
-            <button class="btn-confirm-restore" id="confirmForceRestoreBtn" onclick="executeRestoreReview()"
+    <!--  非管理員刪除警告彈窗 (普通用戶刪除時使用) -->
+    <div id="restoreUserDeletedModal" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal-box" style="border-top: 5px solid #ffc107;">
+            <div class="modal-icon" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: white;"></i>
+            </div>
+            <h3 class="modal-title" style="color: var(--primary); margin-bottom: 0.5rem;">注意：非管理員刪除</h3>
+            <p class="modal-message" style="color: var(--gray); margin-bottom: 1.5rem; line-height: 1.6;">
+                該言論是由用戶 <strong id="restoreDeletedByUsername" style="color: #ff9800; font-weight: 700;"></strong>
+                所刪除。<br>
+                您確定要強制恢復用戶 <strong id="restoreAuthorUsername" style="color: var(--gold); font-weight: 700;"></strong>
+                的評論嗎？
+            </p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeRestoreUserDeletedModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-confirm-restore" id="confirmForceRestoreBtn" onclick="executeRestoreReview()"
                     style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: white;">
-                <i class="fas fa-check"></i> 確認強制恢復
-            </button>
+                    <i class="fas fa-check"></i> 確認強制恢復
+                </button>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- ==========================================
+    <!-- ==========================================
 举报处理决策模态框
 ========================================== -->
-<div id="reportDecisionModal" class="report-decision-modal-overlay">
-    <div class="report-decision-modal-box">
-        <div class="report-decision-header">
-            <h3>
-                <i class="fas fa-gavel"></i>
-                举报处理决策
-            </h3>
-        </div>
-        <div class="report-decision-body">
-            <div class="report-info">
-                <div class="report-info-item">
-                    <span class="report-info-label">举报人：</span>
-                    <span class="report-info-value" id="reportReporter">-</span>
-                </div>
-                <div class="report-info-item">
-                    <span class="report-info-label">被举报人：</span>
-                    <span class="report-info-value" id="reportReportedUser">-</span>
-                </div>
-                <div class="report-info-item">
-                    <span class="report-info-label">举报类别：</span>
-                    <span class="report-info-value" id="reportCategory">-</span>
-                </div>
-                <div class="report-info-item">
-                    <span class="report-info-label">举报原因：</span>
-                    <span class="report-info-value" id="reportReason">-</span>
-                </div>
+    <div id="reportDecisionModal" class="report-decision-modal-overlay">
+        <div class="report-decision-modal-box">
+            <div class="report-decision-header">
+                <h3>
+                    <i class="fas fa-gavel"></i>
+                    举报处理决策
+                </h3>
             </div>
-            <div class="decision-question">
-                <i class="fas fa-question-circle" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                举报是否成立？
-            </div>
-            <div class="decision-buttons">
-                <button class="btn-decision btn-decision-success" onclick="handleReportDecision(true)">
-                    <i class="fas fa-check-circle"></i>
-                    <div>
-                        <div style="font-size: 1.1rem;">举报成立</div>
-                        <span>对被举报用户进行处罚</span>
+            <div class="report-decision-body">
+                <div class="report-info">
+                    <div class="report-info-item">
+                        <span class="report-info-label">举报人：</span>
+                        <span class="report-info-value" id="reportReporter">-</span>
                     </div>
-                </button>
-                <button class="btn-decision btn-decision-dismiss" onclick="handleReportDecision(false)">
-                    <i class="fas fa-times-circle"></i>
-                    <div>
-                        <div style="font-size: 1.1rem;">举报不成立</div>
-                        <span>密切关注该用户</span>
+                    <div class="report-info-item">
+                        <span class="report-info-label">被举报人：</span>
+                        <span class="report-info-value" id="reportReportedUser">-</span>
                     </div>
-                </button>
+                    <div class="report-info-item">
+                        <span class="report-info-label">举报类别：</span>
+                        <span class="report-info-value" id="reportCategory">-</span>
+                    </div>
+                    <div class="report-info-item">
+                        <span class="report-info-label">举报原因：</span>
+                        <span class="report-info-value" id="reportReason">-</span>
+                    </div>
+                </div>
+                <div class="decision-question">
+                    <i class="fas fa-question-circle" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    举报是否成立？
+                </div>
+                <div class="decision-buttons">
+                    <button class="btn-decision btn-decision-success" onclick="handleReportDecision(true)">
+                        <i class="fas fa-check-circle"></i>
+                        <div>
+                            <div style="font-size: 1.1rem;">举报成立</div>
+                            <span>对被举报用户进行处罚</span>
+                        </div>
+                    </button>
+                    <button class="btn-decision btn-decision-dismiss" onclick="handleReportDecision(false)">
+                        <i class="fas fa-times-circle"></i>
+                        <div>
+                            <div style="font-size: 1.1rem;">举报不成立</div>
+                            <span>密切关注该用户</span>
+                        </div>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- 2. 注入登入狀態變量 (必須在 common.js 之前，否則 common.js 會報 isLoggedIn 未定義錯誤) -->
-<script th:inline="javascript">
-    const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-</script>
+    <!-- 2. 注入登入狀態變量 (必須在 common.js 之前，否則 common.js 會報 isLoggedIn 未定義錯誤) -->
+    <script th:inline="javascript">
+        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    </script>
 
-<!-- 3. 引入公共 JS -->
-<script src="/js/common.js"></script>
-<script src="/js/admin.js"></script>
+    <!-- 3. 引入公共 JS -->
+    <script src="/js/common.js"></script>
+    <script src="/js/admin.js"></script>
 
-<script>
-    // ==========================================
-    // 0. 全局變量聲明 (核心狀態與彈窗狀態)
-    // ==========================================
-    const tabState = {
-        reviews: { page: 0, size: 25, username: '', reviewType: 'all', keywordMode: 'no' },
-        archives: { page: 0, size: 25, author: '', deletedBy: '' },
-        reports: { page: 0, size: 25, reporter: '', reportedUser: '' }
-    };
+    <script>
+        // ==========================================
+        // 0. 全局變量聲明 (核心狀態與彈窗狀態)
+        // ==========================================
+        const tabState = {
+            reviews: { page: 0, size: 25, username: '', reviewType: 'all', keywordMode: 'no' },
+            archives: { page: 0, size: 25, author: '', deletedBy: '' },
+            reports: { page: 0, size: 25, reporter: '', reportedUser: '' }
+        };
 
-    let currentActiveTab = 'reviews'; // 默認激活的 Tab
+        let currentActiveTab = 'reviews'; // 默認激活的 Tab
 
-    // 彈窗與業務全局變量
-    let currentDeleteId = null;
-    let currentBanTarget = '';
-    let currentBanReviewId = null;
-    let currentBanReviewContent = '';
-    let blacklistTargetUser = '';
-    let blacklistReviewId = null;
-    let blacklistReviewContent = null;
-    let editingKeywordId = null;
-    let pendingDeleteKeywordId = null;
-    let allUsers = [];
-    let allKeywords = [];
-    let currentRestoreArchiveId = null;
-    let currentRestoreAuthorUsername = '';
-    let currentReportId = null;
-    let currentReportData = null;
+        // 彈窗與業務全局變量
+        let currentDeleteId = null;
+        let currentBanTarget = '';
+        let currentBanReviewId = null;
+        let currentBanReviewContent = '';
+        let blacklistTargetUser = '';
+        let blacklistReviewId = null;
+        let blacklistReviewContent = null;
+        let editingKeywordId = null;
+        let pendingDeleteKeywordId = null;
+        let allUsers = [];
+        let allKeywords = [];
+        let currentRestoreArchiveId = null;
+        let currentRestoreAuthorUsername = '';
+        let currentReportId = null;
+        let currentReportData = null;
 
-    // ==========================================
-    // 1. 全局篩選輔助函數 (Toggle 顯示/隱藏輸入框)
-    // ==========================================
-    function toggleUserSearch() {
-        const mode = document.getElementById('userFilterMode').value;
-        const input = document.getElementById('userSearchInput');
-        if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
-        else { input.style.display = 'none'; input.value = ''; }
-    }
-
-    function toggleArchiveAuthorSearch() {
-        const mode = document.getElementById('archiveAuthorFilterMode').value;
-        const input = document.getElementById('archiveAuthorSearchInput');
-        if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
-        else { input.style.display = 'none'; input.value = ''; }
-    }
-
-    function toggleArchiveDeletedBySearch() {
-        const mode = document.getElementById('archiveDeletedByFilterMode').value;
-        const input = document.getElementById('archiveDeletedBySearchInput');
-        if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
-        else { input.style.display = 'none'; input.value = ''; }
-    }
-
-    function toggleReporterSearch() {
-        const mode = document.getElementById('reporterFilterMode').value;
-        const input = document.getElementById('reporterSearchInput');
-        if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
-        else { input.style.display = 'none'; input.value = ''; }
-    }
-
-    function toggleReportedUserSearch() {
-        const mode = document.getElementById('reportedUserFilterMode').value;
-        const input = document.getElementById('reportedUserSearchInput');
-        if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
-        else { input.style.display = 'none'; input.value = ''; }
-    }
-
-    // ==========================================
-    // 2. 全局篩選與重置函數 (更新 State 並觸發加載)
-    // ==========================================
-    function filterReviews() {
-        const userMode = document.getElementById('userFilterMode').value;
-        const targetUsername = document.getElementById('userSearchInput').value.trim();
-        const reviewType = document.getElementById('reviewTypeFilter').value;
-        const keywordMode = document.getElementById('keywordFilterMode').value;
-
-        tabState.reviews.username = userMode === 'specific' ? targetUsername : '';
-        tabState.reviews.reviewType = reviewType;
-        tabState.reviews.keywordMode = keywordMode;
-        tabState.reviews.page = 0;
-        loadReviewsData();
-    }
-
-    function resetReviewsFilter() {
-        document.getElementById('userFilterMode').value = 'all';
-        document.getElementById('userSearchInput').value = '';
-        document.getElementById('userSearchInput').style.display = 'none';
-        document.getElementById('reviewTypeFilter').value = 'all';
-        document.getElementById('keywordFilterMode').value = 'no';
-
-        tabState.reviews.username = '';
-        tabState.reviews.reviewType = 'all';
-        tabState.reviews.keywordMode = 'no';
-        tabState.reviews.page = 0;
-        loadReviewsData();
-    }
-
-    function filterArchives() {
-        const authorMode = document.getElementById('archiveAuthorFilterMode').value;
-        const authorUsername = document.getElementById('archiveAuthorSearchInput').value.trim();
-        const deletedByMode = document.getElementById('archiveDeletedByFilterMode').value;
-        const deletedByUsername = document.getElementById('archiveDeletedBySearchInput').value.trim();
-
-        tabState.archives.author = authorMode === 'specific' ? authorUsername : '';
-        tabState.archives.deletedBy = deletedByMode === 'specific' ? deletedByUsername : (deletedByMode === 'admin' ? 'admin' : '');
-        tabState.archives.page = 0;
-        loadArchivesData();
-    }
-
-    function resetArchivesFilter() {
-        document.getElementById('archiveAuthorFilterMode').value = 'all';
-        document.getElementById('archiveAuthorSearchInput').value = '';
-        document.getElementById('archiveAuthorSearchInput').style.display = 'none';
-        document.getElementById('archiveDeletedByFilterMode').value = 'all';
-        document.getElementById('archiveDeletedBySearchInput').value = '';
-        document.getElementById('archiveDeletedBySearchInput').style.display = 'none';
-
-        tabState.archives.author = '';
-        tabState.archives.deletedBy = '';
-        tabState.archives.page = 0;
-        loadArchivesData();
-    }
-
-    function filterReports() {
-        const reporterMode = document.getElementById('reporterFilterMode').value;
-        const reporterName = document.getElementById('reporterSearchInput').value.trim();
-        const reportedMode = document.getElementById('reportedUserFilterMode').value;
-        const reportedName = document.getElementById('reportedUserSearchInput').value.trim();
-
-        tabState.reports.reporter = reporterMode === 'specific' ? reporterName : '';
-        tabState.reports.reportedUser = reportedMode === 'specific' ? reportedName : '';
-        tabState.reports.page = 0;
-        loadReportsData();
-    }
-
-    function resetReportsFilter() {
-        document.getElementById('reporterFilterMode').value = 'all';
-        document.getElementById('reporterSearchInput').value = '';
-        document.getElementById('reporterSearchInput').style.display = 'none';
-        document.getElementById('reportedUserFilterMode').value = 'all';
-        document.getElementById('reportedUserSearchInput').value = '';
-        document.getElementById('reportedUserSearchInput').style.display = 'none';
-
-        tabState.reports.reporter = '';
-        tabState.reports.reportedUser = '';
-        tabState.reports.page = 0;
-        loadReportsData();
-    }
-
-    // ==========================================
-    // 3. Tab 切換與數據加載函數 (AJAX)
-    // ==========================================
-    function switchTab(tabName, btnElement) {
-        currentActiveTab = tabName;
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        btnElement.classList.add('active');
-        document.getElementById('tab-' + tabName).classList.add('active');
-
-        if (tabName === 'reviews') { tabState.reviews.page = 0; loadReviewsData(); }
-        else if (tabName === 'archives') { tabState.archives.page = 0; loadArchivesData(); }
-        else if (tabName === 'reports') { tabState.reports.page = 0; loadReportsData(); }
-    }
-
-
-
-    async function loadReviewsData() {
-        const state = tabState.reviews;
-        const tbody = document.querySelector('#tab-reviews .data-table tbody');
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
-        try {
-            const params = new URLSearchParams({ page: state.page, size: state.size, username: state.username, reviewType: state.reviewType, keywordMode: state.keywordMode });
-            const response = await fetch(`/admin/api/reviews/list?${params.toString()}`);
-            const data = await response.json();
-            if (data.content && data.content.length > 0) {
-                renderReviewsTable(data.content);
-                renderPagination(data.currentPage, data.totalPages, 'reviews');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">暫無評論數據</td></tr>';
-                document.getElementById('reviews-pagination').innerHTML = '';
-            }
-        } catch (error) {
-            console.error('加載評論失敗:', error);
-            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem; color: red;">加載失敗，請重試</td></tr>';
+        // ==========================================
+        // 1. 全局篩選輔助函數 (Toggle 顯示/隱藏輸入框)
+        // ==========================================
+        function toggleUserSearch() {
+            const mode = document.getElementById('userFilterMode').value;
+            const input = document.getElementById('userSearchInput');
+            if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
+            else { input.style.display = 'none'; input.value = ''; }
         }
-    }
 
-    async function loadArchivesData() {
-        const state = tabState.archives;
-        const tbody = document.querySelector('#tab-archives .data-table tbody');
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
-        try {
-            const params = new URLSearchParams({ page: state.page, size: state.size, authorUsername: state.author, deletedByUsername: state.deletedBy });
-            const response = await fetch(`/admin/api/reviews/archives?${params.toString()}`);
-            const data = await response.json();
-            if (data.content && data.content.length > 0) {
-                renderArchivesTable(data.content);
-                renderPagination(data.currentPage, data.totalPages, 'archives');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;">暫無刪除歸檔數據</td></tr>';
-                document.getElementById('archives-pagination').innerHTML = '';
-            }
-        } catch (error) {
-            console.error('加載歸檔失敗:', error);
+        function toggleArchiveAuthorSearch() {
+            const mode = document.getElementById('archiveAuthorFilterMode').value;
+            const input = document.getElementById('archiveAuthorSearchInput');
+            if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
+            else { input.style.display = 'none'; input.value = ''; }
         }
-    }
 
-    async function loadReportsData() {
-        const state = tabState.reports;
-        const tbody = document.querySelector('#tab-reports .data-table tbody');
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
-        try {
-            const params = new URLSearchParams({ page: state.page, size: state.size, reporterUsername: state.reporter, reportedUsername: state.reportedUser });
-            const response = await fetch(`/admin/api/reviews/reports?${params.toString()}`);
-            const data = await response.json();
-            if (data.content && data.content.length > 0) {
-                renderReportsTable(data.content);
-                renderPagination(data.currentPage, data.totalPages, 'reports');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">暫無舉報數據</td></tr>';
-                document.getElementById('reports-pagination').innerHTML = '';
-            }
-        } catch (error) {
-            console.error('加載舉報失敗:', error);
+        function toggleArchiveDeletedBySearch() {
+            const mode = document.getElementById('archiveDeletedByFilterMode').value;
+            const input = document.getElementById('archiveDeletedBySearchInput');
+            if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
+            else { input.style.display = 'none'; input.value = ''; }
         }
-    }
 
-    // ==========================================
-    // 4. 動態渲染表格與分頁函數
-    // ==========================================
-    function renderReviewsTable(reviews) {
-        const tbody = document.querySelector('#tab-reviews .data-table tbody');
-        let html = '';
-        reviews.forEach(review => {
-            const user = review.user || {};
-            const product = review.product || {};
-            html += `<tr data-username="${user.username || ''}" data-userid="${user.id || ''}" data-parentid="${review.parentId ? 'reply' : 'root'}">
+        function toggleReporterSearch() {
+            const mode = document.getElementById('reporterFilterMode').value;
+            const input = document.getElementById('reporterSearchInput');
+            if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
+            else { input.style.display = 'none'; input.value = ''; }
+        }
+
+        function toggleReportedUserSearch() {
+            const mode = document.getElementById('reportedUserFilterMode').value;
+            const input = document.getElementById('reportedUserSearchInput');
+            if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
+            else { input.style.display = 'none'; input.value = ''; }
+        }
+
+        // ==========================================
+        // 2. 全局篩選與重置函數 (更新 State 並觸發加載)
+        // ==========================================
+        function filterReviews() {
+            const userMode = document.getElementById('userFilterMode').value;
+            const targetUsername = document.getElementById('userSearchInput').value.trim();
+            const reviewType = document.getElementById('reviewTypeFilter').value;
+            const keywordMode = document.getElementById('keywordFilterMode').value;
+
+            tabState.reviews.username = userMode === 'specific' ? targetUsername : '';
+            tabState.reviews.reviewType = reviewType;
+            tabState.reviews.keywordMode = keywordMode;
+            tabState.reviews.page = 0;
+            loadReviewsData();
+        }
+
+        function resetReviewsFilter() {
+            document.getElementById('userFilterMode').value = 'all';
+            document.getElementById('userSearchInput').value = '';
+            document.getElementById('userSearchInput').style.display = 'none';
+            document.getElementById('reviewTypeFilter').value = 'all';
+            document.getElementById('keywordFilterMode').value = 'no';
+
+            tabState.reviews.username = '';
+            tabState.reviews.reviewType = 'all';
+            tabState.reviews.keywordMode = 'no';
+            tabState.reviews.page = 0;
+            loadReviewsData();
+        }
+
+        function filterArchives() {
+            const authorMode = document.getElementById('archiveAuthorFilterMode').value;
+            const authorUsername = document.getElementById('archiveAuthorSearchInput').value.trim();
+            const deletedByMode = document.getElementById('archiveDeletedByFilterMode').value;
+            const deletedByUsername = document.getElementById('archiveDeletedBySearchInput').value.trim();
+
+            tabState.archives.author = authorMode === 'specific' ? authorUsername : '';
+            tabState.archives.deletedBy = deletedByMode === 'specific' ? deletedByUsername : (deletedByMode === 'admin' ? 'admin' : '');
+            tabState.archives.page = 0;
+            loadArchivesData();
+        }
+
+        function resetArchivesFilter() {
+            document.getElementById('archiveAuthorFilterMode').value = 'all';
+            document.getElementById('archiveAuthorSearchInput').value = '';
+            document.getElementById('archiveAuthorSearchInput').style.display = 'none';
+            document.getElementById('archiveDeletedByFilterMode').value = 'all';
+            document.getElementById('archiveDeletedBySearchInput').value = '';
+            document.getElementById('archiveDeletedBySearchInput').style.display = 'none';
+
+            tabState.archives.author = '';
+            tabState.archives.deletedBy = '';
+            tabState.archives.page = 0;
+            loadArchivesData();
+        }
+
+        function filterReports() {
+            const reporterMode = document.getElementById('reporterFilterMode').value;
+            const reporterName = document.getElementById('reporterSearchInput').value.trim();
+            const reportedMode = document.getElementById('reportedUserFilterMode').value;
+            const reportedName = document.getElementById('reportedUserSearchInput').value.trim();
+
+            tabState.reports.reporter = reporterMode === 'specific' ? reporterName : '';
+            tabState.reports.reportedUser = reportedMode === 'specific' ? reportedName : '';
+            tabState.reports.page = 0;
+            loadReportsData();
+        }
+
+        function resetReportsFilter() {
+            document.getElementById('reporterFilterMode').value = 'all';
+            document.getElementById('reporterSearchInput').value = '';
+            document.getElementById('reporterSearchInput').style.display = 'none';
+            document.getElementById('reportedUserFilterMode').value = 'all';
+            document.getElementById('reportedUserSearchInput').value = '';
+            document.getElementById('reportedUserSearchInput').style.display = 'none';
+
+            tabState.reports.reporter = '';
+            tabState.reports.reportedUser = '';
+            tabState.reports.page = 0;
+            loadReportsData();
+        }
+
+        // ==========================================
+        // 3. Tab 切換與數據加載函數 (AJAX)
+        // ==========================================
+        function switchTab(tabName, btnElement) {
+            currentActiveTab = tabName;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            btnElement.classList.add('active');
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            if (tabName === 'reviews') { tabState.reviews.page = 0; loadReviewsData(); }
+            else if (tabName === 'archives') { tabState.archives.page = 0; loadArchivesData(); }
+            else if (tabName === 'reports') { tabState.reports.page = 0; loadReportsData(); }
+        }
+
+        // ==========================================
+        // 【全新思路】后端驱动的智能分页渲染 (前端无脑遍历)
+        // ==========================================
+        function renderPagination(currentPage, totalPages, smartPages, tabName) {
+            const containerId = `${tabName}-pagination`;
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            // 边界防御：如果没有数据或没有 smartPages，直接清空
+            if (!smartPages || smartPages.length === 0 || totalPages === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '<div class="pagination-wrapper">';
+
+            // 1. 渲染“上一页”按钮
+            if (currentPage > 0) {
+                html += `<button class="page-btn" onclick="changePage('${tabName}', ${currentPage - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+            } else {
+                html += `<button class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+            }
+
+            // 2. 【核心】无脑遍历后端传来的智能分页结构 (彻底抛弃前端数学计算)
+            smartPages.forEach(item => {
+                if (item.isEllipsis) {
+                    // 渲染省略号
+                    html += `<span class="page-ellipsis">...</span>`;
+                } else {
+                    // 渲染页码按钮
+                    // 注意：后端 pageNumber 是 1-based，前端 changePage 需要 0-based，所以要减 1
+                    const pageIndex = item.pageNumber - 1;
+                    const isActive = pageIndex === currentPage ? 'active' : '';
+                    html += `<button class="page-btn ${isActive}" onclick="changePage('${tabName}', ${pageIndex})">${item.pageNumber}</button>`;
+                }
+            });
+
+            // 3. 渲染“下一页”按钮
+            if (currentPage < totalPages - 1) {
+                html += `<button class="page-btn" onclick="changePage('${tabName}', ${currentPage + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
+            } else {
+                html += `<button class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // ==========================================
+        // 3. Tab 切换与数据加载函数 (AJAX) - 传入 smartPages
+        // ==========================================
+        async function loadReviewsData() {
+            const state = tabState.reviews;
+            const tbody = document.querySelector('#tab-reviews .data-table tbody');
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
+            try {
+                const params = new URLSearchParams({ page: state.page, size: state.size, username: state.username, reviewType: state.reviewType, keywordMode: state.keywordMode });
+                const response = await fetch(`/admin/api/reviews/list?${params.toString()}`);
+                const data = await response.json();
+                if (data.content && data.content.length > 0) {
+                    renderReviewsTable(data.content);
+                    // 【修改点】：将后端返回的 data.smartPages 传入渲染函数
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'reviews');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">暫無評論數據</td></tr>';
+                    // 即使没数据，如果 totalPages > 0 也要渲染分页（防止第一页消失）
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'reviews');
+                }
+            } catch (error) {
+                console.error('加載評論失敗:', error);
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem; color: red;">加載失敗，請重試</td></tr>';
+            }
+        }
+
+        async function loadArchivesData() {
+            const state = tabState.archives;
+            const tbody = document.querySelector('#tab-archives .data-table tbody');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
+            try {
+                const params = new URLSearchParams({ page: state.page, size: state.size, authorUsername: state.author, deletedByUsername: state.deletedBy });
+                const response = await fetch(`/admin/api/reviews/archives?${params.toString()}`);
+                const data = await response.json();
+                if (data.content && data.content.length > 0) {
+                    renderArchivesTable(data.content);
+                    // 【修改点】：将后端返回的 data.smartPages 传入渲染函数
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'archives');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;">暫無刪除歸檔數據</td></tr>';
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'archives');
+                }
+            } catch (error) {
+                console.error('加載歸檔失敗:', error);
+            }
+        }
+
+        async function loadReportsData() {
+            const state = tabState.reports;
+            const tbody = document.querySelector('#tab-reports .data-table tbody');
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
+            try {
+                const params = new URLSearchParams({ page: state.page, size: state.size, reporterUsername: state.reporter, reportedUsername: state.reportedUser });
+                const response = await fetch(`/admin/api/reviews/reports?${params.toString()}`);
+                const data = await response.json();
+                if (data.content && data.content.length > 0) {
+                    renderReportsTable(data.content);
+                    // 【修改点】：将后端返回的 data.smartPages 传入渲染函数
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'reports');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">暫無舉報數據</td></tr>';
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'reports');
+                }
+            } catch (error) {
+                console.error('加載舉報失敗:', error);
+            }
+        }
+
+        // ==========================================
+        // 4. 動態渲染表格與分頁函數
+        // ==========================================
+        function renderReviewsTable(reviews) {
+            const tbody = document.querySelector('#tab-reviews .data-table tbody');
+            let html = '';
+            reviews.forEach(review => {
+                const user = review.user || {};
+                const product = review.product || {};
+                html += `<tr data-username="${user.username || ''}" data-userid="${user.id || ''}" data-parentid="${review.parentId ? 'reply' : 'root'}">
                 <td style="color: var(--gray); font-family: monospace;">${review.reviewId}</td>
                 <td>${user.username || '未知'}</td>
                 <td><span class="text-truncate" title="${product.description || ''}">${product.description || '未知商品'}</span></td>
@@ -2793,25 +2973,25 @@
                     </div>
                 </td>
             </tr>`;
-        });
-        tbody.innerHTML = html;
-        bindDynamicEvents();
-    }
+            });
+            tbody.innerHTML = html;
+            bindDynamicEvents();
+        }
 
-    function renderArchivesTable(archives) {
-        const tbody = document.querySelector('#tab-archives .data-table tbody');
-        let html = '';
-        archives.forEach(item => {
-            const archiveId = item.archiveId || '未知';
-            const content = item.content || '無內容';
-            const authorUsername = item.author ? item.author.username : '未知';
-            const product = item.product || {};
-            const productDesc = product.description || '未知商品';
-            const deleteReason = item.deleteReason || ' ';
-            const deletedBy = item.deletedBy || {};
-            const deletedByUsername = deletedBy.username || '系統';
-            const deletedAt = item.deletedAt ? formatDate(item.deletedAt) : '未知';
-            html += `<tr>
+        function renderArchivesTable(archives) {
+            const tbody = document.querySelector('#tab-archives .data-table tbody');
+            let html = '';
+            archives.forEach(item => {
+                const archiveId = item.archiveId || '未知';
+                const content = item.content || '無內容';
+                const authorUsername = item.author ? item.author.username : '未知';
+                const product = item.product || {};
+                const productDesc = product.description || '未知商品';
+                const deleteReason = item.deleteReason || ' ';
+                const deletedBy = item.deletedBy || {};
+                const deletedByUsername = deletedBy.username || '系統';
+                const deletedAt = item.deletedAt ? formatDate(item.deletedAt) : '未知';
+                html += `<tr>
                 <td style="color: var(--gray); font-family: monospace;">${archiveId}</td>
                 <td><span class="text-truncate" title="${content}">${content}</span></td>
                 <td>${authorUsername}</td>
@@ -2825,46 +3005,64 @@
                     <button class="btn-sm btn-restore" title="恢復評論" data-archive-id="${archiveId}" data-username="${authorUsername}"><i class="fas fa-undo"></i> 恢復</button>
                 </td>
             </tr>`;
-        });
-        tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center; padding: 2rem;">暫無刪除歸檔數據</td></tr>';
-        bindDynamicEvents();
-    }
+            });
+            tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center; padding: 2rem;">暫無刪除歸檔數據</td></tr>';
+            bindDynamicEvents();
+        }
+        function renderReportsTable(reports) {
+            const tbody = document.querySelector('#tab-reports .data-table tbody');
+            let html = '';
 
-    function renderReportsTable(reports) {
-        const tbody = document.querySelector('#tab-reports .data-table tbody');
-        let html = '';
-        reports.forEach(item => {
-            const reportId = item.reportId || 'undefined';
-            const category = item.category || '無';
-            const reason = item.reason || '無';
-            const status = item.status || 'UNKNOWN';
-            const createdAt = item.createdAt || '';
-            const content = item.content || '無內容快照';
-            const isDel = item.isDeleted || false;
-            const isBanned = item.isAlreadyBanned || false;
-            const reporterUsername = (item.reporter && item.reporter.username) ? item.reporter.username : '未知';
-            const reportedUsername = (item.reportedUser && item.reportedUser.username) ? item.reportedUser.username : '未知';
+            // 【新增】定義舉報類別的中文映射表
+            const categoryMap = {
+                "ILLEGAL": "違法信息",
+                "PORNOGRAPHY": "色情低俗",
+                "HARMFUL": "有害信息",
+                "CYBERBULLYING_ME": "網暴信息",
+                "PERSONAL_ATTACK": "人身攻擊",
+                "CYBER_VIOLENCE": "网络暴力",
+                "MINOR": "涉及未成年人",
+                "FRAUD": "詐騙信息",
+                "SPAM": "垃圾行爲或内容",
+                "NOT_INTERESTED": "不感興趣"
+            };
 
-            let statusBadge = '';
-            if (status === 'PENDING') statusBadge = '<span class="status-badge status-pending">待處理</span>';
-            else if (status === 'RESOLVED') statusBadge = '<span class="status-badge status-resolved">已處理</span>';
-            else if (status === 'DISMISSED') statusBadge = '<span class="status-badge status-dismissed">已駁回</span>';
+            reports.forEach(item => {
+                const reportId = item.reportId || 'undefined';
+                const categoryRaw = item.category || '無';
 
-            let actionBtn1 = status === 'PENDING'
-                ? `<button class="btn-sm btn-approve" title="處理舉報" onclick="openReportDetailModal('${reportId}')"><i class="fas fa-gavel"></i> 處理</button>`
-                : `<span class="btn-sm ${status === 'RESOLVED' ? 'status-resolved' : 'status-dismissed'}" style="cursor: default; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">${status === 'RESOLVED' ? '已處理' : '已駁回'}</span>`;
+                // 【修改】使用映射表將英文轉換為中文，如果找不到則顯示原文
+                const category = categoryMap[categoryRaw] || categoryRaw;
 
-            let actionBtn2 = !isDel
-                ? `<button class="btn-sm btn-delete" title="刪除被舉報的評論" data-report-id="${reportId}" data-review-id="${item.reviewId || ''}" data-username="${reportedUsername}"><i class="fas fa-trash-alt"></i> 刪除</button>`
-                : `<span class="btn-sm" style="background: #e9ecef; color: #6c757d; cursor: not-allowed; border: 1px solid #dee2e6; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;" title="該評論已被刪除或無相關評論，無法再次刪除"><i class="fas fa-trash-alt"></i> 已刪除</span>`;
+                const reason = item.reason || '無';
+                const status = item.status || 'UNKNOWN';
+                const createdAt = item.createdAt || '';
+                const content = item.content || '無內容快照';
+                const isDel = item.isDeleted || false;
+                const isBanned = item.isAlreadyBanned || false;
+                const reporterUsername = (item.reporter && item.reporter.username) ? item.reporter.username : '未知';
+                const reportedUsername = (item.reportedUser && item.reportedUser.username) ? item.reportedUser.username : '未知';
 
-            let actionBtn3 = isBanned
-                ? `<button class="btn-sm btn-ban btn-disabled" title="封禁被舉報人" disabled style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-ban"></i> 已封禁</button>`
-                : `<button class="btn-sm btn-ban" title="封禁被舉報人" data-username="${reportedUsername}" data-review-id="${item.reviewId || ''}" data-review-content="${content}" onclick="openAdminBanModal(this.dataset.username, this.dataset.reviewId, this.dataset.reviewContent)"><i class="fas fa-ban"></i> 封禁</button>`;
+                let statusBadge = '';
+                if (status === 'PENDING') statusBadge = '<span class="status-badge status-pending">待處理</span>';
+                else if (status === 'RESOLVED') statusBadge = '<span class="status-badge status-resolved">已處理</span>';
+                else if (status === 'DISMISSED') statusBadge = '<span class="status-badge status-dismissed">已駁回</span>';
 
-            const actionBtn4 = `<button class="btn-sm btn-blacklist" title="永久拉黑被舉報人" data-username="${reportedUsername}" data-review-id="${item.reviewId || ''}" data-review-content="${content}" onclick="openBlacklistConfirmModalFromBtn(this)"><i class="fas fa-user-slash"></i> 拉黑</button>`;
+                let actionBtn1 = status === 'PENDING'
+                    ? `<button class="btn-sm btn-approve" title="處理舉報" onclick="openReportDetailModal('${reportId}')"><i class="fas fa-gavel"></i> 處理</button>`
+                    : `<span class="btn-sm ${status === 'RESOLVED' ? 'status-resolved' : 'status-dismissed'}" style="cursor: default; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">${status === 'RESOLVED' ? '已處理' : '已駁回'}</span>`;
 
-            html += `<tr>
+                let actionBtn2 = !isDel
+                    ? `<button class="btn-sm btn-delete" title="刪除被舉報的評論" data-report-id="${reportId}" data-review-id="${item.reviewId || ''}" data-username="${reportedUsername}"><i class="fas fa-trash-alt"></i> 刪除</button>`
+                    : `<span class="btn-sm" style="background: #e9ecef; color: #6c757d; cursor: not-allowed; border: 1px solid #dee2e6; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;" title="該評論已被刪除或無相關評論，無法再次刪除"><i class="fas fa-trash-alt"></i> 已刪除</span>`;
+
+                let actionBtn3 = isBanned
+                    ? `<button class="btn-sm btn-ban btn-disabled" title="封禁被舉報人" disabled style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-ban"></i> 已封禁</button>`
+                    : `<button class="btn-sm btn-ban" title="封禁被舉報人" data-username="${reportedUsername}" data-review-id="${item.reviewId || ''}" data-review-content="${content}" onclick="openAdminBanModal(this.dataset.username, this.dataset.reviewId, this.dataset.reviewContent)"><i class="fas fa-ban"></i> 封禁</button>`;
+
+                const actionBtn4 = `<button class="btn-sm btn-blacklist" title="永久拉黑被舉報人" data-username="${reportedUsername}" data-review-id="${item.reviewId || ''}" data-review-content="${content}" onclick="openBlacklistConfirmModalFromBtn(this)"><i class="fas fa-user-slash"></i> 拉黑</button>`;
+
+                html += `<tr>
                 <td style="color: var(--gray); font-family: monospace;">${reportId}</td>
                 <td>${reporterUsername}</td>
                 <td>${reportedUsername}</td>
@@ -2877,378 +3075,344 @@
                     <div class="action-buttons-grid">${actionBtn1}${actionBtn2}${actionBtn3}${actionBtn4}</div>
                 </td>
             </tr>`;
-        });
-        tbody.innerHTML = html || '<tr><td colspan="9" style="text-align:center; padding: 2rem;">暫無舉報數據</td></tr>';
-        bindDynamicEvents();
-    }
-
-
-    function renderPagination(currentPage, totalPages, tabName) {
-        const containerId = `${tabName}-pagination`;
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        if (totalPages === 0) { container.innerHTML = ''; return; }
-
-        let html = '<div class="pagination-wrapper">';
-        if (totalPages === 1) {
-            html += `<button class="page-btn active">1</button></div>`;
-            container.innerHTML = html;
-            return;
-        }
-
-        if (currentPage > 0) html += `<button class="page-btn" onclick="changePage('${tabName}', ${currentPage - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
-        else html += `<button class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
-
-        let start = Math.max(0, currentPage - 2);
-        let end = Math.min(totalPages - 1, currentPage + 2);
-        if (start > 0) html += `<span class="page-ellipsis">...</span>`;
-        for (let i = start; i <= end; i++) {
-            if (i === currentPage) html += `<button class="page-btn active">${i + 1}</button>`;
-            else html += `<button class="page-btn" onclick="changePage('${tabName}', ${i})">${i + 1}</button>`;
-        }
-        if (end < totalPages - 1) html += `<span class="page-ellipsis">...</span>`;
-
-        if (currentPage < totalPages - 1) html += `<button class="page-btn" onclick="changePage('${tabName}', ${currentPage + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
-        else html += `<button class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
-
-        html += '</div>';
-        container.innerHTML = html;
-    }
-
-    function changePage(tabName, newPage) {
-        tabState[tabName].page = newPage;
-        if (tabName === 'reviews') loadReviewsData();
-        else if (tabName === 'archives') loadArchivesData();
-        else if (tabName === 'reports') loadReportsData();
-    }
-
-    // ==========================================
-    // 5. 輔助函數與事件委託
-    // ==========================================
-    function formatDate(dateStr) {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        return date.toLocaleString('zh-TW', { hour12: false });
-    }
-
-    function bindDynamicEvents() {
-        document.querySelectorAll('.data-table tbody').forEach(tbody => {
-            tbody.addEventListener('click', function(e) {
-                const deleteBtn = e.target.closest('.btn-delete');
-                if (deleteBtn) openDeleteModal(deleteBtn.dataset.reviewId, deleteBtn.dataset.username);
-
-                const banBtn = e.target.closest('.btn-ban');
-                if (banBtn && !banBtn.disabled) openAdminBanModal(banBtn.dataset.username, banBtn.dataset.reviewId, banBtn.dataset.reviewContent);
-
-                const restoreBtn = e.target.closest('.btn-restore');
-                if (restoreBtn) openRestoreModal(restoreBtn.dataset.archiveId, restoreBtn.dataset.username);
             });
-        });
-    }
-
-    // ==========================================
-    // 6. 頁面初始化 (DOMContentLoaded)
-    // ==========================================
-    document.addEventListener('DOMContentLoaded', function () {
-        loadReviewsData(); // 首次加載默認 Tab 數據
-        bindDynamicEvents(); // 綁定全局事件委託
-    });
-
-    // ==========================================
-    // 7. 保留您原有的全局彈窗與業務邏輯 (完整保留)
-    // ==========================================
-    function openDeleteModal(reviewId, username) {
-        currentDeleteId = reviewId;
-        const targetUserEl = document.getElementById('targetUsername');
-        if (targetUserEl && username) targetUserEl.textContent = username;
-        const defaultRadio = document.querySelector('input[value="該內容不符合社區規範，因此被移除。"]');
-        if (defaultRadio) defaultRadio.checked = true;
-        const customReasonEl = document.getElementById('customReasonText');
-        if (customReasonEl) customReasonEl.value = '';
-        handleReasonChange('default');
-        const modal = document.getElementById('deleteReviewModal');
-        if (modal) modal.style.display = 'flex';
-    }
-    function closeDeleteModal() {
-        const modal = document.getElementById('deleteReviewModal');
-        if (modal) modal.style.display = 'none';
-        currentDeleteId = null;
-    }
-    function handleReasonChange(type) {
-        const customWrapper = document.getElementById('customInputWrapper');
-        if (type === 'custom') {
-            if (customWrapper) { customWrapper.style.display = 'block'; setTimeout(() => { const input = document.getElementById('customReasonText'); if (input) input.focus(); }, 100); }
-        } else {
-            if (customWrapper) customWrapper.style.display = 'none';
+            tbody.innerHTML = html || '<tr><td colspan="9" style="text-align:center; padding: 2rem;">暫無舉報數據</td></tr>';
+            bindDynamicEvents();
         }
-    }
-    async function confirmDeleteReview() {
-        if (!currentDeleteId) return;
-        const btn = document.querySelector('#deleteReviewModal .btn-confirm-delete');
-        if (!btn) return;
-        const originalText = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-        try {
-            let deleteReason = '';
-            const selectedRadio = document.querySelector('input[name="deleteReason"]:checked');
-            if (selectedRadio) {
-                if (selectedRadio.value === 'custom') {
-                    deleteReason = document.getElementById('customReasonText').value.trim();
-                    if (!deleteReason) {
-                        if (typeof showNotification === 'function') showNotification('❌ 請輸入自定義刪除原因', true);
-                        else alert('請輸入自定義刪除原因');
-                        btn.disabled = false; btn.innerHTML = originalText; return;
-                    }
-                } else { deleteReason = selectedRadio.value; }
-            }
-            const response = await fetch(`/api/review/${currentDeleteId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deleteReason: deleteReason }) });
-            const result = await response.json();
-            if (response.ok && result.success) {
-                closeDeleteModal();
-                if (typeof showNotification === 'function') showNotification('✅ 該評論已成功刪除！');
-                else alert('✅ 該評論已成功刪除！');
-                if (currentActiveTab === 'reviews') loadReviewsData();
-                else if (currentActiveTab === 'reports') loadReportsData();
+
+        function changePage(tabName, newPage) {
+            tabState[tabName].page = newPage;
+            if (tabName === 'reviews') loadReviewsData();
+            else if (tabName === 'archives') loadArchivesData();
+            else if (tabName === 'reports') loadReportsData();
+        }
+
+        // ==========================================
+        // 5. 輔助函數與事件委託
+        // ==========================================
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-TW', { hour12: false });
+        }
+
+        function bindDynamicEvents() {
+            document.querySelectorAll('.data-table tbody').forEach(tbody => {
+                tbody.addEventListener('click', function (e) {
+                    const deleteBtn = e.target.closest('.btn-delete');
+                    if (deleteBtn) openDeleteModal(deleteBtn.dataset.reviewId, deleteBtn.dataset.username);
+
+                    const banBtn = e.target.closest('.btn-ban');
+                    if (banBtn && !banBtn.disabled) openAdminBanModal(banBtn.dataset.username, banBtn.dataset.reviewId, banBtn.dataset.reviewContent);
+
+                    const restoreBtn = e.target.closest('.btn-restore');
+                    if (restoreBtn) openRestoreModal(restoreBtn.dataset.archiveId, restoreBtn.dataset.username);
+                });
+            });
+        }
+
+        // ==========================================
+        // 6. 頁面初始化 (DOMContentLoaded)
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function () {
+            loadReviewsData(); // 首次加載默認 Tab 數據
+            bindDynamicEvents(); // 綁定全局事件委託
+        });
+
+        // ==========================================
+        // 7. 保留您原有的全局彈窗與業務邏輯 (完整保留)
+        // ==========================================
+        function openDeleteModal(reviewId, username) {
+            currentDeleteId = reviewId;
+            const targetUserEl = document.getElementById('targetUsername');
+            if (targetUserEl && username) targetUserEl.textContent = username;
+            const defaultRadio = document.querySelector('input[value="該內容不符合社區規範，因此被移除。"]');
+            if (defaultRadio) defaultRadio.checked = true;
+            const customReasonEl = document.getElementById('customReasonText');
+            if (customReasonEl) customReasonEl.value = '';
+            handleReasonChange('default');
+            const modal = document.getElementById('deleteReviewModal');
+            if (modal) modal.style.display = 'flex';
+        }
+        function closeDeleteModal() {
+            const modal = document.getElementById('deleteReviewModal');
+            if (modal) modal.style.display = 'none';
+            currentDeleteId = null;
+        }
+        function handleReasonChange(type) {
+            const customWrapper = document.getElementById('customInputWrapper');
+            if (type === 'custom') {
+                if (customWrapper) { customWrapper.style.display = 'block'; setTimeout(() => { const input = document.getElementById('customReasonText'); if (input) input.focus(); }, 100); }
             } else {
-                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '刪除失敗'), true);
-                else alert('❌ ' + (result.message || '刪除失敗'));
+                if (customWrapper) customWrapper.style.display = 'none';
+            }
+        }
+        async function confirmDeleteReview() {
+            if (!currentDeleteId) return;
+            const btn = document.querySelector('#deleteReviewModal .btn-confirm-delete');
+            if (!btn) return;
+            const originalText = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+            try {
+                let deleteReason = '';
+                const selectedRadio = document.querySelector('input[name="deleteReason"]:checked');
+                if (selectedRadio) {
+                    if (selectedRadio.value === 'custom') {
+                        deleteReason = document.getElementById('customReasonText').value.trim();
+                        if (!deleteReason) {
+                            if (typeof showNotification === 'function') showNotification('❌ 請輸入自定義刪除原因', true);
+                            else alert('請輸入自定義刪除原因');
+                            btn.disabled = false; btn.innerHTML = originalText; return;
+                        }
+                    } else { deleteReason = selectedRadio.value; }
+                }
+                const response = await fetch(`/api/review/${currentDeleteId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deleteReason: deleteReason }) });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    closeDeleteModal();
+                    if (typeof showNotification === 'function') showNotification('✅ 該評論已成功刪除！');
+                    else alert('✅ 該評論已成功刪除！');
+                    if (currentActiveTab === 'reviews') loadReviewsData();
+                    else if (currentActiveTab === 'reports') loadReportsData();
+                } else {
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '刪除失敗'), true);
+                    else alert('❌ ' + (result.message || '刪除失敗'));
+                    btn.disabled = false; btn.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error('刪除評論錯誤:', error);
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
+                else alert('❌ 網絡錯誤，請稍後重試');
                 btn.disabled = false; btn.innerHTML = originalText;
             }
-        } catch (error) {
-            console.error('刪除評論錯誤:', error);
-            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
-            else alert('❌ 網絡錯誤，請稍後重試');
-            btn.disabled = false; btn.innerHTML = originalText;
         }
-    }
 
-    function openAdminBanModal(username, reviewId, reviewContent) {
-        currentBanTarget = username; currentBanReviewId = reviewId; currentBanReviewContent = reviewContent;
-        const targetUserEl = document.getElementById('banTargetUsername');
-        if (targetUserEl) targetUserEl.textContent = username;
-        document.getElementById('banDuration').value = '1';
-        document.getElementById('banUnit').value = 'day';
-        document.getElementById('banReason').value = '違反社區規範';
-        const modal = document.getElementById('adminBanModal');
-        if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-    }
-    function closeAdminBanModal() {
-        const modal = document.getElementById('adminBanModal');
-        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
-        currentBanTarget = ''; currentBanReviewId = null; currentBanReviewContent = '';
-    }
-    async function confirmAdminBan() {
-        const duration = parseInt(document.getElementById('banDuration').value) || 0;
-        const unit = document.getElementById('banUnit').value;
-        const reason = document.getElementById('banReason').value.trim();
-        if (!duration || duration <= 0 || !reason) {
-            if (typeof showNotification === 'function') showNotification('❌ 請輸入有效的禁言時長與原因', true);
-            return;
+        function openAdminBanModal(username, reviewId, reviewContent) {
+            currentBanTarget = username; currentBanReviewId = reviewId; currentBanReviewContent = reviewContent;
+            const targetUserEl = document.getElementById('banTargetUsername');
+            if (targetUserEl) targetUserEl.textContent = username;
+            document.getElementById('banDuration').value = '1';
+            document.getElementById('banUnit').value = 'day';
+            document.getElementById('banReason').value = '違反社區規範';
+            const modal = document.getElementById('adminBanModal');
+            if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
         }
-        let durationMinutes = unit === 'day' ? duration * 24 * 60 : (unit === 'week' ? duration * 7 * 24 * 60 : duration * 30 * 24 * 60);
-        const confirmBtn = document.querySelector('#adminBanModal .btn-confirm');
-        const originalText = confirmBtn.innerHTML;
-        confirmBtn.disabled = true; confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-        try {
-            const params = new URLSearchParams({ durationMinutes, reason });
-            if (currentBanReviewId) params.append('reviewId', currentBanReviewId);
-            if (currentBanReviewContent) params.append('reviewContent', currentBanReviewContent);
-            const response = await fetch(`/api/user/${encodeURIComponent(currentBanTarget)}/toggle-block?${params.toString()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-            const result = await response.json();
-            if (response.ok && result.success) {
-                if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
-                closeAdminBanModal();
-                if (currentActiveTab === 'reviews') loadReviewsData();
-                else if (currentActiveTab === 'reports') loadReportsData();
-            } else if (result.alreadyBanned) {
-                closeAdminBanModal();
-                const permModal = document.getElementById('adminPermissionModal');
-                if (permModal) { permModal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-            } else {
-                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '禁言失敗'), true);
+        function closeAdminBanModal() {
+            const modal = document.getElementById('adminBanModal');
+            if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+            currentBanTarget = ''; currentBanReviewId = null; currentBanReviewContent = '';
+        }
+        async function confirmAdminBan() {
+            const duration = parseInt(document.getElementById('banDuration').value) || 0;
+            const unit = document.getElementById('banUnit').value;
+            const reason = document.getElementById('banReason').value.trim();
+            if (!duration || duration <= 0 || !reason) {
+                if (typeof showNotification === 'function') showNotification('❌ 請輸入有效的禁言時長與原因', true);
+                return;
+            }
+            let durationMinutes = unit === 'day' ? duration * 24 * 60 : (unit === 'week' ? duration * 7 * 24 * 60 : duration * 30 * 24 * 60);
+            const confirmBtn = document.querySelector('#adminBanModal .btn-confirm');
+            const originalText = confirmBtn.innerHTML;
+            confirmBtn.disabled = true; confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+            try {
+                const params = new URLSearchParams({ durationMinutes, reason });
+                if (currentBanReviewId) params.append('reviewId', currentBanReviewId);
+                if (currentBanReviewContent) params.append('reviewContent', currentBanReviewContent);
+                const response = await fetch(`/api/user/${encodeURIComponent(currentBanTarget)}/toggle-block?${params.toString()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
+                    closeAdminBanModal();
+                    if (currentActiveTab === 'reviews') loadReviewsData();
+                    else if (currentActiveTab === 'reports') loadReportsData();
+                } else if (result.alreadyBanned) {
+                    closeAdminBanModal();
+                    const permModal = document.getElementById('adminPermissionModal');
+                    if (permModal) { permModal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+                } else {
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '禁言失敗'), true);
+                    confirmBtn.disabled = false; confirmBtn.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error('禁言錯誤:', error);
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 confirmBtn.disabled = false; confirmBtn.innerHTML = originalText;
             }
-        } catch (error) {
-            console.error('禁言錯誤:', error);
-            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
-            confirmBtn.disabled = false; confirmBtn.innerHTML = originalText;
         }
-    }
-    function closeAdminPermissionModal() {
-        const modal = document.getElementById('adminPermissionModal');
-        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
-    }
+        function closeAdminPermissionModal() {
+            const modal = document.getElementById('adminPermissionModal');
+            if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+        }
 
-    window.openBlacklistConfirmModalFromBtn = function (btn) {
-        window.openBlacklistConfirmModal(btn.getAttribute('data-username'), btn.getAttribute('data-review-id'), btn.getAttribute('data-review-content') || '');
-    };
-    window.openBlacklistConfirmModal = function (username, reviewId, reviewContent) {
-        blacklistTargetUser = username; blacklistReviewId = reviewId ? parseInt(reviewId) : null; blacklistReviewContent = reviewContent || null;
-        document.getElementById('blacklistTargetUsername').textContent = username;
-        document.getElementById('blacklistReason').value = '嚴重違反社區規範';
-        document.getElementById('blacklistConfirmModal').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    };
-    window.closeBlacklistConfirmModal = function () {
-        document.getElementById('blacklistConfirmModal').style.display = 'none';
-        document.body.style.overflow = '';
-        blacklistTargetUser = ''; blacklistReviewId = null; blacklistReviewContent = null;
-    };
-    window.confirmBlacklistAction = async function () {
-        const reason = document.getElementById('blacklistReason').value.trim();
-        if (!reason) { if (typeof showNotification === 'function') showNotification('❌ 請輸入拉黑原因', true); return; }
-        let url = `/api/admin/penalty/blacklist/${encodeURIComponent(blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`;
-        if (blacklistReviewId) url += `&reviewId=${blacklistReviewId}`;
-        if (blacklistReviewContent) url += `&reviewContent=${encodeURIComponent(blacklistReviewContent)}`;
-        try {
-            const response = await fetch(url, { method: 'POST', credentials: 'same-origin' });
-            const result = await response.json();
-            if (response.ok && result.success) {
-                if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
-                window.closeBlacklistConfirmModal();
-                if (currentActiveTab === 'reviews') loadReviewsData();
-                else if (currentActiveTab === 'reports') loadReportsData();
-            } else {
-                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
+        window.openBlacklistConfirmModalFromBtn = function (btn) {
+            window.openBlacklistConfirmModal(btn.getAttribute('data-username'), btn.getAttribute('data-review-id'), btn.getAttribute('data-review-content') || '');
+        };
+        window.openBlacklistConfirmModal = function (username, reviewId, reviewContent) {
+            blacklistTargetUser = username; blacklistReviewId = reviewId ? parseInt(reviewId) : null; blacklistReviewContent = reviewContent || null;
+            document.getElementById('blacklistTargetUsername').textContent = username;
+            document.getElementById('blacklistReason').value = '嚴重違反社區規範';
+            document.getElementById('blacklistConfirmModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        };
+        window.closeBlacklistConfirmModal = function () {
+            document.getElementById('blacklistConfirmModal').style.display = 'none';
+            document.body.style.overflow = '';
+            blacklistTargetUser = ''; blacklistReviewId = null; blacklistReviewContent = null;
+        };
+        window.confirmBlacklistAction = async function () {
+            const reason = document.getElementById('blacklistReason').value.trim();
+            if (!reason) { if (typeof showNotification === 'function') showNotification('❌ 請輸入拉黑原因', true); return; }
+            let url = `/api/admin/penalty/blacklist/${encodeURIComponent(blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`;
+            if (blacklistReviewId) url += `&reviewId=${blacklistReviewId}`;
+            if (blacklistReviewContent) url += `&reviewContent=${encodeURIComponent(blacklistReviewContent)}`;
+            try {
+                const response = await fetch(url, { method: 'POST', credentials: 'same-origin' });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
+                    window.closeBlacklistConfirmModal();
+                    if (currentActiveTab === 'reviews') loadReviewsData();
+                    else if (currentActiveTab === 'reports') loadReportsData();
+                } else {
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
+                }
+            } catch (error) {
+                console.error('拉黑失敗:', error);
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
             }
-        } catch (error) {
-            console.error('拉黑失敗:', error);
-            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
-        }
-    };
+        };
 
-    async function openRestoreModal(archiveId, authorUsername) {
-        currentRestoreArchiveId = archiveId; currentRestoreAuthorUsername = authorUsername;
-        const btn = document.querySelector(`button[data-archive-id="${archiveId}"]`);
-        const originalHtml = btn ? btn.innerHTML : '';
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 檢查中...'; }
-        try {
-            const response = await fetch(`/api/review/restore/${archiveId}/check`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-            const result = await response.json();
-            if (!response.ok || !result.success) {
-                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '預檢失敗'), true);
+        async function openRestoreModal(archiveId, authorUsername) {
+            currentRestoreArchiveId = archiveId; currentRestoreAuthorUsername = authorUsername;
+            const btn = document.querySelector(`button[data-archive-id="${archiveId}"]`);
+            const originalHtml = btn ? btn.innerHTML : '';
+            try {
+                const response = await fetch(`/api/review/restore/${archiveId}/check`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '預檢失敗'), true);
+                    if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+                    return;
+                }
+                const data = result.data;
+                if (data.parentExists === false) {
+                    if (typeof showNotification === 'function') showNotification('❌ 無法恢復：該回覆的父評論已被刪除，無法單獨恢復樓中樓回覆！', true);
+                    if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+                    return;
+                }
+                if (data.isDeletedByAdmin) {
+                    document.getElementById('restoreTargetUsername').textContent = authorUsername;
+                    document.getElementById('restoreReviewModal').style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.getElementById('restoreDeletedByUsername').textContent = data.deletedByUsername;
+                    document.getElementById('restoreAuthorUsername').textContent = authorUsername;
+                    document.getElementById('restoreUserDeletedModal').style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                }
+            } catch (error) {
+                console.error('預檢錯誤:', error);
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
+            } finally {
                 if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
-                return;
             }
-            const data = result.data;
-            if (data.parentExists === false) {
-                if (typeof showNotification === 'function') showNotification('❌ 無法恢復：該回覆的父評論已被刪除，無法單獨恢復樓中樓回覆！', true);
-                if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
-                return;
-            }
-            if (data.isDeletedByAdmin) {
-                document.getElementById('restoreTargetUsername').textContent = authorUsername;
-                document.getElementById('restoreReviewModal').style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            } else {
-                document.getElementById('restoreDeletedByUsername').textContent = data.deletedByUsername;
-                document.getElementById('restoreAuthorUsername').textContent = authorUsername;
-                document.getElementById('restoreUserDeletedModal').style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
-        } catch (error) {
-            console.error('預檢錯誤:', error);
-            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
-        } finally {
-            if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
         }
-    }
-    function closeRestoreUserDeletedModal() {
-        const modal = document.getElementById('restoreUserDeletedModal');
-        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
-        currentRestoreArchiveId = null;
-    }
-    function closeRestoreModal() {
-        const modal = document.getElementById('restoreReviewModal');
-        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
-        currentRestoreArchiveId = null;
-    }
-    async function executeRestoreReview() {
-        if (!currentRestoreArchiveId) return;
-        const isUserDeletedModal = document.getElementById('restoreUserDeletedModal').style.display === 'flex';
-        const btnId = isUserDeletedModal ? 'confirmForceRestoreBtn' : 'confirmRestoreBtn';
-        const btn = document.getElementById(btnId);
-        const originalHtml = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-        try {
-            const response = await fetch(`/api/review/restore/${currentRestoreArchiveId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-            const result = await response.json();
-            if (response.ok && result.success) {
-                closeRestoreModal(); closeRestoreUserDeletedModal();
-                if (typeof showNotification === 'function') showNotification('✅ 評論已成功恢復，並已發送通知給用戶！');
-                loadArchivesData();
-            } else {
-                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '恢復失敗'), true);
+        function closeRestoreUserDeletedModal() {
+            const modal = document.getElementById('restoreUserDeletedModal');
+            if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+            currentRestoreArchiveId = null;
+        }
+        function closeRestoreModal() {
+            const modal = document.getElementById('restoreReviewModal');
+            if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+            currentRestoreArchiveId = null;
+        }
+        async function executeRestoreReview() {
+            if (!currentRestoreArchiveId) return;
+            const isUserDeletedModal = document.getElementById('restoreUserDeletedModal').style.display === 'flex';
+            const btnId = isUserDeletedModal ? 'confirmForceRestoreBtn' : 'confirmRestoreBtn';
+            const btn = document.getElementById(btnId);
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+            try {
+                const response = await fetch(`/api/review/restore/${currentRestoreArchiveId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    closeRestoreModal(); closeRestoreUserDeletedModal();
+                    if (typeof showNotification === 'function') showNotification('✅ 評論已成功恢復，並已發送通知給用戶！');
+                    loadArchivesData();
+                } else {
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '恢復失敗'), true);
+                    btn.disabled = false; btn.innerHTML = originalHtml;
+                }
+            } catch (error) {
+                console.error('恢復評論錯誤:', error);
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 btn.disabled = false; btn.innerHTML = originalHtml;
             }
-        } catch (error) {
-            console.error('恢復評論錯誤:', error);
-            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
-            btn.disabled = false; btn.innerHTML = originalHtml;
         }
-    }
 
-    function openReportDetailModal(reportId) {
-        currentReportId = reportId;
-        const reportRow = document.querySelector(`button[onclick*="openReportDetailModal(${reportId})"]`)?.closest('tr');
-        if (!reportRow) return;
-        document.getElementById('reportReporter').textContent = reportRow.cells[1].textContent.trim();
-        document.getElementById('reportReportedUser').textContent = reportRow.cells[2].textContent.trim();
-        document.getElementById('reportCategory').textContent = reportRow.cells[4].textContent.trim();
-        document.getElementById('reportReason').textContent = reportRow.cells[5].textContent.trim() || '未填寫';
-        const modal = document.getElementById('reportDecisionModal');
-        if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-    }
-    async function handleReportDecision(isSuccessful) {
-        if (!currentReportId) return;
-        const btn = event.target.closest('.btn-decision');
-        const originalHtml = btn.innerHTML;
-        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-        try {
-            const response = await fetch(`/api/report/${currentReportId}/decision`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ successful: isSuccessful }) });
-            const result = await response.json();
-            if (response.ok && result.success) {
-                closeReportDecisionModal();
-                if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
-                loadReportsData();
-            } else {
-                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '處理失敗'), true);
+        function openReportDetailModal(reportId) {
+            currentReportId = reportId;
+            const reportRow = document.querySelector(`button[onclick*="openReportDetailModal(${reportId})"]`)?.closest('tr');
+            if (!reportRow) return;
+            document.getElementById('reportReporter').textContent = reportRow.cells[1].textContent.trim();
+            document.getElementById('reportReportedUser').textContent = reportRow.cells[2].textContent.trim();
+            document.getElementById('reportCategory').textContent = reportRow.cells[4].textContent.trim();
+            document.getElementById('reportReason').textContent = reportRow.cells[5].textContent.trim() || '未填寫';
+            const modal = document.getElementById('reportDecisionModal');
+            if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+        }
+        async function handleReportDecision(isSuccessful) {
+            if (!currentReportId) return;
+            const btn = event.target.closest('.btn-decision');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+            try {
+                const response = await fetch(`/api/report/${currentReportId}/decision`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ successful: isSuccessful }) });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    closeReportDecisionModal();
+                    if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
+                    loadReportsData();
+                } else {
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '處理失敗'), true);
+                    btn.disabled = false; btn.innerHTML = originalHtml;
+                }
+            } catch (error) {
+                console.error('處理舉報錯誤:', error);
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 btn.disabled = false; btn.innerHTML = originalHtml;
             }
-        } catch (error) {
-            console.error('處理舉報錯誤:', error);
-            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
-            btn.disabled = false; btn.innerHTML = originalHtml;
         }
-    }
-    function closeReportDecisionModal() {
-        const modal = document.getElementById('reportDecisionModal');
-        if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
-        currentReportId = null; currentReportData = null;
-    }
+        function closeReportDecisionModal() {
+            const modal = document.getElementById('reportDecisionModal');
+            if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+            currentReportId = null; currentReportData = null;
+        }
 
-    document.addEventListener('click', function (e) {
-        const modals = ['deleteReviewModal', 'adminBanModal', 'adminPermissionModal', 'blacklistConfirmModal', 'restoreReviewModal', 'restoreUserDeletedModal', 'reportDecisionModal'];
-        modals.forEach(id => {
-            const modal = document.getElementById(id);
-            if (modal && e.target === modal) {
-                if (id === 'deleteReviewModal') closeDeleteModal();
-                else if (id === 'adminBanModal') closeAdminBanModal();
-                else if (id === 'adminPermissionModal') closeAdminPermissionModal();
-                else if (id === 'blacklistConfirmModal') window.closeBlacklistConfirmModal();
-                else if (id === 'restoreReviewModal') closeRestoreModal();
-                else if (id === 'restoreUserDeletedModal') closeRestoreUserDeletedModal();
-                else if (id === 'reportDecisionModal') closeReportDecisionModal();
+        document.addEventListener('click', function (e) {
+            const modals = ['deleteReviewModal', 'adminBanModal', 'adminPermissionModal', 'blacklistConfirmModal', 'restoreReviewModal', 'restoreUserDeletedModal', 'reportDecisionModal'];
+            modals.forEach(id => {
+                const modal = document.getElementById(id);
+                if (modal && e.target === modal) {
+                    if (id === 'deleteReviewModal') closeDeleteModal();
+                    else if (id === 'adminBanModal') closeAdminBanModal();
+                    else if (id === 'adminPermissionModal') closeAdminPermissionModal();
+                    else if (id === 'blacklistConfirmModal') window.closeBlacklistConfirmModal();
+                    else if (id === 'restoreReviewModal') closeRestoreModal();
+                    else if (id === 'restoreUserDeletedModal') closeRestoreUserDeletedModal();
+                    else if (id === 'reportDecisionModal') closeReportDecisionModal();
+                }
+            });
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeDeleteModal(); closeAdminBanModal(); closeAdminPermissionModal();
+                window.closeBlacklistConfirmModal(); closeRestoreModal(); closeRestoreUserDeletedModal(); closeReportDecisionModal();
             }
         });
-    });
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-            closeDeleteModal(); closeAdminBanModal(); closeAdminPermissionModal();
-            window.closeBlacklistConfirmModal(); closeRestoreModal(); closeRestoreUserDeletedModal(); closeReportDecisionModal();
-        }
-    });
-</script>
+    </script>
 </body>
 
 </html>

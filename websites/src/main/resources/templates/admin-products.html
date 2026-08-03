@@ -101,6 +101,45 @@
             text-overflow: ellipsis;
         }
 
+        .product-name-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .product-name-wrapper .product-name {
+            flex: 1;
+            margin-right: 0.5rem;
+        }
+
+        .product-view-icon {
+            opacity: 0;
+            transition: all 0.3s ease;
+            color: var(--gold);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            background: rgba(212, 175, 55, 0.1);
+            flex-shrink: 0;
+        }
+
+        .product-name-wrapper:hover .product-view-icon {
+            opacity: 1;
+        }
+
+        .product-view-icon:hover {
+            background: var(--gold);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .product-name-wrapper:hover .product-name {
+            color: var(--gold);
+        }
+
         .product-meta {
             font-size: 0.9rem;
             color: var(--gray);
@@ -993,8 +1032,14 @@
                                 </td>
                                 <td>
                                     <span class="product-brand" th:text="${product.brand} ?: 'ChronoTeam'">Brand</span>
-                                    <span class="product-name" th:text="${product.description}"
-                                        th:title="${product.description}">Product Name</span>
+                                    <div class="product-name-wrapper">
+                                        <span class="product-name" th:text="${product.description}"
+                                            th:title="${product.description}">Product Name</span>
+                                        <a th:href="@{/product/{id}(id=${product.productId})}" target="_blank"
+                                            class="product-view-icon" title="查看商品詳情">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                    </div>
                                     <div class="product-meta">
                                         <span th:if="${product.groupCode != null and product.groupCode != ''}">
                                             <i class="fas fa-link" style="font-size: 0.7rem;"></i> 分組: <span
@@ -1169,7 +1214,24 @@
                     下一頁 <i class="fas fa-chevron-right"></i>
                 </span>
             </div>
-            <!-- ==================== 智能分頁導航結束 ==================== -->
+            <footer class="admin-footer" style="
+        margin-top: 3rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        border-radius: 12px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.7);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    ">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
+                    ChronoTeam Admin Panel. All Rights Reserved.
+                </p>
+                <p style="margin: 0.5rem 0 0; font-size: 0.8rem; opacity: 0.8;">
+                    專業二手名錶管理平台
+                </p>
+            </footer>
         </main>
     </div>
 

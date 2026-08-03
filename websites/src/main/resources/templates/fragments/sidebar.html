@@ -69,6 +69,12 @@
                     th:classappend="${activePage == 'history'} ? 'active' : ''">
                     <i class="fas fa-history"></i> 瀏覽歷史
                 </a>
+
+                <a href="/account/cancelled-orders" class="menu-item"
+                   th:classappend="${activePage == 'cancelled-orders'} ? 'active' : ''">
+                    <i class="fas fa-undo"></i> 取消與退貨訂單
+                </a>
+
             </div>
 
             <!-- 互動中心 -->

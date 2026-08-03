@@ -9,16 +9,14 @@ import org.example.website.repository.AppealRepository;
 import org.example.website.repository.RateLimitLogRepository;
 import org.example.website.service.AdminPenaltyService;
 import org.example.website.service.RateLimitService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin")
@@ -27,7 +25,6 @@ public class PenaltyAppealController {
     private final AdminPenaltyRepository adminPenaltyRepository;
     private final AppealRepository appealRepository;
     private final AdminPenaltyService adminPenaltyService;
-
     private final RateLimitLogRepository rateLimitLogRepository;
     private final RateLimitService rateLimitService;
 
@@ -43,86 +40,53 @@ public class PenaltyAppealController {
         this.rateLimitService = rateLimitService;
     }
 
-    // ==========================================
-    // 內部類：用於智能分頁渲染
-    // ==========================================
-    public static class PageItem {
-        private boolean isEllipsis;
-        private Integer pageNumber;
-
-        public PageItem(boolean isEllipsis, Integer pageNumber) {
-            this.isEllipsis = isEllipsis;
-            this.pageNumber = pageNumber;
-        }
-
-        public boolean isEllipsis() {
-            return isEllipsis;
-        }
-
-        public Integer getPageNumber() {
-            return pageNumber;
-        }
-    }
-
     /**
-     * 生成智能分頁列表的核心算法
+     * 1. 頁面骨架渲染 (首次加載時僅渲染基礎 HTML 框架，數據交由前端 AJAX 異步獲取)
      */
-    private List<PageItem> generateSmartPagination(int currentPage, int totalPages) {
-        List<PageItem> pages = new ArrayList<>();
-        if (totalPages <= 7) {
-            for (int i = 1; i <= totalPages; i++) {
-                pages.add(new PageItem(false, i));
-            }
-        } else {
-            pages.add(new PageItem(false, 1)); // 始終顯示第一頁
-            if (currentPage > 3) {
-                pages.add(new PageItem(true, null)); // 省略號
-            }
-            int start = Math.max(2, currentPage - 1);
-            int end = Math.min(totalPages - 1, currentPage + 1);
-            for (int i = start; i <= end; i++) {
-                pages.add(new PageItem(false, i));
-            }
-            if (currentPage < totalPages - 2) {
-                pages.add(new PageItem(true, null)); // 省略號
-            }
-            pages.add(new PageItem(false, totalPages)); // 始終顯示最後一頁
-        }
-        return pages;
+    @GetMapping("/penalties")
+    public String managePenaltiesPage(Model model) {
+        return "admin/admin-penalties";
     }
 
-    @GetMapping("/penalties")
-    public String managePenaltiesAndAppeals(
+    // ==========================================
+    // API 1: 獲取處罰記錄列表 (已修復篩選功能)
+    // ==========================================
+    @GetMapping("/api/admin/penalties/list")
+    @ResponseBody
+    public ResponseEntity<?> getPenaltiesList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size,
-            Model model) {
+            @RequestParam(required = false) String type,      // 【新增】接收類型參數
+            @RequestParam(required = false) String status     // 【新增】接收狀態參數
+    ) {
 
-        // 【關鍵】：Spring Data JPA 的 page 是從 0 開始的，而智能分頁算法是從 1 開始的，所以需要 +1
-        int currentPage = page + 1;
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startTime"));
-
+        // 【關鍵步驟】：在查詢前，先執行批量更新，確保數據庫狀態是最新的
         adminPenaltyService.updateExpiredStatus();
         adminPenaltyService.updateExpiredAppeals();
 
-        // 1. 獲取處罰記錄 (按開始時間倒序)
-        Page<AdminPenalty> penaltiesPage = adminPenaltyRepository.findAll(pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startTime"));
+        Page<AdminPenalty> penaltiesPage;
 
-        // 2. 獲取申訴記錄 (按創建時間倒序)
-        Pageable appealPageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Appeal> appealsPage = appealRepository.findAll(appealPageable);
-
-        // 修复后的正确写法（通过恒定的 notificationId 关联，完美解决多次申诉问题）
-        Map<Long, String> reviewContentMap = new HashMap<>();
-        for (Appeal appeal : appealsPage.getContent()) {
-            Optional<AdminPenalty> penaltyOpt = adminPenaltyRepository.findByNotificationId(appeal.getNotificationId());
-            if (penaltyOpt.isPresent()) {
-                reviewContentMap.put(appeal.getAppealId(), penaltyOpt.get().getReviewContent());
-            } else {
-                reviewContentMap.put(appeal.getAppealId(), "无关联处罚记录");
-            }
+        // 【核心修復】：根據參數動態調用不同的 Repository 方法
+        if ((type == null || type.isEmpty()) && (status == null || status.isEmpty())) {
+            // 情況 A: 無篩選，查全部
+            penaltiesPage = adminPenaltyRepository.findAll(pageable);
+        } else if (type != null && !type.isEmpty() && (status == null || status.isEmpty())) {
+            // 情況 B: 僅篩選類型
+            penaltiesPage = adminPenaltyRepository.findByType(AdminPenalty.PenaltyType.valueOf(type), pageable);
+        } else if ((type == null || type.isEmpty()) && status != null && !status.isEmpty()) {
+            // 情況 C: 僅篩選狀態
+            penaltiesPage = adminPenaltyRepository.findByStatus(AdminPenalty.PenaltyStatus.valueOf(status), pageable);
+        } else {
+            // 情況 D: 同時篩選類型和狀態
+            penaltiesPage = adminPenaltyRepository.findByTypeAndStatus(
+                    AdminPenalty.PenaltyType.valueOf(type),
+                    AdminPenalty.PenaltyStatus.valueOf(status),
+                    pageable
+            );
         }
 
+        // 構建關聯數據 Map (申訴狀態映射) - 保持原有邏輯不變
         Map<Long, String> appealStatusMap = new HashMap<>();
         for (AdminPenalty penalty : penaltiesPage.getContent()) {
             if (penalty.getAppealId() != null) {
@@ -133,45 +97,199 @@ public class PenaltyAppealController {
             }
         }
 
-        // ==========================================
-        // 3. 獲取限流與封禁記錄 (新增核心邏輯)
-        // ==========================================
+        // 構建返回數據 (保持原有數據清洗邏輯)
+        List<Map<String, Object>> cleanPenalties = penaltiesPage.getContent().stream().map(penalty -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("penaltyId", penalty.getPenaltyId());
+            item.put("type", penalty.getType().name());
+            item.put("status", penalty.getStatus().name());
+            item.put("reason", penalty.getReason());
+            item.put("reviewContent", penalty.getReviewContent());
+            item.put("startTime", penalty.getStartTime());
+            item.put("endTime", penalty.getEndTime());
+            item.put("appealId", penalty.getAppealId());
+
+            if (penalty.getTargetUser() != null) {
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("username", penalty.getTargetUser().getUsername());
+                userInfo.put("id", penalty.getTargetUser().getId());
+                item.put("targetUser", userInfo);
+            }
+
+            if (penalty.getAdminUser() != null) {
+                Map<String, Object> adminInfo = new HashMap<>();
+                adminInfo.put("username", penalty.getAdminUser().getUsername());
+                item.put("adminUser", adminInfo);
+            }
+
+            return item;
+        }).collect(Collectors.toList());
+
+        int totalPages = penaltiesPage.getTotalPages() == 0 ? 1 : penaltiesPage.getTotalPages();
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", cleanPenalties);
+        response.put("currentPage", penaltiesPage.getNumber());
+        response.put("totalPages", totalPages);
+        response.put("totalElements", penaltiesPage.getTotalElements());
+
+        // 【全新思路】：後端直接計算並返回智能分頁結構
+        response.put("smartPages", generateSmartPagination(penaltiesPage.getNumber(), totalPages));
+
+        // 附加關聯數據
+        response.put("appealStatusMap", appealStatusMap);
+
+        return ResponseEntity.ok(response);
+    }
+
+
+    // ==========================================
+    // API 2: 獲取申訴記錄列表 (已修復篩選功能)
+    // ==========================================
+    @GetMapping("/api/admin/appeals/list")
+    @ResponseBody
+    public ResponseEntity<?> getAppealsList(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String appealType,   // 【新增】接收申訴類型參數
+            @RequestParam(required = false) String status        // 【新增】接收狀態參數
+    ) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Appeal> appealsPage;
+
+        // 【核心修復】：根據參數動態調用不同的 Repository 方法
+        if ((appealType == null || appealType.isEmpty()) && (status == null || status.isEmpty())) {
+            // 情況 A: 無篩選，查全部
+            appealsPage = appealRepository.findAll(pageable);
+        } else if (appealType != null && !appealType.isEmpty() && (status == null || status.isEmpty())) {
+            // 情況 B: 僅篩選類型
+            try {
+                appealsPage = appealRepository.findByAppealType(Appeal.AppealType.valueOf(appealType), pageable);
+            } catch (IllegalArgumentException e) {
+                // 如果枚舉值不匹配，降級為查詢全部或返回空頁
+                appealsPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+        } else if ((appealType == null || appealType.isEmpty()) && status != null && !status.isEmpty()) {
+            // 情況 C: 僅篩選狀態
+            try {
+                appealsPage = appealRepository.findByStatus(Appeal.AppealStatus.valueOf(status), pageable);
+            } catch (IllegalArgumentException e) {
+                appealsPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+        } else {
+            // 情況 D: 同時篩選類型和狀態 (注意：這需要 Repository 支持組合查詢)
+            // 如果您的 Repository 沒有 findByAppealTypeAndStatus，這裡可以改為內存過濾或添加對應方法
+            try {
+                appealsPage = appealRepository.findByAppealTypeAndStatus(
+                        Appeal.AppealType.valueOf(appealType),
+                        Appeal.AppealStatus.valueOf(status),
+                        pageable
+                );
+            } catch (Exception e) {
+                // 若無組合查詢方法，可先按類型查再手動過濾狀態，或直接返回空
+                appealsPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+        }
+
+        // 構建關聯數據 Map (處罰內容映射) - 保持原有邏輯不變
+        Map<Long, String> reviewContentMap = new HashMap<>();
+        for (Appeal appeal : appealsPage.getContent()) {
+            Optional<AdminPenalty> penaltyOpt = adminPenaltyRepository.findByNotificationId(appeal.getNotificationId());
+            if (penaltyOpt.isPresent()) {
+                reviewContentMap.put(appeal.getAppealId(), penaltyOpt.get().getReviewContent());
+            } else {
+                reviewContentMap.put(appeal.getAppealId(), "無關聯處罰記錄");
+            }
+        }
+
+        // 構建返回數據
+        List<Map<String, Object>> cleanAppeals = appealsPage.getContent().stream().map(appeal -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("appealId", appeal.getAppealId());
+            item.put("notificationId", appeal.getNotificationId());
+            item.put("appealType", appeal.getAppealType().name());
+            item.put("status", appeal.getStatus().name());
+            item.put("reason", appeal.getReason());
+            item.put("adminResponse", appeal.getAdminResponse());
+            item.put("createdAt", appeal.getCreatedAt());
+            item.put("reviewedAt", appeal.getReviewedAt());
+
+            // 用戶信息
+            if (appeal.getUser() != null) {
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("username", appeal.getUser().getUsername());
+                userInfo.put("id", appeal.getUser().getId());
+                item.put("user", userInfo);
+            }
+
+            return item;
+        }).collect(Collectors.toList());
+
+        int totalPages = appealsPage.getTotalPages() == 0 ? 1 : appealsPage.getTotalPages();
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", cleanAppeals);
+        response.put("currentPage", appealsPage.getNumber());
+        response.put("totalPages", totalPages);
+        response.put("totalElements", appealsPage.getTotalElements());
+
+        // 【全新思路】：後端直接計算並返回智能分頁結構
+        response.put("smartPages", generateSmartPagination(appealsPage.getNumber(), totalPages));
+
+        // 附加關聯數據
+        response.put("reviewContentMap", reviewContentMap);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ==========================================
+    // API 3: 獲取限流與封禁記錄列表
+    // ==========================================
+    @GetMapping("/api/admin/rate-limits/list")
+    @ResponseBody
+    public ResponseEntity<?> getRateLimitsList(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size) {
+
         // 【關鍵步驟】：在查詢前，先執行批量更新，確保數據庫狀態是最新的
         rateLimitService.updateExpiredBans();
 
-        Pageable rateLimitPageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "actionTime"));
-        Page<RateLimitLog> rateLimitsPage = rateLimitLogRepository.findAll(rateLimitPageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "actionTime"));
+        Page<RateLimitLog> rateLimitsPage = rateLimitLogRepository.findAll(pageable);
 
-        // ==========================================
-        // 4. 生成智能分頁列表並傳遞給前端
-        // ==========================================
-        List<PageItem> smartPenaltyPages = generateSmartPagination(currentPage, penaltiesPage.getTotalPages());
-        List<PageItem> smartAppealPages = generateSmartPagination(currentPage, appealsPage.getTotalPages());
-        List<PageItem> smartRateLimitPages = generateSmartPagination(currentPage, rateLimitsPage.getTotalPages());
+        // 構建返回數據
+        List<Map<String, Object>> cleanRateLimits = rateLimitsPage.getContent().stream().map(log -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("logId", log.getLogId());
+            item.put("actionTime", log.getActionTime());
+            item.put("times", log.getTimes());
+            item.put("bannedUntil", log.getBannedUntil());
+            item.put("bannedBy", log.getBannedBy());
+            item.put("banReason", log.getBanReason());
+            item.put("status", log.getStatus().name());
+            item.put("updatedAt", log.getUpdatedAt());
 
-        // 處罰記錄 Model 屬性
-        model.addAttribute("penalties", penaltiesPage.getContent());
-        model.addAttribute("penaltyTotalPages", penaltiesPage.getTotalPages());
-        model.addAttribute("penaltyCurrentPage", page);
-        model.addAttribute("smartPenaltyPages", smartPenaltyPages); // 新增
+            // 用戶信息
+            if (log.getUser() != null) {
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("username", log.getUser().getUsername());
+                userInfo.put("id", log.getUser().getId());
+                item.put("user", userInfo);
+            }
 
-        // 申訴記錄 Model 屬性
-        model.addAttribute("appeals", appealsPage.getContent());
-        model.addAttribute("appealTotalPages", appealsPage.getTotalPages());
-        model.addAttribute("appealCurrentPage", page);
-        model.addAttribute("smartAppealPages", smartAppealPages); // 新增
+            return item;
+        }).collect(Collectors.toList());
 
-        // 限流記錄 Model 屬性
-        model.addAttribute("rateLimits", rateLimitsPage.getContent());
-        model.addAttribute("rateLimitTotalPages", rateLimitsPage.getTotalPages());
-        model.addAttribute("rateLimitCurrentPage", page);
-        model.addAttribute("smartRateLimitPages", smartRateLimitPages); // 新增
+        int totalPages = rateLimitsPage.getTotalPages() == 0 ? 1 : rateLimitsPage.getTotalPages();
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", cleanRateLimits);
+        response.put("currentPage", rateLimitsPage.getNumber());
+        response.put("totalPages", totalPages);
+        response.put("totalElements", rateLimitsPage.getTotalElements());
 
-        // 其他關聯數據
-        model.addAttribute("reviewContentMap", reviewContentMap);
-        model.addAttribute("appealStatusMap", appealStatusMap);
+        // 【全新思路】：後端直接計算並返回智能分頁結構
+        response.put("smartPages", generateSmartPagination(rateLimitsPage.getNumber(), totalPages));
 
-        return "admin/admin-penalties";
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/appeal/{appealId}")
@@ -204,5 +322,80 @@ public class PenaltyAppealController {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("獲取失敗: " + e.getMessage()));
         }
+    }
+
+    // ==========================================
+    // 內部類：用於智能分頁渲染數據傳輸 (與 AdminReviewController 保持一致)
+    // ==========================================
+    public static class PageItem {
+        private boolean isEllipsis;
+        private Integer pageNumber; // 1-based 頁碼
+
+        public PageItem(boolean isEllipsis, Integer pageNumber) {
+            this.isEllipsis = isEllipsis;
+            this.pageNumber = pageNumber;
+        }
+        public boolean isEllipsis() { return isEllipsis; }
+        public Integer getPageNumber() { return pageNumber; }
+    }
+
+    /**
+     * 生成智能分頁列表的核心算法 (全新思路：後端計算，前端無腦渲染)
+     * 規則：第一頁永遠顯示，最後一頁永遠顯示，當前頁及前後各1頁顯示，使用省略號分隔。
+     * @param currentPage 當前頁 (0-based, Spring Data JPA 默認)
+     * @param totalPages 總頁數
+     * @return 智能分頁項目列表
+     */
+    private List<PageItem> generateSmartPagination(int currentPage, int totalPages) {
+        List<PageItem> pages = new ArrayList<>();
+
+        // 邊界檢查：哪怕總頁數為0，也強制返回第1頁，確保"第一頁永遠出現"
+        if (totalPages <= 0) {
+            pages.add(new PageItem(false, 1));
+            return pages;
+        }
+
+        // 情況1：總頁數 <= 7，直接顯示所有頁碼 (1-based)
+        if (totalPages <= 7) {
+            for (int i = 1; i <= totalPages; i++) {
+                pages.add(new PageItem(false, i));
+            }
+            return pages;
+        }
+
+        // 情況2：總頁數 > 7，智能顯示
+        // 1. 第一頁永遠顯示 (1-based)
+        pages.add(new PageItem(false, 1));
+
+        // 2. 計算當前頁(0-based)對應的 1-based 頁碼
+        int current1Based = currentPage + 1;
+
+        // 3. 如果當前頁靠近第一頁（前3頁），不需要第一個省略號
+        if (current1Based <= 3) {
+            for (int i = 2; i <= 4; i++) {
+                pages.add(new PageItem(false, i));
+            }
+            pages.add(new PageItem(true, null)); // 省略號
+        }
+        // 4. 如果當前頁靠近最後一頁（後3頁），不需要第二個省略號
+        else if (current1Based >= totalPages - 2) {
+            pages.add(new PageItem(true, null)); // 省略號
+            for (int i = totalPages - 3; i <= totalPages - 1; i++) {
+                pages.add(new PageItem(false, i));
+            }
+        }
+        // 5. 當前頁在中間位置
+        else {
+            pages.add(new PageItem(true, null)); // 第一個省略號
+            pages.add(new PageItem(false, current1Based - 1));
+            pages.add(new PageItem(false, current1Based));
+            pages.add(new PageItem(false, current1Based + 1));
+            pages.add(new PageItem(true, null)); // 第二個省略號
+        }
+
+        // 6. 最後一頁永遠顯示
+        pages.add(new PageItem(false, totalPages));
+
+        return pages;
     }
 }

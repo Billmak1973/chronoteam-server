@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,8 +50,10 @@
             background: var(--primary);
             color: white;
             position: fixed;
-            top: 0;          /* 固定在顶部 */
-            bottom: 0;       /* 固定在底部，完美撑满高度，彻底告别 100vh 计算错误 */
+            top: 0;
+            /* 固定在顶部 */
+            bottom: 0;
+            /* 固定在底部，完美撑满高度，彻底告别 100vh 计算错误 */
             left: 0;
             overflow-y: auto;
             overflow-x: hidden;
@@ -64,16 +67,20 @@
         .admin-sidebar::-webkit-scrollbar {
             width: 6px;
         }
+
         .admin-sidebar::-webkit-scrollbar-track {
             background: rgba(255, 255, 255, 0.05);
         }
+
         .admin-sidebar::-webkit-scrollbar-thumb {
             background: rgba(212, 175, 55, 0.5);
             border-radius: 3px;
         }
+
         .admin-sidebar::-webkit-scrollbar-thumb:hover {
             background: rgba(212, 175, 55, 0.8);
         }
+
         /* Firefox 滚动条支持 */
         .admin-sidebar {
             scrollbar-width: thin;
@@ -84,7 +91,8 @@
             padding: 2rem 1.5rem;
             border-bottom: 2px solid var(--gold);
             text-align: center;
-            flex-shrink: 0; /* 防止头部被压缩 */
+            flex-shrink: 0;
+            /* 防止头部被压缩 */
         }
 
         .sidebar-header i {
@@ -112,7 +120,8 @@
 
         .menu-group {
             margin-bottom: 0.5rem;
-            flex-shrink: 0; /* 防止菜单组被压缩 */
+            flex-shrink: 0;
+            /* 防止菜单组被压缩 */
         }
 
         .menu-group-title {
@@ -163,6 +172,7 @@
         .menu-items::-webkit-scrollbar {
             width: 4px;
         }
+
         .menu-items::-webkit-scrollbar-thumb {
             background: rgba(212, 175, 55, 0.3);
             border-radius: 2px;
@@ -278,6 +288,7 @@
                 opacity: 0;
                 transform: translateY(-10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -368,13 +379,13 @@
         }
 
         /* 选中状态 */
-        .theme-option input[type="radio"]:checked + .theme-card {
+        .theme-option input[type="radio"]:checked+.theme-card {
             border-color: var(--gold);
             box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.2), var(--shadow-lg);
             transform: scale(1.02);
         }
 
-        .theme-option input[type="radio"]:checked + .theme-card::after {
+        .theme-option input[type="radio"]:checked+.theme-card::after {
             content: '\f00c';
             font-family: 'Font Awesome 6 Free';
             font-weight: 900;
@@ -393,9 +404,17 @@
         }
 
         @keyframes checkmark {
-            0% { transform: scale(0); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(0);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
         .theme-icon {
@@ -539,150 +558,175 @@
         }
     </style>
 </head>
+
 <body>
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="admin-layout">
-    <!-- 引入管理后台侧边栏 -->
-    <div th:replace="~{fragments/admin-sidebar :: adminSidebar('settings')}"></div>
+    <div class="admin-layout">
+        <!-- 引入管理后台侧边栏 -->
+        <div th:replace="~{fragments/admin-sidebar :: adminSidebar('settings')}"></div>
 
-    <!-- 主内容区域 -->
-    <main class="admin-main">
-        <div class="admin-header">
-            <h1>
-                <i class="fas fa-cog"></i>
-                站点设置
-            </h1>
-        </div>
-
-        <!-- 成功/错误提示 -->
-        <div th:if="${successMessage}" class="alert alert-success">
-            <i class="fas fa-check-circle"></i>
-            <span th:text="${successMessage}"></span>
-        </div>
-
-        <div th:if="${errorMessage}" class="alert alert-error">
-            <i class="fas fa-exclamation-circle"></i>
-            <span th:text="${errorMessage}"></span>
-        </div>
-
-        <!-- 产品卡片边框主题设置 -->
-        <div class="settings-card">
-            <div class="settings-header">
-                <h2>
-                    <i class="fas fa-palette"></i>
-                    产品卡片边框主题
-                </h2>
-                <p>选择产品展示卡片的边框装饰风格，提升网站视觉效果</p>
+        <!-- 主内容区域 -->
+        <main class="admin-main">
+            <div class="admin-header">
+                <h1>
+                    <i class="fas fa-cog"></i>
+                    站点设置
+                </h1>
             </div>
 
-            <form th:action="@{/admin/settings/update-theme}" method="post" id="themeForm">
-                <div class="theme-options">
-                    <!-- 白天主题 -->
-                    <label class="theme-option">
-                        <input type="radio" name="theme" value="day" th:checked="${currentTheme == 'day'}">
-                        <div class="theme-card day">
-                            <div class="theme-icon">
-                                <i class="fas fa-sun"></i>
-                            </div>
-                            <h3>白天主题</h3>
-                            <p>金色优雅边框，适合日间浏览，展现高端奢华感</p>
-                            <div class="theme-preview-box day">
-                                <small style="opacity: 0.7;">预览效果</small>
-                                <div class="mini-card">
-                                    <div style="height: 8px; background: linear-gradient(90deg, #d4af37, #f5e6c8); border-radius: 4px;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </label>
+            <!-- 成功/错误提示 -->
+            <div th:if="${successMessage}" class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                <span th:text="${successMessage}"></span>
+            </div>
 
-                    <!-- 晚上主题 -->
-                    <label class="theme-option">
-                        <input type="radio" name="theme" value="night" th:checked="${currentTheme == 'night'}">
-                        <div class="theme-card night">
-                            <div class="theme-icon">
-                                <i class="fas fa-moon"></i>
-                            </div>
-                            <h3>晚上主题</h3>
-                            <p>深蓝发光边框，科技感十足，适合夜间浏览</p>
-                            <div class="theme-preview-box night">
-                                <small style="opacity: 0.7;">预览效果</small>
-                                <div class="mini-card">
-                                    <div style="height: 8px; background: linear-gradient(90deg, #00d4ff, #7b2cbf); border-radius: 4px;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </label>
+            <div th:if="${errorMessage}" class="alert alert-error">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:text="${errorMessage}"></span>
+            </div>
+
+            <!-- 产品卡片边框主题设置 -->
+            <div class="settings-card">
+                <div class="settings-header">
+                    <h2>
+                        <i class="fas fa-palette"></i>
+                        产品卡片边框主题
+                    </h2>
+                    <p>选择产品展示卡片的边框装饰风格，提升网站视觉效果</p>
                 </div>
 
-                <div class="form-actions">
-                    <button type="button" class="btn" style="background: var(--gray); color: white;" onclick="resetForm()">
-                        <i class="fas fa-undo"></i> 重置
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> 保存设置
-                    </button>
-                </div>
-            </form>
-        </div>
-    </main>
-</div>
+                <form th:action="@{/admin/settings/update-theme}" method="post" id="themeForm">
+                    <div class="theme-options">
+                        <!-- 白天主题 -->
+                        <label class="theme-option">
+                            <input type="radio" name="theme" value="day" th:checked="${currentTheme == 'day'}">
+                            <div class="theme-card day">
+                                <div class="theme-icon">
+                                    <i class="fas fa-sun"></i>
+                                </div>
+                                <h3>白天主题</h3>
+                                <p>金色优雅边框，适合日间浏览，展现高端奢华感</p>
+                                <div class="theme-preview-box day">
+                                    <small style="opacity: 0.7;">预览效果</small>
+                                    <div class="mini-card">
+                                        <div
+                                            style="height: 8px; background: linear-gradient(90deg, #d4af37, #f5e6c8); border-radius: 4px;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
 
-<!-- 保存中遮罩 -->
-<div class="saving" id="savingOverlay">
-    <div class="saving-spinner"></div>
-</div>
+                        <!-- 晚上主题 -->
+                        <label class="theme-option">
+                            <input type="radio" name="theme" value="night" th:checked="${currentTheme == 'night'}">
+                            <div class="theme-card night">
+                                <div class="theme-icon">
+                                    <i class="fas fa-moon"></i>
+                                </div>
+                                <h3>晚上主题</h3>
+                                <p>深蓝发光边框，科技感十足，适合夜间浏览</p>
+                                <div class="theme-preview-box night">
+                                    <small style="opacity: 0.7;">预览效果</small>
+                                    <div class="mini-card">
+                                        <div
+                                            style="height: 8px; background: linear-gradient(90deg, #00d4ff, #7b2cbf); border-radius: 4px;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
 
-<script>
-    // 主题卡片点击效果
-    document.querySelectorAll('.theme-option').forEach(option => {
-        option.addEventListener('click', function(e) {
-            // 防止重复触发
-            if (e.target.tagName === 'INPUT') return;
+                    <div class="form-actions">
+                        <button type="button" class="btn" style="background: var(--gray); color: white;"
+                            onclick="resetForm()">
+                            <i class="fas fa-undo"></i> 重置
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> 保存设置
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <footer class="admin-footer" style="
+        margin-top: 3rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        border-radius: 12px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.7);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    ">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
+                    ChronoTeam Admin Panel. All Rights Reserved.
+                </p>
+                <p style="margin: 0.5rem 0 0; font-size: 0.8rem; opacity: 0.8;">
+                    專業二手名錶管理平台
+                </p>
+            </footer>
+        </main>
+    </div>
 
-            const radio = this.querySelector('input[type="radio"]');
-            radio.checked = true;
+    <!-- 保存中遮罩 -->
+    <div class="saving" id="savingOverlay">
+        <div class="saving-spinner"></div>
+    </div>
 
-            // 移除所有选中状态
-            document.querySelectorAll('.theme-card').forEach(card => {
-                card.style.transform = '';
+    <script>
+        // 主题卡片点击效果
+        document.querySelectorAll('.theme-option').forEach(option => {
+            option.addEventListener('click', function (e) {
+                // 防止重复触发
+                if (e.target.tagName === 'INPUT') return;
+
+                const radio = this.querySelector('input[type="radio"]');
+                radio.checked = true;
+
+                // 移除所有选中状态
+                document.querySelectorAll('.theme-card').forEach(card => {
+                    card.style.transform = '';
+                });
+
+                // 添加选中效果
+                const card = this.querySelector('.theme-card');
+                card.style.transform = 'scale(1.02)';
             });
-
-            // 添加选中效果
-            const card = this.querySelector('.theme-card');
-            card.style.transform = 'scale(1.02)';
         });
-    });
 
-    // 表单提交时显示加载动画
-    document.getElementById('themeForm').addEventListener('submit', function() {
-        document.getElementById('savingOverlay').classList.add('show');
-    });
+        // 表单提交时显示加载动画
+        document.getElementById('themeForm').addEventListener('submit', function () {
+            document.getElementById('savingOverlay').classList.add('show');
+        });
 
-    // 重置表单
-    function resetForm() {
-        if (confirm('确定要重置为默认设置吗？')) {
-            location.reload();
-        }
-    }
-
-    // 侧边栏菜单展开/收起
-    document.querySelectorAll('.menu-group-title').forEach(title => {
-        title.addEventListener('click', function() {
-            const group = this.parentElement;
-            const isActive = group.classList.contains('active');
-
-            // 关闭所有组
-            document.querySelectorAll('.menu-group').forEach(g => {
-                g.classList.remove('active');
-            });
-
-            // 如果之前不是激活状态，则打开当前组
-            if (!isActive) {
-                group.classList.add('active');
+        // 重置表单
+        function resetForm() {
+            if (confirm('确定要重置为默认设置吗？')) {
+                location.reload();
             }
+        }
+
+        // 侧边栏菜单展开/收起
+        document.querySelectorAll('.menu-group-title').forEach(title => {
+            title.addEventListener('click', function () {
+                const group = this.parentElement;
+                const isActive = group.classList.contains('active');
+
+                // 关闭所有组
+                document.querySelectorAll('.menu-group').forEach(g => {
+                    g.classList.remove('active');
+                });
+
+                // 如果之前不是激活状态，则打开当前组
+                if (!isActive) {
+                    group.classList.add('active');
+                }
+            });
         });
-    });
-</script>
+    </script>
 </body>
+
 </html>

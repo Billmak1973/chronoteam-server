@@ -560,6 +560,7 @@
                 <!-- 1. 處罰記錄 Tab -->
                 <!-- ========================================== -->
                 <div id="tab-penalties" class="tab-content active">
+                    <!-- 1. 篩選器保留不動 -->
                     <div class="filter-container"
                         style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef;">
                         <div
@@ -584,6 +585,7 @@
                         </button>
                     </div>
 
+                    <!-- 2. 表格容器：只保留 thead，清空 tbody -->
                     <div class="table-container">
                         <table class="data-table">
                             <thead>
@@ -600,148 +602,179 @@
                                     <th style="width: 100px;">操作</th>
                                 </tr>
                             </thead>
+
+                            <!-- 【關鍵修改】這裡不需要 th:each，也不需要那些複雜的 th:if -->
+                            <!-- JS 會自動把數據渲染到這個 tbody 裡面 -->
                             <tbody>
-                                <tr th:each="penalty : ${penalties}"
-                                    th:attr="data-type=${penalty.type.name()}, data-status=${penalty.status.name()}">
-                                    <td style="color: var(--gray); font-family: monospace;"
-                                        th:text="${penalty.penaltyId}">1</td>
-                                    <td th:text="${penalty.targetUser != null ? penalty.targetUser.username : '未知'}">
-                                        user123</td>
-                                    <td>
-                                        <span th:if="${penalty.type.name() == 'BAN'}"
-                                            style="color: #ffc107; font-weight: 600;">
-                                            <i class="fas fa-clock"></i> 封禁
-                                        </span>
-                                        <span th:if="${penalty.type.name() == 'BLACKLIST'}"
-                                            style="color: #dc3545; font-weight: 600;">
-                                            <i class="fas fa-user-slash"></i> 永久拉黑
-                                        </span>
-                                    </td>
-                                    <td th:text="${penalty.reason != null ? penalty.reason : '無'}"
-                                        style="font-size: 0.9rem;">違規</td>
-                                    <td class="review-snapshot-cell">
-                                        <div th:if="${penalty.reviewContent != null and !#strings.isEmpty(penalty.reviewContent)}"
-                                            class="review-snapshot-box" th:text="${penalty.reviewContent}"></div>
-                                        <span
-                                            th:unless="${penalty.reviewContent != null and !#strings.isEmpty(penalty.reviewContent)}"
-                                            style="color: #adb5bd; font-size: 0.85rem;">
-                                            <i class="fas fa-minus-circle"></i> 無快照
-                                        </span>
-                                    </td>
-                                    <td th:text="${#temporals.format(penalty.startTime, 'yyyy-MM-dd HH:mm')}">2024-01-01
-                                    </td>
-                                    <td
-                                        th:text="${penalty.endTime != null ? #temporals.format(penalty.endTime, 'yyyy-MM-dd HH:mm') : '永久'}">
-                                        永久</td>
-                                    <td>
-                                        <span th:if="${penalty.status.name() == 'ACTIVE'}"
-                                            class="status-badge status-active">生效中</span>
-                                        <span th:if="${penalty.status.name() == 'EXPIRED'}"
-                                            class="status-badge status-expired">已過期</span>
-                                        <span th:if="${penalty.status.name() == 'REVOKED'}"
-                                            class="status-badge status-revoked">已撤銷</span>
-                                    </td>
-                                    <td th:text="${penalty.adminUser != null ? penalty.adminUser.username : 'System'}">
-                                        admin</td>
-                                    <td style="text-align: center; vertical-align: middle;">
-                                        <div th:if="${penalty.type.name() == 'BAN'}">
-                                            <span
-                                                th:if="${penalty.appealId != null and appealStatusMap[penalty.appealId] != null and appealStatusMap[penalty.appealId] == 'APPROVED'}"
-                                                style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                                <i class="fas fa-check-circle"></i> 已解除處罰
-                                            </span>
-                                            <span
-                                                th:if="${penalty.appealId != null and appealStatusMap[penalty.appealId] != null and appealStatusMap[penalty.appealId] == 'REJECTED'}"
-                                                style="color: #dc3545; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                                <i class="fas fa-times-circle"></i> 申訴失敗
-                                            </span>
-                                            <span
-                                                th:if="${penalty.status.name() == 'REVOKED' and (penalty.appealId == null or appealStatusMap[penalty.appealId] == null)}"
-                                                style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                                <i class="fas fa-unlock"></i> 已主動解封處罰
-                                            </span>
-                                            <button
-                                                th:if="${penalty.endTime != null and penalty.endTime.isAfter(T(java.time.LocalDateTime).now()) and penalty.status.name() != 'REVOKED' and (penalty.appealId == null or appealStatusMap[penalty.appealId] == null or appealStatusMap[penalty.appealId] == 'PENDING')}"
-                                                class="btn-sm btn-unban-btn" th:data-penalty-id="${penalty.penaltyId}"
-                                                th:data-appeal-id="${penalty.appealId != null ? penalty.appealId : ''}"
-                                                onclick="handleUnbanClick(this.dataset.penaltyId, this.dataset.appealId)"
-                                                style="background: #28a745; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s;">
-                                                解除封禁
-                                            </button>
-                                            <span
-                                                th:if="${penalty.endTime != null and penalty.endTime.isBefore(T(java.time.LocalDateTime).now()) and penalty.status.name() != 'REVOKED' and (penalty.appealId == null or appealStatusMap[penalty.appealId] == null or appealStatusMap[penalty.appealId] == 'PENDING')}"
-                                                style="color: #adb5bd; font-size: 0.85rem; display: block;">
-                                                不適用
-                                            </span>
-                                        </div>
-                                        <div th:if="${penalty.type.name() == 'BLACKLIST'}">
-                                            <span
-                                                th:if="${penalty.appealId != null and appealStatusMap[penalty.appealId] != null and appealStatusMap[penalty.appealId] == 'APPROVED'}"
-                                                style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                                <i class="fas fa-check-circle"></i> 已解除拉黑
-                                            </span>
-                                            <span
-                                                th:if="${penalty.appealId != null and appealStatusMap[penalty.appealId] != null and appealStatusMap[penalty.appealId] == 'REJECTED'}"
-                                                style="color: #dc3545; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                                <i class="fas fa-times-circle"></i> 申訴失敗
-                                            </span>
-                                            <span
-                                                th:if="${penalty.status.name() == 'REVOKED' and (penalty.appealId == null or appealStatusMap[penalty.appealId] == null)}"
-                                                style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">
-                                                <i class="fas fa-unlock"></i> 已主動解除拉黑
-                                            </span>
-                                            <button
-                                                th:if="${penalty.status.name() == 'ACTIVE' and (penalty.appealId == null or appealStatusMap[penalty.appealId] == null or appealStatusMap[penalty.appealId] == 'PENDING')}"
-                                                class="btn-sm btn-unblacklist-btn"
-                                                th:data-penalty-id="${penalty.penaltyId}"
-                                                th:data-appeal-id="${penalty.appealId != null ? penalty.appealId : ''}"
-                                                onclick="handleUnblacklistClick(this.dataset.penaltyId, this.dataset.appealId)"
-                                                style="background: #dc3545; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s;">
-                                                解除拉黑
-                                            </button>
-                                            <span
-                                                th:if="${penalty.status.name() != 'ACTIVE' and penalty.status.name() != 'REVOKED'}"
-                                                style="color: #adb5bd; font-size: 0.85rem; display: block;">
-                                                不適用
-                                            </span>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr th:if="${#lists.isEmpty(penalties)}">
-                                    <td colspan="10" style="text-align: center; padding: 2rem; color: var(--gray);">
-                                        暫無處罰記錄</td>
+                                <!-- 初始可以是空的，或者放一個 loading 提示 -->
+                                <tr>
+                                    <td colspan="10" style="text-align:center; padding: 2rem;">正在加載數據...</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
-                    <!-- ==================== 智能分頁導航：處罰記錄 ==================== -->
-                    <div class="pagination-wrapper" th:if="${penaltyTotalPages > 1}">
-                        <a th:href="@{/admin/penalties(page=${penaltyCurrentPage - 1}, size=25)}"
-                            th:class="${penaltyCurrentPage == 0} ? 'page-btn disabled' : 'page-btn'"
-                            th:if="${penaltyCurrentPage > 0}">
-                            <i class="fas fa-chevron-left"></i> 上一頁
-                        </a>
-                        <span th:if="${penaltyCurrentPage == 0}" class="page-btn disabled">
-                            <i class="fas fa-chevron-left"></i> 上一頁
-                        </span>
-                        <th:block th:each="item : ${smartPenaltyPages}">
-                            <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
-                            <a th:unless="${item.isEllipsis}"
-                                th:href="@{/admin/penalties(page=${item.pageNumber - 1}, size=25)}"
-                                th:class="${item.pageNumber - 1 == penaltyCurrentPage} ? 'page-btn active' : 'page-btn'"
-                                th:text="${item.pageNumber}">1</a>
-                        </th:block>
-                        <a th:href="@{/admin/penalties(page=${penaltyCurrentPage + 1}, size=25)}"
-                            th:class="${penaltyCurrentPage + 1 >= penaltyTotalPages} ? 'page-btn disabled' : 'page-btn'"
-                            th:if="${penaltyCurrentPage + 1 < penaltyTotalPages}">
-                            下一頁 <i class="fas fa-chevron-right"></i>
-                        </a>
-                        <span th:if="${penaltyCurrentPage + 1 >= penaltyTotalPages}" class="page-btn disabled">
-                            下一頁 <i class="fas fa-chevron-right"></i>
-                        </span>
-                    </div>
+                    <!-- 3. 分頁容器保留 -->
+                    <div id="penalties-pagination"></div>
                 </div>
+
+                <!--            <div id="tab-penalties" class="tab-content active">-->
+                <!--                <div class="filter-container"-->
+                <!--                     style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef;">-->
+                <!--                    <div-->
+                <!--                            style="font-weight: 600; color: var(&#45;&#45;primary); display: flex; align-items: center; gap: 0.5rem;">-->
+                <!--                        <i class="fas fa-filter" style="color: var(&#45;&#45;gold);"></i> 篩選條件：-->
+                <!--                    </div>-->
+                <!--                    <select id="filterType" onchange="filterPenalties()"-->
+                <!--                            style="padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #ced4da; background: white; cursor: pointer; font-size: 0.9rem;">-->
+                <!--                        <option value="">全部類型</option>-->
+                <!--                        <option value="BAN">封禁 (BAN)</option>-->
+                <!--                        <option value="BLACKLIST">永久拉黑 (BLACKLIST)</option>-->
+                <!--                    </select>-->
+                <!--                    <select id="filterStatus" onchange="filterPenalties()"-->
+                <!--                            style="padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #ced4da; background: white; cursor: pointer; font-size: 0.9rem;">-->
+                <!--                        <option value="">全部狀態</option>-->
+                <!--                        <option value="ACTIVE">生效中 (ACTIVE)</option>-->
+                <!--                        <option value="EXPIRED">已過期 (EXPIRED)</option>-->
+                <!--                        <option value="REVOKED">已撤銷 (REVOKED)</option>-->
+                <!--                    </select>-->
+                <!--                    <button class="btn-sm" onclick="resetFilters('penalties')">-->
+                <!--                        <i class="fas fa-undo"></i> 重置篩選-->
+                <!--                    </button>-->
+                <!--                </div>-->
+
+                <!--                <div class="table-container">-->
+                <!--                    <table class="data-table">-->
+                <!--                        <thead>-->
+                <!--                        <tr>-->
+                <!--                            <th style="width: 60px;">ID</th>-->
+                <!--                            <th style="width: 100px;">目標用戶</th>-->
+                <!--                            <th style="width: 100px;">處罰類型</th>-->
+                <!--                            <th style="width: 120px;">處罰原因</th>-->
+                <!--                            <th style="min-width: 250px;">評論快照</th>-->
+                <!--                            <th style="width: 140px;">開始時間</th>-->
+                <!--                            <th style="width: 140px;">結束時間</th>-->
+                <!--                            <th style="width: 120px;">狀態</th>-->
+                <!--                            <th style="width: 100px;">操作管理員</th>-->
+                <!--                            <th style="width: 100px;">操作</th>-->
+                <!--                        </tr>-->
+                <!--                        </thead>-->
+                <!--                        <tbody>-->
+                <!--                        <tr th:each="penalty : ${penalties}"-->
+                <!--                            th:attr="data-type=${penalty.type.name()}, data-status=${penalty.status.name()}">-->
+                <!--                            <td style="color: var(&#45;&#45;gray); font-family: monospace;"-->
+                <!--                                th:text="${penalty.penaltyId}">1</td>-->
+                <!--                            <td th:text="${penalty.targetUser != null ? penalty.targetUser.username : '未知'}">-->
+                <!--                                user123</td>-->
+                <!--                            <td>-->
+                <!--                                        <span th:if="${penalty.type.name() == 'BAN'}"-->
+                <!--                                              style="color: #ffc107; font-weight: 600;">-->
+                <!--                                            <i class="fas fa-clock"></i> 封禁-->
+                <!--                                        </span>-->
+                <!--                                <span th:if="${penalty.type.name() == 'BLACKLIST'}"-->
+                <!--                                      style="color: #dc3545; font-weight: 600;">-->
+                <!--                                            <i class="fas fa-user-slash"></i> 永久拉黑-->
+                <!--                                        </span>-->
+                <!--                            </td>-->
+                <!--                            <td th:text="${penalty.reason != null ? penalty.reason : '無'}"-->
+                <!--                                style="font-size: 0.9rem;">違規</td>-->
+                <!--                            <td class="review-snapshot-cell">-->
+                <!--                                <div th:if="${penalty.reviewContent != null and !#strings.isEmpty(penalty.reviewContent)}"-->
+                <!--                                     class="review-snapshot-box" th:text="${penalty.reviewContent}"></div>-->
+                <!--                                <span-->
+                <!--                                        th:unless="${penalty.reviewContent != null and !#strings.isEmpty(penalty.reviewContent)}"-->
+                <!--                                        style="color: #adb5bd; font-size: 0.85rem;">-->
+                <!--                                            <i class="fas fa-minus-circle"></i> 無快照-->
+                <!--                                        </span>-->
+                <!--                            </td>-->
+                <!--                            <td th:text="${#temporals.format(penalty.startTime, 'yyyy-MM-dd HH:mm')}">2024-01-01-->
+                <!--                            </td>-->
+                <!--                            <td-->
+                <!--                                    th:text="${penalty.endTime != null ? #temporals.format(penalty.endTime, 'yyyy-MM-dd HH:mm') : '永久'}">-->
+                <!--                                永久</td>-->
+                <!--                            <td>-->
+                <!--                                        <span th:if="${penalty.status.name() == 'ACTIVE'}"-->
+                <!--                                              class="status-badge status-active">生效中</span>-->
+                <!--                                <span th:if="${penalty.status.name() == 'EXPIRED'}"-->
+                <!--                                      class="status-badge status-expired">已過期</span>-->
+                <!--                                <span th:if="${penalty.status.name() == 'REVOKED'}"-->
+                <!--                                      class="status-badge status-revoked">已撤銷</span>-->
+                <!--                            </td>-->
+                <!--                            <td th:text="${penalty.adminUser != null ? penalty.adminUser.username : 'System'}">-->
+                <!--                                admin</td>-->
+                <!--                            <td style="text-align: center; vertical-align: middle;">-->
+                <!--                                <div th:if="${penalty.type.name() == 'BAN'}">-->
+                <!--                                            <span-->
+                <!--                                                    th:if="${penalty.appealId != null and appealStatusMap[penalty.appealId] != null and appealStatusMap[penalty.appealId] == 'APPROVED'}"-->
+                <!--                                                    style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">-->
+                <!--                                                <i class="fas fa-check-circle"></i> 已解除處罰-->
+                <!--                                            </span>-->
+                <!--                                    <span-->
+                <!--                                            th:if="${penalty.appealId != null and appealStatusMap[penalty.appealId] != null and appealStatusMap[penalty.appealId] == 'REJECTED'}"-->
+                <!--                                            style="color: #dc3545; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">-->
+                <!--                                                <i class="fas fa-times-circle"></i> 申訴失敗-->
+                <!--                                            </span>-->
+                <!--                                    <span-->
+                <!--                                            th:if="${penalty.status.name() == 'REVOKED' and (penalty.appealId == null or appealStatusMap[penalty.appealId] == null)}"-->
+                <!--                                            style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">-->
+                <!--                                                <i class="fas fa-unlock"></i> 已主動解封處罰-->
+                <!--                                            </span>-->
+                <!--                                    <button-->
+                <!--                                            th:if="${penalty.endTime != null and penalty.endTime.isAfter(T(java.time.LocalDateTime).now()) and penalty.status.name() != 'REVOKED' and (penalty.appealId == null or appealStatusMap[penalty.appealId] == null or appealStatusMap[penalty.appealId] == 'PENDING')}"-->
+                <!--                                            class="btn-sm btn-unban-btn" th:data-penalty-id="${penalty.penaltyId}"-->
+                <!--                                            th:data-appeal-id="${penalty.appealId != null ? penalty.appealId : ''}"-->
+                <!--                                            onclick="handleUnbanClick(this.dataset.penaltyId, this.dataset.appealId)"-->
+                <!--                                            style="background: #28a745; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s;">-->
+                <!--                                        解除封禁-->
+                <!--                                    </button>-->
+                <!--                                    <span-->
+                <!--                                            th:if="${penalty.endTime != null and penalty.endTime.isBefore(T(java.time.LocalDateTime).now()) and penalty.status.name() != 'REVOKED' and (penalty.appealId == null or appealStatusMap[penalty.appealId] == null or appealStatusMap[penalty.appealId] == 'PENDING')}"-->
+                <!--                                            style="color: #adb5bd; font-size: 0.85rem; display: block;">-->
+                <!--                                                不適用-->
+                <!--                                            </span>-->
+                <!--                                </div>-->
+                <!--                                <div th:if="${penalty.type.name() == 'BLACKLIST'}">-->
+                <!--                                            <span-->
+                <!--                                                    th:if="${penalty.appealId != null and appealStatusMap[penalty.appealId] != null and appealStatusMap[penalty.appealId] == 'APPROVED'}"-->
+                <!--                                                    style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">-->
+                <!--                                                <i class="fas fa-check-circle"></i> 已解除拉黑-->
+                <!--                                            </span>-->
+                <!--                                    <span-->
+                <!--                                            th:if="${penalty.appealId != null and appealStatusMap[penalty.appealId] != null and appealStatusMap[penalty.appealId] == 'REJECTED'}"-->
+                <!--                                            style="color: #dc3545; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">-->
+                <!--                                                <i class="fas fa-times-circle"></i> 申訴失敗-->
+                <!--                                            </span>-->
+                <!--                                    <span-->
+                <!--                                            th:if="${penalty.status.name() == 'REVOKED' and (penalty.appealId == null or appealStatusMap[penalty.appealId] == null)}"-->
+                <!--                                            style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;">-->
+                <!--                                                <i class="fas fa-unlock"></i> 已主動解除拉黑-->
+                <!--                                            </span>-->
+                <!--                                    <button-->
+                <!--                                            th:if="${penalty.status.name() == 'ACTIVE' and (penalty.appealId == null or appealStatusMap[penalty.appealId] == null or appealStatusMap[penalty.appealId] == 'PENDING')}"-->
+                <!--                                            class="btn-sm btn-unblacklist-btn"-->
+                <!--                                            th:data-penalty-id="${penalty.penaltyId}"-->
+                <!--                                            th:data-appeal-id="${penalty.appealId != null ? penalty.appealId : ''}"-->
+                <!--                                            onclick="handleUnblacklistClick(this.dataset.penaltyId, this.dataset.appealId)"-->
+                <!--                                            style="background: #dc3545; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem; transition: all 0.2s;">-->
+                <!--                                        解除拉黑-->
+                <!--                                    </button>-->
+                <!--                                    <span-->
+                <!--                                            th:if="${penalty.status.name() != 'ACTIVE' and penalty.status.name() != 'REVOKED'}"-->
+                <!--                                            style="color: #adb5bd; font-size: 0.85rem; display: block;">-->
+                <!--                                                不適用-->
+                <!--                                            </span>-->
+                <!--                                </div>-->
+                <!--                            </td>-->
+                <!--                        </tr>-->
+                <!--                        <tr th:if="${#lists.isEmpty(penalties)}">-->
+                <!--                            <td colspan="10" style="text-align: center; padding: 2rem; color: var(&#45;&#45;gray);">-->
+                <!--                                暫無處罰記錄</td>-->
+                <!--                        </tr>-->
+                <!--                        </tbody>-->
+                <!--                    </table>-->
+                <!--                </div>-->
+                <!--                <div id="penalties-pagination"></div>-->
+                <!--            </div>-->
 
                 <!-- ========================================== -->
                 <!-- 2. 用戶申訴 Tab -->
@@ -874,33 +907,7 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <!-- ==================== 智能分頁導航：用戶申訴 ==================== -->
-                    <div class="pagination-wrapper" th:if="${appealTotalPages > 1}">
-                        <a th:href="@{/admin/penalties(page=${appealCurrentPage - 1}, size=25)}"
-                            th:class="${appealCurrentPage == 0} ? 'page-btn disabled' : 'page-btn'"
-                            th:if="${appealCurrentPage > 0}">
-                            <i class="fas fa-chevron-left"></i> 上一頁
-                        </a>
-                        <span th:if="${appealCurrentPage == 0}" class="page-btn disabled">
-                            <i class="fas fa-chevron-left"></i> 上一頁
-                        </span>
-                        <th:block th:each="item : ${smartAppealPages}">
-                            <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
-                            <a th:unless="${item.isEllipsis}"
-                                th:href="@{/admin/penalties(page=${item.pageNumber - 1}, size=25)}"
-                                th:class="${item.pageNumber - 1 == appealCurrentPage} ? 'page-btn active' : 'page-btn'"
-                                th:text="${item.pageNumber}">1</a>
-                        </th:block>
-                        <a th:href="@{/admin/penalties(page=${appealCurrentPage + 1}, size=25)}"
-                            th:class="${appealCurrentPage + 1 >= appealTotalPages} ? 'page-btn disabled' : 'page-btn'"
-                            th:if="${appealCurrentPage + 1 < appealTotalPages}">
-                            下一頁 <i class="fas fa-chevron-right"></i>
-                        </a>
-                        <span th:if="${appealCurrentPage + 1 >= appealTotalPages}" class="page-btn disabled">
-                            下一頁 <i class="fas fa-chevron-right"></i>
-                        </span>
-                    </div>
+                    <div id="appeals-pagination"></div>
                 </div>
 
                 <!-- ========================================== -->
@@ -963,35 +970,28 @@
                             </tbody>
                         </table>
                     </div>
-
-                    <!-- ==================== 智能分頁導航：限流與封禁 ==================== -->
-                    <div class="pagination-wrapper" th:if="${rateLimitTotalPages > 1}">
-                        <a th:href="@{/admin/penalties(page=${rateLimitCurrentPage - 1}, size=25)}"
-                            th:class="${rateLimitCurrentPage == 0} ? 'page-btn disabled' : 'page-btn'"
-                            th:if="${rateLimitCurrentPage > 0}">
-                            <i class="fas fa-chevron-left"></i> 上一頁
-                        </a>
-                        <span th:if="${rateLimitCurrentPage == 0}" class="page-btn disabled">
-                            <i class="fas fa-chevron-left"></i> 上一頁
-                        </span>
-                        <th:block th:each="item : ${smartRateLimitPages}">
-                            <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
-                            <a th:unless="${item.isEllipsis}"
-                                th:href="@{/admin/penalties(page=${item.pageNumber - 1}, size=25)}"
-                                th:class="${item.pageNumber - 1 == rateLimitCurrentPage} ? 'page-btn active' : 'page-btn'"
-                                th:text="${item.pageNumber}">1</a>
-                        </th:block>
-                        <a th:href="@{/admin/penalties(page=${rateLimitCurrentPage + 1}, size=25)}"
-                            th:class="${rateLimitCurrentPage + 1 >= rateLimitTotalPages} ? 'page-btn disabled' : 'page-btn'"
-                            th:if="${rateLimitCurrentPage + 1 < rateLimitTotalPages}">
-                            下一頁 <i class="fas fa-chevron-right"></i>
-                        </a>
-                        <span th:if="${rateLimitCurrentPage + 1 >= rateLimitTotalPages}" class="page-btn disabled">
-                            下一頁 <i class="fas fa-chevron-right"></i>
-                        </span>
-                    </div>
+                    <div id="rate-limits-pagination"></div>
                 </div>
             </div> <!-- 這是 content-body 的閉合 -->
+
+            <footer class="admin-footer" style="
+        margin-top: 3rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        border-radius: 12px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.7);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    ">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
+                    ChronoTeam Admin Panel. All Rights Reserved.
+                </p>
+                <p style="margin: 0.5rem 0 0; font-size: 0.8rem; opacity: 0.8;">
+                    專業二手名錶管理平台
+                </p>
+            </footer>
         </main> <!-- 正確閉合 main 標籤 -->
     </div>
 
@@ -1157,31 +1157,482 @@
 
     <script>
         // ==========================================
-        // 1. 基礎 Tab 切換
+        // 0. 全局變量聲明 (核心狀態與彈窗狀態)
+        // ==========================================
+        const tabState = {
+            penalties: { page: 0, size: 25, type: '', status: '' },
+            appeals: { page: 0, size: 25, appealType: '', status: '' },
+            rateLimits: { page: 0, size: 25 }
+        };
+
+        let currentActiveTab = 'penalties'; // 默認激活的 Tab
+
+        // 彈窗與業務全局變量
+        let currentPenaltyIdToUnban = null;
+        let currentPenaltyIdToUnblacklist = null;
+        let currentReviewAppealId = null;
+        let currentBlacklistAppealId = null;
+
+        // ==========================================
+        // 1. Tab 切換與數據加載函數 (AJAX)
         // ==========================================
         function switchTab(tabName, btnElement) {
+            currentActiveTab = tabName;
+
+            // UI 切換
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             btnElement.classList.add('active');
             document.getElementById('tab-' + tabName).classList.add('active');
-        }
 
-        // ==========================================
-        // 2. 模擬處理申訴動作
-        // ==========================================
-        function handleAppealAction(appealId, type) {
-            let actionName = '';
-            if (type === 'BLACKLIST') actionName = '解除黑名單';
-            if (type === 'DELETE_REVIEW') actionName = '恢復評論';
-            if (confirm(`確定要執行「${actionName}」操作嗎？\n申訴ID: ${appealId}`)) {
-                alert('操作成功！(此為演示)');
+            // 數據加載
+            if (tabName === 'penalties') {
+                tabState.penalties.page = 0;
+                loadPenaltiesData();
+            } else if (tabName === 'appeals') {
+                tabState.appeals.page = 0;
+                loadAppealsData();
+            } else if (tabName === 'rate-limits') {
+                tabState.rateLimits.page = 0;
+                loadRateLimitsData();
             }
         }
 
         // ==========================================
-        // 3. 申訴處理確認模態框邏輯
+        // 2. 數據加載核心函數 (Fetch API)
         // ==========================================
-        let currentReviewAppealId = null;
+
+        // 加載處罰記錄
+        async function loadPenaltiesData() {
+            const state = tabState.penalties;
+            const tbody = document.querySelector('#tab-penalties .data-table tbody');
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
+
+            try {
+                // 注意：這裡假設後端 Controller 已經按照要求拆分了接口 /api/admin/penalties/list
+                // 如果後端還沒改，這裡會報 404，請確保後端代碼已更新
+                const params = new URLSearchParams({
+                    page: state.page,
+                    size: state.size,
+                    type: state.type,
+                    status: state.status
+                });
+
+                const response = await fetch(`/admin/api/admin/penalties/list?${params.toString()}`);
+                const data = await response.json();
+
+                if (data.content && data.content.length > 0) {
+                    renderPenaltiesTable(data.content, data.appealStatusMap || {});
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'penalties');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 2rem;">暫無處罰記錄</td></tr>';
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'penalties');
+                }
+            } catch (error) {
+                console.error('加載處罰記錄失敗:', error);
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 2rem; color: red;">加載失敗，請檢查後端接口</td></tr>';
+            }
+        }
+
+        // 加載申訴記錄
+        async function loadAppealsData() {
+            const state = tabState.appeals;
+            const tbody = document.querySelector('#tab-appeals .data-table tbody');
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
+
+            try {
+                const params = new URLSearchParams({
+                    page: state.page,
+                    size: state.size,
+                    appealType: state.appealType,
+                    status: state.status
+                });
+
+                const response = await fetch(`/admin/api/admin/appeals/list?${params.toString()}`);
+                const data = await response.json();
+
+                if (data.content && data.content.length > 0) {
+                    renderAppealsTable(data.content, data.reviewContentMap || {});
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'appeals');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">暫無申訴記錄</td></tr>';
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'appeals');
+                }
+            } catch (error) {
+                console.error('加載申訴記錄失敗:', error);
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem; color: red;">加載失敗</td></tr>';
+            }
+        }
+
+        // 加載限流記錄
+        async function loadRateLimitsData() {
+            const state = tabState.rateLimits;
+            const tbody = document.querySelector('#tab-rate-limits .data-table tbody');
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
+
+            try {
+                const params = new URLSearchParams({
+                    page: state.page,
+                    size: state.size
+                });
+
+                const response = await fetch(`/admin/api/admin/rate-limits/list?${params.toString()}`);
+                const data = await response.json();
+
+                if (data.content && data.content.length > 0) {
+                    renderRateLimitsTable(data.content);
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'rate-limits');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;">暫無限流記錄</td></tr>';
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages, 'rate-limits');
+                }
+            } catch (error) {
+                console.error('加載限流記錄失敗:', error);
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem; color: red;">加載失敗</td></tr>';
+            }
+        }
+
+        // ==========================================
+        // 3. 動態渲染表格函數
+        // ==========================================
+
+        function renderPenaltiesTable(penalties, appealStatusMap) {
+            const tbody = document.querySelector('#tab-penalties .data-table tbody');
+            let html = '';
+
+            penalties.forEach(penalty => {
+                // 1. 處罰類型顯示
+                const typeHtml = penalty.type === 'BAN'
+                    ? `<span style="color: #ffc107; font-weight: 600;"><i class="fas fa-clock"></i> 封禁</span>`
+                    : `<span style="color: #dc3545; font-weight: 600;"><i class="fas fa-user-slash"></i> 永久拉黑</span>`;
+
+                // 2. 狀態徽章樣式
+                const statusClass = penalty.status === 'ACTIVE' ? 'status-active'
+                    : (penalty.status === 'EXPIRED' ? 'status-expired' : 'status-revoked');
+                const statusText = penalty.status === 'ACTIVE' ? '生效中'
+                    : (penalty.status === 'EXPIRED' ? '已過期' : '已撤銷');
+
+                // 3. 【核心修復】操作按鈕邏輯 (完整移植原 HTML 的 th:if/th:unless 判斷)
+                let actionHtml = '';
+
+                // 獲取該處罰對應的申訴狀態 (從後端傳來的 Map 中查找)
+                const appealStatus = penalty.appealId ? (appealStatusMap[penalty.appealId] || null) : null;
+
+                if (penalty.type === 'BAN') {
+                    // --- BAN (封禁) 類型的邏輯 ---
+                    if (appealStatus === 'APPROVED') {
+                        actionHtml = '<span style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;"><i class="fas fa-check-circle"></i> 已解除處罰</span>';
+                    } else if (appealStatus === 'REJECTED') {
+                        actionHtml = '<span style="color: #dc3545; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;"><i class="fas fa-times-circle"></i> 申訴失敗</span>';
+                    } else if (penalty.status === 'REVOKED' && !appealStatus) {
+                        actionHtml = '<span style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;"><i class="fas fa-unlock"></i> 已主動解封</span>';
+                    } else {
+                        // 檢查是否過期 (JS Date 比較)
+                        const now = new Date();
+                        const endTime = penalty.endTime ? new Date(penalty.endTime) : null;
+
+                        // 條件：未過期 AND 無申訴干擾 (PENDING 或 null)
+                        const isPendingOrNoAppeal = (!appealStatus || appealStatus === 'PENDING');
+
+                        if (endTime && endTime > now && isPendingOrNoAppeal) {
+                            actionHtml = `<button class="btn-sm btn-unban-btn"
+                            onclick="handleUnbanClick(${penalty.penaltyId}, '${penalty.appealId || ''}')"
+                            style="background: #28a745; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">解除封禁</button>`;
+                        } else {
+                            actionHtml = '<span style="color: #adb5bd; font-size: 0.85rem;">無需操作</span>';
+                        }
+                    }
+                } else {
+                    // --- BLACKLIST (永久拉黑) 類型的邏輯 ---
+                    if (appealStatus === 'APPROVED') {
+                        actionHtml = '<span style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;"><i class="fas fa-check-circle"></i> 已解除拉黑</span>';
+                    } else if (appealStatus === 'REJECTED') {
+                        actionHtml = '<span style="color: #dc3545; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;"><i class="fas fa-times-circle"></i> 申訴失敗</span>';
+                    } else if (penalty.status === 'REVOKED' && !appealStatus) {
+                        actionHtml = '<span style="color: #28a745; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.3rem;"><i class="fas fa-unlock"></i> 已主動解除</span>';
+                    } else if (penalty.status === 'ACTIVE') {
+                        // 只有 ACTIVE 狀態且無申訴干擾才顯示按鈕
+                        const isPendingOrNoAppeal = (!appealStatus || appealStatus === 'PENDING');
+                        if (isPendingOrNoAppeal) {
+                            actionHtml = `<button class="btn-sm btn-unblacklist-btn"
+                            onclick="handleUnblacklistClick(${penalty.penaltyId}, '${penalty.appealId || ''}')"
+                            style="background: #dc3545; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">解除拉黑</button>`;
+                        } else {
+                            actionHtml = '<span style="color: #adb5bd; font-size: 0.85rem;">不適用</span>';
+                        }
+                    } else {
+                        actionHtml = '<span style="color: #adb5bd; font-size: 0.85rem;">不適用</span>';
+                    }
+                }
+
+                // 4. 構建整行 HTML
+                html += `<tr>
+                <td style="color: var(--gray); font-family: monospace;">${penalty.penaltyId}</td>
+                <td>${penalty.targetUser ? penalty.targetUser.username : '未知'}</td>
+                <td>${typeHtml}</td>
+                <td style="font-size: 0.9rem;">${penalty.reason || '無'}</td>
+                <td class="review-snapshot-cell">
+                    ${penalty.reviewContent ? `<div class="review-snapshot-box">${penalty.reviewContent}</div>` : '<span style="color: #adb5bd;">無快照</span>'}
+                </td>
+                <td>${formatDate(penalty.startTime)}</td>
+                <td>${penalty.endTime ? formatDate(penalty.endTime) : '永久'}</td>
+                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                <td>${penalty.adminUser ? penalty.adminUser.username : 'System'}</td>
+                <td style="text-align: center; vertical-align: middle;">${actionHtml}</td>
+            </tr>`;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function renderAppealsTable(appeals, reviewContentMap) {
+            const tbody = document.querySelector('#tab-appeals .data-table tbody');
+            let html = '';
+
+            appeals.forEach(appeal => {
+                let typeText = '';
+                if (appeal.appealType === 'BAN') typeText = '禁言申訴';
+                else if (appeal.appealType === 'BLACKLIST') typeText = '黑名單申訴';
+                else if (appeal.appealType === 'DELETE_REVIEW') typeText = '評論被刪申訴';
+
+                let statusBadge = '';
+                if (appeal.status === 'PENDING') statusBadge = '<span class="status-badge status-pending">待處理</span>';
+                else if (appeal.status === 'APPROVED') statusBadge = '<span class="status-badge status-approved">申訴成功</span>';
+                else if (appeal.status === 'REJECTED') statusBadge = '<span class="status-badge status-rejected">申訴駁回</span>';
+                else statusBadge = '<span class="status-badge" style="background: #e9ecef;">已過期</span>';
+
+                let actionBtn = '';
+                if (appeal.status === 'PENDING') {
+                    if (appeal.appealType === 'BAN') {
+                        actionBtn = `<button class="btn-sm btn-appeal-ban" onclick="openAppealReviewModal(${appeal.appealId})"><i class="fas fa-unlock-alt"></i> 解除禁言</button>`;
+                    } else if (appeal.appealType === 'BLACKLIST') {
+                        actionBtn = `<button class="btn-sm btn-appeal-blacklist" onclick="openBlacklistAppealModal(${appeal.appealId})"><i class="fas fa-user-shield"></i> 解除黑名單</button>`;
+                    } else {
+                        actionBtn = `<button class="btn-sm btn-appeal-review" onclick="handleAppealAction(${appeal.appealId}, 'DELETE_REVIEW')"><i class="fas fa-comment-medical"></i> 恢復評論</button>`;
+                    }
+                } else if (appeal.status === 'APPROVED') {
+                    actionBtn = '<span style="color: #28a745;"><i class="fas fa-check-circle"></i> 已解除</span>';
+                } else if (appeal.status === 'REJECTED') {
+                    actionBtn = '<span style="color: #dc3545;"><i class="fas fa-times-circle"></i> 維持原判</span>';
+                } else if (appeal.status === 'EXPIRED') {
+                    actionBtn = '<span style="color: #adb5bd; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem;"><i class="fas fa-clock"></i> 無需操作</span>';
+                }
+
+                html += `<tr>
+                <td>${appeal.appealId}</td>
+                <td>${appeal.user ? appeal.user.username : '未知'}</td>
+                <td>${typeText}</td>
+                <td title="${appeal.reason}">${appeal.reason}</td>
+                <td style="font-size: 0.85rem; color: #666; max-width: 250px;">
+                    <span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${reviewContentMap[appeal.appealId] || ''}">
+                        ${reviewContentMap[appeal.appealId] || '無記錄'}
+                    </span>
+                </td>
+                <td>${statusBadge}</td>
+                <td>${formatDate(appeal.createdAt)}</td>
+                <td title="${appeal.adminResponse || '-'}" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${appeal.adminResponse || '-'}</td>
+                <td style="text-align: center;">${actionBtn}</td>
+            </tr>`;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function renderRateLimitsTable(logs) {
+            const tbody = document.querySelector('#tab-rate-limits .data-table tbody');
+            let html = '';
+
+            logs.forEach(log => {
+                let statusBadge = '';
+                if (log.status === 'BANNED') {
+                    // 簡單判斷是否過期，實際建議後端處理
+                    const now = new Date();
+                    const end = new Date(log.bannedUntil);
+                    if (now > end) {
+                        statusBadge = '<span class="status-badge status-expired"><i class="fas fa-unlock"></i> 已解封</span>';
+                    } else {
+                        statusBadge = '<span class="status-badge status-active"><i class="fas fa-ban"></i> 封禁中</span>';
+                    }
+                } else if (log.status === 'EXPIRED') {
+                    statusBadge = '<span class="status-badge status-expired"><i class="fas fa-unlock"></i> 已解封</span>';
+                } else {
+                    statusBadge = '<span class="status-badge" style="background: #e9ecef;">正常</span>';
+                }
+
+                html += `<tr>
+                <td>${log.logId}</td>
+                <td>${log.user ? log.user.username : '未知'}</td>
+                <td>${formatDate(log.actionTime)}</td>
+                <td>${log.times}</td>
+                <td>${log.bannedUntil ? formatDate(log.bannedUntil) : '無'}</td>
+                <td>${log.bannedBy}</td>
+                <td>${log.banReason || '無'}</td>
+                <td>${statusBadge}</td>
+            </tr>`;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // ==========================================
+        // 4. 智能分頁渲染 (與 AdminReviewController 一致)
+        // ==========================================
+        function renderPagination(currentPage, totalPages, smartPages, tabName) {
+            const containerId = `${tabName}-pagination`;
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            // 邊界防禦：如果沒有數據或沒有 smartPages，直接清空
+            if (!smartPages || smartPages.length === 0 || totalPages === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '<div class="pagination-wrapper">';
+
+            // 1. 渲染“上一頁”按鈕
+            if (currentPage > 0) {
+                html += `<button class="page-btn" onclick="changePage('${tabName}', ${currentPage - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+            } else {
+                html += `<button class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+            }
+
+            // 2. 【核心】無腦遍歷後端傳來的智能分頁結構 (徹底拋棄前端數學計算)
+            smartPages.forEach(item => {
+                if (item.isEllipsis) {
+                    // 渲染省略號
+                    html += `<span class="page-ellipsis">...</span>`;
+                } else {
+                    // 渲染頁碼按鈕
+                    // 注意：後端 pageNumber 是 1-based，前端 changePage 需要 0-based，所以要減 1
+                    const pageIndex = item.pageNumber - 1;
+                    const isActive = pageIndex === currentPage ? 'active' : '';
+                    html += `<button class="page-btn ${isActive}" onclick="changePage('${tabName}', ${pageIndex})">${item.pageNumber}</button>`;
+                }
+            });
+
+            // 3. 渲染“下一頁”按鈕
+            if (currentPage < totalPages - 1) {
+                html += `<button class="page-btn" onclick="changePage('${tabName}', ${currentPage + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
+            } else {
+                html += `<button class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function changePage(tabName, newPage) {
+            tabState[tabName].page = newPage;
+            if (tabName === 'penalties') loadPenaltiesData();
+            else if (tabName === 'appeals') loadAppealsData();
+            else if (tabName === 'rate-limits') loadRateLimitsData();
+        }
+
+        // ==========================================
+        // 5. 篩選與重置功能
+        // ==========================================
+        function filterPenalties() {
+            tabState.penalties.type = document.getElementById('filterType').value;
+            tabState.penalties.status = document.getElementById('filterStatus').value;
+            tabState.penalties.page = 0;
+            loadPenaltiesData();
+        }
+
+        function resetFilters(tabName) {
+            if (tabName === 'penalties') {
+                document.getElementById('filterType').value = '';
+                document.getElementById('filterStatus').value = '';
+                filterPenalties();
+            } else if (tabName === 'appeals') {
+                document.getElementById('appealTypeFilter').value = '';
+                document.getElementById('appealStatusFilter').value = '';
+                tabState.appeals.appealType = '';
+                tabState.appeals.status = '';
+                tabState.appeals.page = 0;
+                loadAppealsData();
+            }
+        }
+
+        function filterAppeals() {
+            tabState.appeals.appealType = document.getElementById('appealTypeFilter').value;
+            tabState.appeals.status = document.getElementById('appealStatusFilter').value;
+            tabState.appeals.page = 0;
+            loadAppealsData();
+        }
+
+        // ==========================================
+        // 6. 輔助函數
+        // ==========================================
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-TW', { hour12: false });
+        }
+
+        // ==========================================
+        // 7. 頁面初始化
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function () {
+            // 默認加載第一個 Tab
+            loadPenaltiesData();
+        });
+
+        // ==========================================
+        // 8. 保留原有的彈窗與業務邏輯 (完整保留並適配 AJAX)
+        // ==========================================
+
+        // 模擬處理申訴動作 (連接 API)
+        async function handleAppealAction(appealId, type) {
+            let actionName = '';
+            let apiUrl = '';
+
+            if (type === 'BLACKLIST') {
+                actionName = '解除黑名單';
+                // 假設後端有這個接口，或者你可以複用 revokePenalty 邏輯
+                apiUrl = `/api/admin/penalty/blacklist/${appealId}/revoke`;
+            }
+            if (type === 'DELETE_REVIEW') {
+                actionName = '恢復評論';
+                // 假設後端有這個接口來根據申訴恢復評論
+                apiUrl = `/api/admin/appeal/${appealId}/restore`;
+            }
+
+            if (!confirm(`確定要執行「${actionName}」操作嗎？\n申訴ID: ${appealId}`)) return;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST', // 或 PUT，取決於後端定義
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('✅ ' + (result.message || '操作成功'));
+                    } else {
+                        alert('✅ ' + (result.message || '操作成功'));
+                    }
+                    loadAppealsData(); // 刷新列表
+                } else {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + (result.message || '操作失敗'), true);
+                    } else {
+                        alert('❌ ' + (result.message || '操作失敗'));
+                    }
+                }
+            } catch (error) {
+                console.error('操作錯誤:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 網絡錯誤', true);
+                } else {
+                    alert('❌ 網絡錯誤');
+                }
+            }
+        }
+
+        // 申訴處理確認模態框邏輯
         function openAppealReviewModal(appealId) {
             currentReviewAppealId = appealId;
             document.getElementById('appealAdminResponse').value = '';
@@ -1201,9 +1652,9 @@
             }
             const btnId = decision === 'APPROVED' ? 'btnApprove' : 'btnReject';
             const btn = document.getElementById(btnId);
-            const originalHtml = btn.innerHTML;
+
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
             try {
                 const res = await fetch(`/api/admin/appeal/${currentReviewAppealId}/review`, {
                     method: 'POST',
@@ -1215,28 +1666,23 @@
                     closeAppealReviewModal();
                     if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
                     else alert('✅ ' + result.message);
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => loadAppealsData(), 1000); // 改為刷新數據而非整個頁面
                 } else {
                     if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
                     else alert('❌ ' + (result.message || '操作失敗'));
                     btn.disabled = false;
-                    btn.innerHTML = originalHtml;
                 }
             } catch (error) {
                 console.error('處理申訴錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 else alert('❌ 網絡錯誤，請稍後重試');
                 btn.disabled = false;
-                btn.innerHTML = originalHtml;
             }
         }
 
-        // ==========================================
-        // 4. 解除封禁相關 JS 邏輯
-        // ==========================================
-        let currentPenaltyIdToUnban = null;
+        // 解除封禁相關 JS 邏輯
         function handleUnbanClick(penaltyId, appealId) {
-            if (appealId && appealId.trim() !== '') {
+            if (appealId && appealId !== 'null' && appealId !== '') {
                 openModal('appealExistsModal');
             } else {
                 currentPenaltyIdToUnban = penaltyId;
@@ -1249,18 +1695,19 @@
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
             if (modalId === 'confirmUnbanModal') currentPenaltyIdToUnban = null;
+            if (modalId === 'confirmUnblacklistModal') currentPenaltyIdToUnblacklist = null;
         }
         function goToAppealsTab() {
             closeModal('appealExistsModal');
-            const appealTabBtn = document.querySelector('.tab-btn:nth-child(2)');
-            if (appealTabBtn) switchTab('appeals', appealTabBtn);
+            const btn = document.querySelector('.tab-btn:nth-child(2)'); // 假設第二個是申訴
+            if (btn) switchTab('appeals', btn);
         }
         async function executeUnban() {
             if (!currentPenaltyIdToUnban) return;
             const btn = document.getElementById('confirmUnbanBtn');
-            const originalText = btn.innerHTML;
+
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
             try {
                 const response = await fetch(`/api/admin/penalty/${currentPenaltyIdToUnban}/revoke`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }
@@ -1269,28 +1716,23 @@
                     closeModal('confirmUnbanModal');
                     if (typeof showNotification === 'function') showNotification('✅ 已成功解除封禁');
                     else alert('✅ 解除成功');
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => loadPenaltiesData(), 1000); // 改為刷新數據
                 } else {
                     if (typeof showNotification === 'function') showNotification('❌ 操作失敗，請稍後重試', true);
                     else alert('❌ 操作失敗，請稍後重試');
                     btn.disabled = false;
-                    btn.innerHTML = originalText;
                 }
             } catch (error) {
                 console.error('解除封禁錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤', true);
                 else alert('❌ 網絡錯誤');
                 btn.disabled = false;
-                btn.innerHTML = originalText;
             }
         }
 
-        // ==========================================
-        // 5. 解除永久拉黑相關 JS 邏輯
-        // ==========================================
-        let currentPenaltyIdToUnblacklist = null;
+        // 解除永久拉黑相關 JS 邏輯
         function handleUnblacklistClick(penaltyId, appealId) {
-            if (appealId && appealId.trim() !== '') {
+            if (appealId && appealId !== 'null' && appealId !== '') {
                 openModal('appealExistsModal');
             } else {
                 currentPenaltyIdToUnblacklist = penaltyId;
@@ -1300,9 +1742,9 @@
         async function executeUnblacklist() {
             if (!currentPenaltyIdToUnblacklist) return;
             const btn = document.getElementById('confirmUnblacklistBtn');
-            const originalText = btn.innerHTML;
+
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
             try {
                 const response = await fetch(`/api/admin/penalty/${currentPenaltyIdToUnblacklist}/revoke`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }
@@ -1312,20 +1754,18 @@
                     closeModal('confirmUnblacklistModal');
                     if (typeof showNotification === 'function') showNotification('✅ 已成功解除永久拉黑');
                     else alert('✅ 解除拉黑成功');
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => loadPenaltiesData(), 1000); // 改為刷新數據
                 } else {
                     const result = await response.json();
                     if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
                     else alert('❌ 操作失敗：' + (result.message || '請稍後重試'));
                     btn.disabled = false;
-                    btn.innerHTML = originalText;
                 }
             } catch (error) {
                 console.error('解除拉黑錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 else alert('❌ 網絡錯誤');
                 btn.disabled = false;
-                btn.innerHTML = originalText;
             }
         }
         async function sendUnblacklistNotification(penaltyId) {
@@ -1339,11 +1779,8 @@
             }
         }
 
-        // ==========================================
-        // 6. 黑名單申訴處理專屬邏輯
-        // ==========================================
-        let currentBlacklistAppealId = null;
-        function formatDate(dateString) {
+        // 黑名單申訴處理專屬邏輯
+        function formatDateForModal(dateString) {
             if (!dateString) return '-';
             const date = new Date(dateString);
             return date.toLocaleString('zh-TW', { hour12: false });
@@ -1365,7 +1802,7 @@
                     const createTime = data.createdAt || data.createdTime;
                     document.getElementById('blacklistAppealUsername').textContent = username;
                     document.getElementById('blacklistAppealReason').textContent = reason;
-                    document.getElementById('blacklistAppealTime').textContent = formatDate(createTime);
+                    document.getElementById('blacklistAppealTime').textContent = formatDateForModal(createTime);
                 } else {
                     throw new Error(result.message || '獲取失敗');
                 }
@@ -1389,9 +1826,9 @@
             }
             const btnId = decision === 'APPROVED' ? 'btnBlacklistApprove' : 'btnBlacklistReject';
             const btn = document.getElementById(btnId);
-            const originalHtml = btn.innerHTML;
+
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
             try {
                 const res = await fetch(`/api/admin/appeal/${currentBlacklistAppealId}/review`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1402,91 +1839,21 @@
                     closeBlacklistAppealModal();
                     if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
                     else alert('✅ ' + result.message);
-                    setTimeout(() => location.reload(), 1000);
+                    setTimeout(() => loadAppealsData(), 1000); // 改為刷新數據
                 } else {
                     if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
                     else alert('❌ ' + (result.message || '操作失敗'));
                     btn.disabled = false;
-                    btn.innerHTML = originalHtml;
                 }
             } catch (error) {
                 console.error('處理黑名單申訴錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 else alert('❌ 網絡錯誤，請稍後重試');
                 btn.disabled = false;
-                btn.innerHTML = originalHtml;
             }
         }
 
-        // ==========================================
-        // 7. 篩選與重置功能
-        // ==========================================
-        function filterPenalties() {
-            const typeVal = document.getElementById('filterType').value;
-            const statusVal = document.getElementById('filterStatus').value;
-            const rows = document.querySelectorAll('#tab-penalties tbody tr');
-            let visibleCount = 0;
-            rows.forEach(row => {
-                if (row.cells.length === 1) return;
-                const rowType = row.getAttribute('data-type');
-                const rowStatus = row.getAttribute('data-status');
-                const matchType = typeVal === '' || typeVal === rowType;
-                const matchStatus = statusVal === '' || statusVal === rowStatus;
-                if (matchType && matchStatus) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-        function filterAppeals() {
-            const typeFilter = document.getElementById('appealTypeFilter').value;
-            const statusFilter = document.getElementById('appealStatusFilter').value;
-            const table = document.querySelector('#tab-appeals .data-table tbody');
-            const rows = table.querySelectorAll('tr');
-            let visibleCount = 0;
-            rows.forEach(row => {
-                if (row.querySelector('td[colspan]')) return;
-                const typeCell = row.cells[2].textContent.trim();
-                const statusCell = row.cells[5].textContent.trim();
-                let typeMatch = true, statusMatch = true;
-                if (typeFilter) {
-                    if (typeFilter === 'BAN' && !typeCell.includes('禁言')) typeMatch = false;
-                    if (typeFilter === 'BLACKLIST' && !typeCell.includes('黑名單')) typeMatch = false;
-                    if (typeFilter === 'DELETE_REVIEW' && !typeCell.includes('评论被删')) typeMatch = false;
-                }
-                if (statusFilter) {
-                    if (statusFilter === 'PENDING' && !statusCell.includes('待處理')) statusMatch = false;
-                    if (statusFilter === 'APPROVED' && !statusCell.includes('申訴成功')) statusMatch = false;
-                    if (statusFilter === 'REJECTED' && !statusCell.includes('申訴駁回')) statusMatch = false;
-                    if (statusFilter === 'EXPIRED' && !statusCell.includes('已過期')) statusMatch = false;
-                }
-                if (typeMatch && statusMatch) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-            const emptyRow = table.querySelector('tr td[colspan]')?.parentElement;
-            if (emptyRow) emptyRow.style.display = visibleCount === 0 ? '' : 'none';
-        }
-        function resetFilters(tabName) {
-            if (tabName === 'penalties') {
-                document.getElementById('filterType').value = '';
-                document.getElementById('filterStatus').value = '';
-                filterPenalties();
-            } else if (tabName === 'appeals') {
-                document.getElementById('appealTypeFilter').value = '';
-                document.getElementById('appealStatusFilter').value = '';
-                filterAppeals();
-            }
-        }
-
-        // ==========================================
-        // 8. 點擊彈窗外部關閉
-        // ==========================================
+        // 點擊彈窗外部關閉
         window.onclick = function (event) {
             if (event.target.classList.contains('custom-modal-overlay')) {
                 event.target.style.display = 'none';

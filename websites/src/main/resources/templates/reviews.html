@@ -565,6 +565,7 @@
                 max-width: 100%;
             }
         }
+
         .footer {
             background: var(--primary);
             color: rgba(255, 255, 255, 0.7);
@@ -639,6 +640,9 @@
         <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
             Rights Reserved.</p>
     </footer>
+
+    <!-- 在这里引入公共弹窗 (包含登出、登录、注册等弹窗) -->
+    <div th:replace="~{fragments/common :: modals}"></div>
 
     <script th:inline="javascript">
         const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];

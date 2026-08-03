@@ -83,12 +83,21 @@ public class Order {
     @Column(name = "deadline_at")
     private LocalDateTime deadlineAt;
 
+
+    // ================= 8. 用戶界面可見性 (新增) =================
+    /**
+     * 訂單在用戶端是否可見 (用於取消/退貨訂單的「軟刪除」/隱藏)
+     * 默認為 true (可見)，用戶點擊刪除後設為 false (隱藏)
+     */
+    @Column(name = "is_visible", nullable = false)
+    private Boolean isVisible = true;
+
     // ================= 枚舉定義 =================
     public enum OrderStatus {
         PENDING, PAID, SHIPPED, COMPLETED, CANCELLED
     }
 
     public enum PaymentStatus {
-        UNPAID, PAID_SIMULATED, PAID_REAL, PENDING_OFFLINE, PAID_OFFLINE
+        UNPAID, PAID_SIMULATED, PAID_REAL, PENDING_OFFLINE, PAID_OFFLINE,REFUNDED
     }
 }

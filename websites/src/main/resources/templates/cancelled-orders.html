@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <title>订单管理 - ChronoTeam Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+
+    <style>
+        /* 管理员布局 */
+        .admin-wrapper {
+            display: flex;
+            min-height: 100vh;
+            background: #f5f7fa;
+        }
+
+        /* 主内容区 */
+        .admin-content {
+            flex: 1;
+            margin-left: 260px;
+            /* sidebar宽度 */
+            padding: 2rem;
+        }
+
+        /* 页面头部 */
+        .page-header {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .page-title i {
+            color: var(--gold);
+        }
+
+        /* 订单表格 */
+        .order-table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .order-table th,
+        .order-table td {
+            padding: 1.2rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .order-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .order-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .order-no {
+            font-weight: 600;
+            color: var(--primary);
+            font-family: monospace;
+        }
+
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .status-unpaid {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-paid,
+        .status-refunded {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .btn-view-details {
+            background: var(--gold);
+            color: var(--primary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-view-details:hover {
+            background: #b8972b;
+            transform: translateY(-2px);
+        }
+
+        /* 详情展开区域 */
+        .order-details-row {
+            display: none;
+            background: #f8f9fa;
+        }
+
+        .order-details-content {
+            padding: 2rem;
+        }
+
+        .item-card {
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 1.2rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid var(--gold);
+        }
+
+        .item-img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-right: 1.5rem;
+            border: 2px solid #e9ecef;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1.05rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .item-meta {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .item-price {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 1.1rem;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding: 1.5rem;
+        }
+
+        .pagination a,
+        .pagination span {
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .pagination a {
+            background: white;
+            color: var(--primary);
+            border: 2px solid #e9ecef;
+            transition: all 0.3s;
+        }
+
+        .pagination a:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .pagination .current {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 1. 顶部导航栏 (common.html) -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
+
+    <div class="admin-wrapper">
+        <!-- 2. 左侧管理员侧边栏 (admin-sidebar.html) -->
+        <div th:replace="~{fragments/admin-sidebar :: sidebar(activePage='orders')}"></div>
+
+        <!-- 3. 主内容区 -->
+        <main class="admin-content">
+            <div class="page-header">
+                <h2 class="page-title">
+                    <i class="fas fa-shopping-bag"></i>
+                    订单管理
+                </h2>
+                <div style="color: #6c757d; font-size: 0.9rem;">
+                    <i class="fas fa-list"></i> 订单列表
+                </div>
+            </div>
+
+            <div class="order-table-container">
+                <table class="order-table">
+                    <thead>
+                        <tr>
+                            <th>订单编号</th>
+                            <th>买家</th>
+                            <th>快递员</th>
+                            <th>总金额</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="order : ${orders.content}">
+                            <td>
+                                <span class="order-no" th:text="${order.orderNo}">ORD-123</span>
+                            </td>
+                            <td>
+                                <span th:text="${order.user != null ? order.user.username : '未知用户'}">user1</span>
+                            </td>
+                            <td>
+                                <span th:if="${order.courier != null}" th:text="${order.courier.username}"
+                                    style="color: var(--primary);">courier1</span>
+                                <span th:unless="${order.courier != null}" style="color:#999">未分配</span>
+                            </td>
+                            <td>
+                                <span style="color: var(--accent); font-weight: 700; font-size: 1.05rem;">
+                                    HK$ <span
+                                        th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 0, 'POINT')}">0</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge"
+                                    th:classappend="${order.paymentStatus.name() == 'UNPAID'} ? 'status-unpaid' :
+                                                 (${order.paymentStatus.name() == 'REFUNDED'} ? 'status-refunded' : 'status-paid')"
+                                    th:text="${order.paymentStatus.name()}">UNPAID</span>
+                            </td>
+                            <td th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm')}">2026-08-03 15:12
+                            </td>
+                            <td>
+                                <button class="btn-view-details" th:data-order-id="${order.orderId}"
+                                    th:data-order-no="${order.orderNo}" onclick="toggleOrderDetails(this)">
+                                    <i class="fas fa-eye"></i> 查看详情
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- 详情行 -->
+                        <tr class="order-details-row" th:each="order : ${orders.content}">
+                            <td colspan="7">
+                                <div class="order-details-content" th:id="'details-' + ${order.orderId}">
+                                    <div style="text-align: center; padding: 2rem; color: #6c757d;">
+                                        <i class="fas fa-spinner fa-spin"
+                                            style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                                        <p>正在加载商品详情...</p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- 分页 -->
+                <div class="pagination" th:if="${totalPages > 1}">
+                    <a th:if="${currentPage > 0}" th:href="@{/admin/orders(page=${currentPage - 1})}">
+                        <i class="fas fa-chevron-left"></i> 上一页
+                    </a>
+
+                    <span style="color: #6c757d; font-weight: 500;">
+                        第 <span th:text="${currentPage + 1}" style="color: var(--gold); font-weight: 700;">1</span> 页 /
+                        共 <span th:text="${totalPages}" style="color: var(--gold); font-weight: 700;">1</span> 页
+                    </span>
+
+                    <a th:if="${currentPage < totalPages - 1}" th:href="@{/admin/orders(page=${currentPage + 1})}">
+                        下一页 <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 4. 引入公共 JS -->
+    <script src="/js/common.js"></script>
+
+    <!-- 5. 页面专属 JS -->
+    <script>
+        async function toggleOrderDetails(btn) {
+            const orderId = btn.getAttribute('data-order-id');
+            const detailsRow = btn.closest('tr').nextElementSibling;
+            const detailsContent = document.getElementById('details-' + orderId);
+            const icon = btn.querySelector('i');
+
+            // 如果已经显示，则隐藏
+            if (detailsRow.style.display === 'table-row') {
+                detailsRow.style.display = 'none';
+                icon.className = 'fas fa-eye';
+                btn.innerHTML = '<i class="fas fa-eye"></i> 查看详情';
+                return;
+            }
+
+            // 如果还没加载数据，则请求 API
+            if (detailsContent.innerHTML.includes('正在加载')) {
+                try {
+                    const response = await fetch(`/admin/api/order/${orderId}/items`);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        renderOrderItems(detailsContent, result.data);
+                    } else {
+                        detailsContent.innerHTML = '<p style="color: var(--accent); text-align: center;">加载失败</p>';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    detailsContent.innerHTML = '<p style="color: var(--accent); text-align: center;">网络错误</p>';
+                }
+            }
+
+            // 显示
+            detailsRow.style.display = 'table-row';
+            icon.className = 'fas fa-chevron-up';
+            btn.innerHTML = '<i class="fas fa-chevron-up"></i> 收起详情';
+        }
+
+        function renderOrderItems(container, items) {
+            if (!items || items.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #6c757d;">该订单没有商品</p>';
+                return;
+            }
+
+            let html = `
+          <h4 style="margin-bottom: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-box-open" style="color: var(--gold);"></i>
+              订单商品明细
+          </h4>
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+      `;
+
+            items.forEach(item => {
+                html += `
+              <div class="item-card">
+                  <img src="/images/products/${item.productImage}"
+                       alt="Product"
+                       class="item-img"
+                       onerror="this.src='/images/placeholder.png'">
+                  <div class="item-info">
+                      <div class="item-name">${item.productName}</div>
+                      <div class="item-meta">
+                          <i class="fas fa-tag" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                          ${item.productCategory || '手表'} |
+                          <i class="fas fa-box" style="margin: 0 0.3rem;"></i>
+                          数量: ${item.quantity}
+                      </div>
+                  </div>
+                  <div class="item-price">
+                      HK$ ${item.price} × ${item.quantity} =
+                      <span style="color: var(--primary);">HK$ ${item.subtotal}</span>
+                  </div>
+              </div>
+          `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+    </script>
+
+</body>
+
+</html>

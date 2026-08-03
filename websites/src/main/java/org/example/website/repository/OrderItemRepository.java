@@ -22,4 +22,9 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
             @Param("productId") Integer productId,
             @Param("paidStatuses") List<Order.PaymentStatus> paidStatuses
     );
+
+    List<OrderItem> findByOrder_OrderId(Long orderId);
+
+    List<OrderItem> findByOrder_OrderIdIn(List<Long> orderIds);
+
 }

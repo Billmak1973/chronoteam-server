@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.example.website.repository.SystemConfigRepository; // 新增
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -21,9 +22,11 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository; // 新增：直接獲取用戶實體
     private final OrderItemRepository orderItemRepository;
-    private final DailyBusinessReportService dailyBusinessReportService; // 新增
-    private final SystemConfigRepository systemConfigRepository; // 新增注入
-
+    private final DailyBusinessReportService dailyBusinessReportService;
+    private final SystemConfigRepository systemConfigRepository;
+    private final QuarterlySalesReportService quarterlySalesReportService;
+    private final QuarterlySalesReportRepository quarterlySalesReportRepository;
+    private final DailyBusinessReportRepository dailyBusinessReportRepository;
     /**
      * 1. 創建訂單 (移除庫存扣減，僅校驗庫存是否充足)
      */
@@ -96,7 +99,7 @@ public class OrderService {
      * 2. 線上模擬支付處理 (支付成功後扣減庫存，並正確處理運費)
      */
     @Transactional
-    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount, String deliveryMethod) {
+    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount, String deliveryMethod,String storeId) {
         // 1. 查詢訂單並校驗權限
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
@@ -134,6 +137,11 @@ public class OrderService {
         order.setDeliveryMethod(deliveryMethod);
         order.setDelivery("EXPRESS".equals(deliveryMethod)); // 如果是快遞配送，delivery=true；門店自取=false
 
+        //  如果是門店自取，且前端傳來了有效的 storeId，則保存到數據庫
+        if ("STORE_PICKUP".equals(deliveryMethod) && storeId != null && !storeId.trim().isEmpty()) {
+            order.setOfflineStoreId(storeId);
+        }
+
         // 8. 【新增】設置發貨截止時間（當前時間 ）
         order.setDeadlineAt(LocalDateTime.now());
 
@@ -147,7 +155,25 @@ public class OrderService {
         // 8. 線上支付成功，真正扣減庫存！
         deductStock(savedOrder);
 
-        // 9. 更新每日業務報表
+        // ==========================================
+        // 9. 記錄季度銷售報表數據
+        // ==========================================
+        for (OrderItem item : savedOrder.getItems()) {
+            Product product = item.getProduct();
+            BigDecimal itemTotalAmount = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+
+            // 調用記錄服務
+            quarterlySalesReportService.recordSale(
+                    product.getProductId(),
+                    product.getDescription(), // 作為 productName 快照
+                    product.getBrand(),       // 作為 brand 快照
+                    product.getPrice(),       // unitPrice
+                    item.getQuantity(),       // quantity
+                    itemTotalAmount           // totalAmount
+            );
+
+        }
+            // 10. 更新每日業務報表
         dailyBusinessReportService.updateDailyReport(savedOrder);
 
         return savedOrder;
@@ -319,6 +345,134 @@ public class OrderService {
         // 5. 更新訂單的運費和總價，並保存
         order.setShippingFee(actualShippingFee);
         order.setTotalAmount(subtotal.add(actualShippingFee));
+        orderRepository.save(order);
+    }
+
+    /**
+     * 取消已付款訂單 (退款並恢復庫存)
+     * 注意：此方法應由管理員後台或用戶在前端點擊「取消訂單」時調用
+     */
+    @Transactional
+    public void cancelPaidOrder(String orderNo, String username) {
+        // 1. 查找訂單並校驗權限
+        Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
+                .orElseThrow(() -> new RuntimeException("訂單不存在或無權操作"));
+
+        // 2. 核心校驗：只允許取消「已付款」狀態的訂單
+        // (請根據您實際的 PaymentStatus 枚舉調整，例如 PAID_SIMULATED, PAID_REAL, PAID_OFFLINE)
+        if (order.getPaymentStatus() != Order.PaymentStatus.PAID_SIMULATED &&
+                order.getPaymentStatus() != Order.PaymentStatus.PAID_REAL &&
+                order.getPaymentStatus() != Order.PaymentStatus.PAID_OFFLINE) {
+            throw new RuntimeException("只有已付款的訂單才能執行取消/退款操作");
+        }
+
+        // 3. 更新訂單狀態為已取消
+        order.setStatus(Order.OrderStatus.CANCELLED);
+        order.setPaymentStatus(Order.PaymentStatus.REFUNDED);
+
+        orderRepository.save(order);
+
+        // 4. 恢復庫存 (這就是您提到的缺失部分)
+        restoreStock(order);
+
+        // 5. 更新每日業務報表 (記錄退款，不修改原始銷售數據)
+        updateDailyBusinessReportForCancellation(order);
+
+        // 6. 更新季度銷售報表 (記錄退貨，不修改原始銷售快照)
+        updateQuarterlySalesReportForCancellation(order);
+    }
+
+    /**
+     *  恢復庫存方法 (私有輔助方法)
+     * 遍歷訂單中的商品，將賣出的數量加回對應商品的庫存中
+     */
+    private void restoreStock(Order order) {
+        for (OrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            // 將庫存加回
+            product.setStock(product.getStock() + item.getQuantity());
+            // 保存更新後的庫存
+            productRepository.save(product);
+        }
+    }
+
+    /**
+     * 更新每日業務報告 (記錄退款)
+     * 核心原則：totalGmv, totalOrders, totalItemsSold 保持不變，只增加 refundAmount 和 refundCount
+     */
+    @Transactional
+    public void updateDailyBusinessReportForCancellation(Order order) {
+        // 使用訂單創建日期或付款日期作為報表日期
+        LocalDate reportDate = order.getCreatedAt().toLocalDate();
+
+        DailyBusinessReport report = dailyBusinessReportRepository.findByReportDate(reportDate)
+                .orElseThrow(() -> new RuntimeException("找不到當日的業務報表，無法記錄退款"));
+
+        // 1. 增加退款總金額
+        BigDecimal currentRefundAmount = report.getRefundAmount() != null ? report.getRefundAmount() : BigDecimal.ZERO;
+        report.setRefundAmount(currentRefundAmount.add(order.getTotalAmount()));
+
+        // 2. 增加退貨總件數
+        int itemCount = order.getItems().stream()
+                .mapToInt(OrderItem::getQuantity)
+                .sum();
+        Integer currentRefundCount = report.getRefundCount() != null ? report.getRefundCount() : 0;
+        report.setRefundCount(currentRefundCount + itemCount);
+
+        dailyBusinessReportRepository.save(report);
+    }
+
+    /**
+     * 更新季度銷售報告 (記錄退貨)
+     * 核心原則：quantity, totalAmount 保持不變，只增加 refundQuantity 和 refundAmount
+     */
+    @Transactional
+    public void updateQuarterlySalesReportForCancellation(Order order) {
+        int year = order.getCreatedAt().getYear();
+        int quarter = (order.getCreatedAt().getMonthValue() - 1) / 3 + 1;
+
+        for (OrderItem item : order.getItems()) {
+            // 根據 年份、季度、商品ID、單價 查找唯一的歷史快照記錄
+            QuarterlySalesReport report = quarterlySalesReportRepository
+                    .findByYearAndQuarterAndProductIdAndUnitPrice(
+                            year,
+                            quarter,
+                            item.getProduct().getProductId(),
+                            item.getPrice()
+                    )
+                    .orElseThrow(() -> new RuntimeException("找不到對應的季度報表記錄，無法記錄退貨"));
+
+            // 1. 增加該單價下的退貨數量
+            Integer currentRefundQty = report.getRefundQuantity() != null ? report.getRefundQuantity() : 0;
+            report.setRefundQuantity(currentRefundQty + item.getQuantity());
+
+            // 2. 增加該單價下的退貨總金額
+            BigDecimal itemRefundAmount = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal currentRefundAmt = report.getRefundAmount() != null ? report.getRefundAmount() : BigDecimal.ZERO;
+            report.setRefundAmount(currentRefundAmt.add(itemRefundAmount));
+
+            quarterlySalesReportRepository.save(report);
+        }
+    }
+    /**
+     * 隱藏訂單 (用戶端的「刪除」操作，實際為軟刪除/隱藏)
+     * 僅允許對已取消或已退貨的訂單執行此操作
+     */
+    @Transactional
+    public void hideOrder(String orderNo, String username) {
+        // 1. 查找訂單並校驗權限
+        Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
+                .orElseThrow(() -> new RuntimeException("訂單不存在或無權操作"));
+
+        // 2. 核心校驗：只允許隱藏「已取消」或「已退貨」狀態的訂單
+        if (order.getStatus() != Order.OrderStatus.CANCELLED && !"RETURNED".equals(order.getStatus().name())) {
+            throw new RuntimeException("只能隱藏已取消或已退貨的訂單");
+        }
+
+        // 3.  設置為不可見 (軟刪除)
+        order.setIsVisible(false);
+
+        // 4. 保存更新到數據庫
         orderRepository.save(order);
     }
 }

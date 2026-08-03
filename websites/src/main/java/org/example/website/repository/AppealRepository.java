@@ -1,6 +1,8 @@
 package org.example.website.repository;
 
 import org.example.website.entity.Appeal;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,4 +19,12 @@ public interface AppealRepository extends JpaRepository<Appeal, Long> {
 
     List<Appeal> findByNotificationIdOrderByCreatedAtDesc(Long notificationId);
 
+    Page<Appeal> findByAppealType(Appeal.AppealType appealType, Pageable pageable);
+    Page<Appeal> findByStatus(Appeal.AppealStatus status, Pageable pageable);
+
+    Page<Appeal> findByAppealTypeAndStatus(
+            Appeal.AppealType appealType,
+            Appeal.AppealStatus status,
+            Pageable pageable
+    );
 }

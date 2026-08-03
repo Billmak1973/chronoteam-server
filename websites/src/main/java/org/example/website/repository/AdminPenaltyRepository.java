@@ -1,6 +1,8 @@
 package org.example.website.repository;
 
 import org.example.website.entity.AdminPenalty;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -17,11 +19,6 @@ public interface AdminPenaltyRepository extends JpaRepository<AdminPenalty, Long
             AdminPenalty.PenaltyStatus status
     );
 
-    boolean existsByTargetUser_UsernameAndTypeAndStatus(
-            String username,
-            AdminPenalty.PenaltyType type,
-            AdminPenalty.PenaltyStatus status
-    );
 
 
     Optional<AdminPenalty> findTopByTargetUser_UsernameAndTypeOrderByStartTimeDesc(
@@ -37,5 +34,14 @@ public interface AdminPenaltyRepository extends JpaRepository<AdminPenalty, Long
     List<AdminPenalty> findByStatusAndEndTimeBefore(AdminPenalty.PenaltyStatus status, LocalDateTime endTime);
 
     boolean existsByReviewId(Long reviewId);
+
+    // 根據類型分頁查詢
+    Page<AdminPenalty> findByType(AdminPenalty.PenaltyType type, Pageable pageable);
+
+    // 根據狀態分頁查詢
+    Page<AdminPenalty> findByStatus(AdminPenalty.PenaltyStatus status, Pageable pageable);
+
+    // 根據類型和狀態組合分頁查詢
+    Page<AdminPenalty> findByTypeAndStatus(AdminPenalty.PenaltyType type, AdminPenalty.PenaltyStatus status, Pageable pageable);
 
 }

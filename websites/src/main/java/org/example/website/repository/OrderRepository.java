@@ -1,7 +1,10 @@
 package org.example.website.repository;
 
 import org.example.website.entity.Order;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -13,5 +16,13 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByOrderNoAndUser_Username(String orderNo, String username);
 
     List<Order> findByUser_UsernameOrderByCreatedAtDesc(String username);
+
+    List<Order> findByUser_UsernameAndStatusAndIsVisibleTrue(String username, Order.OrderStatus status);
+
+    @Query(value = "SELECT o FROM Order o JOIN FETCH o.user",
+            countQuery = "SELECT count(o) FROM Order o")
+    Page<Order> findAllWithUsers(Pageable pageable);
+
+    Optional<Order> findByOrderNo(String orderNo);
 
 }

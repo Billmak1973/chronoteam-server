@@ -35,10 +35,10 @@ public class PageController {
     private final UserRepository userRepository;
     private final LoginLogRepository loginLogRepository;
     private final SellApplicationRepository sellApplicationRepository;
-    private final FavoriteRepository favoriteRepository; // 新增聲明
-    private final ViewHistoryService viewHistoryService; //  新增依賴
-    private final OrderService orderService; //  新增
-    private final NotificationRepository notificationRepository; //  新增聲明
+    private final FavoriteRepository favoriteRepository;
+    private final ViewHistoryService viewHistoryService;
+    private final OrderService orderService;
+    private final NotificationRepository notificationRepository;
     private final StockNotificationRepository stockNotificationRepository;
     private final UserBlockRepository userBlockRepository;
     private final AppealRepository appealRepository;
@@ -49,6 +49,7 @@ public class PageController {
     private final ProductService productService;
     private final SiteSettingService siteSettingService;
     private final AnnouncementReceiptRepository announcementReceiptRepository;
+    private final OrderRepository orderRepository;
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
@@ -63,8 +64,8 @@ public class PageController {
                           SecurityQuestionRepository securityQuestionRepository,
                           AdminPenaltyRepository adminPenaltyRepository,
                           AdminPenaltyService adminPenaltyService,
-                          CartService cartService, ProductService productService,AnnouncementReceiptRepository announcementReceiptRepository,
-                          UserRepository userRepository, SiteSettingService siteSettingService) {
+                          CartService cartService, ProductService productService, AnnouncementReceiptRepository announcementReceiptRepository,
+                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository) {
         this.userService = userService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -83,6 +84,7 @@ public class PageController {
         this.productService = productService;
         this.siteSettingService = siteSettingService;
         this.announcementReceiptRepository = announcementReceiptRepository;
+        this.orderRepository = orderRepository;
     }
 
     @GetMapping("/")
@@ -728,5 +730,38 @@ public class PageController {
     @GetMapping("/admin/config")
     public String adminConfigPage(Model model) {
         return "admin-config";
+    }
+
+
+    /**
+     * 新增：取消與退貨訂單頁面路由
+     */
+    @GetMapping("/account/cancelled-orders")
+    public String cancelledAndReturnedOrders(Model model, Authentication authentication) {
+        String username = authentication.getName();
+
+        // 1. 獲取 User 實體 (用於側邊欄渲染)
+        User user = userService.findByUsername(username);
+        model.addAttribute("user", user);
+
+        // 2.  【核心修改】：直接在數據庫層面加載「可見」且「已取消」的訂單
+        // 這樣就不會加載到那些已經被用戶隱藏 (is_visible = false) 的訂單
+        List<Order> cancelledOrders = orderRepository.findByUser_UsernameAndStatusAndIsVisibleTrue(
+                username, Order.OrderStatus.CANCELLED);
+
+        // 3. 篩選出已退貨的訂單 (同樣只加載可見的)
+        // 若未來 OrderStatus 枚舉中增加了 RETURNED 狀態，可直接替換下方的 CANCELLED
+        List<Order> returnedOrders = orderRepository.findByUser_UsernameAndStatusAndIsVisibleTrue(
+                username, Order.OrderStatus.CANCELLED); // 暫時用 CANCELLED 佔位，未來改為 RETURNED
+
+        // 4. 傳遞數據到前端
+        model.addAttribute("cancelledOrders", cancelledOrders);
+        model.addAttribute("cancelledCount", cancelledOrders.size());
+
+        model.addAttribute("returnedOrders", returnedOrders);
+        model.addAttribute("returnedCount", returnedOrders.size());
+
+        // 5. 返回視圖名稱
+        return "cancelled-orders";
     }
 }

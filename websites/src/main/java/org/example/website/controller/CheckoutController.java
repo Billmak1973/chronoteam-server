@@ -44,7 +44,7 @@ public class CheckoutController {
         List<OrderItem> orderItems = orderItemRepository.findByOrder_OrderNo(orderNo);
 
         model.addAttribute("order", order);
-        model.addAttribute("orderItems", orderItems); // 传给前端的变量名改为 orderItems
+        model.addAttribute("orderItems", orderItems);
         model.addAttribute("shippingFee", systemConfigService.getShippingFee());
         model.addAttribute("freeShippingThreshold", systemConfigService.getFreeShippingThreshold());
         return "checkout";
@@ -69,15 +69,16 @@ public class CheckoutController {
     public ResponseEntity<?> simulatePay(@RequestBody Map<String, Object> payload, Authentication authentication) {
         try {
             String orderNo = (String) payload.get("orderNo");
-
             // 1. 前端傳來的金額轉為 BigDecimal
             BigDecimal payAmount = new BigDecimal(payload.get("amount").toString());
-
-            //  從 payload 中提取配送方式 (如果前端沒傳，默認為 null)
+            // 2. 從 payload 中提取配送方式
             String deliveryMethod = payload.containsKey("deliveryMethod") ? (String) payload.get("deliveryMethod") : null;
 
-            //  傳遞 4 個參數給 Service 層
-            Order order = orderService.simulatePayment(orderNo, authentication.getName(), payAmount, deliveryMethod);
+            //  從 payload 中提取 storeId
+            String storeId = payload.containsKey("storeId") ? (String) payload.get("storeId") : null;
+
+            //  將 storeId 作為第 5 個參數傳遞給 Service 層
+            Order order = orderService.simulatePayment(orderNo, authentication.getName(), payAmount, deliveryMethod, storeId);
 
             return ResponseEntity.ok(ApiResponse.okWithData("支付成功", order.getOrderNo()));
         } catch (Exception e) {

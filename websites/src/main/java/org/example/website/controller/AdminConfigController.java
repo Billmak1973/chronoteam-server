@@ -38,7 +38,6 @@ public class AdminConfigController {
         return ResponseEntity.ok(successResp);
     }
 
-    // 建議：添加一個 GET 接口讓前端加載當前數值
     @GetMapping("/get")
     public ResponseEntity<?> getCurrentConfig() {
         Map<String, String> configs = new HashMap<>();

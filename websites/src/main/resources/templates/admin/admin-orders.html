@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>訂單管理 - ChronoTeam Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <style>
+        /* 橫向滾動容器 */
+        .table-responsive {
+            overflow-x: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+
+        .order-table {
+            width: 100%;
+            min-width: 2400px;
+            border-collapse: collapse;
+        }
+
+        .order-table th,
+        .order-table td {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+            white-space: nowrap;
+            font-size: 0.9rem;
+        }
+
+        .order-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .order-table tbody tr:hover {
+            background-color: #fcfcfc;
+        }
+
+        /* 狀態徽章 */
+        .status-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .status-unpaid {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-paid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .status-shipped {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-completed {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .status-cancelled {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .status-refunded {
+            background: #e7e3ff;
+            color: #5a32a3;
+        }
+
+        /* 詳情展開區域樣式 */
+        .order-details-row {
+            background: #f8f9fa;
+        }
+
+        .order-details-content {
+            padding: 1.5rem 2rem;
+        }
+
+        .item-card {
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.8rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
+        }
+
+        .item-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-right: 1rem;
+            border: 1px solid #e9ecef;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .item-meta {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .item-price {
+            font-weight: 700;
+            color: var(--accent);
+            font-size: 1rem;
+            white-space: nowrap;
+        }
+
+        .btn-toggle {
+            background: white;
+            border: 1px solid #dee2e6;
+            color: var(--primary);
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-toggle:hover {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+        }
+
+        .bool-yes {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .bool-no {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .text-muted {
+            color: #6c757d;
+        }
+
+        /* 分頁 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        .pagination a,
+        .pagination span {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            text-decoration: none;
+        }
+
+        .pagination a {
+            background: white;
+            border: 1px solid #dee2e6;
+            color: var(--primary);
+        }
+
+        .pagination a:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .pagination .current-page {
+            background: var(--gold);
+            color: white;
+            border: 1px solid var(--gold);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div th:replace="~{fragments/common :: navbar}"></div>
+
+    <div class="admin-layout">
+        <div th:replace="~{fragments/admin-sidebar :: adminSidebar('orders')}"></div>
+
+        <main class="admin-main">
+            <div class="content-header">
+                <h2><i class="fas fa-shopping-bag" style="color: var(--gold);"></i> 訂單管理 (全字段視圖)</h2>
+                <div class="breadcrumb">後台管理 / 訂單列表 (共 17 個數據字段)</div>
+            </div>
+
+            <div class="content-body">
+                <div class="table-responsive">
+                    <table class="order-table">
+                        <thead>
+                            <tr>
+                                <th>1. ID</th>
+                                <th>2. 訂單編號</th>
+                                <th>3. 買家 (User)</th>
+                                <th>4. 快遞員 (Courier)</th>
+                                <th>5. 總金額</th>
+                                <th>6. 運費</th>
+                                <th>7. 配送方式</th>
+                                <th>8. 需快遞</th>
+                                <th>9. 支付方式</th>
+                                <th>10. 支付狀態</th>
+                                <th>11. 訂單狀態</th>
+                                <th>12. 線下店鋪ID</th>
+                                <th>13. 創建時間</th>
+                                <th>14. 支付時間</th>
+                                <th>15. 收貨時間</th>
+                                <th>16. 發貨截止</th>
+                                <th>17. 用戶可見</th>
+                                <th style="text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- ========================================== -->
+                            <!-- 【核心修復】：訂單行 + 詳情行包在同一個 th:each 裡，
+                         詳情行永遠緊挨著屬於它的訂單號！ -->
+                            <!-- ========================================== -->
+                            <th:block th:each="order : ${orders.content}">
+
+                                <!-- 訂單行 -->
+                                <tr>
+                                    <td th:text="${order.orderId}" class="text-muted"></td>
+                                    <td><strong th:text="${order.orderNo}"
+                                            style="font-family: monospace; color: var(--primary);"></strong></td>
+                                    <td>
+                                        <i class="fas fa-user" style="color: var(--gold); margin-right: 5px;"></i>
+                                        <span th:text="${order.user != null ? order.user.username : '未知用戶'}"></span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${order.courier != null}" th:text="${order.courier.username}"
+                                            style="color: #004085;"></span>
+                                        <span th:unless="${order.courier != null}" class="text-muted">未分配</span>
+                                    </td>
+                                    <td style="color: var(--accent); font-weight: 700;">
+                                        HK$ <span
+                                            th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 0, 'POINT')}">0</span>
+                                    </td>
+                                    <td>
+                                        HK$ <span
+                                            th:text="${#numbers.formatDecimal(order.shippingFee, 1, 'COMMA', 0, 'POINT')}">0</span>
+                                    </td>
+                                    <td>
+                                        <span th:switch="${order.deliveryMethod}">
+                                            <span th:case="'EXPRESS'" style="color: #004085;"><i
+                                                    class="fas fa-truck"></i> 快遞</span>
+                                            <span th:case="'STORE_PICKUP'" style="color: #155724;"><i
+                                                    class="fas fa-store"></i> 門店自取</span>
+                                            <span th:case="*" th:text="${order.deliveryMethod ?: '-'}"
+                                                class="text-muted"></span>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${order.delivery}" class="bool-yes"><i
+                                                class="fas fa-check-circle"></i> 是</span>
+                                        <span th:unless="${order.delivery}" class="bool-no"><i
+                                                class="fas fa-times-circle"></i> 否</span>
+                                    </td>
+                                    <td th:text="${order.paymentMethod}" style="font-family: monospace;"></td>
+                                    <td>
+                                        <span th:switch="${order.paymentStatus.name()}" class="status-badge"
+                                            th:classappend="${order.paymentStatus.name() == 'UNPAID'} ? 'status-unpaid' :
+                                                     (${order.paymentStatus.name() == 'PAID_SIMULATED' or order.paymentStatus.name() == 'PAID_REAL' or order.paymentStatus.name() == 'PAID_OFFLINE'} ? 'status-paid' :
+                                                     (${order.paymentStatus.name() == 'PENDING_OFFLINE'} ? 'status-pending' :
+                                                     (${order.paymentStatus.name() == 'REFUNDED'} ? 'status-refunded' : 'status-cancelled')))">
+                                            <span th:case="'UNPAID'">待付款</span>
+                                            <span th:case="'PAID_SIMULATED'">已付款(模擬)</span>
+                                            <span th:case="'PAID_REAL'">已付款(真實)</span>
+                                            <span th:case="'PENDING_OFFLINE'">待線下付款</span>
+                                            <span th:case="'PAID_OFFLINE'">已線下付款</span>
+                                            <span th:case="'REFUNDED'">已退款</span>
+                                            <span th:case="*">未知</span>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span th:switch="${order.status.name()}" class="status-badge"
+                                            th:classappend="${order.status.name() == 'PENDING'} ? 'status-pending' :
+                                                     (${order.status.name() == 'PAID'} ? 'status-paid' :
+                                                     (${order.status.name() == 'SHIPPED'} ? 'status-shipped' :
+                                                     (${order.status.name() == 'COMPLETED'} ? 'status-completed' : 'status-cancelled')))">
+                                            <span th:case="'PENDING'">待處理</span>
+                                            <span th:case="'PAID'">已付款</span>
+                                            <span th:case="'SHIPPED'">已發貨</span>
+                                            <span th:case="'COMPLETED'">已完成</span>
+                                            <span th:case="'CANCELLED'">已取消</span>
+                                            <span th:case="*">未知</span>
+                                        </span>
+                                    </td>
+                                    <td th:text="${order.offlineStoreId ?: '-'}" class="text-muted"></td>
+                                    <td th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+                                    <td>
+                                        <span th:if="${order.paidAt != null}"
+                                            th:text="${#temporals.format(order.paidAt, 'yyyy-MM-dd HH:mm')}"></span>
+                                        <span th:unless="${order.paidAt != null}" class="text-muted">-</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${order.receivedAt != null}"
+                                            th:text="${#temporals.format(order.receivedAt, 'yyyy-MM-dd HH:mm')}"></span>
+                                        <span th:unless="${order.receivedAt != null}" class="text-muted">-</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${order.deadlineAt != null}"
+                                            th:text="${#temporals.format(order.deadlineAt, 'yyyy-MM-dd HH:mm')}"
+                                            style="color: #856404;"></span>
+                                        <span th:unless="${order.deadlineAt != null}" class="text-muted">-</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${order.isVisible}" class="bool-yes"><i class="fas fa-eye"></i>
+                                            可見</span>
+                                        <span th:unless="${order.isVisible}" class="bool-no"><i
+                                                class="fas fa-eye-slash"></i> 隱藏</span>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <button class="btn-toggle" onclick="toggleOrderDetails(this)">
+                                            <i class="fas fa-eye"></i> <span>明細</span>
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <!-- ========================================== -->
+                                <!-- 詳情行：緊挨著上面的訂單號！
+                             數據由後端 orderItemsMap 直接渲染，零 AJAX、零「加載中」 -->
+                                <!-- ========================================== -->
+                                <tr class="order-details-row" style="display: none;">
+                                    <td colspan="18">
+                                        <div class="order-details-content">
+                                            <h4
+                                                style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
+                                                <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細
+                                                <span class="text-muted" style="font-size:0.85rem; font-weight:normal;"
+                                                    th:text="'（訂單編號：' + ${order.orderNo} + '）'"></span>
+                                            </h4>
+
+                                            <!-- 該訂單沒有明細時 -->
+                                            <p th:if="${orderItemsMap[order.orderId] == null or #lists.isEmpty(orderItemsMap[order.orderId])}"
+                                                style="text-align:center; color:#6c757d; padding:1rem; margin:0;">
+                                                <i class="fas fa-inbox"></i> 該訂單沒有商品
+                                            </p>
+
+                                            <!-- 有明細：直接渲染，所見即所得 -->
+                                            <div th:unless="${orderItemsMap[order.orderId] == null or #lists.isEmpty(orderItemsMap[order.orderId])}"
+                                                style="display:flex; flex-direction:column; gap:0.8rem;">
+                                                <div class="item-card" style="margin-bottom:0;"
+                                                    th:each="item : ${orderItemsMap[order.orderId]}">
+                                                    <img class="item-img"
+                                                        th:src="@{/images/products/{img}(img=${item.product.image})}"
+                                                        onerror="this.src='/images/placeholder.png'" alt="Product">
+                                                    <div class="item-info">
+                                                        <div class="item-name"
+                                                            th:text="${item.product.description} ?: '未知商品'"></div>
+                                                        <div class="item-meta">
+                                                            數量: <span th:text="${item.quantity}"></span> |
+                                                            單價: HK$ <span
+                                                                th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}"></span>
+                                                            |
+                                                            分類: <span th:text="${item.product.category} ?: '-'"></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="item-price"
+                                                        th:text="'HK$ ' + ${#numbers.formatDecimal(item.price * item.quantity, 1, 'COMMA', 0, 'POINT')}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                            </th:block>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 分頁 -->
+                <div class="pagination">
+                    <a th:if="${currentPage > 0}" th:href="@{/admin/orders(page=${currentPage - 1})}">
+                        <i class="fas fa-chevron-left"></i> 上一頁
+                    </a>
+                    <span class="current-page" th:text="${currentPage + 1}">1</span>
+                    <a th:if="${currentPage < totalPages - 1}" th:href="@{/admin/orders(page=${currentPage + 1})}">
+                        下一頁 <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <footer class="admin-footer" style="
+        margin-top: 3rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        border-radius: 12px;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.7);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+    ">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
+                    ChronoTeam Admin Panel. All Rights Reserved.
+                </p>
+                <p style="margin: 0.5rem 0 0; font-size: 0.8rem; opacity: 0.8;">
+                    專業二手名錶管理平台
+                </p>
+            </footer>
+        </main>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/admin.js"></script>
+    <div th:replace="~{fragments/common :: modals}"></div>
+
+    <script>
+        // ==========================================
+        // 【核心修復】：純前端展開/收起！
+        // 數據已經由後端 (order_item.order_id = orders.order_id) 匹配好並用 Thymeleaf 直接渲染，
+        // 不再有任何 AJAX 請求，不再有任何「加載中」！
+        // ==========================================
+        function toggleOrderDetails(btn) {
+            const detailsRow = btn.closest('tr').nextElementSibling;
+            const icon = btn.querySelector('i');
+            const textNode = btn.querySelector('span');
+
+            // 安全護欄：確保下一行確實是詳情行
+            if (!detailsRow || !detailsRow.classList.contains('order-details-row')) return;
+
+            if (detailsRow.style.display === 'table-row') {
+                detailsRow.style.display = 'none';
+                icon.className = 'fas fa-eye';
+                textNode.textContent = '明細';
+            } else {
+                detailsRow.style.display = 'table-row';
+                icon.className = 'fas fa-chevron-up';
+                textNode.textContent = '收起';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

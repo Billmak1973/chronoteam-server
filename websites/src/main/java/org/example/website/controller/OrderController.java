@@ -84,4 +84,35 @@ public class OrderController {
         }
     }
 
+    /**
+     * 取消已付款訂單 (觸發退款、恢復庫存、更新報表)
+     */
+    @PostMapping("/{orderNo}/cancel")
+    public ResponseEntity<ApiResponse> cancelPaidOrder(@PathVariable String orderNo, Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            // 調用 Service 層的 cancelPaidOrder 方法
+            orderService.cancelPaidOrder(orderNo, username);
+
+            return ResponseEntity.ok(ApiResponse.ok("訂單已成功取消並退款"));
+        } catch (RuntimeException e) {
+            // 捕獲業務異常 (如：訂單不存在、狀態不允許取消等)
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(ApiResponse.error("系統錯誤，取消訂單失敗"));
+        }
+    }
+
+    @DeleteMapping("/{orderNo}/hide")
+    public ResponseEntity<ApiResponse> hideOrder(@PathVariable String orderNo, Authentication authentication) {
+        try {
+            String username = authentication.getName();
+            orderService.hideOrder(orderNo, username);
+            return ResponseEntity.ok(ApiResponse.ok("订单已删除"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(ApiResponse.error("系统错误，删除失败"));
+        }
+    }
 }

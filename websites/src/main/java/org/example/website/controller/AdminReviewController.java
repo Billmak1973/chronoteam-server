@@ -24,13 +24,15 @@ public class AdminReviewController {
     private final AdminPenaltyRepository adminPenaltyRepository;
     private final AdminPenaltyService adminPenaltyService;
     private final KeywordRepository keywordRepository;
+
     public AdminReviewController(ReviewRepository reviewRepository,
                                  ReviewArchiveRepository archiveRepository,
                                  ReportRepository reportRepository,
                                  UserRepository userRepository,
                                  ProductRepository productRepository,
                                  AdminPenaltyRepository adminPenaltyRepository,
-                                 AdminPenaltyService adminPenaltyService, KeywordRepository keywordRepository) {
+                                 AdminPenaltyService adminPenaltyService,
+                                 KeywordRepository keywordRepository) {
         this.reviewRepository = reviewRepository;
         this.archiveRepository = archiveRepository;
         this.reportRepository = reportRepository;
@@ -49,8 +51,6 @@ public class AdminReviewController {
         return "admin/admin-reviews";
     }
 
-
-
     @GetMapping("/api/reviews/list")
     @ResponseBody
     public ResponseEntity<?> getReviews(
@@ -63,7 +63,6 @@ public class AdminReviewController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Review> reviewsPage;
 
-        // ========== 1. 數據庫層面精準分頁查詢 ==========
         if (username != null && !username.isEmpty()) {
             if ("reply".equals(reviewType)) {
                 reviewsPage = reviewRepository.findByUser_UsernameAndParentIdIsNotNull(username, pageable);
@@ -78,16 +77,12 @@ public class AdminReviewController {
             } else if ("root".equals(reviewType)) {
                 reviewsPage = reviewRepository.findByParentIdIsNullOrderByCreatedAtDesc(pageable);
             } else {
-                // 無任何篩選條件，查詢所有
                 reviewsPage = reviewRepository.findAll(pageable);
             }
         }
 
         List<Review> reviews = reviewsPage.getContent();
 
-        // ========== 2. 關鍵詞篩選 (若開啟，在內存中過濾當前頁數據) ==========
-        // 註：由於分頁限制，關鍵詞篩選僅對「當前頁的25條數據生效」。
-        // 若需全局關鍵詞篩選，需在 Repository 中添加 LIKE 查詢。
         if ("yes".equals(keywordMode)) {
             List<Keyword> keywords = keywordRepository.findAllByOrderByCreatedAtDesc();
             if (!keywords.isEmpty()) {
@@ -99,11 +94,10 @@ public class AdminReviewController {
                         })
                         .collect(Collectors.toList());
             } else {
-                reviews = new ArrayList<>(); // 沒有設置關鍵詞，視為無匹配
+                reviews = new ArrayList<>();
             }
         }
 
-        // ========== 3. 批量加載關聯數據，避免 N+1 查詢 ==========
         List<Long> userIds = reviews.stream()
                 .map(r -> r.getUser() != null ? r.getUser().getId() : null)
                 .filter(Objects::nonNull).distinct().collect(Collectors.toList());
@@ -117,7 +111,6 @@ public class AdminReviewController {
         Map<Integer, Product> productMap = productRepository.findAllById(productIds).stream()
                 .collect(Collectors.toMap(Product::getProductId, p -> p));
 
-        // ========== 4. 組裝乾淨的 JSON 數據 ==========
         List<Map<String, Object>> cleanReviews = new ArrayList<>();
         for (Review review : reviews) {
             Map<String, Object> item = new HashMap<>();
@@ -126,7 +119,7 @@ public class AdminReviewController {
 
             Double rating = review.getRating();
             if (rating != null) {
-                item.put("rating", String.format("%.1f", rating)); // 確保保留一位小數
+                item.put("rating", String.format("%.1f", rating));
             } else {
                 item.put("rating", null);
             }
@@ -136,7 +129,6 @@ public class AdminReviewController {
             item.put("likeCount", review.getLikeCount());
             item.put("dislikeCount", review.getDislikeCount());
 
-            // 組裝 User 信息
             Map<String, Object> userInfo = new HashMap<>();
             if (review.getUser() != null && review.getUser().getId() != null) {
                 User user = userMap.get(review.getUser().getId());
@@ -145,7 +137,6 @@ public class AdminReviewController {
             }
             item.put("user", userInfo);
 
-            // 組裝 Product 信息
             Map<String, Object> productInfo = new HashMap<>();
             if (review.getProduct() != null && review.getProduct().getProductId() != null) {
                 Product product = productMap.get(review.getProduct().getProductId());
@@ -159,21 +150,19 @@ public class AdminReviewController {
             cleanReviews.add(item);
         }
 
-        // ========== 5. 返回分頁響應 ==========
+        int totalPages = reviewsPage.getTotalPages() == 0 ? 1 : reviewsPage.getTotalPages();
         Map<String, Object> response = new HashMap<>();
         response.put("content", cleanReviews);
         response.put("currentPage", reviewsPage.getNumber());
-        // 確保即使過濾後為空，總頁數也至少為 1，防止前端分頁組件消失
-        response.put("totalPages", reviewsPage.getTotalPages() == 0 ? 1 : reviewsPage.getTotalPages());
+        response.put("totalPages", totalPages);
         response.put("totalElements", reviewsPage.getTotalElements());
+
+        // 【全新思路】：後端直接計算並返回智能分頁結構，前端無需複雜計算，直接無腦遍歷渲染
+        response.put("smartPages", generateSmartPagination(reviewsPage.getNumber(), totalPages));
 
         return ResponseEntity.ok(response);
     }
 
-
-    /**
-     * 3. 獨立 API：獲取「刪除歸檔」分頁數據 (已修復代理序列化問題 + 支持篩選)
-     */
     @GetMapping("/api/reviews/archives")
     @ResponseBody
     public ResponseEntity<?> getArchives(
@@ -185,11 +174,8 @@ public class AdminReviewController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "deletedAt"));
         Page<ReviewArchive> archivesPage;
 
-        // ========== 1. 數據庫層面精準分頁查詢（根據篩選條件）==========
         if (authorUsername != null && !authorUsername.isEmpty()) {
             if (deletedByUsername != null && !deletedByUsername.isEmpty()) {
-                // 同时筛选原作者和执行删除者
-                // 先查询用户ID
                 User author = userRepository.findByUsername(authorUsername).orElse(null);
                 User deletedBy = userRepository.findByUsername(deletedByUsername).orElse(null);
 
@@ -197,30 +183,24 @@ public class AdminReviewController {
                     archivesPage = archiveRepository.findByAuthor_UsernameAndDeletedByIdOrderByDeletedAtDesc(
                             authorUsername, deletedBy.getId(), pageable);
                 } else {
-                    // 用户不存在，返回空结果
                     archivesPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
                 }
             } else {
-                // 只筛选原作者
                 archivesPage = archiveRepository.findByAuthor_UsernameOrderByDeletedAtDesc(authorUsername, pageable);
             }
         } else if (deletedByUsername != null && !deletedByUsername.isEmpty()) {
-            // 只筛选执行删除者
             User deletedBy = userRepository.findByUsername(deletedByUsername).orElse(null);
             if (deletedBy != null) {
                 archivesPage = archiveRepository.findByDeletedByIdOrderByDeletedAtDesc(deletedBy.getId(), pageable);
             } else {
-                // 用户不存在，返回空结果
                 archivesPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
             }
         } else {
-            // 无任何筛选条件，查询所有
             archivesPage = archiveRepository.findAll(pageable);
         }
 
         List<ReviewArchive> archives = archivesPage.getContent();
 
-        // ========== 2. 批量加載關聯數據，避免 N+1 查詢 ==========
         List<Integer> productIds = archives.stream()
                 .map(ReviewArchive::getProductId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
@@ -231,7 +211,6 @@ public class AdminReviewController {
         List<Long> deletedByIds = archives.stream()
                 .map(ReviewArchive::getDeletedById).filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
-        // 3. 批量查詢關聯實體
         Map<Integer, Product> productMap = productRepository.findAllById(productIds).stream()
                 .collect(Collectors.toMap(Product::getProductId, p -> p));
         Map<Long, User> authorMap = userRepository.findAllById(authorIds).stream()
@@ -239,18 +218,14 @@ public class AdminReviewController {
         Map<Long, User> deletedByUserMap = userRepository.findAllById(deletedByIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
 
-        // 4. 組裝純淨的 Map 數據 (徹底杜絕 Hibernate 代理對象)
         List<Map<String, Object>> archiveDataList = new ArrayList<>();
         for (ReviewArchive archive : archives) {
             Map<String, Object> item = new HashMap<>();
-
-            // 直接將 archive 的字段放到 item 中，而不是嵌套在 archive 對象裡
             item.put("archiveId", archive.getArchiveId());
             item.put("content", archive.getContent());
             item.put("deleteReason", archive.getDeleteReason());
             item.put("deletedAt", archive.getDeletedAt());
 
-            // 手動組裝 author 信息
             Map<String, Object> authorInfo = new HashMap<>();
             if (archive.getAuthor() != null && archive.getAuthor().getId() != null) {
                 User author = authorMap.get(archive.getAuthor().getId());
@@ -260,7 +235,6 @@ public class AdminReviewController {
             }
             item.put("author", authorInfo);
 
-            // 手動組裝 product 信息
             Map<String, Object> productInfo = new HashMap<>();
             if (archive.getProductId() != null) {
                 Product product = productMap.get(archive.getProductId());
@@ -271,7 +245,6 @@ public class AdminReviewController {
             }
             item.put("product", productInfo);
 
-            // 手動組裝 deletedBy 信息
             Map<String, Object> deletedByInfo = new HashMap<>();
             if (archive.getDeletedById() != null) {
                 User deletedBy = deletedByUserMap.get(archive.getDeletedById());
@@ -284,19 +257,19 @@ public class AdminReviewController {
             archiveDataList.add(item);
         }
 
-        // ========== 5. 返回分頁響應 ==========
+        int totalPages = archivesPage.getTotalPages() == 0 ? 1 : archivesPage.getTotalPages();
         Map<String, Object> response = new HashMap<>();
         response.put("content", archiveDataList);
         response.put("currentPage", archivesPage.getNumber());
-        response.put("totalPages", archivesPage.getTotalPages() == 0 ? 1 : archivesPage.getTotalPages());
+        response.put("totalPages", totalPages);
         response.put("totalElements", archivesPage.getTotalElements());
+
+        // 【全新思路】：後端直接計算並返回智能分頁結構
+        response.put("smartPages", generateSmartPagination(archivesPage.getNumber(), totalPages));
 
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 4. 獨立 API：獲取「舉報管理」分頁數據 (已修復代理序列化問題 + 篩選失效問題)
-     */
     @GetMapping("/api/reviews/reports")
     @ResponseBody
     public ResponseEntity<?> getReports(
@@ -305,15 +278,12 @@ public class AdminReviewController {
             @RequestParam(required = false) String reporterUsername,
             @RequestParam(required = false) String reportedUsername) {
 
-        // 構建排序規則
         Pageable pageable = PageRequest.of(page, size,
                 Sort.by(Sort.Direction.DESC, "status").and(Sort.by(Sort.Direction.DESC, "createdAt")));
 
-        // 【核心修復】：使用支持篩選的 Repository 方法，而不是 findAll
         Page<Report> reportsPage = reportRepository.findByFilters(reporterUsername, reportedUsername, pageable);
         List<Report> reportList = reportsPage.getContent();
 
-        // 1. 提取所有需要查詢的 Review ID (僅用於檢查刪除狀態)
         List<Long> reviewIds = reportList.stream()
                 .map(Report::getReviewId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
@@ -323,7 +293,6 @@ public class AdminReviewController {
             existingReviewIds = existingReviews.stream().map(Review::getReviewId).collect(Collectors.toSet());
         }
 
-        // 2. 提取 User ID，避免 N+1 查詢與代理序列化問題
         List<Long> reporterIds = reportList.stream()
                 .map(r -> r.getReporter() != null ? r.getReporter().getId() : null).filter(Objects::nonNull).distinct().collect(Collectors.toList());
         List<Long> reportedUserIds = reportList.stream()
@@ -332,7 +301,6 @@ public class AdminReviewController {
         Map<Long, User> reporterMap = userRepository.findAllById(reporterIds).stream().collect(Collectors.toMap(User::getId, u -> u));
         Map<Long, User> reportedUserMap = userRepository.findAllById(reportedUserIds).stream().collect(Collectors.toMap(User::getId, u -> u));
 
-        // 3. 組裝純淨的 Map 數據 (徹底杜絕 Hibernate 代理對象)
         List<Map<String, Object>> reportDataList = new ArrayList<>();
         for (Report report : reportList) {
             Map<String, Object> item = new HashMap<>();
@@ -343,14 +311,12 @@ public class AdminReviewController {
             item.put("createdAt", report.getCreatedAt());
             item.put("reviewId", report.getReviewId());
 
-            // 優先使用舉報時保存的內容快照
             String contentToShow = report.getReportContent();
             if (contentToShow == null || contentToShow.trim().isEmpty()) {
                 contentToShow = "無內容快照";
             }
             item.put("content", contentToShow);
 
-            // 手動組裝 reporter 信息
             Map<String, Object> reporterInfo = new HashMap<>();
             if (report.getReporter() != null && report.getReporter().getId() != null) {
                 User reporter = reporterMap.get(report.getReporter().getId());
@@ -360,7 +326,6 @@ public class AdminReviewController {
             }
             item.put("reporter", reporterInfo);
 
-            // 手動組裝 reportedUser 信息
             Map<String, Object> reportedUserInfo = new HashMap<>();
             if (report.getReportedUser() != null && report.getReportedUser().getId() != null) {
                 User reportedUser = reportedUserMap.get(report.getReportedUser().getId());
@@ -370,18 +335,15 @@ public class AdminReviewController {
             }
             item.put("reportedUser", reportedUserInfo);
 
-            // 判斷是否已被封禁
             boolean isAlreadyBanned = false;
             if (report.getReviewId() != null) {
                 isAlreadyBanned = adminPenaltyRepository.existsByReviewId(report.getReviewId());
             }
             item.put("isAlreadyBanned", isAlreadyBanned);
 
-            // 標記該評論是否已被刪除
             boolean isDeleted = report.getReviewId() == null || !existingReviewIds.contains(report.getReviewId());
             item.put("isDeleted", isDeleted);
 
-            // 判斷是否被拉黑 (從已加載的 Map 中取 username，避免觸發代理)
             boolean isBlacklisted = false;
             if (report.getReportedUser() != null && report.getReportedUser().getId() != null) {
                 User ru = reportedUserMap.get(report.getReportedUser().getId());
@@ -394,15 +356,91 @@ public class AdminReviewController {
             reportDataList.add(item);
         }
 
+        int totalPages = reportsPage.getTotalPages() == 0 ? 1 : reportsPage.getTotalPages();
         Map<String, Object> response = new HashMap<>();
         response.put("content", reportDataList);
         response.put("currentPage", reportsPage.getNumber());
-
-        // 【確保分頁邏輯穩健】：即使數據為空或只有1頁，也能正確返回給前端
-        int totalPages = reportsPage.getTotalPages();
-        response.put("totalPages", totalPages == 0 ? 1 : totalPages);
+        response.put("totalPages", totalPages);
         response.put("totalElements", reportsPage.getTotalElements());
 
+        // 【全新思路】：後端直接計算並返回智能分頁結構
+        response.put("smartPages", generateSmartPagination(reportsPage.getNumber(), totalPages));
+
         return ResponseEntity.ok(response);
+    }
+
+    // ==========================================
+    // 內部類：用於智能分頁渲染數據傳輸
+    // ==========================================
+    public static class PageItem {
+        private boolean isEllipsis;
+        private Integer pageNumber; // 1-based 頁碼
+
+        public PageItem(boolean isEllipsis, Integer pageNumber) {
+            this.isEllipsis = isEllipsis;
+            this.pageNumber = pageNumber;
+        }
+        public boolean isEllipsis() { return isEllipsis; }
+        public Integer getPageNumber() { return pageNumber; }
+    }
+
+    /**
+     * 生成智能分頁列表的核心算法 (全新思路：後端計算，前端無腦渲染)
+     * 規則：第一頁永遠顯示，最後一頁永遠顯示，當前頁及前後各1頁顯示，使用省略號分隔。
+     * @param currentPage 當前頁 (0-based, Spring Data JPA 默認)
+     * @param totalPages 總頁數
+     * @return 智能分頁項目列表
+     */
+    private List<PageItem> generateSmartPagination(int currentPage, int totalPages) {
+        List<PageItem> pages = new ArrayList<>();
+
+        // 邊界檢查：哪怕總頁數為0，也強制返回第1頁，確保"第一頁永遠出現"
+        if (totalPages <= 0) {
+            pages.add(new PageItem(false, 1));
+            return pages;
+        }
+
+        // 情況1：總頁數 <= 7，直接顯示所有頁碼 (1-based)
+        if (totalPages <= 7) {
+            for (int i = 1; i <= totalPages; i++) {
+                pages.add(new PageItem(false, i));
+            }
+            return pages;
+        }
+
+        // 情況2：總頁數 > 7，智能顯示
+        // 1. 第一頁永遠顯示 (1-based)
+        pages.add(new PageItem(false, 1));
+
+        // 2. 計算當前頁(0-based)對應的 1-based 頁碼
+        int current1Based = currentPage + 1;
+
+        // 3. 如果當前頁靠近第一頁（前3頁），不需要第一個省略號
+        if (current1Based <= 3) {
+            for (int i = 2; i <= 4; i++) {
+                pages.add(new PageItem(false, i));
+            }
+            pages.add(new PageItem(true, null)); // 省略號
+        }
+        // 4. 如果當前頁靠近最後一頁（後3頁），不需要第二個省略號
+        else if (current1Based >= totalPages - 2) {
+            pages.add(new PageItem(true, null)); // 省略號
+            for (int i = totalPages - 3; i <= totalPages - 1; i++) {
+                pages.add(new PageItem(false, i));
+            }
+        }
+        // 5. 當前頁在中間位置
+        else {
+            pages.add(new PageItem(true, null)); // 第一個省略號
+            pages.add(new PageItem(false, current1Based - 1));
+            pages.add(new PageItem(false, current1Based));
+            pages.add(new PageItem(false, current1Based + 1));
+            pages.add(new PageItem(true, null)); // 第二個省略號
+        }
+
+        // 6. 最後一頁永遠顯示
+        pages.add(new PageItem(false, totalPages));
+
+        return pages;
     }
 }
