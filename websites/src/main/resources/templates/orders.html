@@ -1209,6 +1209,26 @@
                                 </p>
                                 <p th:if="${order.paidAt != null}">付款時間：<strong
                                         th:text="${#temporals.format(order.paidAt, 'yyyy-MM-dd HH:mm')}">-</strong></p>
+
+                                <!-- 收貨時間 (僅 COMPLETED 且 receivedAt 有值時顯示) -->
+                                <p th:if="${order.status.name() == 'COMPLETED' and order.receivedAt != null}">
+                                    收貨時間：<strong th:text="${#temporals.format(order.receivedAt, 'yyyy-MM-dd HH:mm')}">-</strong>
+                                </p>
+
+                                <!-- 收貨後 7 天內顯示無條件退貨提示 (超過 7 天自動隱藏) -->
+                                <p th:if="${order.status.name() == 'COMPLETED'
+                and order.receivedAt != null
+                and #temporals.createNow().isBefore(order.receivedAt.plusDays(7))}"
+                                   style="color: #155724; font-weight: 600; font-size: 0.85rem;
+              background: rgba(40, 167, 69, 0.1); border-left: 3px solid #28a745;
+              padding: 0.5rem 0.8rem; border-radius: 6px;">
+                                    <i class="fas fa-undo"></i> 該物品若無故意損壞的痕跡，可以 7 天內申請無條件原額退貨！
+                                    <br>
+                                    <small style="font-weight: 500;">
+                                        <i class="fas fa-hourglass-half"></i> 退貨期限至：
+                                        <span th:text="${#temporals.format(order.receivedAt.plusDays(7), 'yyyy-MM-dd HH:mm')}"></span>
+                                    </small>
+                                </p>
                             </div>
 
                             <div class="order-amount">
