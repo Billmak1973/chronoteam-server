@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,47 +13,174 @@
        店鋪卡片樣式
        ========================================== */
     .store-card-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 1.5rem;
-        margin-top: 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
     }
+
     .store-card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: var(--card-shadow);
-        border: 1px solid rgba(0,0,0,0.03);
-        padding: 1.5rem;
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        transition: var(--transition);
-        position: relative;
-        overflow: hidden;
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      border: 1px solid rgba(0, 0, 0, 0.03);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
     }
-    .store-card:hover { transform: translateY(-5px); box-shadow: var(--card-hover-shadow); }
-    .store-card.hidden-store { opacity: 0.6; border: 2px dashed #e9ecef; }
-    .store-name { font-size: 1.25rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
-    .store-name i { color: var(--gold); }
-    .store-code { font-family: monospace; font-size: 0.85rem; background: #f1f3f5; color: #495057; padding: 0.2rem 0.6rem; border-radius: 4px; display: inline-block; width: fit-content; }
-    .store-info { display: flex; flex-direction: column; gap: 0.6rem; color: var(--gray); font-size: 0.95rem; flex: 1; }
-    .store-info div { display: flex; align-items: flex-start; gap: 0.6rem; }
-    .store-info i { color: var(--gold); width: 16px; text-align: center; margin-top: 3px; }
-    .store-actions { display: flex; gap: 0.8rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid #f1f3f5; }
-    .btn-store { flex: 1; padding: 0.6rem; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.9rem; }
-    .btn-edit { background: rgba(212, 175, 55, 0.1); color: var(--gold); }
-    .btn-edit:hover { background: var(--gold); color: white; }
-    .btn-toggle { background: rgba(23, 162, 184, 0.1); color: #17a2b8; }
-    .btn-toggle:hover { background: #17a2b8; color: white; }
-    .btn-toggle.is-hidden { background: rgba(108, 117, 125, 0.1); color: #6c757d; }
-    .btn-toggle.is-hidden:hover { background: #6c757d; color: white; }
-    .btn-delete { background: rgba(220, 53, 69, 0.1); color: #dc3545; }
-    .btn-delete:hover { background: #dc3545; color: white; }
-    .status-badge-store { position: absolute; top: 1rem; right: 1rem; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-    .status-active { background: rgba(40, 167, 69, 0.15); color: #28a745; }
-    .status-inactive { background: rgba(108, 117, 125, 0.15); color: #6c757d; }
-    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .modal-grid-full { grid-column: 1 / -1; }
+
+    .store-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--card-hover-shadow);
+    }
+
+    .store-card.hidden-store {
+      opacity: 0.6;
+      border: 2px dashed #e9ecef;
+    }
+
+    .store-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .store-name i {
+      color: var(--gold);
+    }
+
+    .store-code {
+      font-family: monospace;
+      font-size: 0.85rem;
+      background: #f1f3f5;
+      color: #495057;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      display: inline-block;
+      width: fit-content;
+    }
+
+    .store-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      color: var(--gray);
+      font-size: 0.95rem;
+      flex: 1;
+    }
+
+    .store-info div {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+
+    .store-info i {
+      color: var(--gold);
+      width: 16px;
+      text-align: center;
+      margin-top: 3px;
+    }
+
+    .store-actions {
+      display: flex;
+      gap: 0.8rem;
+      margin-top: auto;
+      padding-top: 1rem;
+      border-top: 1px solid #f1f3f5;
+    }
+
+    .btn-store {
+      flex: 1;
+      padding: 0.6rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      font-size: 0.9rem;
+    }
+
+    .btn-edit {
+      background: rgba(212, 175, 55, 0.1);
+      color: var(--gold);
+    }
+
+    .btn-edit:hover {
+      background: var(--gold);
+      color: white;
+    }
+
+    .btn-toggle {
+      background: rgba(23, 162, 184, 0.1);
+      color: #17a2b8;
+    }
+
+    .btn-toggle:hover {
+      background: #17a2b8;
+      color: white;
+    }
+
+    .btn-toggle.is-hidden {
+      background: rgba(108, 117, 125, 0.1);
+      color: #6c757d;
+    }
+
+    .btn-toggle.is-hidden:hover {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-delete {
+      background: rgba(220, 53, 69, 0.1);
+      color: #dc3545;
+    }
+
+    .btn-delete:hover {
+      background: #dc3545;
+      color: white;
+    }
+
+    .status-badge-store {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-active {
+      background: rgba(40, 167, 69, 0.15);
+      color: #28a745;
+    }
+
+    .status-inactive {
+      background: rgba(108, 117, 125, 0.15);
+      color: #6c757d;
+    }
+
+    .modal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .modal-grid-full {
+      grid-column: 1 / -1;
+    }
 
     /* ==========================================
        【核心修復】：編輯彈窗樣式補全
@@ -61,246 +189,699 @@
        display:none 而直接渲染在頁面上。現在補全到此頁面。
        ========================================== */
     .edit-modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
-        z-index: 2000;
-        display: none;               /* ⭐ 關鍵：默認隱藏！ */
-        justify-content: center;
-        align-items: center;
-        animation: fadeIn 0.3s ease;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      display: none;
+      /* ⭐ 關鍵：默認隱藏！ */
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.3s ease;
     }
+
     .edit-modal-box {
-        background: white;
-        border-radius: 16px;
-        width: 90%;
-        max-width: 750px;
-        max-height: 90vh;
-        overflow-y: auto;
-        padding: 2rem;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        border-top: 5px solid var(--gold);
+      background: white;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 750px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 2rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border-top: 5px solid var(--gold);
     }
+
     .edit-modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1rem;
-        border-bottom: 2px solid #f1f3f5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #f1f3f5;
     }
+
     .edit-modal-header h3 {
-        margin: 0;
-        color: var(--primary);
-        font-size: 1.4rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+      margin: 0;
+      color: var(--primary);
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .edit-modal-header h3 i { color: var(--gold); }
+
+    .edit-modal-header h3 i {
+      color: var(--gold);
+    }
+
     .modal-close-btn {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        color: var(--gray);
-        cursor: pointer;
-        transition: color 0.3s;
-        padding: 0.5rem;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--gray);
+      cursor: pointer;
+      transition: color 0.3s;
+      padding: 0.5rem;
     }
-    .modal-close-btn:hover { color: var(--accent); }
-    .form-group { margin-bottom: 1.2rem; }
+
+    .modal-close-btn:hover {
+      color: var(--accent);
+    }
+
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+
     .form-group label {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        color: var(--primary);
-        font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--primary);
+      font-size: 0.9rem;
     }
-    .form-group label i { color: var(--gold); width: 16px; text-align: center; }
+
+    .form-group label i {
+      color: var(--gold);
+      width: 16px;
+      text-align: center;
+    }
+
     .form-group input,
     .form-group select,
     .form-group textarea {
-        width: 100%;
-        padding: 0.8rem 1rem;
-        border: 2px solid #e9ecef;
-        border-radius: 8px;
-        font-size: 0.95rem;
-        font-family: inherit;
-        transition: all 0.3s ease;
-        background: #fafafa;
+      width: 100%;
+      padding: 0.8rem 1rem;
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: all 0.3s ease;
+      background: #fafafa;
     }
+
     .form-group input:focus,
     .form-group select:focus,
     .form-group textarea:focus {
-        outline: none;
-        border-color: var(--gold);
-        background: white;
-        box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+      outline: none;
+      border-color: var(--gold);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
     }
+
     .form-group small {
-        display: block;
-        margin-top: 0.4rem;
-        color: var(--gray);
-        font-size: 0.8rem;
+      display: block;
+      margin-top: 0.4rem;
+      color: var(--gray);
+      font-size: 0.8rem;
     }
+
     .modal-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-        margin-top: 2rem;
-        padding-top: 1.5rem;
-        border-top: 2px solid #f1f3f5;
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 2px solid #f1f3f5;
     }
+
     .btn-modal-cancel {
-        padding: 0.8rem 1.5rem;
-        background: #e9ecef;
-        color: var(--primary);
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s;
+      padding: 0.8rem 1.5rem;
+      background: #e9ecef;
+      color: var(--primary);
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
     }
-    .btn-modal-cancel:hover { background: #dee2e6; transform: translateY(-2px); }
+
+    .btn-modal-cancel:hover {
+      background: #dee2e6;
+      transform: translateY(-2px);
+    }
+
     .btn-modal-save {
-        padding: 0.8rem 2rem;
-        background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s;
-        box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+      padding: 0.8rem 2rem;
+      background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
-    .btn-modal-save:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4); }
-    .btn-modal-save:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .btn-modal-save:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+    }
+
+    .btn-modal-save:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
     @keyframes slideUp {
-        from { opacity: 0; transform: translateY(40px) scale(0.95); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
+      from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
+
     @media (max-width: 768px) {
-        .modal-grid { grid-template-columns: 1fr; }
-        .edit-modal-box { padding: 1.5rem; width: 95%; }
+      .modal-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .edit-modal-box {
+        padding: 1.5rem;
+        width: 95%;
+      }
+    }
+
+    /* ========================================== */
+    /*   刪除店鋪確認彈窗樣式 (精美設計) */
+    /* ========================================== */
+    .delete-store-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 10001;
+      display: none;
+      /*  默認隱藏 */
+      justify-content: center;
+      align-items: center;
+      animation: overlayFadeIn 0.3s ease;
+    }
+
+    @keyframes overlayFadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .delete-store-modal-box {
+      background: #fff;
+      width: 92%;
+      max-width: 460px;
+      border-radius: 20px;
+      padding: 2.5rem 2rem 2rem;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(220, 53, 69, 0.1);
+      border-top: 5px solid #dc3545;
+      animation: modalSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      overflow: hidden;
+    }
+
+    .delete-store-modal-box::before {
+      content: '';
+      position: absolute;
+      top: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 120px;
+      background: radial-gradient(ellipse, rgba(220, 53, 69, 0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    @keyframes modalSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .delete-store-modal-box .modal-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.2rem;
+      background: linear-gradient(135deg, #dc3545 0%, #ff6b6b 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 25px rgba(220, 53, 69, 0.35), 0 0 0 8px rgba(220, 53, 69, 0.08);
+      animation: iconPulse 2s ease-in-out infinite;
+    }
+
+    .delete-store-modal-box .modal-icon i {
+      font-size: 2.2rem;
+      color: #fff;
+    }
+
+    @keyframes iconPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 8px 25px rgba(220, 53, 69, 0.35), 0 0 0 8px rgba(220, 53, 69, 0.08);
+      }
+
+      50% {
+        box-shadow: 0 8px 30px rgba(220, 53, 69, 0.5), 0 0 0 12px rgba(220, 53, 69, 0.04);
+      }
+    }
+
+    .delete-store-modal-box .modal-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #212529;
+      margin: 0 0 0.5rem;
+    }
+
+    .delete-store-modal-box .modal-message {
+      font-size: 1rem;
+      color: #555;
+      line-height: 1.7;
+      margin: 0 0 1.2rem;
+    }
+
+    .store-name-highlight {
+      color: #dc3545;
+      font-weight: 700;
+      background: rgba(220, 53, 69, 0.08);
+      padding: 0.1rem 0.5rem;
+      border-radius: 4px;
+      font-size: 1.05em;
+    }
+
+    .delete-store-modal-box .warning-box {
+      background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+      border: 1px solid rgba(220, 53, 69, 0.15);
+      border-radius: 12px;
+      padding: 1.2rem 1rem;
+      margin: 0 auto 1.5rem;
+    }
+
+    .delete-store-modal-box .warning-box i {
+      font-size: 1.3rem;
+      color: #dc3545;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .delete-store-modal-box .warning-box p {
+      font-size: 0.9rem;
+      color: #495057;
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    .delete-store-modal-box .warning-box strong {
+      color: #dc3545;
+      font-weight: 700;
+    }
+
+    .delete-store-modal-box .modal-actions {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #f1f3f5;
+    }
+
+    .btn-cancel-store-modal {
+      padding: 0.7rem 1.8rem;
+      background: #f1f3f5;
+      color: #495057;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn-cancel-store-modal:hover {
+      background: #e9ecef;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-confirm-delete-store {
+      padding: 0.7rem 1.8rem;
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      box-shadow: 0 4px 15px rgba(220, 53, 69, 0.35);
+      letter-spacing: 0.5px;
+    }
+
+    .btn-confirm-delete-store:hover {
+      background: linear-gradient(135deg, #c82333 0%, #a71d2a 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(220, 53, 69, 0.5);
+    }
+
+    .btn-confirm-delete-store:active {
+      transform: scale(0.96);
+    }
+
+    @media (max-width: 576px) {
+      .delete-store-modal-box {
+        padding: 2rem 1.2rem 1.5rem;
+        border-radius: 16px;
+      }
+
+      .delete-store-modal-box .modal-icon {
+        width: 65px;
+        height: 65px;
+      }
+
+      .delete-store-modal-box .modal-icon i {
+        font-size: 1.8rem;
+      }
+
+      .delete-store-modal-box .modal-title {
+        font-size: 1.2rem;
+      }
+
+      .delete-store-modal-box .modal-actions {
+        flex-direction: column;
+        gap: 0.8rem;
+      }
+
+      .btn-cancel-store-modal,
+      .btn-confirm-delete-store {
+        width: 100%;
+        justify-content: center;
+      }
     }
   </style>
 </head>
-<body>
-<div th:replace="~{fragments/common :: navbar}"></div>
-<div class="admin-layout">
-  <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='stores')}"></div>
-  <main class="admin-main">
-    <div class="content-header">
-      <h2><i class="fas fa-store"></i> <span>線下店鋪管理</span></h2>
-      <button class="btn btn-primary" onclick="openAddStoreModal()" style="white-space: nowrap;">
-        <i class="fas fa-plus-circle"></i> 新增店鋪
-      </button>
-    </div>
-    <div class="content-body">
-      <div id="storeLoading" style="text-align: center; padding: 3rem; color: var(--gray);">
-        <i class="fas fa-spinner fa-spin fa-2x"></i>
-        <p style="margin-top: 1rem;">加載店鋪數據中...</p>
-      </div>
-      <div class="store-card-grid" id="storeGrid" style="display: none;"></div>
-      <div id="storeEmpty" style="display: none; text-align: center; padding: 4rem 2rem; color: var(--gray);">
-        <i class="fas fa-store-slash" style="font-size: 4rem; color: #e9ecef; margin-bottom: 1.5rem;"></i>
-        <h3>暫無線下店鋪</h3>
-        <p>點擊右上角「新增店鋪」按鈕添加您的第一家實體店鋪。</p>
-      </div>
-    </div>
-  </main>
-</div>
 
-<!-- 新增/編輯 Modal（雙保險：額外加上 inline display:none） -->
-<div id="storeModal" class="edit-modal-overlay" style="display: none;">
-  <div class="edit-modal-box" style="max-width: 600px;">
-    <div class="edit-modal-header">
-      <h3><i class="fas fa-store"></i> <span id="modalTitle">新增店鋪</span></h3>
-      <button class="modal-close-btn" onclick="closeStoreModal()">&times;</button>
+<body>
+  <div th:replace="~{fragments/common :: navbar}"></div>
+  <div class="admin-layout">
+    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='stores')}"></div>
+    <main class="admin-main">
+      <div class="content-header">
+        <h2><i class="fas fa-store"></i> <span>線下店鋪管理</span></h2>
+        <button class="btn btn-primary" onclick="openAddStoreModal()" style="white-space: nowrap;">
+          <i class="fas fa-plus-circle"></i> 新增店鋪
+        </button>
+      </div>
+      <div class="content-body">
+        <div id="storeLoading" style="text-align: center; padding: 3rem; color: var(--gray);">
+          <i class="fas fa-spinner fa-spin fa-2x"></i>
+          <p style="margin-top: 1rem;">加載店鋪數據中...</p>
+        </div>
+        <div class="store-card-grid" id="storeGrid" style="display: none;"></div>
+        <div id="storeEmpty" style="display: none; text-align: center; padding: 4rem 2rem; color: var(--gray);">
+          <i class="fas fa-store-slash" style="font-size: 4rem; color: #e9ecef; margin-bottom: 1.5rem;"></i>
+          <h3>暫無線下店鋪</h3>
+          <p>點擊右上角「新增店鋪」按鈕添加您的第一家實體店鋪。</p>
+        </div>
+      </div>
+      <footer class="admin-footer"
+        style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 12px; text-align: center; color: rgba(255,255,255,0.7);">
+        <p style="margin: 0; font-size: 0.9rem;">
+          <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+          &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
+          ChronoTeam Admin Panel. All Rights Reserved.
+        </p>
+      </footer>
+    </main>
+  </div>
+
+  <!-- 新增/編輯 Modal（雙保險：額外加上 inline display:none） -->
+  <div id="storeModal" class="edit-modal-overlay" style="display: none;">
+    <div class="edit-modal-box" style="max-width: 600px;">
+      <div class="edit-modal-header">
+        <h3><i class="fas fa-store"></i> <span id="modalTitle">新增店鋪</span></h3>
+        <button class="modal-close-btn" onclick="closeStoreModal()">&times;</button>
+      </div>
+      <form id="storeForm" onsubmit="saveStore(event)">
+        <input type="hidden" id="storeId">
+        <div class="modal-grid">
+          <div class="form-group">
+            <label><i class="fas fa-barcode"></i> 店鋪代碼 (唯一標識)</label>
+            <input type="text" id="storeCode" required placeholder="例如: store-central" pattern="[a-zA-Z0-9\-]+"
+              title="僅允許字母、數字和連字符">
+            <small style="color: var(--accent);">* 結帳系統依賴此代碼，新增後請勿隨意更改</small>
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-signature"></i> 店鋪名稱</label>
+            <input type="text" id="storeName" required placeholder="例如: 中環旗艦店">
+          </div>
+          <div class="form-group modal-grid-full">
+            <label><i class="fas fa-map-marker-alt"></i> 詳細地址</label>
+            <input type="text" id="storeAddress" required placeholder="例如: 中環皇后大道中 99 號">
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-phone"></i> 聯繫電話</label>
+            <input type="text" id="storePhone" placeholder="例如: +852 2123 4567">
+          </div>
+          <!--          <div class="form-group">-->
+          <!--            <label><i class="fas fa-clock"></i> 營業時間</label>-->
+          <!--            <input type="text" id="storeHours" placeholder="例如: 10:00 AM - 8:00 PM">-->
+          <!--          </div>-->
+          <!-- 營業時間 (修改為結構化輸入) -->
+          <div class="form-group">
+            <label><i class="fas fa-clock"></i> 營業時間</label>
+            <div
+              style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; background: #f8f9fa; padding: 0.8rem; border-radius: 8px; border: 1px solid #e9ecef;">
+
+              <!-- 開始時間 -->
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">開始:</span>
+                <input type="number" id="startHour" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" id="startMinute" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select id="startPeriod"
+                  style="padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+
+              <span style="color: var(--gray); font-weight: bold;">至</span>
+
+              <!-- 結束時間 -->
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">結束:</span>
+                <input type="number" id="endHour" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" id="endMinute" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select id="endPeriod"
+                  style="padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM" selected>PM</option>
+                </select>
+              </div>
+            </div>
+            <small style="color: var(--gray); font-size: 0.8rem; margin-top: 0.3rem; display: block;">
+              <i class="fas fa-info-circle"></i> 請選擇上午 (AM) 或下午 (PM)，時數限制 1-12，分鐘限制 0-59。
+            </small>
+          </div>
+          <!-- === 新增：退貨設置區塊 === -->
+          <div style="border-top: 1px dashed #e9ecef; margin: 1.5rem 0 1rem; padding-top: 0.5rem;">
+            <h4
+              style="font-size: 1rem; color: var(--primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-undo-alt" style="color: var(--accent);"></i> 退貨預約設置
+            </h4>
+            <div class="modal-grid">
+              <div class="form-group">
+                <label><i class="fas fa-calendar-day"></i> 最早提前預約天數</label>
+                <input type="number" id="returnAdvanceDays" min="0" placeholder="例如: 3 (0表示無限制)">
+                <small>用戶必須至少提前此天數才能預約到店退貨。</small>
+              </div>
+              <!--将这两个日期字段放在同一个网格容器中-->
+              <div class="form-group" style="grid-column: span 2;">
+                <label><i class="fas fa-calendar-alt"></i> 暫停退貨日期範圍</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <div>
+                    <input type="date" id="returnBlackoutStartDate" placeholder="開始日期">
+                  </div>
+                  <div>
+                    <input type="date" id="returnBlackoutEndDate" placeholder="結束日期">
+                  </div>
+                </div>
+              </div>
+              <!-- === 新增：每週固定休息日選擇器 === -->
+              <div class="form-group modal-grid-full">
+                <label><i class="fas fa-calendar-week"></i> 每週固定不處理退貨日</label>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                  <!-- 使用 data-val 對應 Java DayOfWeek.getValue() (1=週一, 7=週日) -->
+                  <label
+                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                    <input type="checkbox" class="closed-day-checkbox" value="1" style="margin: 0;"> 週一
+                  </label>
+                  <label
+                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                    <input type="checkbox" class="closed-day-checkbox" value="2" style="margin: 0;"> 週二
+                  </label>
+                  <label
+                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                    <input type="checkbox" class="closed-day-checkbox" value="3" style="margin: 0;"> 週三
+                  </label>
+                  <label
+                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                    <input type="checkbox" class="closed-day-checkbox" value="4" style="margin: 0;"> 週四
+                  </label>
+                  <label
+                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                    <input type="checkbox" class="closed-day-checkbox" value="5" style="margin: 0;"> 週五
+                  </label>
+                  <label
+                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                    <input type="checkbox" class="closed-day-checkbox" value="6" style="margin: 0;"> 週六
+                  </label>
+                  <label
+                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                    <input type="checkbox" class="closed-day-checkbox" value="7" style="margin: 0;"> 週日
+                  </label>
+                </div>
+                <small style="color: var(--gray); font-size: 0.8rem; margin-top: 0.3rem; display: block;">
+                  <i class="fas fa-info-circle"></i> 勾選的星期幾將無法預約到店退貨。若不勾選則表示每天都可處理。
+                </small>
+              </div>
+              <!-- === 每週固定休息日結束 === -->
+              <div class="form-group modal-grid-full">
+                <label><i class="fas fa-comment-dots"></i> 暫停退貨原因備註</label>
+                <input type="text" id="returnBlackoutReason" placeholder="例如: 農曆新年期間暫停退貨服務 或 店鋪年度盤點">
+              </div>
+            </div>
+          </div>
+          <!-- === 退貨設置區塊結束 === -->
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-modal-cancel" onclick="closeStoreModal()">取消</button>
+          <button type="submit" class="btn-modal-save" id="saveStoreBtn"><i class="fas fa-save"></i> 儲存</button>
+        </div>
+      </form>
     </div>
-    <form id="storeForm" onsubmit="saveStore(event)">
-      <input type="hidden" id="storeId">
-      <div class="modal-grid">
-        <div class="form-group">
-          <label><i class="fas fa-barcode"></i> 店鋪代碼 (唯一標識)</label>
-          <input type="text" id="storeCode" required placeholder="例如: store-central" pattern="[a-zA-Z0-9\-]+" title="僅允許字母、數字和連字符">
-          <small style="color: var(--accent);">* 結帳系統依賴此代碼，新增後請勿隨意更改</small>
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-signature"></i> 店鋪名稱</label>
-          <input type="text" id="storeName" required placeholder="例如: 中環旗艦店">
-        </div>
-        <div class="form-group modal-grid-full">
-          <label><i class="fas fa-map-marker-alt"></i> 詳細地址</label>
-          <input type="text" id="storeAddress" required placeholder="例如: 中環皇后大道中 99 號">
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-phone"></i> 聯繫電話</label>
-          <input type="text" id="storePhone" placeholder="例如: +852 2123 4567">
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-clock"></i> 營業時間</label>
-          <input type="text" id="storeHours" placeholder="例如: 10:00 AM - 8:00 PM">
+  </div>
+
+  <!-- 刪除店鋪確認彈窗 -->
+  <div id="deleteStoreModal" class="delete-store-overlay">
+    <div class="delete-store-modal-box">
+      <div class="modal-icon">
+        <i class="fas fa-trash-alt"></i>
+      </div>
+      <h3 class="modal-title">確認刪除此店鋪？</h3>
+      <div class="modal-body">
+        <p class="modal-message">
+          您確定要永久刪除店鋪 <strong id="deleteStoreNameDisplay" class="store-name-highlight"></strong> 嗎？
+        </p>
+        <div class="warning-box">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>此操作將<strong>徹底清除</strong>該店鋪的所有數據（包含退貨預約設置），且無法恢復！</p>
+          <p style="font-size: 0.85rem; color: #6c757d; margin-top: 0.5rem;">請確保該店鋪下無未完成的退貨訂單。</p>
         </div>
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn-modal-cancel" onclick="closeStoreModal()">取消</button>
-        <button type="submit" class="btn-modal-save" id="saveStoreBtn"><i class="fas fa-save"></i> 儲存</button>
+        <button class="btn-cancel-store-modal" onclick="closeDeleteStoreModal()">
+          <i class="fas fa-times"></i> 取消
+        </button>
+        <button class="btn-confirm-delete-store" onclick="confirmDeleteStore()">
+          <i class="fas fa-trash-alt"></i> 確認刪除
+        </button>
       </div>
-    </form>
+    </div>
   </div>
-</div>
 
-<div th:replace="~{fragments/common :: modals}"></div>
+  <div th:replace="~{fragments/common :: modals}"></div>
 
-<script th:inline="javascript">
-  const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-</script>
-<script src="/js/common.js"></script>
-<script src="/js/admin.js"></script>
-<script>
-  let stores = [];
-  document.addEventListener('DOMContentLoaded', loadStores);
+  <script th:inline="javascript">
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+  </script>
+  <script src="/js/common.js"></script>
+  <script src="/js/admin.js"></script>
+  <script>
+    let stores = [];
+    let pendingDeleteStoreId = null;
+    let pendingDeleteStoreName = null;
 
-  async function loadStores() {
+    document.addEventListener('DOMContentLoaded', loadStores);
+
+    async function loadStores() {
       try {
-          const res = await fetch('/admin/stores/api/list');
-          if (res.ok) { stores = await res.json(); renderStores(); }
-          else {
-              // 接口失敗時也要隱藏 loading，避免卡在加載中
-              document.getElementById('storeLoading').style.display = 'none';
-              document.getElementById('storeEmpty').style.display = 'block';
-          }
-      } catch (e) {
+        const res = await fetch('/admin/stores/api/list');
+        if (res.ok) {stores = await res.json(); renderStores();}
+        else {
+          // 接口失敗時也要隱藏 loading，避免卡在加載中
           document.getElementById('storeLoading').style.display = 'none';
           document.getElementById('storeEmpty').style.display = 'block';
-          showNotification('❌ 網絡錯誤', true);
+        }
+      } catch (e) {
+        document.getElementById('storeLoading').style.display = 'none';
+        document.getElementById('storeEmpty').style.display = 'block';
+        showNotification('❌ 網絡錯誤', true);
       }
-  }
+    }
 
-  function renderStores() {
+    function renderStores() {
       const grid = document.getElementById('storeGrid');
       const loading = document.getElementById('storeLoading');
       const empty = document.getElementById('storeEmpty');
       loading.style.display = 'none';
-      if (stores.length === 0) { grid.style.display = 'none'; empty.style.display = 'block'; return; }
+      if (stores.length === 0) {grid.style.display = 'none'; empty.style.display = 'block'; return;}
       empty.style.display = 'none'; grid.style.display = 'grid'; grid.innerHTML = '';
 
       stores.forEach(store => {
-          const card = document.createElement('div');
-          card.className = `store-card ${!store.isActive ? 'hidden-store' : ''}`;
-          card.innerHTML = `
+        const card = document.createElement('div');
+        card.className = `store-card ${!store.isActive ? 'hidden-store' : ''}`;
+        card.innerHTML = `
               <span class="status-badge-store ${store.isActive ? 'status-active' : 'status-inactive'}">
                   <i class="fas fa-${store.isActive ? 'eye' : 'eye-slash'}"></i> ${store.isActive ? '顯示中' : '已隱藏'}
               </span>
@@ -318,84 +899,262 @@
                   </button>
                   <button class="btn-store btn-delete" onclick="deleteStore(${store.storeId})"><i class="fas fa-trash-alt"></i></button>
               </div>`;
-          grid.appendChild(card);
+        grid.appendChild(card);
       });
-  }
+    }
 
-  function openAddStoreModal() {
+    function openAddStoreModal() {
       document.getElementById('modalTitle').textContent = '新增店鋪';
       document.getElementById('storeForm').reset();
       document.getElementById('storeId').value = '';
       document.getElementById('storeModal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
-  }
+    }
 
-  function openEditStoreModal(id) {
+    function openEditStoreModal(id) {
       const store = stores.find(s => s.storeId === id);
       if (!store) return;
+
       document.getElementById('modalTitle').textContent = '編輯店鋪';
       document.getElementById('storeId').value = store.storeId;
       document.getElementById('storeCode').value = store.storeCode;
       document.getElementById('storeName').value = store.name;
       document.getElementById('storeAddress').value = store.address;
       document.getElementById('storePhone').value = store.phone || '';
-      document.getElementById('storeHours').value = store.hours || '';
+
+      // === 新增：解析營業時間並填充 ===
+      if (store.hours) {
+        // 假設後端格式為 "10:00 AM - 8:00 PM"
+        const parts = store.hours.split(' - ');
+        if (parts.length === 2) {
+          const startParts = parts[0].trim().split(' '); // ["10:00", "AM"]
+          const endParts = parts[1].trim().split(' ');   // ["8:00", "PM"]
+
+          if (startParts.length === 2) {
+            const startTime = startParts[0].split(':');
+            document.getElementById('startHour').value = startTime[0];
+            document.getElementById('startMinute').value = startTime[1] || '00'; // 容錯補零
+            document.getElementById('startPeriod').value = startParts[1];
+          }
+          if (endParts.length === 2) {
+            const endTime = endParts[0].split(':');
+            document.getElementById('endHour').value = endTime[0];
+            document.getElementById('endMinute').value = endTime[1] || '00'; // 容錯補零
+            document.getElementById('endPeriod').value = endParts[1];
+          }
+        }
+      }
+      // ==============================
+
+      document.getElementById('returnAdvanceDays').value = (store.returnAdvanceDays !== null && store.returnAdvanceDays !== undefined) ? store.returnAdvanceDays : '';
+      document.getElementById('returnBlackoutStartDate').value = store.returnBlackoutStartDate ? store.returnBlackoutStartDate.substring(0, 10) : '';
+      document.getElementById('returnBlackoutEndDate').value = store.returnBlackoutEndDate ? store.returnBlackoutEndDate.substring(0, 10) : '';
+      document.getElementById('returnBlackoutReason').value = store.returnBlackoutReason || '';
+
+      const checkboxes = document.querySelectorAll('.closed-day-checkbox');
+      checkboxes.forEach(cb => cb.checked = false); // 先全部取消
+
+      if (store.returnClosedDaysOfWeek) {
+        // 將 "1,3,7" 轉換為數組 ["1", "3", "7"]
+        const closedDays = String(store.returnClosedDaysOfWeek).split(',').map(d => d.trim());
+        checkboxes.forEach(cb => {
+          if (closedDays.includes(cb.value)) {
+            cb.checked = true;
+          }
+        });
+      }
+
       document.getElementById('storeModal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
-  }
+    }
 
-  function closeStoreModal() {
+    function closeStoreModal() {
       document.getElementById('storeModal').style.display = 'none';
       document.body.style.overflow = '';
-  }
+    }
 
-  async function saveStore(e) {
+
+    async function saveStore(e) {
       e.preventDefault();
+
+      const checkedBoxes = Array.from(document.querySelectorAll('.closed-day-checkbox:checked'));
+      const closedDaysString = checkedBoxes.length > 0
+        ? checkedBoxes.map(cb => cb.value).join(',')
+        : null;
+
+      // === 處理營業時間拼湊與驗證 ===
+      const startH = document.getElementById('startHour').value;
+      const startM = document.getElementById('startMinute').value || '00';
+      const startP = document.getElementById('startPeriod').value;
+      const endH = document.getElementById('endHour').value;
+      const endM = document.getElementById('endMinute').value || '00';
+      const endP = document.getElementById('endPeriod').value;
+
+      // 1. 簡單驗證：是否填寫完整
+      if (!startH || !endH) {
+        showNotification('❌ 請填寫完整的營業時間', true);
+        return;
+      }
+
+      // 2. 【核心輔助】：將時間轉換為 24 小時制的分鐘數，方便精確比較
+      function timeToMinutes(h, m, p) {
+        let hour = parseInt(h);
+        let min = parseInt(m);
+        // 如果是 PM 且不是 12 點，則加上 12 小時 (例如 1 PM = 13)
+        if (p === 'PM' && hour !== 12) {
+          hour += 12;
+        }
+        // 如果是 AM 且是 12 點，則視為 0 點 (午夜)
+        else if (p === 'AM' && hour === 12) {
+          hour = 0;
+        }
+        return hour * 60 + min;
+      }
+
+      const startMinutes = timeToMinutes(startH, startM, startP);
+      const endMinutes = timeToMinutes(endH, endM, endP);
+
+      // 3. 【核心修正】：只有當「同為 AM」或「同為 PM」時，才強制要求結束時間必須晚於開始時間
+      // (如果是 PM 到 AM，則視為跨天營業，直接允許通過，不作攔截)
+      if (startP === endP) {
+        if (startMinutes >= endMinutes) {
+          showNotification('❌ 同為 AM 或 PM 時，結束時間必須晚於開始時間！', true);
+          return;
+        }
+      }
+
+      // 4. 格式化分鐘 (補零)
+      const formattedStartM = startM.padStart(2, '0');
+      const formattedEndM = endM.padStart(2, '0');
+
+      // 5. 拼湊成後端需要的格式: "10:00 AM - 8:00 PM"
+      const hoursString = `${startH}:${formattedStartM} ${startP} - ${endH}:${formattedEndM} ${endP}`;
+      // ==============================
+
       const id = document.getElementById('storeId').value;
       const payload = {
-          storeCode: document.getElementById('storeCode').value.trim(),
-          name: document.getElementById('storeName').value.trim(),
-          address: document.getElementById('storeAddress').value.trim(),
-          phone: document.getElementById('storePhone').value.trim(),
-          hours: document.getElementById('storeHours').value.trim()
+        storeCode: document.getElementById('storeCode').value.trim(),
+        name: document.getElementById('storeName').value.trim(),
+        address: document.getElementById('storeAddress').value.trim(),
+        phone: document.getElementById('storePhone').value.trim(),
+        hours: hoursString, // 使用驗證並拼湊後的字符串
+        returnAdvanceDays: document.getElementById('returnAdvanceDays').value ? parseInt(document.getElementById('returnAdvanceDays').value) : null,
+        returnBlackoutStartDate: document.getElementById('returnBlackoutStartDate').value || null,
+        returnBlackoutEndDate: document.getElementById('returnBlackoutEndDate').value || null,
+        returnBlackoutReason: document.getElementById('returnBlackoutReason').value.trim() || null,
+        returnClosedDaysOfWeek: closedDaysString
       };
+
       const btn = document.getElementById('saveStoreBtn');
       const originalText = btn.innerHTML;
-      btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 儲存中...';
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 儲存中...';
+
       try {
-          const url = id ? `/admin/stores/api/update/${id}` : '/admin/stores/api/add';
-          const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-          const result = await res.json();
-          if (res.ok) { showNotification('✅ ' + result.message); closeStoreModal(); loadStores(); }
-          else { showNotification('❌ ' + (result.message || '操作失敗'), true); }
-      } catch (err) { showNotification('❌ 網絡錯誤', true); }
-      finally { btn.disabled = false; btn.innerHTML = originalText; }
-  }
+        const url = id ? `/admin/stores/api/update/${id}` : '/admin/stores/api/add';
+        const res = await fetch(url, {
+          method: id ? 'PUT' : 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
 
-  async function toggleStore(id) {
-      const res = await fetch(`/admin/stores/api/toggle/${id}`, { method: 'PUT' });
-      const result = await res.json();
-      if (res.ok) { showNotification('✅ ' + result.message); loadStores(); }
-      else { showNotification('❌ ' + (result.message || '操作失敗'), true); }
-  }
-
-  async function deleteStore(id) {
-      if (!confirm('確定要永久刪除此店鋪嗎？')) return;
-      const res = await fetch(`/admin/stores/api/delete/${id}`, { method: 'DELETE' });
-      const result = await res.json();
-      if (res.ok) { showNotification('✅ ' + result.message); loadStores(); }
-      else { showNotification('❌ ' + (result.message || '刪除失敗'), true); }
-  }
-
-  // 點擊遮罩層關閉
-  document.getElementById('storeModal')?.addEventListener('click', function(e) { if (e.target === this) closeStoreModal(); });
-  // ESC 鍵關閉
-  document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-          const modal = document.getElementById('storeModal');
-          if (modal && modal.style.display === 'flex') closeStoreModal();
+        if (res.ok) {
+          showNotification('✅ ' + result.message);
+          closeStoreModal();
+          loadStores();
+        } else {
+          showNotification('❌ ' + (result.message || '操作失敗'), true);
+        }
+      } catch (err) {
+        showNotification('❌ 網絡錯誤', true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
       }
-  });
-</script>
+    }
+
+    async function toggleStore(id) {
+      const res = await fetch(`/admin/stores/api/toggle/${id}`, {method: 'PUT'});
+      const result = await res.json();
+      if (res.ok) {showNotification('✅ ' + result.message); loadStores();}
+      else {showNotification('❌ ' + (result.message || '操作失敗'), true);}
+    }
+
+    function openDeleteStoreModal(id) {
+      const store = stores.find(s => s.storeId === id);
+      if (!store) return;
+
+      pendingDeleteStoreId = id;
+      pendingDeleteStoreName = store.name;
+
+      document.getElementById('deleteStoreNameDisplay').textContent = pendingDeleteStoreName;
+      document.getElementById('deleteStoreModal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDeleteStoreModal() {
+      document.getElementById('deleteStoreModal').style.display = 'none';
+      document.body.style.overflow = '';
+      pendingDeleteStoreId = null;
+      pendingDeleteStoreName = null;
+    }
+
+    async function confirmDeleteStore() {
+      if (!pendingDeleteStoreId) return;
+
+      const id = pendingDeleteStoreId;
+      closeDeleteStoreModal(); // 先關閉彈窗
+
+      try {
+        const res = await fetch(`/admin/stores/api/delete/${id}`, {method: 'DELETE'});
+        const result = await res.json();
+        if (res.ok) {
+          showNotification('✅ ' + result.message);
+          loadStores(); // 重新加載列表
+        } else {
+          showNotification('❌ ' + (result.message || '刪除失敗'), true);
+        }
+      } catch (err) {
+        showNotification('❌ 網絡錯誤', true);
+      }
+    }
+
+    // 原本的 deleteStore 函數修改為打開彈窗
+    function deleteStore(id) {
+      openDeleteStoreModal(id);
+    }
+
+
+    // ==========================================
+    // 全局事件監聽 (補充了你需要的遮罩層和 ESC 鍵關閉邏輯)
+    // ==========================================
+
+    // 1. 點擊遮罩層關閉「新增/編輯」彈窗
+    document.getElementById('storeModal')?.addEventListener('click', function (e) {
+      if (e.target === this) closeStoreModal();
+    });
+
+    // 2. 點擊遮罩層關閉「刪除確認」彈窗 (你要求的補充)
+    document.getElementById('deleteStoreModal')?.addEventListener('click', function (e) {
+      if (e.target === this) closeDeleteStoreModal();
+    });
+
+    // 3. ESC 鍵關閉彈窗 (整合了兩個彈窗的判斷)
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        const storeModal = document.getElementById('storeModal');
+        if (storeModal && storeModal.style.display === 'flex') {
+          closeStoreModal();
+        }
+
+        const deleteModal = document.getElementById('deleteStoreModal');
+        if (deleteModal && deleteModal.style.display === 'flex') {
+          closeDeleteStoreModal();
+        }
+      }
+    });
+  </script>
 </body>
+
 </html>

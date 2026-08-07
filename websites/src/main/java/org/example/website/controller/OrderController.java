@@ -115,4 +115,21 @@ public class OrderController {
             return ResponseEntity.internalServerError().body(ApiResponse.error("系统错误，删除失败"));
         }
     }
+
+    /**
+     * 確認門店取貨 API (匹配前端 /api/order/{orderNo}/pickup)
+     */
+    @PostMapping("/{orderNo}/pickup")
+    public ResponseEntity<?> confirmPickup(
+            @PathVariable String orderNo,
+            Authentication authentication) {
+
+        // 獲取當前登錄用戶名
+        String currentUsername = authentication.getName();
+
+        // 調用 Service 層執行取貨邏輯
+        orderService.confirmPickup(orderNo, currentUsername);
+
+        return ResponseEntity.ok(ApiResponse.ok("確認收貨成功，訂單狀態已更新為已完成！"));
+    }
 }

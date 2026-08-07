@@ -85,6 +85,11 @@ public class AdminStoreController {
         store.setAddress(storeDetails.getAddress());
         store.setPhone(storeDetails.getPhone());
         store.setHours(storeDetails.getHours());
+        store.setReturnAdvanceDays(storeDetails.getReturnAdvanceDays());
+        store.setReturnBlackoutStartDate(storeDetails.getReturnBlackoutStartDate());
+        store.setReturnBlackoutEndDate(storeDetails.getReturnBlackoutEndDate());
+        store.setReturnBlackoutReason(storeDetails.getReturnBlackoutReason());
+        store.setReturnClosedDaysOfWeek(storeDetails.getReturnClosedDaysOfWeek());
 
         storeRepository.save(store);
         return ResponseEntity.ok(ApiResponse.ok("店鋪更新成功"));

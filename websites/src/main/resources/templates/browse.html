@@ -226,6 +226,7 @@
                 left: 0;
             }
         }
+
         .footer {
             background: var(--primary);
             color: rgba(255, 255, 255, 0.7);
@@ -403,7 +404,7 @@
             </div>
 
             <!-- 分頁 -->
-            <div class="pagination" th:if="${totalPages > 1}">
+            <div class="pagination">
                 <!-- 上一頁 -->
                 <a th:if="${currentPage > 1}" th:href="@{/browse(page=${currentPage - 1}, ${currentFilters})}">
                     <i class="fas fa-chevron-left"></i> 上一頁
@@ -431,7 +432,7 @@
 
     <!--  5. 注入後端登入狀態變量 (必須在 common.js 之前) -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
 
     <!--  6. 引入公共 JS (包含購物車下拉、加入購物車、登入/登出邏輯等) -->
@@ -473,7 +474,7 @@
                 // 2. 調用後端 API 切換狀態
                 const response = await fetch(`/api/favorites/toggle/${productId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: {'Content-Type': 'application/json'}
                 });
 
                 const result = await response.json();

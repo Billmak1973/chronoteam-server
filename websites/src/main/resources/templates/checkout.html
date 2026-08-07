@@ -1568,11 +1568,14 @@
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">
                     <i class="fas fa-map-marker-alt" style="color: var(--gold); margin-right: 0.5rem;"></i> 選擇取貨/支付店鋪：
                 </label>
+
                 <select id="storeSelect" name="storeId" onchange="updateStoreInfo()">
                     <option value="">請選擇店鋪</option>
-                    <option value="store-central">中環皇后大道中 99 號店</option>
-                    <option value="store-tsimsatsui">尖沙咀廣東道 88 號店</option>
-                    <option value="store-causeway">銅鑼灣軒尼詩道 500 號店</option>
+                    <!-- 將 th:value 改為 store.storeId，這樣前端傳給後端的就是數字 ID (如 "1", "2") -->
+                    <option th:each="store : ${activeStores}" th:value="${store.storeId}" th:data-name="${store.name}"
+                        th:data-address="${store.address}" th:data-phone="${store.phone}" th:data-hours="${store.hours}"
+                        th:text="${store.name + ' - ' + store.address}">
+                    </option>
                 </select>
 
                 <div id="storeInfo" class="store-info" style="display: none;">
@@ -1812,10 +1815,10 @@
     </div>
 
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
         //  接收後端傳來的動態配置
-        const baseShippingFee = [[${ shippingFee }]];
-        const freeShippingThreshold = [[${ freeShippingThreshold }]];
+        const baseShippingFee = [[${shippingFee}]];
+        const freeShippingThreshold = [[${freeShippingThreshold}]];
         // ==========================================
         // 1. 删除商品功能 - 改为调用订单删除 API
         // ==========================================
@@ -1844,7 +1847,7 @@
 
             setTimeout(async () => {
                 try {
-                    const response = await fetch(`/checkout/api/remove-item/${orderItemId}`, { method: 'DELETE' });
+                    const response = await fetch(`/checkout/api/remove-item/${orderItemId}`, {method: 'DELETE'});
                     const result = await response.json();
 
                     if (response.ok && result.success) {
@@ -2171,7 +2174,7 @@
             }
 
             try {
-                const response = await fetch(`/checkout/api/update-item/${orderItemId}?quantity=${newQty}`, { method: 'PUT' });
+                const response = await fetch(`/checkout/api/update-item/${orderItemId}?quantity=${newQty}`, {method: 'PUT'});
                 const result = await response.json();
 
                 if (response.ok && result.success) {
@@ -2216,7 +2219,7 @@
 
         // 格式化价格辅助函数 (保留原有的)
         function formatPrice(price) {
-            return new Intl.NumberFormat('zh-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
+            return new Intl.NumberFormat('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(price);
         }
 
         // ==========================================
@@ -2343,7 +2346,7 @@
                     const isOnline = document.getElementById('pay-online')?.checked;
                     const icon = isOnline ? 'fa-credit-card' : 'fa-store';
                     const text = isOnline ? '確認線上支付' : '確認訂單（到店支付）';
-                    confirmBtn.innerHTML = `<i class="fas ${icon}"></i> ${text} HK$ ${totalAmount.toLocaleString('zh-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    confirmBtn.innerHTML = `<i class="fas ${icon}"></i> ${text} HK$ ${totalAmount.toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                 }
             }
 
@@ -2418,24 +2421,15 @@
         // ==========================================
         // 5. 店鋪信息與支付方式切換
         // ==========================================
-        const storeData = {
-            'store-central': { name: '中環店', address: '中環皇后大道中 99 號', phone: '+852 2123 4567', hours: '10:00 AM - 8:00 PM', tips: ['訂單確認後，請前往選定店鋪支付', '店鋪保留訂單 7 天，逾期自動取消', '支付完成後，店員會即時更新訂單狀態', '請出示訂單編號給店員'] },
-            'store-tsimsatsui': { name: '尖沙咀店', address: '尖沙咀廣東道 88 號', phone: '+852 2234 5678', hours: '11:00 AM - 9:00 PM', tips: ['訂單確認後，請前往選定店鋪支付', '店鋪保留訂單 7 天，逾期自動取消', '支付完成後，店員會即時更新訂單狀態', '請出示訂單編號給店員'] },
-            'store-causeway': { name: '銅鑼灣店', address: '銅鑼灣軒尼詩道 500 號', phone: '+852 2345 6789', hours: '12:00 PM - 10:00 PM', tips: ['訂單確認後，請前往選定店鋪支付', '店鋪保留訂單 7 天，逾期自動取消', '支付完成後，店員會即時更新訂單狀態', '請出示訂單編號給店員'] }
-        };
-
-        // 切換支付方式 (線上/線下)
+        // 切換支付方式 (線上/線下) — 此函數不變，保留原樣
         function togglePaymentMethod() {
             const isOnline = document.getElementById('pay-online').checked;
             const deliverySection = document.getElementById('deliveryMethodSection');
 
             if (isOnline) {
-                // 線上支付：顯示配送方式區塊
                 deliverySection.style.display = 'block';
-                // 根據當前選擇的配送方式決定是否顯示店鋪選擇
                 toggleDeliveryMethod();
             } else {
-                // 線下支付：隱藏配送方式區塊，強制顯示店鋪選擇
                 deliverySection.style.display = 'none';
                 document.getElementById('storeSelection').style.display = 'block';
             }
@@ -2450,42 +2444,56 @@
             updateTotal();
         }
 
-        // 新增：切換配送方式 (快遞/門店自取)
+        // 切換配送方式 (快遞/門店自取) — 此函數不變，保留原樣
         function toggleDeliveryMethod() {
             const isExpress = document.getElementById('delivery-express').checked;
             const storeSelection = document.getElementById('storeSelection');
 
             if (isExpress) {
-                // 快遞配送：隱藏店鋪選擇
                 storeSelection.style.display = 'none';
             } else {
-                // 門店自取：顯示店鋪選擇
                 storeSelection.style.display = 'block';
             }
-            // 切换配送方式后，必须重新计算总价（清除或添加快递费）
             updateTotal();
         }
 
+        //  重寫：從 <option> 的 data-* 屬性動態讀取店鋪信息
         function updateStoreInfo() {
-            const storeId = document.getElementById('storeSelect').value;
+            const select = document.getElementById('storeSelect');
+            const selectedOption = select.options[select.selectedIndex];
             const storeInfo = document.getElementById('storeInfo');
             const storeInfoList = document.getElementById('storeInfoList');
 
-            if (storeId && storeData[storeId]) {
-                const store = storeData[storeId];
-                storeInfoList.innerHTML = `
-        <li><strong>店鋪：</strong>${store.name}</li>
-        <li><strong>地址：</strong>${store.address}</li>
-        <li><strong>電話：</strong>${store.phone}</li>
-        <li><strong>營業時間：</strong>${store.hours}</li>
+            // 沒有選擇有效店鋪時隱藏信息面板
+            if (!selectedOption || !selectedOption.value) {
+                storeInfo.style.display = 'none';
+                return;
+            }
+
+            // 從 data-* 屬性讀取數據
+            const name = selectedOption.getAttribute('data-name') || '';
+            const address = selectedOption.getAttribute('data-address') || '';
+            const phone = selectedOption.getAttribute('data-phone') || '未提供';
+            const hours = selectedOption.getAttribute('data-hours') || '未提供';
+
+            // 通用注意事項（所有店鋪共用）
+            const tips = [
+                '訂單確認後，請前往選定店鋪支付',
+                '店鋪保留訂單 7 天，逾期自動取消',
+                '支付完成後，店員會即時更新訂單狀態',
+                '請出示訂單編號給店員'
+            ];
+
+            storeInfoList.innerHTML = `
+        <li><strong>店鋪：</strong>${name}</li>
+        <li><strong>地址：</strong>${address}</li>
+        <li><strong>電話：</strong>${phone}</li>
+        <li><strong>營業時間：</strong>${hours}</li>
         <li style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(133, 100, 4, 0.3);">
             <strong>注意事項：</strong>
-            <ul style="margin-top: 0.3rem;">${store.tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
+            <ul style="margin-top: 0.3rem;">${tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
         </li>`;
-                storeInfo.style.display = 'block';
-            } else {
-                storeInfo.style.display = 'none';
-            }
+            storeInfo.style.display = 'block';
         }
 
         // ==========================================
@@ -2505,7 +2513,7 @@
 
                 // 如果購買數量大於庫存，加入異常列表
                 if (quantity > stock) {
-                    outOfStockItems.push({ name, stock });
+                    outOfStockItems.push({name, stock});
                 }
             });
 
@@ -2559,7 +2567,7 @@
                     await new Promise(resolve => setTimeout(resolve, 1500));
                     const response = await fetch('/checkout/api/pay', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
                             orderNo: orderNo,
                             amount: amount,
@@ -2582,7 +2590,7 @@
                     // 線下支付邏輯
                     const response = await fetch('/checkout/api/offline-payment', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
                             orderNo: orderNo,
                             storeId: storeId,
@@ -2591,6 +2599,9 @@
                     });
                     const result = await response.json();
                     if (response.ok && result.success) {
+                        // 標記支付已完成，解除離開攔截
+                        isPaymentCompleted = true;
+                        allowExit = true;
                         window.location.replace(`/checkout/offline-success?orderNo=${orderNo}&storeId=${storeId}`);
                     } else {
                         btn.disabled = false;
@@ -2642,7 +2653,7 @@
             try {
                 const response = await fetch(`/api/order/${pendingDeleteOrderNo}`, {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     credentials: 'same-origin'
                 });
 
@@ -2923,7 +2934,7 @@
                     countdownElement.textContent = `${days}日${hours}時${minutes}分${seconds}秒`;
 
                     // 格式化发货日期
-                    const options = { month: 'long', day: 'numeric', weekday: 'long' };
+                    const options = {month: 'long', day: 'numeric', weekday: 'long'};
                     shippingDateElement.textContent = shippingDate.toLocaleDateString('zh-TW', options);
                 } else {
                     countdownElement.textContent = '已截止';

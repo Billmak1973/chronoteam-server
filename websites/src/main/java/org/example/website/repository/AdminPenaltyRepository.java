@@ -44,4 +44,16 @@ public interface AdminPenaltyRepository extends JpaRepository<AdminPenalty, Long
     // 根據類型和狀態組合分頁查詢
     Page<AdminPenalty> findByTypeAndStatus(AdminPenalty.PenaltyType type, AdminPenalty.PenaltyStatus status, Pageable pageable);
 
+
+    // 1. 僅按用戶名查詢
+    Page<AdminPenalty> findByTargetUser_Username(String username, Pageable pageable);
+
+    // 2. 按用戶名 + 類型查詢
+    Page<AdminPenalty> findByTargetUser_UsernameAndType(String username, AdminPenalty.PenaltyType type, Pageable pageable);
+
+    // 3. 按用戶名 + 狀態查詢
+    Page<AdminPenalty> findByTargetUser_UsernameAndStatus(String username, AdminPenalty.PenaltyStatus status, Pageable pageable);
+
+    // 4. 按用戶名 + 類型 + 狀態查詢
+    Page<AdminPenalty> findByTargetUser_UsernameAndTypeAndStatus(String username, AdminPenalty.PenaltyType type, AdminPenalty.PenaltyStatus status, Pageable pageable);
 }

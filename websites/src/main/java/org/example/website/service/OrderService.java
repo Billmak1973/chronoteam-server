@@ -27,6 +27,9 @@ public class OrderService {
     private final QuarterlySalesReportService quarterlySalesReportService;
     private final QuarterlySalesReportRepository quarterlySalesReportRepository;
     private final DailyBusinessReportRepository dailyBusinessReportRepository;
+    private final OfflineStoreRepository offlineStoreRepository;
+
+
     /**
      * 1. 創建訂單 (移除庫存扣減，僅校驗庫存是否充足)
      */
@@ -99,7 +102,7 @@ public class OrderService {
      * 2. 線上模擬支付處理 (支付成功後扣減庫存，並正確處理運費)
      */
     @Transactional
-    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount, String deliveryMethod,String storeId) {
+    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount, String deliveryMethod,Long storeId) {
         // 1. 查詢訂單並校驗權限
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
@@ -138,8 +141,11 @@ public class OrderService {
         order.setDelivery("EXPRESS".equals(deliveryMethod)); // 如果是快遞配送，delivery=true；門店自取=false
 
         //  如果是門店自取，且前端傳來了有效的 storeId，則保存到數據庫
-        if ("STORE_PICKUP".equals(deliveryMethod) && storeId != null && !storeId.trim().isEmpty()) {
-            order.setOfflineStoreId(storeId);
+        // 如果是门店自取，并且传入了 storeId
+        if ("STORE_PICKUP".equals(deliveryMethod) && storeId != null) {
+            OfflineStore store = offlineStoreRepository.findById(storeId)
+                    .orElseThrow(() -> new RuntimeException("门店不存在"));
+            order.setOfflineStore(store);
         }
 
         // 8. 【新增】設置發貨截止時間（當前時間 ）
@@ -173,7 +179,7 @@ public class OrderService {
             );
 
         }
-            // 10. 更新每日業務報表
+        // 10. 更新每日業務報表
         dailyBusinessReportService.updateDailyReport(savedOrder);
 
         return savedOrder;
@@ -199,9 +205,12 @@ public class OrderService {
      * 4. 處理線下支付邏輯 (確認線下支付訂單後扣減庫存)
      */
     @Transactional
-    public Order processOfflinePayment(String orderNo, String username, String storeId,String deliveryMethod) {
+    public Order processOfflinePayment(String orderNo, String username, Long storeId,String deliveryMethod) {
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
+
+        OfflineStore store = offlineStoreRepository.findById(storeId)
+                .orElseThrow(() -> new RuntimeException("门店不存在"));
 
         if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID) {
             throw new RuntimeException("訂單狀態異常，無法更改支付方式。當前狀態: " + order.getPaymentStatus());
@@ -209,7 +218,7 @@ public class OrderService {
 
         order.setPaymentStatus(Order.PaymentStatus.PENDING_OFFLINE);
         order.setPaymentMethod("OFFLINE_STORE");
-        order.setOfflineStoreId(storeId);
+        order.setOfflineStore(store);
 
         order.setDeliveryMethod("STORE_PICKUP");
         order.setDelivery(false); // 線下支付=門店自取，delivery=false
@@ -474,5 +483,86 @@ public class OrderService {
 
         // 4. 保存更新到數據庫
         orderRepository.save(order);
+    }
+
+    @Transactional
+    public void confirmPickup(String orderNo, String currentUserUsername) {
+        // 1. 判斷當前用戶是否是管理員
+        User currentUser = userRepository.findByUsername(currentUserUsername)
+                .orElseThrow(() -> new RuntimeException("用戶不存在"));
+
+        boolean isAdmin = currentUser.getRole()== User.Role.ADMIN;
+
+        Order order;
+        if (isAdmin) {
+            // 管理員：只校驗訂單號是否存在
+            order = orderRepository.findByOrderNo(orderNo)
+                    .orElseThrow(() -> new RuntimeException("訂單不存在"));
+        } else {
+            // 普通用戶：校驗訂單號和用戶名（只能確認自己的訂單）
+            order = orderRepository.findByOrderNoAndUser_Username(orderNo, currentUserUsername)
+                    .orElseThrow(() -> new RuntimeException("訂單不存在或無權操作"));
+        }
+
+        // 2. 核心校驗：必須是門店自取
+        if (!"STORE_PICKUP".equals(order.getDeliveryMethod())) {
+            throw new RuntimeException("此訂單非門店自取，無法執行取貨操作");
+        }
+
+        // 3. 記錄實際收貨時間
+        LocalDateTime now = LocalDateTime.now();
+        order.setReceivedAt(now);
+
+        // 標記是否需要更新報表（防止已付款訂單在取貨時重複計算）
+        boolean shouldUpdateReport = false;
+
+        // 4. 根據當前支付狀態執行不同邏輯
+        if (order.getPaymentStatus() == Order.PaymentStatus.PENDING_OFFLINE) {
+            // 情況 A：待線下付款 -> 變為已線下付款，訂單直接完成
+            // 【關鍵】此時才真正產生銷售，需要更新報表
+            order.setPaidAt(now);
+            order.setPaymentStatus(Order.PaymentStatus.PAID_OFFLINE);
+
+            order.setStatus(Order.OrderStatus.COMPLETED);
+            shouldUpdateReport = true;
+
+        } else if (order.getPaymentStatus() == Order.PaymentStatus.PAID_SIMULATED ||
+                order.getPaymentStatus() == Order.PaymentStatus.PAID_REAL ||
+                order.getPaymentStatus() == Order.PaymentStatus.PAID_OFFLINE) {
+            // 情況 B：已付款狀態 -> 僅將訂單狀態改為已完成
+            // 【關鍵】報表已在支付成功時記錄過，此處不可重複記錄！
+            order.setStatus(Order.OrderStatus.COMPLETED);
+            shouldUpdateReport = false;
+
+        } else {
+            throw new RuntimeException("當前訂單狀態不允許執行取貨操作");
+        }
+
+        // 5. 保存訂單狀態更新
+        orderRepository.save(order);
+
+        // 6. 【新增】如果需要，更新業務報表 (僅針對情況 A：待線下付款轉為已完成)
+        if (shouldUpdateReport) {
+            // 6.1 更新每日業務報表 (自動處理: total_gmv += totalAmount, total_orders += 1, total_items_sold += 訂單內所有物品數量總和)
+            dailyBusinessReportService.updateDailyReport(order);
+
+            // 6.2 更新季度銷售報表 (根據 product_id, quarter, unit_price 匹配並累加 quantity 和 total_amount)
+            for (OrderItem item : order.getItems()) {
+                Product product = item.getProduct();
+                // 計算該商品的總成交額
+                BigDecimal itemTotalAmount = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+
+                // 調用現有的 recordSale 方法，它內部已經完美實現了：
+                // "根據年份、季度、商品ID和單價查找，若存在則累加 quantity 和 totalAmount，若不存在則新建"
+                quarterlySalesReportService.recordSale(
+                        product.getProductId(),
+                        product.getDescription(), // productName 快照
+                        product.getBrand(),       // brand 快照
+                        product.getPrice(),       // unitPrice
+                        item.getQuantity(),       // quantity
+                        itemTotalAmount           // totalAmount
+                );
+            }
+        }
     }
 }

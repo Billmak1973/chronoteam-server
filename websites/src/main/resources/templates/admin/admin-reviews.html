@@ -1813,10 +1813,14 @@
 
 <body>
     <!-- 1. 引入公共導航欄 -->
+    <!--引入全站統一的頂部導航欄 Fragment。-->
+    <!-- Logo、首頁/瀏覽商品鏈接、登入/註冊按鈕（未登入時）、用戶下拉菜單與購物車下拉菜單（已登入時）。-->
     <div th:replace="~{fragments/common :: navbar}"></div>
 
     <div class="admin-layout">
         <!-- 2. 引入左側邊欄 (activePage='reviews' 用於高亮菜單) -->
+        <!-- 引入管理後台左側菜單欄 Fragment，並傳遞參數高亮當前頁面-->
+        <!-- 管理後台通常有幾十個頁面，側邊欄結構複雜且頻繁變動。通過 Fragment + 參數化高亮，新增一個後台頁面時只需在主內容區寫業務代碼，側邊欄無需任何修改即可自動適配。-->
         <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='reviews')}"></div>
 
         <!-- 3. 右側主內容區 -->
@@ -2650,11 +2654,16 @@
 
     <!-- 2. 注入登入狀態變量 (必須在 common.js 之前，否則 common.js 會報 isLoggedIn 未定義錯誤) -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
 
     <!-- 3. 引入公共 JS -->
+    <!--加載全站公共 JavaScript 邏輯。-->
+    <!--根據你提供的知識庫，這個文件包含了購物車操作（加入/刪除/更新數量）、登入/註冊彈窗控制、登出確認、全局通知提示 (showNotification)、未讀消息紅點刷新等。-->
     <script src="/js/common.js"></script>
+
+    <!-- 加載管理後台專屬的 JavaScript 邏輯。-->
+    <!-- 側邊欄菜單的展開/收起交互、管理員專用的表格操作、後台特定的 AJAX 請求封裝、權限校驗輔助函數等。-->
     <script src="/js/admin.js"></script>
 
     <script>
@@ -2662,9 +2671,9 @@
         // 0. 全局變量聲明 (核心狀態與彈窗狀態)
         // ==========================================
         const tabState = {
-            reviews: { page: 0, size: 25, username: '', reviewType: 'all', keywordMode: 'no' },
-            archives: { page: 0, size: 25, author: '', deletedBy: '' },
-            reports: { page: 0, size: 25, reporter: '', reportedUser: '' }
+            reviews: {page: 0, size: 25, username: '', reviewType: 'all', keywordMode: 'no'},
+            archives: {page: 0, size: 25, author: '', deletedBy: ''},
+            reports: {page: 0, size: 25, reporter: '', reportedUser: ''}
         };
 
         let currentActiveTab = 'reviews'; // 默認激活的 Tab
@@ -2692,36 +2701,36 @@
         function toggleUserSearch() {
             const mode = document.getElementById('userFilterMode').value;
             const input = document.getElementById('userSearchInput');
-            if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
-            else { input.style.display = 'none'; input.value = ''; }
+            if (mode === 'specific') {input.style.display = 'block'; input.focus();}
+            else {input.style.display = 'none'; input.value = '';}
         }
 
         function toggleArchiveAuthorSearch() {
             const mode = document.getElementById('archiveAuthorFilterMode').value;
             const input = document.getElementById('archiveAuthorSearchInput');
-            if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
-            else { input.style.display = 'none'; input.value = ''; }
+            if (mode === 'specific') {input.style.display = 'block'; input.focus();}
+            else {input.style.display = 'none'; input.value = '';}
         }
 
         function toggleArchiveDeletedBySearch() {
             const mode = document.getElementById('archiveDeletedByFilterMode').value;
             const input = document.getElementById('archiveDeletedBySearchInput');
-            if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
-            else { input.style.display = 'none'; input.value = ''; }
+            if (mode === 'specific') {input.style.display = 'block'; input.focus();}
+            else {input.style.display = 'none'; input.value = '';}
         }
 
         function toggleReporterSearch() {
             const mode = document.getElementById('reporterFilterMode').value;
             const input = document.getElementById('reporterSearchInput');
-            if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
-            else { input.style.display = 'none'; input.value = ''; }
+            if (mode === 'specific') {input.style.display = 'block'; input.focus();}
+            else {input.style.display = 'none'; input.value = '';}
         }
 
         function toggleReportedUserSearch() {
             const mode = document.getElementById('reportedUserFilterMode').value;
             const input = document.getElementById('reportedUserSearchInput');
-            if (mode === 'specific') { input.style.display = 'block'; input.focus(); }
-            else { input.style.display = 'none'; input.value = ''; }
+            if (mode === 'specific') {input.style.display = 'block'; input.focus();}
+            else {input.style.display = 'none'; input.value = '';}
         }
 
         // ==========================================
@@ -2816,16 +2825,16 @@
             btnElement.classList.add('active');
             document.getElementById('tab-' + tabName).classList.add('active');
 
-            if (tabName === 'reviews') { tabState.reviews.page = 0; loadReviewsData(); }
-            else if (tabName === 'archives') { tabState.archives.page = 0; loadArchivesData(); }
-            else if (tabName === 'reports') { tabState.reports.page = 0; loadReportsData(); }
+            if (tabName === 'reviews') {tabState.reviews.page = 0; loadReviewsData();}
+            else if (tabName === 'archives') {tabState.archives.page = 0; loadArchivesData();}
+            else if (tabName === 'reports') {tabState.reports.page = 0; loadReportsData();}
         }
 
         // ==========================================
         // 【全新思路】后端驱动的智能分页渲染 (前端无脑遍历)
         // ==========================================
         function renderPagination(currentPage, totalPages, smartPages, tabName) {
-            const containerId = `${tabName}-pagination`;
+            const containerId = `${tabName}-pagination`; //  動態拼接容器 ID
             const container = document.getElementById(containerId);
             if (!container) return;
 
@@ -2877,7 +2886,7 @@
             const tbody = document.querySelector('#tab-reviews .data-table tbody');
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
             try {
-                const params = new URLSearchParams({ page: state.page, size: state.size, username: state.username, reviewType: state.reviewType, keywordMode: state.keywordMode });
+                const params = new URLSearchParams({page: state.page, size: state.size, username: state.username, reviewType: state.reviewType, keywordMode: state.keywordMode});
                 const response = await fetch(`/admin/api/reviews/list?${params.toString()}`);
                 const data = await response.json();
                 if (data.content && data.content.length > 0) {
@@ -2900,7 +2909,7 @@
             const tbody = document.querySelector('#tab-archives .data-table tbody');
             tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
             try {
-                const params = new URLSearchParams({ page: state.page, size: state.size, authorUsername: state.author, deletedByUsername: state.deletedBy });
+                const params = new URLSearchParams({page: state.page, size: state.size, authorUsername: state.author, deletedByUsername: state.deletedBy});
                 const response = await fetch(`/admin/api/reviews/archives?${params.toString()}`);
                 const data = await response.json();
                 if (data.content && data.content.length > 0) {
@@ -2921,7 +2930,7 @@
             const tbody = document.querySelector('#tab-reports .data-table tbody');
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;"><i class="fas fa-spinner fa-spin"></i> 加載中...</td></tr>';
             try {
-                const params = new URLSearchParams({ page: state.page, size: state.size, reporterUsername: state.reporter, reportedUsername: state.reportedUser });
+                const params = new URLSearchParams({page: state.page, size: state.size, reporterUsername: state.reporter, reportedUsername: state.reportedUser});
                 const response = await fetch(`/admin/api/reviews/reports?${params.toString()}`);
                 const data = await response.json();
                 if (data.content && data.content.length > 0) {
@@ -3081,8 +3090,9 @@
         }
 
         function changePage(tabName, newPage) {
+            // 關鍵：根據 Tab 名稱觸發不同的數據加載函數
             tabState[tabName].page = newPage;
-            if (tabName === 'reviews') loadReviewsData();
+            if (tabName === 'reviews') loadReviewsData(); // 調用 /api/reviews/list
             else if (tabName === 'archives') loadArchivesData();
             else if (tabName === 'reports') loadReportsData();
         }
@@ -3093,7 +3103,7 @@
         function formatDate(dateStr) {
             if (!dateStr) return '';
             const date = new Date(dateStr);
-            return date.toLocaleString('zh-TW', { hour12: false });
+            return date.toLocaleString('zh-TW', {hour12: false});
         }
 
         function bindDynamicEvents() {
@@ -3115,7 +3125,65 @@
         // 6. 頁面初始化 (DOMContentLoaded)
         // ==========================================
         document.addEventListener('DOMContentLoaded', function () {
-            loadReviewsData(); // 首次加載默認 Tab 數據
+            // ==========================================
+            // 1. 檢查 URL 參數並自動篩選
+            // ==========================================
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetUsername = urlParams.get('username');
+            let shouldFilter = false;
+
+            if (targetUsername) {
+                shouldFilter = true;
+
+                // 1. 設置「用戶篩選」下拉框為「指定用戶」
+                const userFilterModeSelect = document.getElementById('userFilterMode');
+                if (userFilterModeSelect) {
+                    userFilterModeSelect.value = 'specific';
+                    // 觸發 change 事件以顯示輸入框
+                    if (typeof toggleUserSearch === 'function') {
+                        toggleUserSearch();
+                    }
+                }
+
+                // 2. 設置用戶名輸入框的值
+                const userSearchInput = document.getElementById('userSearchInput');
+                if (userSearchInput) {
+                    userSearchInput.value = targetUsername;
+                    userSearchInput.style.display = 'block';
+                }
+
+                // 3. 設置「評論類型」為「全部評論」
+                const reviewTypeFilter = document.getElementById('reviewTypeFilter');
+                if (reviewTypeFilter) {
+                    reviewTypeFilter.value = 'all';
+                }
+
+                // 4. 設置「關鍵詞篩選」為「否」
+                const keywordFilterMode = document.getElementById('keywordFilterMode');
+                if (keywordFilterMode) {
+                    keywordFilterMode.value = 'no';
+                }
+
+                // 5. 【核心】更新全局狀態 tabState
+                if (typeof tabState !== 'undefined' && tabState.reviews) {
+                    tabState.reviews.username = targetUsername;
+                    tabState.reviews.reviewType = 'all';
+                    tabState.reviews.keywordMode = 'no';
+                    tabState.reviews.page = 0;
+                }
+            }
+
+            // ==========================================
+            // 2. 統一觸發數據加載 (只執行一次！)
+            // ==========================================
+            // 無論是否有 URL 參數，都在這裡統一加載。
+            // 如果有參數，tabState 已經被修改，loadReviewsData 會讀取修改後的狀態進行篩選。
+            // 如果無參數，tabState 保持默認，loadReviewsData 會加載全部。
+            if (typeof loadReviewsData === 'function') {
+                console.log(`初始化加載數據... (篩選用戶: ${targetUsername || '無'})`);
+                loadReviewsData();
+            }
+
             bindDynamicEvents(); // 綁定全局事件委託
         });
 
@@ -3142,7 +3210,7 @@
         function handleReasonChange(type) {
             const customWrapper = document.getElementById('customInputWrapper');
             if (type === 'custom') {
-                if (customWrapper) { customWrapper.style.display = 'block'; setTimeout(() => { const input = document.getElementById('customReasonText'); if (input) input.focus(); }, 100); }
+                if (customWrapper) {customWrapper.style.display = 'block'; setTimeout(() => {const input = document.getElementById('customReasonText'); if (input) input.focus();}, 100);}
             } else {
                 if (customWrapper) customWrapper.style.display = 'none';
             }
@@ -3164,9 +3232,9 @@
                             else alert('請輸入自定義刪除原因');
                             btn.disabled = false; btn.innerHTML = originalText; return;
                         }
-                    } else { deleteReason = selectedRadio.value; }
+                    } else {deleteReason = selectedRadio.value;}
                 }
-                const response = await fetch(`/api/review/${currentDeleteId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deleteReason: deleteReason }) });
+                const response = await fetch(`/api/review/${currentDeleteId}`, {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({deleteReason: deleteReason})});
                 const result = await response.json();
                 if (response.ok && result.success) {
                     closeDeleteModal();
@@ -3195,11 +3263,11 @@
             document.getElementById('banUnit').value = 'day';
             document.getElementById('banReason').value = '違反社區規範';
             const modal = document.getElementById('adminBanModal');
-            if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+            if (modal) {modal.style.display = 'flex'; document.body.style.overflow = 'hidden';}
         }
         function closeAdminBanModal() {
             const modal = document.getElementById('adminBanModal');
-            if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+            if (modal) {modal.style.display = 'none'; document.body.style.overflow = '';}
             currentBanTarget = ''; currentBanReviewId = null; currentBanReviewContent = '';
         }
         async function confirmAdminBan() {
@@ -3215,10 +3283,10 @@
             const originalText = confirmBtn.innerHTML;
             confirmBtn.disabled = true; confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
             try {
-                const params = new URLSearchParams({ durationMinutes, reason });
+                const params = new URLSearchParams({durationMinutes, reason});
                 if (currentBanReviewId) params.append('reviewId', currentBanReviewId);
                 if (currentBanReviewContent) params.append('reviewContent', currentBanReviewContent);
-                const response = await fetch(`/api/user/${encodeURIComponent(currentBanTarget)}/toggle-block?${params.toString()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                const response = await fetch(`/api/user/${encodeURIComponent(currentBanTarget)}/toggle-block?${params.toString()}`, {method: 'POST', headers: {'Content-Type': 'application/json'}});
                 const result = await response.json();
                 if (response.ok && result.success) {
                     if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
@@ -3228,7 +3296,7 @@
                 } else if (result.alreadyBanned) {
                     closeAdminBanModal();
                     const permModal = document.getElementById('adminPermissionModal');
-                    if (permModal) { permModal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+                    if (permModal) {permModal.style.display = 'flex'; document.body.style.overflow = 'hidden';}
                 } else {
                     if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '禁言失敗'), true);
                     confirmBtn.disabled = false; confirmBtn.innerHTML = originalText;
@@ -3241,7 +3309,7 @@
         }
         function closeAdminPermissionModal() {
             const modal = document.getElementById('adminPermissionModal');
-            if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+            if (modal) {modal.style.display = 'none'; document.body.style.overflow = '';}
         }
 
         window.openBlacklistConfirmModalFromBtn = function (btn) {
@@ -3261,12 +3329,12 @@
         };
         window.confirmBlacklistAction = async function () {
             const reason = document.getElementById('blacklistReason').value.trim();
-            if (!reason) { if (typeof showNotification === 'function') showNotification('❌ 請輸入拉黑原因', true); return; }
+            if (!reason) {if (typeof showNotification === 'function') showNotification('❌ 請輸入拉黑原因', true); return;}
             let url = `/api/admin/penalty/blacklist/${encodeURIComponent(blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`;
             if (blacklistReviewId) url += `&reviewId=${blacklistReviewId}`;
             if (blacklistReviewContent) url += `&reviewContent=${encodeURIComponent(blacklistReviewContent)}`;
             try {
-                const response = await fetch(url, { method: 'POST', credentials: 'same-origin' });
+                const response = await fetch(url, {method: 'POST', credentials: 'same-origin'});
                 const result = await response.json();
                 if (response.ok && result.success) {
                     if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
@@ -3287,17 +3355,17 @@
             const btn = document.querySelector(`button[data-archive-id="${archiveId}"]`);
             const originalHtml = btn ? btn.innerHTML : '';
             try {
-                const response = await fetch(`/api/review/restore/${archiveId}/check`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+                const response = await fetch(`/api/review/restore/${archiveId}/check`, {method: 'GET', headers: {'Content-Type': 'application/json'}});
                 const result = await response.json();
                 if (!response.ok || !result.success) {
                     if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '預檢失敗'), true);
-                    if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+                    if (btn) {btn.disabled = false; btn.innerHTML = originalHtml;}
                     return;
                 }
                 const data = result.data;
                 if (data.parentExists === false) {
                     if (typeof showNotification === 'function') showNotification('❌ 無法恢復：該回覆的父評論已被刪除，無法單獨恢復樓中樓回覆！', true);
-                    if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+                    if (btn) {btn.disabled = false; btn.innerHTML = originalHtml;}
                     return;
                 }
                 if (data.isDeletedByAdmin) {
@@ -3314,17 +3382,17 @@
                 console.error('預檢錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
             } finally {
-                if (btn) { btn.disabled = false; btn.innerHTML = originalHtml; }
+                if (btn) {btn.disabled = false; btn.innerHTML = originalHtml;}
             }
         }
         function closeRestoreUserDeletedModal() {
             const modal = document.getElementById('restoreUserDeletedModal');
-            if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+            if (modal) {modal.style.display = 'none'; document.body.style.overflow = '';}
             currentRestoreArchiveId = null;
         }
         function closeRestoreModal() {
             const modal = document.getElementById('restoreReviewModal');
-            if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+            if (modal) {modal.style.display = 'none'; document.body.style.overflow = '';}
             currentRestoreArchiveId = null;
         }
         async function executeRestoreReview() {
@@ -3335,7 +3403,7 @@
             const originalHtml = btn.innerHTML;
             btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
             try {
-                const response = await fetch(`/api/review/restore/${currentRestoreArchiveId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                const response = await fetch(`/api/review/restore/${currentRestoreArchiveId}`, {method: 'POST', headers: {'Content-Type': 'application/json'}});
                 const result = await response.json();
                 if (response.ok && result.success) {
                     closeRestoreModal(); closeRestoreUserDeletedModal();
@@ -3361,7 +3429,7 @@
             document.getElementById('reportCategory').textContent = reportRow.cells[4].textContent.trim();
             document.getElementById('reportReason').textContent = reportRow.cells[5].textContent.trim() || '未填寫';
             const modal = document.getElementById('reportDecisionModal');
-            if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+            if (modal) {modal.style.display = 'flex'; document.body.style.overflow = 'hidden';}
         }
         async function handleReportDecision(isSuccessful) {
             if (!currentReportId) return;
@@ -3369,7 +3437,7 @@
             const originalHtml = btn.innerHTML;
             btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
             try {
-                const response = await fetch(`/api/report/${currentReportId}/decision`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ successful: isSuccessful }) });
+                const response = await fetch(`/api/report/${currentReportId}/decision`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({successful: isSuccessful})});
                 const result = await response.json();
                 if (response.ok && result.success) {
                     closeReportDecisionModal();
@@ -3387,7 +3455,7 @@
         }
         function closeReportDecisionModal() {
             const modal = document.getElementById('reportDecisionModal');
-            if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+            if (modal) {modal.style.display = 'none'; document.body.style.overflow = '';}
             currentReportId = null; currentReportData = null;
         }
 

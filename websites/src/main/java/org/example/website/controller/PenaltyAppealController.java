@@ -56,10 +56,10 @@ public class PenaltyAppealController {
     public ResponseEntity<?> getPenaltiesList(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size,
-            @RequestParam(required = false) String type,      // 【新增】接收類型參數
-            @RequestParam(required = false) String status     // 【新增】接收狀態參數
+            @RequestParam(required = false) String type,      // 接收類型參數
+            @RequestParam(required = false) String status,    // 接收狀態參數
+            @RequestParam(required = false) String username   // 接收用戶名參數
     ) {
-
         // 【關鍵步驟】：在查詢前，先執行批量更新，確保數據庫狀態是最新的
         adminPenaltyService.updateExpiredStatus();
         adminPenaltyService.updateExpiredAppeals();
@@ -67,23 +67,46 @@ public class PenaltyAppealController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startTime"));
         Page<AdminPenalty> penaltiesPage;
 
-        // 【核心修復】：根據參數動態調用不同的 Repository 方法
-        if ((type == null || type.isEmpty()) && (status == null || status.isEmpty())) {
-            // 情況 A: 無篩選，查全部
+        // 【核心修改】：根據參數動態調用不同的 Repository 方法 (整合用戶名篩選)
+        boolean hasType = type != null && !type.isEmpty();
+        boolean hasStatus = status != null && !status.isEmpty();
+        boolean hasUser = username != null && !username.isEmpty();
+
+        if (!hasType && !hasStatus && !hasUser) {
+            // 情況 A: 無任何篩選，查全部
             penaltiesPage = adminPenaltyRepository.findAll(pageable);
-        } else if (type != null && !type.isEmpty() && (status == null || status.isEmpty())) {
-            // 情況 B: 僅篩選類型
-            penaltiesPage = adminPenaltyRepository.findByType(AdminPenalty.PenaltyType.valueOf(type), pageable);
-        } else if ((type == null || type.isEmpty()) && status != null && !status.isEmpty()) {
-            // 情況 C: 僅篩選狀態
-            penaltiesPage = adminPenaltyRepository.findByStatus(AdminPenalty.PenaltyStatus.valueOf(status), pageable);
+        } else if (hasUser) {
+            // 【新增邏輯】情況 B: 包含用戶名篩選 (優先級最高，可組合 Type/Status)
+            AdminPenalty.PenaltyType pType = hasType ? AdminPenalty.PenaltyType.valueOf(type) : null;
+            AdminPenalty.PenaltyStatus pStatus = hasStatus ? AdminPenalty.PenaltyStatus.valueOf(status) : null;
+
+            if (pType != null && pStatus != null) {
+                // 用戶名 + 類型 + 狀態
+                penaltiesPage = adminPenaltyRepository.findByTargetUser_UsernameAndTypeAndStatus(username, pType, pStatus, pageable);
+            } else if (pType != null) {
+                // 用戶名 + 類型
+                penaltiesPage = adminPenaltyRepository.findByTargetUser_UsernameAndType(username, pType, pageable);
+            } else if (pStatus != null) {
+                // 用戶名 + 狀態
+                penaltiesPage = adminPenaltyRepository.findByTargetUser_UsernameAndStatus(username, pStatus, pageable);
+            } else {
+                // 僅用戶名
+                penaltiesPage = adminPenaltyRepository.findByTargetUser_Username(username, pageable);
+            }
         } else {
-            // 情況 D: 同時篩選類型和狀態
-            penaltiesPage = adminPenaltyRepository.findByTypeAndStatus(
-                    AdminPenalty.PenaltyType.valueOf(type),
-                    AdminPenalty.PenaltyStatus.valueOf(status),
-                    pageable
-            );
+            // 情況 C: 不含用戶名，僅篩選 Type/Status (原有邏輯)
+            if (hasType && !hasStatus) {
+                penaltiesPage = adminPenaltyRepository.findByType(AdminPenalty.PenaltyType.valueOf(type), pageable);
+            } else if (!hasType && hasStatus) {
+                penaltiesPage = adminPenaltyRepository.findByStatus(AdminPenalty.PenaltyStatus.valueOf(status), pageable);
+            } else {
+                // 同時篩選類型和狀態
+                penaltiesPage = adminPenaltyRepository.findByTypeAndStatus(
+                        AdminPenalty.PenaltyType.valueOf(type),
+                        AdminPenalty.PenaltyStatus.valueOf(status),
+                        pageable
+                );
+            }
         }
 
         // 構建關聯數據 Map (申訴狀態映射) - 保持原有邏輯不變
@@ -140,7 +163,6 @@ public class PenaltyAppealController {
 
         return ResponseEntity.ok(response);
     }
-
 
     // ==========================================
     // API 2: 獲取申訴記錄列表 (已修復篩選功能)

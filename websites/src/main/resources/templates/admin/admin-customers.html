@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用戶管理 - ChronoTeam 管理中心</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <style>
+        /* ==========================================
+       頁面專屬樣式：現代化用戶管理表格 (整合橫向滾動版)
+       ========================================== */
+
+        /* 1. 篩選工具欄美化 */
+        .filter-bar {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            align-items: flex-end;
+            flex-wrap: wrap;
+            border: 1px solid rgba(0, 0, 0, 0.02);
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 200px;
+            flex: 1;
+        }
+
+        .filter-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-label i {
+            color: var(--gold);
+            font-size: 1rem;
+        }
+
+        .filter-input,
+        .filter-select {
+            padding: 0.75rem 1rem;
+            border: 2px solid #edf2f9;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            background: #f8fafc;
+            transition: all 0.3s ease;
+            width: 100%;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--gold);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .btn-filter {
+            padding: 0.75rem 1.8rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 48px;
+        }
+
+        .btn-search {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-reset {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-reset:hover {
+            background: #cbd5e1;
+            color: #1e293b;
+        }
+
+        .btn-create {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-create:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        /* ==========================================
+       2. 表格容器與基礎樣式 (已整合橫向滾動優化)
+       ========================================== */
+        .table-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            /* overflow: hidden;  <-- 已刪除，避免隱藏滾動條 */
+            overflow-x: auto;
+            /* <--- 新增：允許橫向滾動 */
+            overflow-y: hidden;
+            /* 保持縱向不滾動 */
+            border: 1px solid rgba(0, 0, 0, 0.02);
+            position: relative;
+            /* 確保圓角在滾動時依然生效 */
+        }
+
+        /* 美化滾動條 (Webkit 瀏覽器: Chrome, Safari, Edge) */
+        .table-container::-webkit-scrollbar {
+            height: 8px;
+            /* 滾動條高度 */
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .data-table {
+            width: 100%;
+            min-width: 1200px;
+            /* <--- 新增：強制最小寬度，觸發滾動條 */
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .data-table thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid #edf2f9;
+        }
+
+        .data-table th {
+            padding: 1.2rem 1.5rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            /* 防止表頭文字換行 */
+        }
+
+        .data-table td {
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid #f1f3f5;
+            color: #334155;
+            vertical-align: middle;
+            font-size: 0.95rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: rgba(212, 175, 55, 0.03);
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* ==========================================
+       3. 角色徽章系統 (適配新 Role + 可點擊樣式)
+       ========================================== */
+        .role-badge {
+            padding: 0.35rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .role-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            filter: brightness(1.1);
+        }
+
+        /* 管理員：尊貴紅金 */
+        .role-ADMIN {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+            color: white;
+            box-shadow: 0 4px 10px rgba(255, 65, 108, 0.3);
+        }
+
+        /* 顧客：簡約灰藍 */
+        .role-CUSTOMER {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* 銷售：活力青藍 */
+        .role-SALES {
+            background: linear-gradient(135deg, #00c6fb, #005bea);
+            color: white;
+        }
+
+        /* 快遞：物流橙黃 */
+        .role-COURIER {
+            background: linear-gradient(135deg, #f6d365, #fda085);
+            color: #7c2d12;
+        }
+
+        /* 鑑定師：專業紫羅蘭 */
+        .role-APPRAISER {
+            background: linear-gradient(135deg, #a18cd1, #fbc2eb);
+            color: #4a148c;
+        }
+
+        /* ==========================================
+       4. 其他細節優化
+       ========================================== */
+        .uid-text {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .user-info-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .user-name {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        .user-email {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .text-truncate-cell {
+            max-width: 250px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+            color: #64748b;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            color: #e2e8f0;
+            margin-bottom: 1rem;
+        }
+
+        /* ==========================================
+       彈窗通用樣式
+       ========================================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            /* 默認隱藏 */
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid var(--gold);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .modal-title i {
+            color: var(--gold);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #999;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: var(--accent);
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--gold);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn-modal {
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .btn-cancel:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-confirm {
+            background: var(--gold);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: #b8972b;
+            transform: translateY(-1px);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ==========================================
+       新增：操作按鈕 2x2 網格樣式
+       ========================================== */
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            /* 兩列等寬 */
+            gap: 6px;
+            /* 按鈕間距 */
+            width: 100%;
+            max-width: 160px;
+            /* 限制最大寬度，保持緊湊 */
+            margin: 0 auto;
+            /* 居中 */
+        }
+
+        .btn-action-sm {
+            padding: 0.4rem 0.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+            white-space: nowrap;
+            text-decoration: none;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-action-sm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            filter: brightness(1.1);
+        }
+
+        /* 按鈕配色方案 */
+        .btn-review {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* 評論 - 紫藍 */
+        .btn-order {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        /* 訂單 - 粉紅 */
+        .btn-penalty {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        /* 處罰 - 青藍 */
+        .btn-report {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #7c2d12;
+        }
+
+        /* 舉報 - 橙黃 (文字深色) */
+    </style>
+</head>
+
+<body>
+    <!-- 引入公共導航欄 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
+
+    <div class="admin-layout">
+        <!-- 引入左側邊欄 -->
+        <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='customers')}"></div>
+
+        <main class="admin-main">
+            <div class="content-header">
+                <h2><i class="fas fa-users-cog"></i> <span id="pageTitle">用戶權限管理</span></h2>
+                <div class="breadcrumb">
+                    <a href="/admin/dashboard">管理中心</a> / <span id="pageBreadcrumb">用戶列表</span>
+                </div>
+            </div>
+
+            <div class="content-body">
+                <!-- 篩選工具欄 -->
+                <div class="filter-bar">
+                    <div class="filter-item">
+                        <label class="filter-label"><i class="fas fa-search"></i> 關鍵字搜索</label>
+                        <input type="text" id="keywordInput" class="filter-input" placeholder="用戶名 / 姓名 / 郵箱 / 手機...">
+                    </div>
+                    <div class="filter-item">
+                        <label class="filter-label"><i class="fas fa-user-shield"></i> 角色篩選</label>
+                        <select id="roleFilter" class="filter-select">
+                            <option value="">全部角色</option>
+                            <option value="ADMIN">👑 管理員 (ADMIN)</option>
+                            <option value="CUSTOMER">👤 顧客 (CUSTOMER)</option>
+                            <option value="SALES">💼 銷售人員 (SALES)</option>
+                            <option value="COURIER">🚚 快遞人員 (COURIER)</option>
+                            <option value="APPRAISER">🔍 鑑定師 (APPRAISER)</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 0.8rem; align-items: flex-end;">
+                        <button class="btn-filter btn-search" onclick="loadCustomers(0)">
+                            <i class="fas fa-search"></i> 查詢
+                        </button>
+                        <button class="btn-filter btn-reset" onclick="resetFilters()">
+                            <i class="fas fa-redo-alt"></i> 重置
+                        </button>
+                        <!-- 新增：創建賬號按鈕 -->
+                        <button class="btn-filter btn-create" onclick="openCreateUserModal()">
+                            <i class="fas fa-user-plus"></i> 創建賬號
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 數據表格 -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">ID</th>
+                                <th style="width: 120px;">UID</th>
+                                <th style="min-width: 200px;">用戶信息</th>
+                                <th style="width: 120px;">聯繫方式</th>
+                                <th style="width: 140px;">角色權限</th>
+                                <th>地址信息</th>
+                                <th style="width: 160px;">註冊時間</th>
+                                <th style="width: 180px; text-align: center;">操作管理</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody">
+                            <!-- 初始加載狀態 -->
+                            <tr>
+                                <td colspan="8" style="text-align:center; padding: 4rem; color: #94a3b8;">
+                                    <i class="fas fa-circle-notch fa-spin"
+                                        style="font-size: 2rem; margin-bottom: 1rem; display:block; color: var(--gold);"></i>
+                                    正在加載用戶數據...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 智能分頁容器 -->
+                <div id="customers-pagination" style="margin-top: 2rem;"></div>
+            </div>
+
+            <!-- 頁腳 -->
+            <footer class="admin-footer"
+                style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 12px; text-align: center; color: rgba(255,255,255,0.7);">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
+                    ChronoTeam Admin Panel. All Rights Reserved.
+                </p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 彈窗 1: 創建賬號 -->
+    <!-- ========================================== -->
+    <div id="createUserModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-user-plus"></i> 創建新賬號</div>
+                <button class="close-modal" onclick="closeCreateUserModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>用戶名 (Username)</label>
+                <input type="text" id="newUsername" class="form-control" placeholder="請輸入登錄用戶名">
+            </div>
+            <div class="form-group">
+                <label>初始角色 (Role)</label>
+                <select id="newRole" class="form-control">
+                    <option value="CUSTOMER">顧客 (CUSTOMER)</option>
+                    <option value="SALES">銷售人員 (SALES)</option>
+                    <option value="COURIER">快遞人員 (COURIER)</option>
+                    <option value="APPRAISER">鑑定師 (APPRAISER)</option>
+                    <option value="ADMIN">管理員 (ADMIN)</option>
+                </select>
+            </div>
+            <div>
+                <div
+                    style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 0.8rem 1rem; border-radius: 6px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                    <i class="fas fa-lock" style="font-size: 1.1rem;"></i>
+                    <span>系統默認初始密碼為：<strong
+                            style="color: #d39e00; font-family: monospace; font-size: 1rem;">123456</strong>
+                        (請通知用戶首次登錄後修改)</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal btn-cancel" onclick="closeCreateUserModal()">取消</button>
+                <button class="btn-modal btn-confirm" onclick="submitCreateUser()">確認創建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 彈窗 2: 修改權限 -->
+    <!-- ========================================== -->
+    <div id="updateRoleModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-user-shield"></i> 修改用戶權限</div>
+                <button class="close-modal" onclick="closeUpdateRoleModal()">&times;</button>
+            </div>
+            <div style="margin-bottom: 1rem; color: #64748b; font-size: 0.9rem;">
+                正在修改用戶: <strong id="roleTargetUsername" style="color: var(--primary);"></strong>
+            </div>
+            <input type="hidden" id="roleTargetId">
+            <div class="form-group">
+                <label>選擇新角色</label>
+                <select id="updateRoleSelect" class="form-control">
+                    <option value="CUSTOMER">顧客 (CUSTOMER)</option>
+                    <option value="SALES">銷售人員 (SALES)</option>
+                    <option value="COURIER">快遞人員 (COURIER)</option>
+                    <option value="APPRAISER">鑑定師 (APPRAISER)</option>
+                    <option value="ADMIN">管理員 (ADMIN)</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal btn-cancel" onclick="closeUpdateRoleModal()">取消</button>
+                <button class="btn-modal btn-confirm" onclick="submitUpdateRole()">保存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入公共 JS -->
+    <script src="/js/common.js"></script>
+    <script src="/js/admin.js"></script>
+
+    <script>
+        // ==========================================
+        // 全局狀態
+        // ==========================================
+        let currentPage = 0;
+        const pageSize = 25; // 每頁顯示數量
+
+        // ==========================================
+        // 核心：加載用戶數據 (AJAX)
+        // ==========================================
+        async function loadCustomers(page) {
+            currentPage = page;
+            const tbody = document.getElementById('customersTableBody');
+            const keyword = document.getElementById('keywordInput').value.trim();
+            const role = document.getElementById('roleFilter').value;
+
+            // 顯示 Loading 動畫
+            tbody.innerHTML = `
+          <tr>
+              <td colspan="7" style="text-align:center; padding: 4rem; color: #94a3b8;">
+                  <i class="fas fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 1rem; display:block; color: var(--gold);"></i>
+                  正在加載用戶數據...
+              </td>
+          </tr>`;
+
+            try {
+                const params = new URLSearchParams({page, size: pageSize});
+                if (keyword) params.append('keyword', keyword);
+                if (role) params.append('role', role);
+
+                const response = await fetch(`/admin/api/customers/list?${params}`);
+                const data = await response.json();
+
+                if (data.content && data.content.length > 0) {
+                    renderTable(data.content);
+                    renderPagination(data.currentPage, data.totalPages, data.smartPages);
+                } else {
+                    tbody.innerHTML = `
+                  <tr>
+                      <td colspan="7" style="text-align:center; padding: 4rem; color: #94a3b8;">
+                          <i class="fas fa-inbox empty-icon"></i>
+                          <h3 style="color: #64748b; margin-bottom: 0.5rem;">暫無用戶數據</h3>
+                          <p>嘗試調整篩選條件或搜索關鍵詞</p>
+                      </td>
+                  </tr>`;
+                    document.getElementById('customers-pagination').innerHTML = '';
+                }
+            } catch (error) {
+                console.error('加載失敗:', error);
+                tbody.innerHTML = `
+              <tr>
+                  <td colspan="7" style="text-align:center; padding: 4rem; color: #ef4444;">
+                      <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem; display:block;"></i>
+                      <h3>加載失敗</h3>
+                      <p>請檢查網絡連接或稍後重試</p>
+                  </td>
+              </tr>`;
+            }
+        }
+
+        // ==========================================
+        // 渲染表格 (核心修改：適配新 Role 枚舉 + 可點擊)
+        // ==========================================
+        function renderTable(users) {
+            const tbody = document.getElementById('customersTableBody');
+            let html = '';
+
+            users.forEach(u => {
+                // ... (原有的 roleClass, roleLabel 邏輯保持不變) ...
+                let roleClass = 'role-CUSTOMER';
+                let roleLabel = '顧客';
+                let roleIcon = 'fa-user';
+
+                switch (u.role) {
+                    case 'ADMIN': roleClass = 'role-ADMIN'; roleLabel = '管理員'; roleIcon = 'fa-crown'; break;
+                    case 'SALES': roleClass = 'role-SALES'; roleLabel = '銷售人員'; roleIcon = 'fa-briefcase'; break;
+                    case 'COURIER': roleClass = 'role-COURIER'; roleLabel = '快遞人員'; roleIcon = 'fa-truck-fast'; break;
+                    case 'APPRAISER': roleClass = 'role-APPRAISER'; roleLabel = '鑑定師'; roleIcon = 'fa-magnifying-glass'; break;
+                    default: roleClass = 'role-CUSTOMER'; roleLabel = '顧客'; roleIcon = 'fa-user';
+                }
+
+                // 構建 HTML 行
+                html += `
+        <tr>
+            <td style="color: #94a3b8; font-weight: 600;">#${u.id}</td>
+            <td><span class="uid-text">${u.uid || '-'}</span></td>
+            <td>
+                <div class="user-info-cell">
+                    <span class="user-name">${u.username}</span>
+                    <span class="user-email">${u.name || '未填寫姓名'}</span>
+                </div>
+            </td>
+            <td>
+                <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                    <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-envelope" style="width:16px; color:#94a3b8;"></i> ${u.email}</span>
+                    <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-phone" style="width:16px; color:#94a3b8;"></i> ${u.phone || '-'}</span>
+                </div>
+            </td>
+            <td>
+                <span class="role-badge ${roleClass}" style="cursor:pointer;" onclick="openUpdateRoleModal(${u.id}, '${u.username}', '${u.role}')" title="點擊修改權限">
+                    <i class="fas ${roleIcon}"></i> ${roleLabel} <i class="fas fa-pen" style="font-size:0.6rem; margin-left:4px; opacity:0.7;"></i>
+                </span>
+            </td>
+            <td>
+                <div style="display:flex; flex-direction:column; gap:0.4rem;">
+                    <div class="text-truncate-cell" title="${u.address || '未設置'}">
+                        <i class="fas fa-home" style="width:16px; color:#94a3b8;" title="主地址"></i>
+                        ${u.address || '<span style="color:#cbd5e1;">未設置</span>'}
+                    </div>
+                    ${u.address ? `
+                        <div class="text-truncate-cell" title="${u.backupAddress || '未設置'}">
+                            <i class="fas fa-map-pin" style="width:16px; color:#cbd5e1;" title="備用地址"></i>
+                            ${u.backupAddress
+                            ? `<span style="color:#64748b;">${u.backupAddress}</span>`
+                            : '<span style="color:#e2e8f0; font-size:0.8rem;">無備用</span>'}
+                        </div>
+                    ` : ''}
+                </div>
+            </td>
+            <td style="font-size: 0.85rem; color: #64748b; font-family: monospace;">
+                ${formatDate(u.createdAt)}
+            </td>
+
+            <!-- 新增：操作管理列 (2x2 網格) -->
+            <td style="text-align: center; vertical-align: middle;">
+                <div class="action-grid">
+                    <!-- 1. 查看評論 -->
+                    <button class="btn-action-sm btn-review" onclick="viewUserReviews('${u.username}')" title="查看該用戶的所有評論">
+                        <i class="fas fa-comments"></i> 評論
+                    </button>
+
+                    <!-- 2. 查看訂單 -->
+                    <button class="btn-action-sm btn-order" onclick="viewUserOrders('${u.username}')" title="查看該用戶的訂單記錄">
+                        <i class="fas fa-shopping-bag"></i> 訂單
+                    </button>
+
+                    <!-- 3. 查看處罰 -->
+                    <button class="btn-action-sm btn-penalty" onclick="viewUserPenalties('${u.username}')" title="查看禁言/拉黑記錄">
+                        <i class="fas fa-gavel"></i> 處罰
+                    </button>
+
+                    <!-- 4. 查看舉報 -->
+                    <button class="btn-action-sm btn-report" onclick="viewUserReports('${u.username}')" title="查看被舉報記錄">
+                        <i class="fas fa-flag"></i> 舉報
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // ==========================================
+        // 智能分頁渲染 (修復版：支持單頁顯示灰色按鈕)
+        // ==========================================
+        function renderPagination(current, total, smartPages) {
+            const container = document.getElementById('customers-pagination');
+
+            // 僅在完全沒有分頁數據時清空 (例如後端報錯或無數據)
+            if (!smartPages || smartPages.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '<div class="pagination-wrapper" style="display:flex; justify-content:center; gap:0.5rem; flex-wrap:wrap; align-items:center;">';
+
+            // 1. 上一頁按鈕 (無論是否只有1頁，都顯示，只是狀態不同)
+            if (current > 0) {
+                html += `<button class="page-btn" onclick="loadCustomers(${current - 1})" style="padding:0.6rem 1.2rem; border:1px solid #e2e8f0; background:white; border-radius:8px; cursor:pointer; color:#475569; font-weight:500; transition:all 0.2s;"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+            } else {
+                // 灰色禁用狀態
+                html += `<button class="page-btn disabled" disabled style="padding:0.6rem 1.2rem; border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px; color:#cbd5e1; cursor:not-allowed;"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+            }
+
+            // 2. 頁碼按鈕 (遍歷後端傳來的 smartPages)
+            smartPages.forEach(item => {
+                if (item.isEllipsis) {
+                    html += `<span style="padding:0.6rem 0.5rem; color:#94a3b8; font-weight:bold;">...</span>`;
+                } else {
+                    const pageIndex = item.pageNumber - 1; // 後端是 1-based，前端是 0-based
+                    const isActive = pageIndex === current;
+
+                    // 當前頁金色高亮，其他頁白色
+                    const activeStyle = isActive
+                        ? 'background:var(--gold); color:white; border-color:var(--gold); box-shadow:0 4px 10px rgba(212,175,55,0.3); cursor:default;'
+                        : 'background:white; color:#475569; border:1px solid #e2e8f0; cursor:pointer;';
+
+                    html += `<button class="page-btn" onclick="loadCustomers(${pageIndex})" style="padding:0.6rem 1rem; border-radius:8px; font-weight:600; transition:all 0.2s; ${activeStyle}">${item.pageNumber}</button>`;
+                }
+            });
+
+            // 3. 下一頁按鈕 (無論是否只有1頁，都顯示，只是狀態不同)
+            if (current < total - 1) {
+                html += `<button class="page-btn" onclick="loadCustomers(${current + 1})" style="padding:0.6rem 1.2rem; border:1px solid #e2e8f0; background:white; border-radius:8px; cursor:pointer; color:#475569; font-weight:500; transition:all 0.2s;">下一頁 <i class="fas fa-chevron-right"></i></button>`;
+            } else {
+                // 灰色禁用狀態
+                html += `<button class="page-btn disabled" disabled style="padding:0.6rem 1.2rem; border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px; color:#cbd5e1; cursor:not-allowed;">下一頁 <i class="fas fa-chevron-right"></i></button>`;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // ==========================================
+        // 輔助函數
+        // ==========================================
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleString('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+
+        function resetFilters() {
+            document.getElementById('keywordInput').value = '';
+            document.getElementById('roleFilter').value = '';
+            loadCustomers(0);
+        }
+
+        // ==========================================
+        // 創建賬號邏輯 (修復版)
+        // ==========================================
+        function openCreateUserModal() {
+            document.getElementById('newUsername').value = '';
+            document.getElementById('newRole').value = 'CUSTOMER';
+            document.getElementById('createUserModal').style.display = 'flex';
+        }
+
+        function closeCreateUserModal() {
+            document.getElementById('createUserModal').style.display = 'none';
+        }
+
+        async function submitCreateUser() {
+            const username = document.getElementById('newUsername').value.trim();
+            const role = document.getElementById('newRole').value;
+
+            if (!username) {
+                // 修復 1: 強制使用 window.showNotification
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('❌ 請輸入用戶名', true);
+                } else {
+                    alert('請輸入用戶名');
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin/api/customers/create', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username: username, role: role})
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // 修復 2: 強制使用 window.showNotification
+                    if (typeof window.showNotification === 'function') {
+                        window.showNotification('✅ 賬號創建成功！默認密碼為 123456');
+                    } else {
+                        console.warn('showNotification 未找到，使用 alert 降級');
+                        alert('✅ 賬號創建成功！默認密碼為 123456');
+                    }
+
+                    closeCreateUserModal();
+                    loadCustomers(currentPage); // 刷新當前頁
+                } else {
+                    // 修復 3: 錯誤提示
+                    if (typeof window.showNotification === 'function') {
+                        window.showNotification('❌ 創建失敗: ' + result.message, true);
+                    } else {
+                        alert('❌ 創建失敗: ' + result.message);
+                    }
+                }
+            } catch (error) {
+                console.error('創建賬號網絡錯誤:', error);
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('❌ 網絡錯誤，請稍後重試', true);
+                } else {
+                    alert('網絡錯誤');
+                }
+            }
+        }
+
+        // ==========================================
+        // 修改權限邏輯 (修復版)
+        // ==========================================
+        function openUpdateRoleModal(id, username, currentRole) {
+            document.getElementById('roleTargetId').value = id;
+            document.getElementById('roleTargetUsername').textContent = username;
+            document.getElementById('updateRoleSelect').value = currentRole;
+            document.getElementById('updateRoleModal').style.display = 'flex';
+        }
+
+        function closeUpdateRoleModal() {
+            document.getElementById('updateRoleModal').style.display = 'none';
+        }
+
+        async function submitUpdateRole() {
+            const id = document.getElementById('roleTargetId').value;
+            const newRole = document.getElementById('updateRoleSelect').value;
+
+            try {
+                const response = await fetch(`/admin/api/customers/${id}/role`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({role: newRole})
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // 修復 4: 權限更新成功提示
+                    if (typeof window.showNotification === 'function') {
+                        window.showNotification('✅ 權限更新成功');
+                    }
+
+                    closeUpdateRoleModal();
+                    loadCustomers(currentPage); // 刷新列表以看到新顏色
+                } else {
+                    if (typeof window.showNotification === 'function') {
+                        window.showNotification('❌ 更新失敗: ' + result.message, true);
+                    } else {
+                        alert('❌ 更新失敗: ' + result.message);
+                    }
+                }
+            } catch (error) {
+                console.error('修改權限網絡錯誤:', error);
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification('❌ 網絡錯誤，請稍後重試', true);
+                } else {
+                    alert('網絡錯誤');
+                }
+            }
+        }
+
+        // ==========================================
+        // 操作按鈕功能 (暫為佔位符)
+        // ==========================================
+
+        // 1. 查看評論 (修改後的邏輯)
+        function viewUserReviews(username) {
+            // 構建 URL，帶上 username 參數
+            // 使用 window.open 在新標籤頁打開
+            const url = `/admin/reviews?username=${encodeURIComponent(username)}`;
+            window.open(url, '_blank');
+        }
+
+        // 2. 查看訂單
+        function viewUserOrders(username) {
+            // 未來邏輯: window.location.href = `/admin/orders?username=${username}`;
+            if (typeof window.showNotification === 'function') {
+                window.showNotification(`📦 正在查詢 ${username} 的訂單記錄... (功能開發中)`);
+            } else {
+                alert(`正在查詢 ${username} 的訂單記錄... (功能開發中)`);
+            }
+        }
+
+        // 3. 查看處罰
+        function viewUserPenalties(username) {
+            // 未來邏輯: window.location.href = `/admin/penalties?username=${username}`;
+            if (typeof window.showNotification === 'function') {
+                window.showNotification(`⚖️ 正在查詢 ${username} 的處罰記錄... (功能開發中)`);
+            } else {
+                alert(`正在查詢 ${username} 的處罰記錄... (功能開發中)`);
+            }
+        }
+
+        // 4. 查看舉報
+        function viewUserReports(username) {
+            // 未來邏輯: window.location.href = `/admin/reports?username=${username}`;
+            if (typeof window.showNotification === 'function') {
+                window.showNotification(`🚩 正在查詢 ${username} 的舉報記錄... (功能開發中)`);
+            } else {
+                alert(`正在查詢 ${username} 的舉報記錄... (功能開發中)`);
+            }
+        }
+
+        // ==========================================
+        // 頁面初始化
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCustomers(0);
+        });
+    </script>
+</body>
+
+</html>

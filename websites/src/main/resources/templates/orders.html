@@ -258,13 +258,7 @@
             }
         }
 
-        < !-- .status-COMPLETED {
-            -->< !-- background: #d1ecf1;
-            -->< !-- color: #0c5460;
-            -->< !--
-        }
-
-        -->.status-CANCELLED {
+        .status-CANCELLED {
             background: #f8d7da;
             color: #721c24;
         }
@@ -349,6 +343,18 @@
             background: #e8590c;
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(253, 126, 20, 0.3);
+        }
+
+        /* 【新增】換貨按鈕樣式 (藍色/青色) */
+        .btn-exchange {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-exchange:hover {
+            background: #138496;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
         }
 
         /* 新增：取消訂單按鈕樣式 (已支付列表用，紅色) */
@@ -455,10 +461,11 @@
             font-size: 1.1rem;
         }
 
-        /*  新增：商品项操作按钮 */
+        /*  【修改】商品项操作按钮：改為橫向排列以容納退貨和換貨按鈕 */
         .order-item-actions {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
+            flex-wrap: wrap;
             gap: 0.5rem;
             flex-shrink: 0;
         }
@@ -770,11 +777,9 @@
             background: white;
             width: 100%;
             max-width: 600px;
-            /* 从 480px 增加到 600px */
             max-height: 90vh;
             border-radius: 16px;
             padding: 2rem;
-            /* 增加内边距 */
             position: relative;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             border-top: 4px solid #dc3545;
@@ -908,11 +913,9 @@
         .btn-cancel-modal,
         .btn-confirm-cancel {
             padding: 0.8rem 2rem;
-            /* 增加左右内边距 */
             border: none;
             border-radius: 8px;
             font-size: 1rem;
-            /* 保持或稍微增加字体大小 */
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
@@ -920,11 +923,8 @@
             align-items: center;
             gap: 0.5rem;
             flex: 0 0 auto;
-            /* 不让按钮自动伸缩 */
             white-space: nowrap;
-            /* 防止文字换行 */
         }
-
 
         .btn-cancel-modal {
             background: #e9ecef;
@@ -1085,15 +1085,11 @@
                                 </p>
                                 <p>支付方式：
                                     <strong>线下店铺支付</strong>
-                                    <span th:if="${order.offlineStoreId != null}"
+                                    <!-- 【核心修改 1】：直接使用 order.offlineStore.name，刪除所有硬編碼 th:switch -->
+                                    <span th:if="${order.offlineStore != null}"
                                         style="color: var(--gold); font-size: 0.85rem; margin-left: 0.5rem; font-weight: 500;">
                                         (<i class="fas fa-map-marker-alt"></i>
-                                        <span th:switch="${order.offlineStoreId}">
-                                            <span th:case="'store-central'">中環店</span>
-                                            <span th:case="'store-tsimsatsui'">尖沙咀店</span>
-                                            <span th:case="'store-causeway'">銅鑼灣店</span>
-                                            <span th:case="*">[[${order.offlineStoreId}]]</span>
-                                        </span>)
+                                        <span th:text="${order.offlineStore.name}">店鋪名稱</span>)
                                     </span>
                                 </p>
                                 <p style="color: #dc3545; font-weight: 600;">
@@ -1151,8 +1147,9 @@
             <!-- ========================================== -->
             <div id="paid-tab" class="tab-content">
                 <div th:if="${!paidOrders.isEmpty()}">
+                    <!-- 【修改處 1】：增加 th:data-received-at 屬性，供前端 JS 計算天數使用 -->
                     <div class="order-card" th:each="order : ${paidOrders}" th:data-order-no="${order.orderNo}"
-                        th:data-order-status="${order.status.name()}">
+                        th:data-order-status="${order.status.name()}" th:data-received-at="${order.receivedAt}">
                         <div class="order-header">
                             <div class="order-no">
                                 <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
@@ -1172,7 +1169,7 @@
                                         <!-- 圖標：如果是門店自取且已付款，顯示店鋪圖標 -->
                                         <i class="fas"
                                             th:classappend="${order.status.name() == 'PENDING'} ? 'fa-exclamation-circle' :
-                                            (${order.status.name() == 'PAID' and order.offlineStoreId != null} ? 'fa-store' :
+                                            (${order.status.name() == 'PAID' and order.offlineStore != null} ? 'fa-store' :
                                             (${order.status.name() == 'PAID'} ? 'fa-check-circle' :
                                             (${order.status.name() == 'SHIPPED'} ? 'fa-truck' :
                                             (${order.status.name() == 'COMPLETED'} ? 'fa-star' : 'fa-times-circle'))))">
@@ -1181,7 +1178,7 @@
                                         <!-- 中文文字：區分待發貨與待取貨 -->
                                         <span th:text="${
                                                         order.status.name() == 'PENDING' ? '待付款' :
-                                                        (order.status.name() == 'PAID' and order.offlineStoreId != null ? '已付款/待取貨' :
+                                                        (order.status.name() == 'PAID' and order.offlineStore != null ? '已付款/待取貨' :
                                                         (order.status.name() == 'PAID' ? '已付款/待發貨' :
                                                         (order.status.name() == 'SHIPPED' ? '已發貨' :
                                                         (order.status.name() == 'COMPLETED' ? '已完成' : '已取消'))))
@@ -1196,15 +1193,11 @@
                                             th:unless="${order.paymentMethod == 'OFFLINE_STORE' or order.paymentMethod == 'PAYPAL_SIM'}"
                                             th:text="${order.paymentMethod}">其他</span>
                                     </strong>
-                                    <span th:if="${order.offlineStoreId != null}"
+                                    <!-- 【核心修改 2】：直接使用 order.offlineStore.name，刪除所有硬編碼 th:switch -->
+                                    <span th:if="${order.offlineStore != null}"
                                         style="color: var(--gold); font-size: 0.85rem; margin-left: 0.5rem; font-weight: 500;">
                                         (<i class="fas fa-map-marker-alt"></i>
-                                        <span th:switch="${order.offlineStoreId}">
-                                            <span th:case="'store-central'">中環店</span>
-                                            <span th:case="'store-tsimsatsui'">尖沙咀店</span>
-                                            <span th:case="'store-causeway'">銅鑼灣店</span>
-                                            <span th:case="*">[[${order.offlineStoreId}]]</span>
-                                        </span>)
+                                        <span th:text="${order.offlineStore.name}">店鋪名稱</span>)
                                     </span>
                                 </p>
                                 <p th:if="${order.paidAt != null}">付款時間：<strong
@@ -1212,21 +1205,69 @@
 
                                 <!-- 收貨時間 (僅 COMPLETED 且 receivedAt 有值時顯示) -->
                                 <p th:if="${order.status.name() == 'COMPLETED' and order.receivedAt != null}">
-                                    收貨時間：<strong th:text="${#temporals.format(order.receivedAt, 'yyyy-MM-dd HH:mm')}">-</strong>
+                                    收貨時間：<strong
+                                        th:text="${#temporals.format(order.receivedAt, 'yyyy-MM-dd HH:mm')}">-</strong>
                                 </p>
 
-                                <!-- 收貨後 7 天內顯示無條件退貨提示 (超過 7 天自動隱藏) -->
+                                <!--                            &lt;!&ndash; 收貨後 7 天內顯示無條件退貨提示 (超過 7 天自動隱藏) &ndash;&gt;-->
+                                <!--                            <p th:if="${order.status.name() == 'COMPLETED'-->
+                                <!--                and order.receivedAt != null-->
+                                <!--                and #temporals.createNow().isBefore(order.receivedAt.plusDays(7))}"-->
+                                <!--                               style="color: #155724; font-weight: 600; font-size: 0.85rem;-->
+                                <!--              background: rgba(40, 167, 69, 0.1); border-left: 3px solid #28a745;-->
+                                <!--              padding: 0.5rem 0.8rem; border-radius: 6px;">-->
+                                <!--                                <i class="fas fa-undo"></i> 該物品若無故意損壞的痕跡，可以 7 天內申請無條件原額退貨！-->
+                                <!--                                <br>-->
+                                <!--                                <small style="font-weight: 500;">-->
+                                <!--                                    <i class="fas fa-hourglass-half"></i> 退貨期限至：-->
+                                <!--                                    <span th:text="${#temporals.format(order.receivedAt.plusDays(7), 'yyyy-MM-dd HH:mm')}"></span>-->
+                                <!--                                </small>-->
+                                <!--                            </p>-->
+
+                                <!--                            &lt;!&ndash; 【新增】收貨後 14 天內顯示無條件換貨提示 (超過 14 天自動隱藏) &ndash;&gt;-->
+                                <!--                            <p th:if="${order.status.name() == 'COMPLETED'-->
+                                <!--                and order.receivedAt != null-->
+                                <!--                and #temporals.createNow().isBefore(order.receivedAt.plusDays(14))}"-->
+                                <!--                               style="color: #0c5460; font-weight: 600; font-size: 0.85rem;-->
+                                <!--              background: rgba(23, 162, 184, 0.1); border-left: 3px solid #17a2b8;-->
+                                <!--              padding: 0.5rem 0.8rem; border-radius: 6px; margin-top: 0.5rem;">-->
+                                <!--                                <i class="fas fa-exchange-alt"></i> 該物品若無故意損壞的痕跡，可以 14 天內申請無條件換貨！-->
+                                <!--                                <br>-->
+                                <!--                                <small style="font-weight: 500;">-->
+                                <!--                                    <i class="fas fa-hourglass-half"></i> 換貨期限至：-->
+                                <!--                                    <span th:text="${#temporals.format(order.receivedAt.plusDays(14), 'yyyy-MM-dd HH:mm')}"></span>-->
+                                <!--                                </small>-->
+                                <!--                            </p>-->
+                                <!-- 收貨後 X 天內顯示無條件退貨提示 (超過天數或配置為 null 自動隱藏) -->
                                 <p th:if="${order.status.name() == 'COMPLETED'
-                and order.receivedAt != null
-                and #temporals.createNow().isBefore(order.receivedAt.plusDays(7))}"
-                                   style="color: #155724; font-weight: 600; font-size: 0.85rem;
-              background: rgba(40, 167, 69, 0.1); border-left: 3px solid #28a745;
-              padding: 0.5rem 0.8rem; border-radius: 6px;">
-                                    <i class="fas fa-undo"></i> 該物品若無故意損壞的痕跡，可以 7 天內申請無條件原額退貨！
+            and order.receivedAt != null
+            and returnDays != null
+            and #temporals.createNow().isBefore(order.receivedAt.plusDays(returnDays))}" style="color: #155724; font-weight: 600; font-size: 0.85rem;
+          background: rgba(40, 167, 69, 0.1); border-left: 3px solid #28a745;
+          padding: 0.5rem 0.8rem; border-radius: 6px;">
+                                    <i class="fas fa-undo"></i> 該物品若無故意損壞的痕跡，可以 <span th:text="${returnDays}">7</span>
+                                    天內申請無條件原額退貨！
                                     <br>
                                     <small style="font-weight: 500;">
                                         <i class="fas fa-hourglass-half"></i> 退貨期限至：
-                                        <span th:text="${#temporals.format(order.receivedAt.plusDays(7), 'yyyy-MM-dd HH:mm')}"></span>
+                                        <span
+                                            th:text="${#temporals.format(order.receivedAt.plusDays(returnDays), 'yyyy-MM-dd HH:mm')}"></span>
+                                    </small>
+                                </p>
+                                <!-- 收貨後 X 天內顯示無條件換貨提示 (超過天數或配置為 null 自動隱藏) -->
+                                <p th:if="${order.status.name() == 'COMPLETED'
+            and order.receivedAt != null
+            and exchangeDays != null
+            and #temporals.createNow().isBefore(order.receivedAt.plusDays(exchangeDays))}" style="color: #0c5460; font-weight: 600; font-size: 0.85rem;
+          background: rgba(23, 162, 184, 0.1); border-left: 3px solid #17a2b8;
+          padding: 0.5rem 0.8rem; border-radius: 6px; margin-top: 0.5rem;">
+                                    <i class="fas fa-exchange-alt"></i> 該物品若無故意損壞的痕跡，可以 <span
+                                        th:text="${exchangeDays}">14</span> 天內申請無條件換貨！
+                                    <br>
+                                    <small style="font-weight: 500;">
+                                        <i class="fas fa-hourglass-half"></i> 換貨期限至：
+                                        <span
+                                            th:text="${#temporals.format(order.receivedAt.plusDays(exchangeDays), 'yyyy-MM-dd HH:mm')}"></span>
                                     </small>
                                 </p>
                             </div>
@@ -1353,7 +1394,9 @@
 
     <div th:replace="~{fragments/common :: modals}"></div>
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        const returnDaysConfig = [[${returnDays}]];
+        const exchangeDaysConfig = [[${exchangeDays}]];
     </script>
     <script src="/js/common.js"></script>
 
@@ -1404,29 +1447,30 @@
                         const response = await fetch(`/api/order/${orderNo}/details`);
                         const result = await response.json();
 
-                        // 核心修復：從 DOM 獲取訂單狀態
+                        // 核心修復：從 DOM 獲取訂單狀態與收貨時間
                         const orderCard = button.closest('.order-card');
                         const orderStatus = orderCard.getAttribute('data-order-status');
+                        const receivedAtStr = orderCard.getAttribute('data-received-at'); // 【修改處 2】：獲取收貨時間
 
                         if (response.ok && result.success) {
-                            // 核心修復：傳遞 orderStatus 參數
-                            await renderOrderItems(itemsList, result.data, orderNo, orderStatus);
+                            // 核心修復：傳遞 orderStatus 與 receivedAtStr 參數
+                            await renderOrderItems(itemsList, result.data, orderNo, orderStatus, receivedAtStr);
                         } else {
                             itemsList.innerHTML = `
-                                <div style="text-align: center; padding: 2rem; color: var(--accent);">
-                                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                                    <p>加載失敗：${result.message || '請稍後重試'}</p>
-                                </div>
-                            `;
+                            <div style="text-align: center; padding: 2rem; color: var(--accent);">
+                                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                                <p>加載失敗：${result.message || '請稍後重試'}</p>
+                            </div>
+                        `;
                         }
                     } catch (error) {
                         console.error('加載訂單詳情失敗:', error);
                         itemsList.innerHTML = `
-                            <div style="text-align: center; padding: 2rem; color: var(--accent);">
-                                <i class="fas fa-times-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                                <p>網絡錯誤，請稍後重試</p>
-                            </div>
-                        `;
+                        <div style="text-align: center; padding: 2rem; color: var(--accent);">
+                            <i class="fas fa-times-circle" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <p>網絡錯誤，請稍後重試</p>
+                        </div>
+                    `;
                     }
                 }
 
@@ -1439,15 +1483,14 @@
         }
 
         // 改為 async 異步函數，並發獲取評價狀態
-        // 注意：新增了 orderStatus 參數，用於判斷是否顯示退貨按鈕
-        async function renderOrderItems(container, orderItems, orderNo, orderStatus) {
+        async function renderOrderItems(container, orderItems, orderNo, orderStatus, receivedAtStr) {
             if (!orderItems || orderItems.length === 0) {
                 container.innerHTML = `
-                <div style="text-align: center; padding: 2rem; color: var(--gray);">
-                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem;"></i>
-                    <p>暫無商品</p>
-                </div>
-                `;
+            <div style="text-align: center; padding: 2rem; color: var(--gray);">
+                <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                <p>暫無商品</p>
+            </div>
+            `;
                 return;
             }
 
@@ -1462,7 +1505,7 @@
                         reviewed: result.reviewed
                     };
                 } catch (e) {
-                    return { id: item.product.id, canReview: false, reviewed: false };
+                    return {id: item.product.id, canReview: false, reviewed: false};
                 }
             });
             const statuses = await Promise.all(statusPromises);
@@ -1470,70 +1513,96 @@
 
             let html = '';
             orderItems.forEach(item => {
-                const status = statusMap.get(item.product.id) || { canReview: false, reviewed: false };
+                const status = statusMap.get(item.product.id) || {canReview: false, reviewed: false};
 
-                // 核心修改：只有在訂單狀態為 'COMPLETED' 時，才生成退貨按鈕的 HTML
+                // ==========================================
+                // 【核心修改】：分別獨立判斷退貨和換貨按鈕
+                // ==========================================
                 let returnBtnHtml = '';
-                if (orderStatus === 'COMPLETED') {
-                    returnBtnHtml = `
+                let exchangeBtnHtml = '';
+
+                // 1. 獨立判斷退貨按鈕 (只要退貨配置不為 null 就單獨計算)
+                if (orderStatus === 'COMPLETED' && receivedAtStr && receivedAtStr !== 'null' && returnDaysConfig != null) {
+                    const receivedAt = new Date(receivedAtStr);
+                    const now = new Date();
+                    const diffDays = (now - receivedAt) / (1000 * 60 * 60 * 24);
+
+                    if (diffDays <= returnDaysConfig) {
+                        returnBtnHtml = `
                         <button class="btn-sm btn-return" onclick="showNotification('⚠️ 退貨功能開發中，如需退貨請聯繫客服處理', true)">
                             <i class="fas fa-undo-alt"></i> 申請退貨
                         </button>`;
+                    }
                 }
+
+                // 2. 獨立判斷換貨按鈕 (只要換貨配置不為 null 就單獨計算)
+                if (orderStatus === 'COMPLETED' && receivedAtStr && receivedAtStr !== 'null' && exchangeDaysConfig != null) {
+                    const receivedAt = new Date(receivedAtStr);
+                    const now = new Date();
+                    const diffDays = (now - receivedAt) / (1000 * 60 * 60 * 24);
+
+                    if (diffDays <= exchangeDaysConfig) {
+                        exchangeBtnHtml = `
+                        <button class="btn-sm btn-exchange" onclick="showNotification('⚠️ 換貨功能開發中，如需換貨請聯繫客服處理', true)">
+                            <i class="fas fa-exchange-alt"></i> 申請換貨
+                        </button>`;
+                    }
+                }
+                // ==========================================
 
                 let actionBtnHtml = '';
                 if (status.reviewed) {
-                    // 已評價：顯示按鈕和查看鏈接 + 退貨按鈕 (如果符合條件)
+                    // 已評價：顯示按鈕和查看鏈接 + 退貨/換貨按鈕 (如果符合條件)
                     actionBtnHtml = `
-                <div style="display: flex; flex-direction: column; gap: 0.3rem; align-items: center;">
-                    <button class="btn-sm btn-review" onclick="viewMyReview(${item.product.id})"
-                            style="background: #6c757d; cursor: pointer; width: 100%;">
-                        <i class="fas fa-check-circle"></i> 已評價
-                    </button>
-                    <div style="font-size: 0.8rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: 600;"
-                         onclick="viewMyReview(${item.product.id})">
-                        <i class="fas fa-eye"></i> 去查看評價！
-                    </div>
-                </div>` + returnBtnHtml;
+            <div style="display: flex; flex-direction: column; gap: 0.3rem; align-items: center;">
+                <button class="btn-sm btn-review" onclick="viewMyReview(${item.product.id})"
+                        style="background: #6c757d; cursor: pointer; width: 100%;">
+                    <i class="fas fa-check-circle"></i> 已評價
+                </button>
+                <div style="font-size: 0.8rem; color: var(--gold); cursor: pointer; text-align: center; font-weight: 600;"
+                     onclick="viewMyReview(${item.product.id})">
+                    <i class="fas fa-eye"></i> 去查看評價！
+                </div>
+            </div>` + returnBtnHtml + exchangeBtnHtml;
                 }
                 else if (status.canReview) {
-                    // 可評價：顯示綠色按鈕 + 退貨按鈕 (如果符合條件)
+                    // 可評價：顯示綠色按鈕 + 退貨/換貨按鈕 (如果符合條件)
                     actionBtnHtml = `
-                    <button class="btn-sm btn-review" onclick="reviewProduct(${item.product.id}, '${orderNo}')">
-                        <i class="fas fa-star"></i> 評價商品
-                    </button>` + returnBtnHtml;
+                <button class="btn-sm btn-review" onclick="reviewProduct(${item.product.id}, '${orderNo}')">
+                    <i class="fas fa-star"></i> 評價商品
+                </button>` + returnBtnHtml + exchangeBtnHtml;
                 } else {
-                    // 不可評價 + 退貨按鈕 (如果符合條件)
+                    // 不可評價 + 退貨/換貨按鈕 (如果符合條件)
                     actionBtnHtml = `
-                    <button class="btn-sm btn-review" disabled style="background: #e9ecef; color: #6c757d; cursor: not-allowed;">
-                        <i class="fas fa-lock"></i> 暫不可評價
-                    </button>` + returnBtnHtml;
+                <button class="btn-sm btn-review" disabled style="background: #e9ecef; color: #6c757d; cursor: not-allowed;">
+                    <i class="fas fa-lock"></i> 暫不可評價
+                </button>` + returnBtnHtml + exchangeBtnHtml;
                 }
 
                 html += `
-                <div class="order-item">
-                    <div class="order-item-image" onclick="window.location.href='/product/${item.product.id}'" title="查看商品詳情">
-                        <img src="/images/products/${item.product.image}"
-                        alt="${item.product.description}"
-                        onerror="this.src='/images/placeholder.png'">
+            <div class="order-item">
+                <div class="order-item-image" onclick="window.location.href='/product/${item.product.id}'" title="查看商品詳情">
+                    <img src="/images/products/${item.product.image}"
+                    alt="${item.product.description}"
+                    onerror="this.src='/images/placeholder.png'">
+                </div>
+                <div class="order-item-info">
+                    <div class="order-item-name">${item.product.description}</div>
+                    <div class="order-item-meta">
+                        <i class="fas fa-tag"></i> ${item.product.category || '手錶'}
                     </div>
-                    <div class="order-item-info">
-                        <div class="order-item-name">${item.product.description}</div>
-                        <div class="order-item-meta">
-                            <i class="fas fa-tag"></i> ${item.product.category || '手錶'}
-                        </div>
-                        <div class="order-item-meta">
-                            <i class="fas fa-box"></i> 數量：${item.quantity}
-                        </div>
-                        <div class="order-item-price">
-                            HK$ ${formatPrice(item.price)}
-                        </div>
+                    <div class="order-item-meta">
+                        <i class="fas fa-box"></i> 數量：${item.quantity}
                     </div>
-                    <div class="order-item-actions">
-                        ${actionBtnHtml}
+                    <div class="order-item-price">
+                        HK$ ${formatPrice(item.price)}
                     </div>
                 </div>
-                `;
+                <div class="order-item-actions">
+                    ${actionBtnHtml}
+                </div>
+            </div>
+            `;
             });
             container.innerHTML = html;
         }
@@ -1607,7 +1676,7 @@
             try {
                 const response = await fetch(`/api/order/${orderNo}`, {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: {'Content-Type': 'application/json'}
                 });
                 const result = await response.json();
 
@@ -1623,12 +1692,12 @@
 
                         if (remainingOrders.length === 0) {
                             unpaidTab.innerHTML = `
-                                <div class="empty-state">
-                                    <i class="fas fa-check-circle"></i>
-                                    <h3>暫無待付款訂單</h3>
-                                    <p>您的待付款訂單將顯示在這裡</p>
-                                </div>
-                            `;
+                            <div class="empty-state">
+                                <i class="fas fa-check-circle"></i>
+                                <h3>暫無待付款訂單</h3>
+                                <p>您的待付款訂單將顯示在這裡</p>
+                            </div>
+                        `;
                         }
                         updateUnpaidCount(-1);
                         showNotification('✅ 訂單已成功刪除');
@@ -1688,7 +1757,7 @@
                 // 1. 使用 AJAX (fetch) 發送請求，頁面不會白屏閃爍
                 const response = await fetch(`/api/order/${currentCancelOrderNo}/cancel`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: {'Content-Type': 'application/json'}
                 });
 
                 const result = await response.json();

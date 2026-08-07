@@ -2,8 +2,10 @@ package org.example.website.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.website.dto.ApiResponse;
+import org.example.website.entity.OfflineStore;
 import org.example.website.entity.Order;
 import org.example.website.entity.OrderItem;
+import org.example.website.repository.OfflineStoreRepository;
 import org.example.website.repository.OrderItemRepository;
 import org.example.website.service.OrderService;
 import org.example.website.entity.User;
@@ -28,6 +30,7 @@ public class CheckoutController {
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
     private final SystemConfigService systemConfigService;
+    private final OfflineStoreRepository offlineStoreRepository;
 
     /**
      * 渲染结账页面：现在查询的是 OrderItem，而不是 Cart！
@@ -47,9 +50,13 @@ public class CheckoutController {
         model.addAttribute("orderItems", orderItems);
         model.addAttribute("shippingFee", systemConfigService.getShippingFee());
         model.addAttribute("freeShippingThreshold", systemConfigService.getFreeShippingThreshold());
+
+        //查詢所有啟用的店鋪並加入 Model
+        List<OfflineStore> activeStores = offlineStoreRepository.findByIsActiveTrue();
+        model.addAttribute("activeStores", activeStores);
+
         return "checkout";
     }
-
     /**
      * API: 前端點擊「去結賬」時調用，生成訂單並返回 orderNo
      */
@@ -75,7 +82,7 @@ public class CheckoutController {
             String deliveryMethod = payload.containsKey("deliveryMethod") ? (String) payload.get("deliveryMethod") : null;
 
             //  從 payload 中提取 storeId
-            String storeId = payload.containsKey("storeId") ? (String) payload.get("storeId") : null;
+            Long storeId = payload.containsKey("storeId") ? Long.valueOf(payload.get("storeId").toString()) : null;
 
             //  將 storeId 作為第 5 個參數傳遞給 Service 層
             Order order = orderService.simulatePayment(orderNo, authentication.getName(), payAmount, deliveryMethod, storeId);
@@ -112,10 +119,11 @@ public class CheckoutController {
             Authentication authentication) {
         try {
             String orderNo = (String) payload.get("orderNo");
-            String storeId = (String) payload.get("storeId");
+
+            Long storeId = payload.containsKey("storeId") ? Long.valueOf(payload.get("storeId").toString()) : null;
 
             // 基礎參數校驗
-            if (storeId == null || storeId.trim().isEmpty()) {
+            if (storeId == null ) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("請選擇線下支付店鋪"));
             }
             // 從 payload 中提取配送方式（線下支付時也可能有配送方式選擇）
@@ -145,33 +153,24 @@ public class CheckoutController {
         Map<String, Object> data = new HashMap<>();
         data.put("orderNo", orderNo);
 
-        // 店铺信息
-        Map<String, String> storeInfo = getStoreInfo(storeId);
-        data.put("storeName", storeInfo.get("name"));
-        data.put("storeAddress", storeInfo.get("address"));
-        data.put("storePhone", storeInfo.get("phone"));
-        data.put("storeHours", storeInfo.get("hours"));
+        // 改為從資料庫查詢店鋪信息
+        OfflineStore store = offlineStoreRepository.findByStoreCode(storeId)
+                .orElse(null);
+
+        if (store != null) {
+            data.put("storeName", store.getName());
+            data.put("storeAddress", store.getAddress());
+            data.put("storePhone", store.getPhone() != null ? store.getPhone() : "未提供");
+            data.put("storeHours", store.getHours() != null ? store.getHours() : "未提供");
+        } else {
+            data.put("storeName", "未知店鋪");
+            data.put("storeAddress", "地址待定");
+            data.put("storePhone", "電話待定");
+            data.put("storeHours", "營業時間待定");
+        }
 
         model.addAttribute("data", data);
         return "offline-payment-success";
-    }
-
-    private Map<String, String> getStoreInfo(String storeId) {
-        Map<String, String> stores = new HashMap<>();
-        stores.put("store-central", "中環店|中環皇后大道中 99 號|+852 2123 4567|10:00 AM - 8:00 PM");
-        stores.put("store-tsimsatsui", "尖沙咀店|尖沙咀廣東道 88 號|+852 2234 5678|11:00 AM - 9:00 PM");
-        stores.put("store-causeway", "銅鑼灣店|銅鑼灣軒尼詩道 500 號|+852 2345 6789|12:00 PM - 10:00 PM");
-
-        String info = stores.getOrDefault(storeId, "未知店鋪|地址待定|電話待定|營業時間待定");
-        String[] parts = info.split("\\|");
-
-        Map<String, String> result = new HashMap<>();
-        result.put("name", parts[0]);
-        result.put("address", parts[1]);
-        result.put("phone", parts[2]);
-        result.put("hours", parts[3]);
-
-        return result;
     }
 
     /**

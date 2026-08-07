@@ -31,8 +31,11 @@
 
                     <a href="/account/dashboard"><i class="fas fa-user-cog"></i> 個人中心</a>
 
-                    <a href="/admin/dashboard"
-                        th:if="${#authorization.expression('isAuthenticated()') and #authentication.name == 'admin'}"
+                    <a href="/admin/dashboard" th:if="${#authorization.expression('isAuthenticated()') and
+            (#authentication.principal.role.name() == 'ADMIN' or
+             #authentication.principal.role.name() == 'SALES' or
+             #authentication.principal.role.name() == 'COURIER' or
+             #authentication.principal.role.name() == 'APPRAISER')}"
                         style="background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%); color: var(--primary); font-weight: 600;">
                         <i class="fas fa-shield-alt"></i> 管理中心
                     </a>

@@ -45,6 +45,60 @@
             padding: 2.5rem;
         }
 
+        /* === Tab 导航样式 === */
+        .config-tabs {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 2rem;
+        }
+
+        .config-tab {
+            padding: 1rem 2rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .config-tab:hover {
+            color: var(--primary);
+        }
+
+        .config-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--gold);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* === 表单样式 === */
         .form-group {
             margin-bottom: 1.8rem;
         }
@@ -126,97 +180,174 @@
             transform: none;
         }
 
-        /* 響應式 */
+        /* 响应式 */
         @media (max-width: 768px) {
             .config-card-body {
                 padding: 1.5rem;
+            }
+
+            .config-tab {
+                padding: 0.8rem 1rem;
+                font-size: 0.9rem;
             }
         }
     </style>
 </head>
 
 <body>
-    <!-- 引入公共導航欄 -->
+    <!-- 引入公共导航栏 -->
     <div th:replace="~{fragments/common :: navbar}"></div>
 
     <div class="admin-layout">
-        <!-- 引入左側邊欄 (activePage 設為 'config') -->
+        <!-- 引入左侧边栏 (activePage 设为 'config') -->
         <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='config')}"></div>
 
-        <!-- 右側內容區 -->
+        <!-- 右侧内容区 -->
         <main class="admin-main">
-            <!-- 頂部標題與麵包屑 -->
+            <!-- 顶部标题与面包屑 -->
             <div class="content-header">
-                <h2><i class="fas fa-cogs"></i> <span id="pageTitle">系統配置管理</span></h2>
+                <h2><i class="fas fa-cogs"></i> <span id="pageTitle">系统配置管理</span></h2>
                 <div class="breadcrumb">
                     <a href="/admin/dashboard">管理中心</a> /
-                    <a href="#">系統與權限管理</a> /
-                    <span id="pageBreadcrumb">系統配置</span>
+                    <a href="#">系统与权限管理</a> /
+                    <span id="pageBreadcrumb">系统配置</span>
                 </div>
             </div>
 
-            <!-- 動態內容容器 -->
+            <!-- 动态内容容器 -->
             <div class="content-body">
                 <div class="config-card">
                     <div class="config-card-header">
-                        <i class="fas fa-truck-fast"></i>
-                        <h3>物流與運費規則設置</h3>
+                        <i class="fas fa-sliders-h"></i>
+                        <h3>平台规则设置</h3>
                     </div>
                     <div class="config-card-body">
-                        <form id="shippingConfigForm" onsubmit="saveShippingConfig(event)">
-                            <div class="form-group">
-                                <label for="shippingFee">
-                                    <i class="fas fa-coins"></i> 基礎快遞費用 (HKD)
-                                </label>
-                                <input type="number" id="shippingFee" step="0.01" min="0" required class="form-input"
-                                    placeholder="例如：50">
-                                <small class="form-hint">
-                                    <i class="fas fa-info-circle"></i> 當訂單未達到免郵門檻時，將向顧客收取此固定運費。
-                                </small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="freeShippingThreshold">
-                                    <i class="fas fa-gift"></i> 免運費門檻 (HKD)
-                                </label>
-                                <input type="number" id="freeShippingThreshold" step="0.01" min="0" required
-                                    class="form-input" placeholder="例如：30000">
-                                <small class="form-hint">
-                                    <i class="fas fa-info-circle"></i> 例如填寫 30000，則顧客訂單總額滿 3 萬即可自動免除快遞費。
-                                </small>
-                            </div>
-
-                            <button type="submit" class="btn-save-config" id="saveConfigBtn">
-                                <i class="fas fa-save"></i> 保存設置
+                        <!-- Tab 导航 -->
+                        <div class="config-tabs">
+                            <button class="config-tab active" onclick="switchConfigTab('shipping', this)">
+                                <i class="fas fa-truck-fast"></i> 物流与运费
                             </button>
-                        </form>
+                            <button class="config-tab" onclick="switchConfigTab('return', this)">
+                                <i class="fas fa-undo"></i> 退换货政策
+                            </button>
+                        </div>
+
+                        <!-- Tab 1: 物流与运费设置 -->
+                        <div id="tab-shipping" class="tab-content active">
+                            <form id="shippingConfigForm" onsubmit="saveShippingConfig(event)">
+                                <div class="form-group">
+                                    <label for="shippingFee">
+                                        <i class="fas fa-coins"></i> 基础快递费用 (HKD)
+                                    </label>
+                                    <input type="number" id="shippingFee" step="0.01" min="0" required
+                                        class="form-input" placeholder="例如：50">
+                                    <small class="form-hint">
+                                        <i class="fas fa-info-circle"></i> 当订单未达到免邮门槛时，将向顾客收取此固定运费。
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="freeShippingThreshold">
+                                        <i class="fas fa-gift"></i> 免运费门槛 (HKD)
+                                    </label>
+                                    <input type="number" id="freeShippingThreshold" step="0.01" min="0" required
+                                        class="form-input" placeholder="例如：30000">
+                                    <small class="form-hint">
+                                        <i class="fas fa-info-circle"></i> 例如填写 30000，则顾客订单总额满 3 万即可自动免除快递费。
+                                    </small>
+                                </div>
+
+                                <button type="submit" class="btn-save-config" id="saveShippingBtn">
+                                    <i class="fas fa-save"></i> 保存运费设置
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Tab 2: 退换货政策设置 -->
+                        <div id="tab-return" class="tab-content">
+                            <form id="returnConfigForm" onsubmit="saveReturnConfig(event)">
+                                <div class="form-group">
+                                    <label for="returnDays">
+                                        <i class="fas fa-calendar-alt"></i> 无条件退货天数
+                                    </label>
+                                    <input type="number" id="returnDays" step="1" min="0" max="30" required
+                                        class="form-input" placeholder="例如：7">
+                                    <small class="form-hint">
+                                        <i class="fas fa-info-circle"></i> 顾客收货后可无条件申请退货的天数（0 表示不支持退货）。
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="exchangeDays">
+                                        <i class="fas fa-exchange-alt"></i> 无条件换货天数
+                                    </label>
+                                    <input type="number" id="exchangeDays" step="1" min="0" max="30" required
+                                        class="form-input" placeholder="例如：14">
+                                    <small class="form-hint">
+                                        <i class="fas fa-info-circle"></i> 顾客收货后可无条件申请换货的天数（0 表示不支持换货）。
+                                    </small>
+                                </div>
+
+                                <button type="submit" class="btn-save-config" id="saveReturnBtn">
+                                    <i class="fas fa-save"></i> 保存退换货设置
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <footer class="admin-footer"
+                style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 12px; text-align: center; color: rgba(255,255,255,0.7);">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
+                    ChronoTeam Admin Panel. All Rights Reserved.
+                </p>
+            </footer>
         </main>
     </div>
 
-    <!-- 引入公共彈窗 -->
+    <!-- 引入公共弹窗 -->
     <div th:replace="~{fragments/common :: modals}"></div>
 
-    <!-- 注入登入狀態 -->
+    <!-- 注入登入状态 -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
 
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>
 
-    <!-- 頁面專屬 JS -->
+    <!-- 页面专属 JS -->
     <script>
-        // 1. 頁面加載時，從後端獲取當前配置並填充表單
+        // 页面加载时，从后端获取当前配置并填充表单
         document.addEventListener('DOMContentLoaded', async function () {
-            await loadCurrentConfig();
+            await loadAllConfigs();
         });
 
-        async function loadCurrentConfig() {
+        // Tab 切换功能
+        function switchConfigTab(tabName, btn) {
+            // 隐藏所有 Tab 内容
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // 移除所有 Tab 按钮的 active 状态
+            document.querySelectorAll('.config-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // 显示当前 Tab 内容
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            // 激活当前 Tab 按钮
+            btn.classList.add('active');
+        }
+
+        // 加载所有配置
+        async function loadAllConfigs() {
             try {
-                // 注意：請確保您的 AdminConfigController 中有提供此 GET 接口
                 const res = await fetch('/api/admin/config/get', {
                     method: 'GET',
                     credentials: 'same-origin'
@@ -224,19 +355,29 @@
 
                 if (res.ok) {
                     const configs = await res.json();
+
+                    // 填充运费设置
                     if (configs.SHIPPING_FEE) {
                         document.getElementById('shippingFee').value = configs.SHIPPING_FEE;
                     }
                     if (configs.FREE_SHIPPING_THRESHOLD) {
                         document.getElementById('freeShippingThreshold').value = configs.FREE_SHIPPING_THRESHOLD;
                     }
+
+                    // 填充退换货设置
+                    if (configs.RETURN_DAYS !== undefined) {
+                        document.getElementById('returnDays').value = configs.RETURN_DAYS;
+                    }
+                    if (configs.EXCHANGE_DAYS !== undefined) {
+                        document.getElementById('exchangeDays').value = configs.EXCHANGE_DAYS;
+                    }
                 }
             } catch (error) {
-                console.warn('加載當前配置失敗 (若後端尚未提供 GET 接口可忽略此警告):', error);
+                console.warn('加载当前配置失败:', error);
             }
         }
 
-        // 2. 保存配置邏輯
+        // 保存运费设置
         async function saveShippingConfig(e) {
             e.preventDefault();
 
@@ -245,45 +386,62 @@
                 "FREE_SHIPPING_THRESHOLD": document.getElementById('freeShippingThreshold').value
             };
 
-            const btn = document.getElementById('saveConfigBtn');
+            await saveConfig('/api/admin/config/update-shipping', data, 'saveShippingBtn', '运费设置已成功保存！');
+        }
+
+        // 保存退换货设置
+        async function saveReturnConfig(e) {
+            e.preventDefault();
+
+            const data = {
+                "RETURN_DAYS": document.getElementById('returnDays').value,
+                "EXCHANGE_DAYS": document.getElementById('exchangeDays').value
+            };
+
+            await saveConfig('/api/admin/config/update-return-policy', data, 'saveReturnBtn', '退换货政策已成功保存！');
+        }
+
+        // 通用保存配置函数
+        async function saveConfig(url, data, btnId, successMessage) {
+            const btn = document.getElementById(btnId);
             const originalText = btn.innerHTML;
 
-            // 進入 Loading 狀態，防止重複點擊
+            // 进入 Loading 状态
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
 
             try {
-                const res = await fetch('/api/admin/config/update-shipping', {
+                const res = await fetch(url, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     credentials: 'same-origin',
-                    body: JSON.stringify(data) // 【修復】原代碼遺失了 body 參數
+                    body: JSON.stringify(data)
                 });
 
                 if (res.ok) {
                     const result = await res.json();
                     if (typeof showNotification === 'function') {
-                        showNotification('✅ ' + (result.message || '設置已成功保存！'));
+                        showNotification('✅ ' + (result.message || successMessage));
                     } else {
-                        alert('✅ ' + (result.message || '設置已成功保存！'));
+                        alert('✅ ' + (result.message || successMessage));
                     }
                 } else {
                     const err = await res.json().catch(() => ({}));
                     if (typeof showNotification === 'function') {
-                        showNotification('❌ ' + (err.message || '保存失敗，請檢查權限'), true);
+                        showNotification(' ' + (err.message || '保存失败，请检查权限'), true);
                     } else {
-                        alert('❌ 保存失敗，請檢查權限');
+                        alert('❌ 保存失败，请检查权限');
                     }
                 }
             } catch (error) {
-                console.error('保存配置錯誤:', error);
+                console.error('保存配置错误:', error);
                 if (typeof showNotification === 'function') {
-                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                    showNotification('❌ 网络错误，请稍后重试', true);
                 } else {
-                    alert('❌ 網絡錯誤，請稍後重試');
+                    alert('❌ 网络错误，请稍后重试');
                 }
             } finally {
-                // 恢復按鈕狀態
+                // 恢复按钮状态
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }

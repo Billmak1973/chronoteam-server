@@ -64,8 +64,13 @@ public class Order {
     @Column(name = "order_status", length = 20)
     private OrderStatus status = OrderStatus.PENDING;
 
-    @Column(name = "offline_store_id", length = 50)
-    private String offlineStoreId; // 記錄具體的線下店鋪 ID (可為空)
+    /**
+     * 关联的线下门店
+     * 使用 @ManyToOne 建立多对一关系
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "offline_store_id") // 指定外键列名
+    private OfflineStore offlineStore;
 
     // ================= 6. 時間戳 (Timestamps) =================
     @CreationTimestamp

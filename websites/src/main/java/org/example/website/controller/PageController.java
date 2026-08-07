@@ -50,6 +50,7 @@ public class PageController {
     private final SiteSettingService siteSettingService;
     private final AnnouncementReceiptRepository announcementReceiptRepository;
     private final OrderRepository orderRepository;
+    private final SystemConfigService systemConfigService;
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
@@ -63,7 +64,7 @@ public class PageController {
                           AppealRepository appealRepository,
                           SecurityQuestionRepository securityQuestionRepository,
                           AdminPenaltyRepository adminPenaltyRepository,
-                          AdminPenaltyService adminPenaltyService,
+                          AdminPenaltyService adminPenaltyService,SystemConfigService systemConfigService,
                           CartService cartService, ProductService productService, AnnouncementReceiptRepository announcementReceiptRepository,
                           UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository) {
         this.userService = userService;
@@ -85,6 +86,7 @@ public class PageController {
         this.siteSettingService = siteSettingService;
         this.announcementReceiptRepository = announcementReceiptRepository;
         this.orderRepository = orderRepository;
+        this.systemConfigService = systemConfigService; // 新增賦值
     }
 
     @GetMapping("/")
@@ -183,6 +185,8 @@ public class PageController {
         model.addAttribute("unpaidOrders", unpaidOrders);
         model.addAttribute("pendingOfflineOrders", pendingOfflineOrders); // 【修改点 3】：传入新列表
         model.addAttribute("paidOrders", paidOrders);
+        model.addAttribute("returnDays", systemConfigService.getReturnDays());
+        model.addAttribute("exchangeDays", systemConfigService.getExchangeDays());
 
         return "orders";
     }
