@@ -1,13 +1,14 @@
 package org.example.website.controller;
 
 import org.example.website.entity.Product;
-import org.example.website.repository.FavoriteRepository; //  新增導入
+import org.example.website.repository.FavoriteRepository;
 import org.example.website.repository.ProductRepository;
+import org.example.website.util.PaginationUtils; // 1. 引入工具類
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.core.Authentication; // 新增導入
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,7 +27,6 @@ public class BrowseController {
     private final ProductRepository productRepository;
     private final FavoriteRepository favoriteRepository;
 
-    //  修改構造函數，注入 FavoriteRepository
     public BrowseController(ProductRepository productRepository, FavoriteRepository favoriteRepository) {
         this.productRepository = productRepository;
         this.favoriteRepository = favoriteRepository;
@@ -40,9 +40,9 @@ public class BrowseController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String priceRange,
             @RequestParam(required = false, defaultValue = "newest") String sort,
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "1") int page, // 注意：前端傳入的是 1-based
             @RequestParam(defaultValue = "12") int size,
-            Authentication authentication, // Spring Security 自動注入當前用戶認證信息
+            Authentication authentication,
             Model model) {
 
         Map<String, Object> filters = new HashMap<>();
@@ -66,16 +66,14 @@ public class BrowseController {
                 break;
         }
 
+        // Spring Data JPA 使用 0-based 頁碼，所以這裡要 page - 1
         Pageable pageable = PageRequest.of(page - 1, size, dynamicSort);
         Page<Product> productPage = productRepository.searchProducts(filters, pageable);
 
-        //  核心修復：查詢當前用戶的收藏商品 ID 集合
-        //使用 Set (如 HashSet)，contains() 的時間複雜度是 O(1)，無論收藏多少商品，判斷速度都是瞬間完成，性能更好。
+        // 查詢當前用戶的收藏商品 ID 集合
         Set<Integer> favoriteProductIds = new HashSet<>();
-        // 判斷用戶是否已登入 (排除匿名用戶)
         if (authentication != null && authentication.isAuthenticated()
                 && !"anonymousUser".equals(authentication.getPrincipal())) {
-
             String username = authentication.getName();
             List<Integer> favIds = favoriteRepository.findFavoriteProductIdsByUsername(username);
             if (favIds != null) {
@@ -84,14 +82,21 @@ public class BrowseController {
         }
 
         model.addAttribute("products", productPage.getContent());
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", page); // 保持 1-based 給前端顯示用
         model.addAttribute("totalPages", productPage.getTotalPages());
         model.addAttribute("totalElements", productPage.getTotalElements());
         model.addAttribute("currentFilters", filters);
         model.addAttribute("currentSort", sort);
-
-        //  將收藏 ID 集合傳遞給 Thymeleaf
         model.addAttribute("favoriteProductIds", favoriteProductIds);
+
+        // ==========================================
+        // 【核心新增】：生成智能分頁列表 (1 ... 4 5 6 ... 10)
+        // 注意：PaginationUtils 內部邏輯通常假設 currentPage 是 0-based (Spring Data 標準)
+        // 但你的前端傳入的是 1-based，PaginationUtils 內部會處理 +1 邏輯，
+        // 所以這裡傳入 page - 1 (即 0-based) 給工具類是安全的。
+        // ==========================================
+        List<PaginationUtils.PageItem> smartPages = PaginationUtils.generateSmartPagination(page - 1, productPage.getTotalPages());
+        model.addAttribute("smartPages", smartPages);
 
         String pageTitle = buildPageTitle(category, brand, condition);
         model.addAttribute("pageTitle", pageTitle);

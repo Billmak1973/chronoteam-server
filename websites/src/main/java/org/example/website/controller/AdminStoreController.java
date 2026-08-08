@@ -5,13 +5,21 @@ import org.example.website.entity.OfflineStore;
 import org.example.website.entity.User;
 import org.example.website.repository.OfflineStoreRepository;
 import org.example.website.security.CustomUserDetails;
+import org.example.website.util.PaginationUtils; // 1. 引入工具類
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin/stores")
@@ -24,8 +32,7 @@ public class AdminStoreController {
     }
 
     /**
-     *  核心修復：權限校驗基於 user_type (Role == ADMIN)，而非用戶名是否等於 "admin"
-     * CustomUserDetails 在登入時已從數據庫載入 Role 枚舉，直接判斷，零查庫開銷
+     * 權限校驗輔助方法
      */
     private boolean isAdmin(Authentication authentication) {
         return authentication != null
@@ -39,17 +46,52 @@ public class AdminStoreController {
     @GetMapping
     public String storesPage(Model model, Authentication authentication) {
         if (!isAdmin(authentication)) {
-            return "redirect:/"; // 非管理員不允許進入頁面
+            return "redirect:/";
         }
-        return "admin/admin-stores"; // 對應 templates/admin/admin-stores.html
+        return "admin/admin-stores";
     }
 
-    // API: 獲取所有店鋪
+    /**
+     * API: 獲取所有店鋪 (已修復：支持分頁 + 避免序列化錯誤)
+     */
     @GetMapping("/api/list")
     @ResponseBody
-    public ResponseEntity<?> getAllStores() {
-        List<OfflineStore> stores = storeRepository.findAll();
-        return ResponseEntity.ok(stores);
+    public ResponseEntity<?> getAllStores(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+
+        // 1. 按創建時間倒序分頁查詢
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<OfflineStore> storesPage = storeRepository.findAll(pageable);
+
+        // 2. 【核心修復】：數據清洗 (Data Cleaning)
+        // 將 Entity 轉換為 Map，只保留前端需要的字段，避免 Jackson 序列化 Hibernate Proxy 導致報錯
+        List<Map<String, Object>> cleanStores = storesPage.getContent().stream().map(store -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("storeId", store.getStoreId());
+            map.put("storeCode", store.getStoreCode());
+            map.put("name", store.getName());
+            map.put("address", store.getAddress());
+            map.put("phone", store.getPhone());
+            map.put("hours", store.getHours());
+            map.put("isActive", store.getIsActive());
+
+            // 退貨相關字段
+            map.put("returnAdvanceDays", store.getReturnAdvanceDays());
+            map.put("returnBlackoutStartDate", store.getReturnBlackoutStartDate());
+            map.put("returnBlackoutEndDate", store.getReturnBlackoutEndDate());
+            map.put("returnBlackoutReason", store.getReturnBlackoutReason());
+            map.put("returnClosedDaysOfWeek", store.getReturnClosedDaysOfWeek());
+
+            map.put("createdAt", store.getCreatedAt());
+            return map;
+        }).collect(Collectors.toList());
+
+        // 3. 使用 PaginationUtils 構建標準響應
+        // 傳入 cleanStores 而不是 null，確保返回的是純淨的 JSON 數據
+        Map<String, Object> response = PaginationUtils.buildPageResponse(storesPage, cleanStores);
+
+        return ResponseEntity.ok(response);
     }
 
     // API: 新增店鋪

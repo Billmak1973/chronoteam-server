@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/admin.css">
+    <!-- 保留原有全部 <style> 內容不變 -->
     <style>
-        /* 橫向滾動容器 */
+        /* ... 原有 CSS 全部保留 ... */
         .table-responsive {
             overflow-x: auto;
             background: white;
@@ -49,7 +50,6 @@
             background-color: #fcfcfc;
         }
 
-        /* 狀態徽章 */
         .status-badge {
             padding: 0.3rem 0.8rem;
             border-radius: 20px;
@@ -95,7 +95,6 @@
             color: #5a32a3;
         }
 
-        /* 詳情展開區域樣式 */
         .order-details-row {
             background: #f8f9fa;
         }
@@ -177,42 +176,7 @@
             color: #6c757d;
         }
 
-        /* 分頁 */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.5rem;
-            margin-top: 2rem;
-        }
-
-        .pagination a,
-        .pagination span {
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            text-decoration: none;
-        }
-
-        .pagination a {
-            background: white;
-            border: 1px solid #dee2e6;
-            color: var(--primary);
-        }
-
-        .pagination a:hover {
-            border-color: var(--gold);
-            color: var(--gold);
-        }
-
-        .pagination .current-page {
-            background: var(--gold);
-            color: white;
-            border: 1px solid var(--gold);
-            font-weight: 600;
-        }
-
-        /* === 門店取貨彈窗專屬樣式 === */
+        /* 取貨彈窗樣式保持不變 */
         .pickup-modal-overlay {
             position: fixed;
             top: 0;
@@ -380,7 +344,6 @@
             transform: none;
         }
 
-        /* 取貨按鈕樣式 - 與明細按鈕尺寸一致 */
         .btn-pickup {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
@@ -407,22 +370,40 @@
         .btn-pickup:active {
             transform: translateY(0);
         }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
     </style>
 </head>
 
 <body>
-
     <div th:replace="~{fragments/common :: navbar}"></div>
-
     <div class="admin-layout">
         <div th:replace="~{fragments/admin-sidebar :: adminSidebar('orders')}"></div>
-
         <main class="admin-main">
             <div class="content-header">
                 <h2><i class="fas fa-shopping-bag" style="color: var(--gold);"></i> 訂單管理 (全字段視圖)</h2>
                 <div class="breadcrumb">後台管理 / 訂單列表 (共 17 個數據字段)</div>
             </div>
-
             <div class="content-body">
                 <div class="table-responsive">
                     <table class="order-table">
@@ -430,8 +411,8 @@
                             <tr>
                                 <th>1. ID</th>
                                 <th>2. 訂單編號</th>
-                                <th>3. 買家 (User)</th>
-                                <th>4. 快遞員 (Courier)</th>
+                                <th>3. 買家</th>
+                                <th>4. 快遞員</th>
                                 <th>5. 總金額</th>
                                 <th>6. 運費</th>
                                 <th>7. 配送方式</th>
@@ -448,270 +429,238 @@
                                 <th style="text-align: center;">操作</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <!-- ========================================== -->
-                            <!-- 【核心修復】：訂單行 + 詳情行包在同一個 th:each 裡，
-                         詳情行永遠緊挨著屬於它的訂單號！ -->
-                            <!-- ========================================== -->
-                            <th:block th:each="order : ${orders.content}">
-
-                                <!-- 訂單行 -->
-                                <tr>
-                                    <td th:text="${order.orderId}" class="text-muted"></td>
-                                    <td><strong th:text="${order.orderNo}"
-                                            style="font-family: monospace; color: var(--primary);"></strong></td>
-                                    <td>
-                                        <i class="fas fa-user" style="color: var(--gold); margin-right: 5px;"></i>
-                                        <span th:text="${order.user != null ? order.user.username : '未知用戶'}"></span>
-                                    </td>
-                                    <td>
-                                        <!-- 只有當配送方式「不是」門店自取時，才顯示快遞員資訊 -->
-                                        <span th:if="${order.deliveryMethod != 'STORE_PICKUP'}">
-                                            <span th:if="${order.courier != null}" th:text="${order.courier.username}"
-                                                style="color: #004085;"></span>
-                                            <span th:unless="${order.courier != null}" class="text-muted">未分配</span>
-                                        </span>
-                                    </td>
-                                    <td style="color: var(--accent); font-weight: 700;">
-                                        HK$ <span
-                                            th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 0, 'POINT')}">0</span>
-                                    </td>
-                                    <td>
-                                        HK$ <span
-                                            th:text="${#numbers.formatDecimal(order.shippingFee, 1, 'COMMA', 0, 'POINT')}">0</span>
-                                    </td>
-                                    <td>
-                                        <span th:switch="${order.deliveryMethod}">
-                                            <span th:case="'EXPRESS'" style="color: #004085;"><i
-                                                    class="fas fa-truck"></i> 快遞</span>
-                                            <span th:case="'STORE_PICKUP'" style="color: #155724;"><i
-                                                    class="fas fa-store"></i> 門店自取</span>
-                                            <span th:case="*" th:text="${order.deliveryMethod ?: '-'}"
-                                                class="text-muted"></span>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span th:if="${order.delivery}" class="bool-yes"><i
-                                                class="fas fa-check-circle"></i> 是</span>
-                                        <span th:unless="${order.delivery}" class="bool-no"><i
-                                                class="fas fa-times-circle"></i> 否</span>
-                                    </td>
-                                    <td th:text="${order.paymentMethod}" style="font-family: monospace;"></td>
-                                    <td>
-                                        <span th:switch="${order.paymentStatus.name()}" class="status-badge"
-                                            th:classappend="${order.paymentStatus.name() == 'UNPAID'} ? 'status-unpaid' :
-                                                     (${order.paymentStatus.name() == 'PAID_SIMULATED' or order.paymentStatus.name() == 'PAID_REAL' or order.paymentStatus.name() == 'PAID_OFFLINE'} ? 'status-paid' :
-                                                     (${order.paymentStatus.name() == 'PENDING_OFFLINE'} ? 'status-pending' :
-                                                     (${order.paymentStatus.name() == 'REFUNDED'} ? 'status-refunded' : 'status-cancelled')))">
-                                            <span th:case="'UNPAID'">待付款</span>
-                                            <span th:case="'PAID_SIMULATED'">已付款(模擬)</span>
-                                            <span th:case="'PAID_REAL'">已付款(真實)</span>
-                                            <span th:case="'PENDING_OFFLINE'">待線下付款</span>
-                                            <span th:case="'PAID_OFFLINE'">已線下付款</span>
-                                            <span th:case="'REFUNDED'">已退款</span>
-                                            <span th:case="*">未知</span>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span th:switch="${order.status.name()}" class="status-badge"
-                                            th:classappend="${order.status.name() == 'PENDING'} ? 'status-pending' :
-                                                     (${order.status.name() == 'PAID'} ? 'status-paid' :
-                                                     (${order.status.name() == 'SHIPPED'} ? 'status-shipped' :
-                                                     (${order.status.name() == 'COMPLETED'} ? 'status-completed' : 'status-cancelled')))">
-                                            <span th:case="'PENDING'">待處理</span>
-                                            <span th:case="'PAID'">已付款</span>
-                                            <span th:case="'SHIPPED'">已發貨</span>
-                                            <span th:case="'COMPLETED'">已完成</span>
-                                            <span th:case="'CANCELLED'">已取消</span>
-                                            <span th:case="*">未知</span>
-                                        </span>
-                                    </td>
-                                    <td th:text="${order.offlineStore != null ? order.offlineStore.name : '-'}"
-                                        class="text-muted"></td>
-                                    <td th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
-                                    <td>
-                                        <span th:if="${order.paidAt != null}"
-                                            th:text="${#temporals.format(order.paidAt, 'yyyy-MM-dd HH:mm')}"></span>
-                                        <span th:unless="${order.paidAt != null}" class="text-muted">-</span>
-                                    </td>
-                                    <td>
-                                        <span th:if="${order.receivedAt != null}"
-                                            th:text="${#temporals.format(order.receivedAt, 'yyyy-MM-dd HH:mm')}"></span>
-                                        <span th:unless="${order.receivedAt != null}" class="text-muted">-</span>
-                                    </td>
-                                    <td>
-                                        <span th:if="${order.deadlineAt != null}"
-                                            th:text="${#temporals.format(order.deadlineAt, 'yyyy-MM-dd HH:mm')}"
-                                            style="color: #856404;"></span>
-                                        <span th:unless="${order.deadlineAt != null}" class="text-muted">-</span>
-                                    </td>
-                                    <td>
-                                        <span th:if="${order.isVisible}" class="bool-yes"><i class="fas fa-eye"></i>
-                                            可見</span>
-                                        <span th:unless="${order.isVisible}" class="bool-no"><i
-                                                class="fas fa-eye-slash"></i> 隱藏</span>
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <button class="btn-toggle" onclick="toggleOrderDetails(this)">
-                                            <i class="fas fa-eye"></i> <span>明細</span>
-                                        </button>
-
-                                        <!-- 取貨按鈕：僅在門店自取 且 狀態為 PENDING 或 PAID 時顯示 -->
-                                        <button
-                                            th:if="${order.deliveryMethod == 'STORE_PICKUP' and (order.status.name() == 'PENDING' or order.status.name() == 'PAID')}"
-                                            class="btn-sm btn-pickup" th:data-order-no="${order.orderNo}"
-                                            th:data-amount="${order.totalAmount}"
-                                            th:data-payment-status="${order.paymentStatus.name()}"
-                                            onclick="openPickupModal(this)">
-                                            <i class="fas fa-box-open"></i> 取貨
-                                        </button>
-                                    </td>
-                                </tr>
-
-                                <!-- ========================================== -->
-                                <!-- 詳情行：緊挨著上面的訂單號！
-                             數據由後端 orderItemsMap 直接渲染，零 AJAX、零「加載中」 -->
-                                <!-- ========================================== -->
-                                <tr class="order-details-row" style="display: none;">
-                                    <td colspan="18">
-                                        <div class="order-details-content">
-                                            <h4
-                                                style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
-                                                <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細
-                                                <span class="text-muted" style="font-size:0.85rem; font-weight:normal;"
-                                                    th:text="'（訂單編號：' + ${order.orderNo} + '）'"></span>
-                                            </h4>
-
-                                            <!-- 該訂單沒有明細時 -->
-                                            <p th:if="${orderItemsMap[order.orderId] == null or #lists.isEmpty(orderItemsMap[order.orderId])}"
-                                                style="text-align:center; color:#6c757d; padding:1rem; margin:0;">
-                                                <i class="fas fa-inbox"></i> 該訂單沒有商品
-                                            </p>
-
-                                            <!-- 有明細：直接渲染，所見即所得 -->
-                                            <div th:unless="${orderItemsMap[order.orderId] == null or #lists.isEmpty(orderItemsMap[order.orderId])}"
-                                                style="display:flex; flex-direction:column; gap:0.8rem;">
-                                                <div class="item-card" style="margin-bottom:0;"
-                                                    th:each="item : ${orderItemsMap[order.orderId]}">
-                                                    <img class="item-img"
-                                                        th:src="@{/images/products/{img}(img=${item.product.image})}"
-                                                        onerror="this.src='/images/placeholder.png'" alt="Product">
-                                                    <div class="item-info">
-                                                        <div class="item-name"
-                                                            th:text="${item.product.description} ?: '未知商品'"></div>
-                                                        <div class="item-meta">
-                                                            數量: <span th:text="${item.quantity}"></span> |
-                                                            單價: HK$ <span
-                                                                th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}"></span>
-                                                            |
-                                                            分類: <span th:text="${item.product.category} ?: '-'"></span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="item-price"
-                                                        th:text="'HK$ ' + ${#numbers.formatDecimal(item.price * item.quantity, 1, 'COMMA', 0, 'POINT')}">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                            </th:block>
-                        </tbody>
+                        <!-- ✅ 核心：tbody 留空，由 AdminTable 動態填充 -->
+                        <tbody id="ordersTableBody"></tbody>
                     </table>
                 </div>
-
-                <!-- 分頁 -->
-                <div class="pagination">
-                    <a th:if="${currentPage > 0}" th:href="@{/admin/orders(page=${currentPage - 1})}">
-                        <i class="fas fa-chevron-left"></i> 上一頁
-                    </a>
-                    <span class="current-page" th:text="${currentPage + 1}">1</span>
-                    <a th:if="${currentPage < totalPages - 1}" th:href="@{/admin/orders(page=${currentPage + 1})}">
-                        下一頁 <i class="fas fa-chevron-right"></i>
-                    </a>
-                </div>
+                <!-- ✅ 核心：分頁容器改為 div，由 AdminTable 動態渲染 -->
+                <div id="orders-pagination"></div>
             </div>
 
-            <footer class="admin-footer" style="
-        margin-top: 3rem;
-        padding: 2rem;
-        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-        border-radius: 12px;
-        text-align: center;
-        color: rgba(255, 255, 255, 0.7);
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
-    ">
-                <p style="margin: 0; font-size: 0.9rem;">
-                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
-                    ChronoTeam Admin Panel. All Rights Reserved.
-                </p>
-                <p style="margin: 0.5rem 0 0; font-size: 0.8rem; opacity: 0.8;">
-                    專業二手名錶管理平台
-                </p>
+            <footer class="admin-footer"
+                style="margin-top:3rem; padding:2rem; background:linear-gradient(135deg,var(--primary) 0%,var(--secondary) 100%); border-radius:12px; text-align:center; color:rgba(255,255,255,0.7); box-shadow:0 -4px 20px rgba(0,0,0,0.05);">
+                <p style="margin:0; font-size:0.9rem;"><i class="fas fa-shield-alt"
+                        style="color:var(--gold); margin-right:0.5rem;"></i> &copy; <span
+                        th:text="${#temporals.format(#temporals.createNow(),'yyyy')}">2026</span> ChronoTeam Admin
+                    Panel. All Rights Reserved.</p>
+                <p style="margin:0.5rem 0 0; font-size:0.8rem; opacity:0.8;">專業二手名錶管理平台</p>
             </footer>
         </main>
     </div>
 
-    <!-- ========================================== -->
-    <!--  門店取貨確認彈窗 (智能動態彈窗) -->
-    <!-- ========================================== -->
-    <div id="pickupModal" class="pickup-modal-overlay" style="display: none;">
+    <!-- 取貨彈窗 HTML 保持不變 -->
+    <div id="pickupModal" class="pickup-modal-overlay" style="display:none;">
         <div class="pickup-modal-box">
-            <div class="pickup-modal-icon">
-                <i class="fas fa-store"></i>
-            </div>
+            <div class="pickup-modal-icon"><i class="fas fa-store"></i></div>
             <h3 class="pickup-modal-title">確認門店取貨</h3>
-
             <div class="pickup-modal-body">
-                <p class="pickup-order-no">
-                    訂單編號：<span id="pickupOrderNo" class="highlight-text"></span>
-                </p>
-
-                <!-- 動態顯示總金額 (僅 PENDING_OFFLINE 時顯示) -->
-                <div id="pickupAmountSection" class="pickup-amount-box" style="display: none;">
-                    <i class="fas fa-coins"></i>
-                    <span>應付總金額：</span>
-                    <strong id="pickupTotalAmount"></strong>
-                </div>
-
-                <div class="pickup-time-box">
-                    <i class="fas fa-clock"></i>
-                    <span>預計取貨/收貨時間：</span>
-                    <strong id="pickupCurrentTime"></strong>
-                </div>
-
+                <p class="pickup-order-no">訂單編號：<span id="pickupOrderNo" class="highlight-text"></span></p>
+                <div id="pickupAmountSection" class="pickup-amount-box" style="display:none;"><i
+                        class="fas fa-coins"></i><span>應付總金額：</span><strong id="pickupTotalAmount"></strong></div>
+                <div class="pickup-time-box"><i class="fas fa-clock"></i><span>預計取貨/收貨時間：</span><strong
+                        id="pickupCurrentTime"></strong></div>
                 <p id="pickupHintText" class="pickup-hint"></p>
             </div>
-
             <div class="pickup-modal-actions">
-                <button class="btn-pickup-cancel" onclick="closePickupModal()">
-                    <i class="fas fa-times"></i> 取消
-                </button>
-                <button class="btn-pickup-confirm" id="confirmPickupBtn" onclick="executePickup()">
-                    <i class="fas fa-check-circle"></i> <span id="pickupConfirmText">確認取貨</span>
-                </button>
+                <button class="btn-pickup-cancel" onclick="closePickupModal()"><i class="fas fa-times"></i> 取消</button>
+                <button class="btn-pickup-confirm" id="confirmPickupBtn" onclick="executePickup()"><i
+                        class="fas fa-check-circle"></i> <span id="pickupConfirmText">確認取貨</span></button>
             </div>
         </div>
     </div>
 
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>
+    <!--  引入通用表格管理器 -->
+    <script src="/js/admin-table.js"></script>
     <div th:replace="~{fragments/common :: modals}"></div>
 
     <script>
         // ==========================================
-        // 【核心修復】：純前端展開/收起！
-        // 數據已經由後端 (order_item.order_id = orders.order_id) 匹配好並用 Thymeleaf 直接渲染，
-        // 不再有任何 AJAX 請求，不再有任何「加載中」！
+        // 格式化輔助函數
+        // ==========================================
+        function formatDateTime(dt) {
+            if (!dt) return '<span class="text-muted">-</span>';
+            const d = new Date(dt);
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+        function formatMoney(amount) {
+            if (amount == null) return '0';
+            return new Intl.NumberFormat('zh-HK', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(amount);
+        }
+
+        // ==========================================
+        // 狀態徽章映射
+        // ==========================================
+        const paymentStatusMap = {
+            'UNPAID': {label: '待付款', cls: 'status-unpaid'},
+            'PAID_SIMULATED': {label: '已付款(模擬)', cls: 'status-paid'},
+            'PAID_REAL': {label: '已付款(真實)', cls: 'status-paid'},
+            'PAID_OFFLINE': {label: '已線下付款', cls: 'status-paid'},
+            'PENDING_OFFLINE': {label: '待線下付款', cls: 'status-pending'},
+            'REFUNDED': {label: '已退款', cls: 'status-refunded'},
+        };
+        const orderStatusMap = {
+            'PENDING': {label: '待處理', cls: 'status-pending'},
+            'PAID': {label: '已付款', cls: 'status-paid'},
+            'SHIPPED': {label: '已發貨', cls: 'status-shipped'},
+            'COMPLETED': {label: '已完成', cls: 'status-completed'},
+            'CANCELLED': {label: '已取消', cls: 'status-cancelled'},
+        };
+
+        // ==========================================
+        //  核心：行渲染回調函數 (翻譯原 Thymeleaf 模板)
+        // ==========================================
+        function renderOrderRow(order) {
+            const ps = paymentStatusMap[order.paymentStatus] || {label: '未知', cls: ''};
+            const os = orderStatusMap[order.orderStatus] || {label: '未知', cls: ''};
+
+            // 配送方式
+            let deliveryHtml = '';
+            if (order.deliveryMethod === 'EXPRESS') {
+                deliveryHtml = '<span style="color:#004085;"><i class="fas fa-truck"></i> 快遞</span>';
+            } else if (order.deliveryMethod === 'STORE_PICKUP') {
+                deliveryHtml = '<span style="color:#155724;"><i class="fas fa-store"></i> 門店自取</span>';
+            } else {
+                deliveryHtml = `<span class="text-muted">${order.deliveryMethod || '-'}</span>`;
+            }
+
+            // 快遞員
+            let courierHtml = '';
+            if (order.deliveryMethod !== 'STORE_PICKUP') {
+                courierHtml = order.courierUsername
+                    ? `<span style="color:#004085;">${order.courierUsername}</span>`
+                    : '<span class="text-muted">未分配</span>';
+            }
+
+            let paymentMethodHtml = '';
+            if (order.paymentMethod === 'OFFLINE_STORE') {
+                paymentMethodHtml = '<span style="color:#155724; font-weight:600;"><i class="fas fa-store"></i> 線下店鋪支付</span>';
+            } else if (order.paymentMethod === 'PAYPAL_SIM') {
+                paymentMethodHtml = '<span style="color:#004085; font-weight:600;"><i class="fas fa-credit-card"></i> 線上支付</span>';
+            } else {
+                paymentMethodHtml = `<span class="text-muted">${order.paymentMethod || '-'}</span>`;
+            }
+
+            // 需快遞
+            const needDeliveryHtml = order.delivery
+                ? '<span class="bool-yes"><i class="fas fa-check-circle"></i> 是</span>'
+                : '<span class="bool-no"><i class="fas fa-times-circle"></i> 否</span>';
+
+            // 用戶可見
+            const visibleHtml = order.isVisible
+                ? '<span class="bool-yes"><i class="fas fa-eye"></i> 可見</span>'
+                : '<span class="bool-no"><i class="fas fa-eye-slash"></i> 隱藏</span>';
+
+            // 取貨按鈕 (僅 STORE_PICKUP 且 PENDING/PAID 時顯示)
+            let pickupBtnHtml = '';
+            if (order.deliveryMethod === 'STORE_PICKUP' &&
+                (order.orderStatus === 'PENDING' || order.orderStatus === 'PAID')) {
+                pickupBtnHtml = `<button class="btn-pickup"
+                    data-order-no="${order.orderNo}"
+                    data-amount="${order.totalAmount}"
+                    data-payment-status="${order.paymentStatus}"
+                    onclick="openPickupModal(this)">
+                    <i class="fas fa-box-open"></i> 取貨</button>`;
+            }
+
+            // 構建明細行 HTML (嵌入在訂單行下方)
+            let detailsRowsHtml = '';
+            if (order.items && order.items.length > 0) {
+                const itemsHtml = order.items.map(it => `
+                    <div class="item-card" style="margin-bottom:0;">
+                        <img class="item-img" src="/images/products/${it.productImage || 'placeholder.png'}"
+                             onerror="this.src='/images/placeholder.png'" alt="Product">
+                        <div class="item-info">
+                            <div class="item-name">${it.productName || '未知商品'}</div>
+                            <div class="item-meta">
+                                數量: ${it.quantity} | 單價: HK$ ${formatMoney(it.price)} | 分類: ${it.productCategory || '-'}
+                            </div>
+                        </div>
+                        <div class="item-price">HK$ ${formatMoney(it.subtotal)}</div>
+                    </div>
+                `).join('');
+                detailsRowsHtml = `<tr class="order-details-row" style="display:none;" data-parent-order="${order.orderId}">
+                    <td colspan="18">
+                        <div class="order-details-content">
+                            <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
+                                <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細
+                                <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
+                            </h4>
+                            <div style="display:flex; flex-direction:column; gap:0.8rem;">${itemsHtml}</div>
+                        </div>
+                    </td>
+                </tr>`;
+            } else {
+                detailsRowsHtml = `<tr class="order-details-row" style="display:none;" data-parent-order="${order.orderId}">
+                    <td colspan="18">
+                        <div class="order-details-content">
+                            <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
+                                <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細
+                                <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
+                            </h4>
+                            <p style="text-align:center; color:#6c757d; padding:1rem; margin:0;">
+                                <i class="fas fa-inbox"></i> 該訂單沒有商品
+                            </p>
+                        </div>
+                    </td>
+                </tr>`;
+            }
+
+            // 返回訂單行 + 明細行 (兩行作為一個整體)
+            return `<tr data-order-id="${order.orderId}">
+                <td class="text-muted">${order.orderId}</td>
+                <td><strong style="font-family:monospace; color:var(--primary);">${order.orderNo}</strong></td>
+                <td><i class="fas fa-user" style="color:var(--gold); margin-right:5px;"></i> ${order.buyerUsername}</td>
+                <td>${courierHtml}</td>
+                <td style="color:var(--accent); font-weight:700;">HK$ ${formatMoney(order.totalAmount)}</td>
+                <td>HK$ ${formatMoney(order.shippingFee)}</td>
+                <td>${deliveryHtml}</td>
+                <td>${needDeliveryHtml}</td>
+                <td>${paymentMethodHtml}</td>
+                <td><span class="status-badge ${ps.cls}">${ps.label}</span></td>
+                <td><span class="status-badge ${os.cls}">${os.label}</span></td>
+                <td class="text-muted">${order.offlineStoreName || '-'}</td>
+                <td>${formatDateTime(order.createdAt)}</td>
+                <td>${formatDateTime(order.paidAt)}</td>
+                <td>${formatDateTime(order.receivedAt)}</td>
+                <td>${order.deadlineAt ? `<span style="color:#856404;">${formatDateTime(order.deadlineAt)}</span>` : '<span class="text-muted">-</span>'}</td>
+                <td>${visibleHtml}</td>
+                <td style="text-align:center;">
+                    <button class="btn-toggle" onclick="toggleOrderDetails(this)">
+                        <i class="fas fa-eye"></i> <span>明細</span>
+                    </button>
+                    ${pickupBtnHtml}
+                </td>
+            </tr>${detailsRowsHtml}`;
+        }
+
+        // ==========================================
+        // ✅ 初始化：使用 AdminTable 加載數據
+        // ==========================================
+        const tableConfig = {
+            apiUrl: '/admin/api/orders/list',
+            params: {page: 0, size: 25},
+            tbodySelector: '#ordersTableBody',
+            paginationId: 'orders-pagination',
+            renderRow: renderOrderRow,
+            emptyText: '暫無訂單數據'
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            AdminTable.loadData(tableConfig);
+        });
+
+        // ==========================================
+        // 展開/收起明細 (純前端 DOM 操作，零 AJAX)
         // ==========================================
         function toggleOrderDetails(btn) {
-            const detailsRow = btn.closest('tr').nextElementSibling;
+            const orderRow = btn.closest('tr');
+            const detailsRow = orderRow.nextElementSibling;
             const icon = btn.querySelector('i');
             const textNode = btn.querySelector('span');
 
-            // 安全護欄：確保下一行確實是詳情行
             if (!detailsRow || !detailsRow.classList.contains('order-details-row')) return;
 
             if (detailsRow.style.display === 'table-row') {
@@ -726,7 +675,7 @@
         }
 
         // ==========================================
-        // 門店取貨彈窗邏輯
+        // 門店取貨彈窗邏輯 (保持不變)
         // ==========================================
         let currentPickupOrderNo = null;
 
@@ -735,38 +684,29 @@
             const totalAmount = button.getAttribute('data-amount');
             const paymentStatus = button.getAttribute('data-payment-status');
 
-            // 1. 填充訂單編號
             document.getElementById('pickupOrderNo').textContent = currentPickupOrderNo;
-
-            // 2. 獲取並格式化當前時間
             const now = new Date();
-            const timeString = now.toLocaleString('zh-TW', {
+            document.getElementById('pickupCurrentTime').textContent = now.toLocaleString('zh-TW', {
                 year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                hour12: false
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
             });
-            document.getElementById('pickupCurrentTime').textContent = timeString;
 
-            // 3. 根據支付狀態動態渲染彈窗內容
             const amountSection = document.getElementById('pickupAmountSection');
             const hintText = document.getElementById('pickupHintText');
             const confirmText = document.getElementById('pickupConfirmText');
             const totalAmountEl = document.getElementById('pickupTotalAmount');
 
             if (paymentStatus === 'PENDING_OFFLINE') {
-                // 情況 A：待線下付款
                 amountSection.style.display = 'flex';
                 totalAmountEl.textContent = 'HK$ ' + new Intl.NumberFormat('zh-HK', {minimumFractionDigits: 2}).format(totalAmount);
                 hintText.textContent = '⚠️ 請在店鋪完成付款，並由店員確認後點擊此按鈕，訂單將直接標記為已完成。';
                 confirmText.textContent = '確認付款並取貨';
             } else {
-                // 情況 B：已付款 (PAID_SIMULATED / PAID_REAL / PAID_OFFLINE)
                 amountSection.style.display = 'none';
                 hintText.textContent = '✅ 請確認您已收到商品且無誤。點擊後訂單狀態將變更為「已完成」。';
                 confirmText.textContent = '確認已取貨';
             }
 
-            // 4. 顯示彈窗
             document.getElementById('pickupModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
         }
@@ -779,30 +719,20 @@
 
         async function executePickup() {
             if (!currentPickupOrderNo) return;
-
             const btn = document.getElementById('confirmPickupBtn');
             const originalText = btn.innerHTML;
-
-            // 進入 Loading 狀態
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-
             try {
                 const response = await fetch(`/api/order/${currentPickupOrderNo}/pickup`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
+                    method: 'POST', headers: {'Content-Type': 'application/json'}
                 });
-
                 const result = await response.json();
-
                 if (response.ok && result.success) {
                     closePickupModal();
                     showNotification('✅ ' + result.message);
-
-                    // 延遲 1 秒後刷新頁面，讓後端重新計算 Tab 徽章數字並更新狀態
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
+                    // ✅ 改為刷新表格而非整頁刷新
+                    setTimeout(() => AdminTable.loadData(tableConfig), 1000);
                 } else {
                     showNotification('❌ ' + (result.message || '取貨確認失敗'), true);
                     btn.disabled = false;
@@ -816,24 +746,16 @@
             }
         }
 
-        // 點擊遮罩層關閉彈窗
         document.getElementById('pickupModal')?.addEventListener('click', function (e) {
-            if (e.target === this) {
-                closePickupModal();
-            }
+            if (e.target === this) closePickupModal();
         });
-
-        // ESC 鍵關閉彈窗
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 const modal = document.getElementById('pickupModal');
-                if (modal && modal.style.display === 'flex') {
-                    closePickupModal();
-                }
+                if (modal && modal.style.display === 'flex') closePickupModal();
             }
         });
     </script>
-
 </body>
 
 </html>

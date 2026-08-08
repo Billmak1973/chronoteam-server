@@ -5,6 +5,7 @@ import org.example.website.entity.*;
 import org.example.website.repository.*;
 import org.example.website.service.*;
 import org.example.website.repository.AdminPenaltyRepository;
+import org.example.website.util.PaginationUtils;
 import org.example.website.util.SecurityUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -259,58 +260,57 @@ public class PageController {
     @GetMapping("/admin/dashboard")
     public String adminDashboard(Model model) {
         // 這裡可以添加數據統計邏輯
-        return "admin-dashboard"; // 對應 templates/admin-dashboard.html
+        return "admin/admin-dashboard";
     }
 
 
     /**
-     *  新增：我的收藏頁面路由 (支援分頁)
+     *  新增：我的收藏頁面路由 (支援分頁) - 重構版
+     *  利用 PaginationUtils 統一處理分頁邏輯
      */
     @GetMapping("/account/favorites")
     public String myFavorites(Model model,
                               Authentication authentication,
-                              @RequestParam(defaultValue = "1") int page) { // Default to page 1
+                              @RequestParam(defaultValue = "1") int page) { // 前端傳入 1-based (1, 2, 3...)
         String username = authentication.getName();
 
-        // 【修改處 1】：使用 UserService 獲取 User 實體
+        // 1. 獲取 User 實體
         User user = userService.findByUsername(username);
 
-        // 查詢當前用戶的收藏列表（按時間倒序）
+        // 2. 查詢所有收藏 (按時間倒序)
         List<Favorite> allFavorites = favoriteRepository.findByUser_UsernameOrderByCreatedAtDesc(username);
 
-        // ================= 核心修正：內存分頁邏輯 =================
-        int size = 15; // 【需求】每頁顯示 15 條 (3列 * 5行)
+        // 3. 分頁參數計算
+        int size = 15; // 每頁 15 條
         int totalElements = allFavorites.size();
-        int totalPages = (int) Math.ceil((double) totalElements / size);
 
-        // 防止頁碼越界
+        // 防止除零錯誤
+        int totalPages = (totalElements == 0) ? 1 : (int) Math.ceil((double) totalElements / size);
+
+        // 邊界檢查 (確保 page 在合法範圍內)
         if (page < 1) page = 1;
-        if (totalPages == 0) totalPages = 1; // 如果沒有數據，至少保持1頁防止報錯
         if (page > totalPages) page = totalPages;
 
+        // 4. 截取當前頁數據 (內存分頁)
         int fromIndex = (page - 1) * size;
         int toIndex = Math.min(fromIndex + size, totalElements);
+        List<Favorite> pagedContent = (fromIndex < totalElements)
+                ? allFavorites.subList(fromIndex, toIndex)
+                : new ArrayList<>();
 
-        // 截取當前頁的數據
-        List<Favorite> pagedFavorites = new ArrayList<>();
-        if (fromIndex < totalElements) {
-            pagedFavorites = allFavorites.subList(fromIndex, toIndex);
-        }
+        // 5. 【核心修改】利用 PaginationUtils 生成智能分頁
+        // 注意：PaginationUtils 內部邏輯是基於 0-based 索引的 (Spring Data 標準)
+        // 所以這裡傳入 (page - 1) 將 1-based 轉換為 0-based
+        List<PaginationUtils.PageItem> smartPages = PaginationUtils.generateSmartPagination(page - 1, totalPages);
 
-        // 6. 生成智能分頁列表 (1 ... 3, 4, 5 ... 10)
-        List<PageItem> smartPages = generateSmartPagination(page, totalPages);
-        // ================================================================
-
-        // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
+        // 6. 傳遞數據給 Thymeleaf
         model.addAttribute("user", user);
+        model.addAttribute("favorites", pagedContent);
 
-        // 傳遞分頁後的數據
-        model.addAttribute("favorites", pagedFavorites);
-
-        // 傳遞分頁相關變量
-        model.addAttribute("currentPage", page);
+        // 傳遞分頁變量
+        model.addAttribute("currentPage", page);       // 保持 1-based 給前端顯示
         model.addAttribute("totalPages", totalPages);
-        model.addAttribute("smartPages", smartPages);
+        model.addAttribute("smartPages", smartPages);  // 使用工具類生成的列表
 
         return "favorites";
     }
@@ -318,47 +318,47 @@ public class PageController {
     @GetMapping("/account/history")
     public String myHistory(Model model,
                             Authentication authentication,
-                            @RequestParam(defaultValue = "1") int page) { // Default to page 1
+                            @RequestParam(defaultValue = "1") int page) { // 前端傳入 1-based
         String username = authentication.getName();
 
-        // 【修改處 1】：使用 UserService 獲取 User 實體
+        // 1. 獲取 User 實體
         User user = userService.findByUsername(username);
 
-        // 获取所有历史记录 (假设 Service 返回的是 List)
+        // 2. 獲取所有歷史記錄
         List<ViewHistory> allHistoryList = viewHistoryService.getUserHistory(username);
 
-        // ================= 核心修正：手动分页逻辑 =================
-        int size = 15; // 【需求】每页显示 15 条 (3列 * 5行)
+        // 3. 分頁參數計算
+        int size = 15;
         int totalElements = allHistoryList.size();
+
+        // 【關鍵修正 1】：將 1-based 頁碼轉換為 0-based 索引進行計算
+        // 防止頁碼越界 (前端傳 1，索引為 0)
+        int pageIndex = page - 1;
+        if (pageIndex < 0) pageIndex = 0;
+
         int totalPages = (int) Math.ceil((double) totalElements / size);
+        if (totalPages == 0) totalPages = 1; // 至少保持 1 頁
+        if (pageIndex >= totalPages) pageIndex = totalPages - 1;
 
-        // 防止页码越界
-        if (page < 1) page = 1;
-        if (totalPages == 0) totalPages = 1; // 如果没有数据，至少保持1页防止报错
-        if (page > totalPages) page = totalPages;
-
-        // 截取当前页的数据
-        int fromIndex = (page - 1) * size;
+        // 4. 截取當前頁數據
+        int fromIndex = pageIndex * size;
         int toIndex = Math.min(fromIndex + size, totalElements);
-
-        // 确保索引有效
         List<ViewHistory> pagedHistoryList = new ArrayList<>();
         if (fromIndex < totalElements) {
             pagedHistoryList = allHistoryList.subList(fromIndex, toIndex);
         }
 
-        // 6. 生成智能分页列表 (1 ... 3, 4, 5 ... 10)
-        List<PageItem> smartPages = generateSmartPagination(page, totalPages);
-        // ================================================================
+        // 5. 【關鍵修正 2】：使用 PaginationUtils 生成智能分頁
+        // 注意：這裡傳入的是 0-based 的 pageIndex
+        List<PaginationUtils.PageItem> smartPages = PaginationUtils.generateSmartPagination(pageIndex, totalPages);
 
-        // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
+        // 6. 傳遞數據到前端
         model.addAttribute("user", user);
-
-        // 传递分页后的数据
         model.addAttribute("historyList", pagedHistoryList);
 
-        // 传递分页相关变量
-        model.addAttribute("currentPage", page);
+        // 【關鍵修正 3】：傳遞給前端的 currentPage 必須轉回 1-based，方便前端顯示 "第 1 頁"
+        // 但 smartPages 內部的 pageNumber 已經是 1-based 了 (由工具類處理)
+        model.addAttribute("currentPage", page); // 保持 1-based 給前端顯示用
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalElements", totalElements);
         model.addAttribute("smartPages", smartPages);
@@ -643,10 +643,11 @@ public class PageController {
 
     /**
      * 購物車頁面 (支援分頁 + 日期分組)
+     * 【重構】：利用 PaginationUtils 統一生成智能分頁列表
      */
     @GetMapping("/cart/view")
     public String viewCartPage(
-            @RequestParam(defaultValue = "1") int page, // 【新增】當前頁碼
+            @RequestParam(defaultValue = "1") int page, // 當前頁碼 (1-based)
             Model model,
             Authentication authentication) {
 
@@ -669,13 +670,13 @@ public class PageController {
                 .sum();
 
         // ================= 核心修正：分頁 + 按日期分組 =================
-        int size = 20; // 【需求】每頁只加載 20 條數據
+        int size = 20; // 每頁只加載 20 條數據
         int totalElements = allCartItems.size();
         int totalPages = (int) Math.ceil((double) totalElements / size);
 
-        // 防止頁碼越界
+        // 防止頁碼越界 (確保 page 在 1 到 totalPages 之間)
         if (page < 1) page = 1;
-        if (page > totalPages && totalPages > 0) page = totalPages;
+        if (totalPages > 0 && page > totalPages) page = totalPages;
 
         // 3. 先對所有商品按時間倒序排序
         allCartItems.sort(Comparator.comparing(Cart::getCreatedAt).reversed());
@@ -710,9 +711,10 @@ public class PageController {
                         )
                 ));
 
-        // 6. 生成智能分頁列表 (1 ... 3, 4, 5 ... 10)
-        List<PageItem> smartPages = generateSmartPagination(page, totalPages);
-        // ================================================================
+        // 6. 【核心重構】：利用 PaginationUtils 生成智能分頁列表
+        // 注意：PaginationUtils.generateSmartPagination 接收的是 0-based 的 currentPage
+        // 而這裡的 page 變量是 1-based，所以需要傳入 page - 1
+        List<PaginationUtils.PageItem> smartPages = PaginationUtils.generateSmartPagination(page - 1, totalPages);
 
         // 傳遞分頁後的數據給前端
         model.addAttribute("cartItems", pagedCartItems);
@@ -721,9 +723,9 @@ public class PageController {
         model.addAttribute("cartCount", cartCount);
 
         // 傳遞分頁相關變量
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", page); // 保持 1-based 給前端 Thymeleaf 使用
         model.addAttribute("totalPages", totalPages);
-        model.addAttribute("smartPages", smartPages);
+        model.addAttribute("smartPages", smartPages); // 傳遞智能分頁列表
 
         return "cart-detail";
     }
@@ -733,7 +735,7 @@ public class PageController {
      */
     @GetMapping("/admin/config")
     public String adminConfigPage(Model model) {
-        return "admin-config";
+        return "admin/admin-config";
     }
 
 

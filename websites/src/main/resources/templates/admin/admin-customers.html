@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/admin.css">
+    <!-- 保留原有的頁面專屬樣式 (篩選欄、表格、角色徽章、彈窗等 CSS 不變) -->
     <style>
         /* ==========================================
        頁面專屬樣式：現代化用戶管理表格 (整合橫向滾動版)
@@ -527,7 +528,7 @@
             </div>
 
             <div class="content-body">
-                <!-- 篩選工具欄 -->
+                <!-- 篩選工具欄 (HTML結構保持不變) -->
                 <div class="filter-bar">
                     <div class="filter-item">
                         <label class="filter-label"><i class="fas fa-search"></i> 關鍵字搜索</label>
@@ -545,13 +546,12 @@
                         </select>
                     </div>
                     <div style="display: flex; gap: 0.8rem; align-items: flex-end;">
-                        <button class="btn-filter btn-search" onclick="loadCustomers(0)">
+                        <button class="btn-filter btn-search" onclick="searchCustomers()">
                             <i class="fas fa-search"></i> 查詢
                         </button>
                         <button class="btn-filter btn-reset" onclick="resetFilters()">
                             <i class="fas fa-redo-alt"></i> 重置
                         </button>
-                        <!-- 新增：創建賬號按鈕 -->
                         <button class="btn-filter btn-create" onclick="openCreateUserModal()">
                             <i class="fas fa-user-plus"></i> 創建賬號
                         </button>
@@ -574,14 +574,7 @@
                             </tr>
                         </thead>
                         <tbody id="customersTableBody">
-                            <!-- 初始加載狀態 -->
-                            <tr>
-                                <td colspan="8" style="text-align:center; padding: 4rem; color: #94a3b8;">
-                                    <i class="fas fa-circle-notch fa-spin"
-                                        style="font-size: 2rem; margin-bottom: 1rem; display:block; color: var(--gold);"></i>
-                                    正在加載用戶數據...
-                                </td>
-                            </tr>
+                            <!-- AdminTable 會自動接管這裡的渲染 -->
                         </tbody>
                     </table>
                 </div>
@@ -603,7 +596,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- 彈窗 1: 創建賬號 -->
+    <!-- 彈窗 HTML (保持不變) -->
     <!-- ========================================== -->
     <div id="createUserModal" class="modal-overlay">
         <div class="modal-box">
@@ -641,9 +634,6 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- 彈窗 2: 修改權限 -->
-    <!-- ========================================== -->
     <div id="updateRoleModal" class="modal-overlay">
         <div class="modal-box">
             <div class="modal-header">
@@ -674,395 +664,184 @@
     <!-- 引入公共 JS -->
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>
+    <!-- 🚀 引入通用表格管理器 -->
+    <script src="/js/admin-table.js"></script>
 
     <script>
         // ==========================================
-        // 全局狀態
+        // 🚀 核心重構：使用 AdminTable 統一管理
         // ==========================================
-        let currentPage = 0;
-        const pageSize = 25; // 每頁顯示數量
 
-        // ==========================================
-        // 核心：加載用戶數據 (AJAX)
-        // ==========================================
-        async function loadCustomers(page) {
-            currentPage = page;
-            const tbody = document.getElementById('customersTableBody');
-            const keyword = document.getElementById('keywordInput').value.trim();
-            const role = document.getElementById('roleFilter').value;
+        // 定義全局配置對象
+        const tableConfig = {
+            apiUrl: '/admin/api/customers/list',
+            params: {page: 0, size: 25, keyword: '', role: ''},
+            tbodySelector: '#customersTableBody',
+            paginationId: 'customers-pagination',
+            emptyText: '暫無用戶數據，嘗試調整篩選條件',
+            renderRow: renderCustomerRow // 指向自定義的行渲染函數
+        };
 
-            // 顯示 Loading 動畫
-            tbody.innerHTML = `
-          <tr>
-              <td colspan="7" style="text-align:center; padding: 4rem; color: #94a3b8;">
-                  <i class="fas fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 1rem; display:block; color: var(--gold);"></i>
-                  正在加載用戶數據...
-              </td>
-          </tr>`;
+        // 搜索按鈕觸發
+        function searchCustomers() {
+            tableConfig.params.keyword = document.getElementById('keywordInput').value.trim();
+            tableConfig.params.role = document.getElementById('roleFilter').value;
+            tableConfig.params.page = 0; // 搜索時重置到第一頁
+            AdminTable.loadData(tableConfig);
+        }
 
-            try {
-                const params = new URLSearchParams({page, size: pageSize});
-                if (keyword) params.append('keyword', keyword);
-                if (role) params.append('role', role);
-
-                const response = await fetch(`/admin/api/customers/list?${params}`);
-                const data = await response.json();
-
-                if (data.content && data.content.length > 0) {
-                    renderTable(data.content);
-                    renderPagination(data.currentPage, data.totalPages, data.smartPages);
-                } else {
-                    tbody.innerHTML = `
-                  <tr>
-                      <td colspan="7" style="text-align:center; padding: 4rem; color: #94a3b8;">
-                          <i class="fas fa-inbox empty-icon"></i>
-                          <h3 style="color: #64748b; margin-bottom: 0.5rem;">暫無用戶數據</h3>
-                          <p>嘗試調整篩選條件或搜索關鍵詞</p>
-                      </td>
-                  </tr>`;
-                    document.getElementById('customers-pagination').innerHTML = '';
-                }
-            } catch (error) {
-                console.error('加載失敗:', error);
-                tbody.innerHTML = `
-              <tr>
-                  <td colspan="7" style="text-align:center; padding: 4rem; color: #ef4444;">
-                      <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem; display:block;"></i>
-                      <h3>加載失敗</h3>
-                      <p>請檢查網絡連接或稍後重試</p>
-                  </td>
-              </tr>`;
-            }
+        // 重置按鈕觸發
+        function resetFilters() {
+            document.getElementById('keywordInput').value = '';
+            document.getElementById('roleFilter').value = '';
+            tableConfig.params.keyword = '';
+            tableConfig.params.role = '';
+            tableConfig.params.page = 0;
+            AdminTable.loadData(tableConfig);
         }
 
         // ==========================================
-        // 渲染表格 (核心修改：適配新 Role 枚舉 + 可點擊)
+        // 自定義行渲染函數 (從原 renderTable 中提取單行邏輯)
         // ==========================================
-        function renderTable(users) {
-            const tbody = document.getElementById('customersTableBody');
-            let html = '';
+        function renderCustomerRow(u) {
+            let roleClass = 'role-CUSTOMER';
+            let roleLabel = '顧客';
+            let roleIcon = 'fa-user';
 
-            users.forEach(u => {
-                // ... (原有的 roleClass, roleLabel 邏輯保持不變) ...
-                let roleClass = 'role-CUSTOMER';
-                let roleLabel = '顧客';
-                let roleIcon = 'fa-user';
+            switch (u.role) {
+                case 'ADMIN': roleClass = 'role-ADMIN'; roleLabel = '管理員'; roleIcon = 'fa-crown'; break;
+                case 'SALES': roleClass = 'role-SALES'; roleLabel = '銷售人員'; roleIcon = 'fa-briefcase'; break;
+                case 'COURIER': roleClass = 'role-COURIER'; roleLabel = '快遞人員'; roleIcon = 'fa-truck-fast'; break;
+                case 'APPRAISER': roleClass = 'role-APPRAISER'; roleLabel = '鑑定師'; roleIcon = 'fa-magnifying-glass'; break;
+            }
 
-                switch (u.role) {
-                    case 'ADMIN': roleClass = 'role-ADMIN'; roleLabel = '管理員'; roleIcon = 'fa-crown'; break;
-                    case 'SALES': roleClass = 'role-SALES'; roleLabel = '銷售人員'; roleIcon = 'fa-briefcase'; break;
-                    case 'COURIER': roleClass = 'role-COURIER'; roleLabel = '快遞人員'; roleIcon = 'fa-truck-fast'; break;
-                    case 'APPRAISER': roleClass = 'role-APPRAISER'; roleLabel = '鑑定師'; roleIcon = 'fa-magnifying-glass'; break;
-                    default: roleClass = 'role-CUSTOMER'; roleLabel = '顧客'; roleIcon = 'fa-user';
-                }
-
-                // 構建 HTML 行
-                html += `
-        <tr>
-            <td style="color: #94a3b8; font-weight: 600;">#${u.id}</td>
-            <td><span class="uid-text">${u.uid || '-'}</span></td>
-            <td>
-                <div class="user-info-cell">
-                    <span class="user-name">${u.username}</span>
-                    <span class="user-email">${u.name || '未填寫姓名'}</span>
-                </div>
-            </td>
-            <td>
-                <div style="display:flex; flex-direction:column; gap:0.3rem;">
-                    <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-envelope" style="width:16px; color:#94a3b8;"></i> ${u.email}</span>
-                    <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-phone" style="width:16px; color:#94a3b8;"></i> ${u.phone || '-'}</span>
-                </div>
-            </td>
-            <td>
-                <span class="role-badge ${roleClass}" style="cursor:pointer;" onclick="openUpdateRoleModal(${u.id}, '${u.username}', '${u.role}')" title="點擊修改權限">
-                    <i class="fas ${roleIcon}"></i> ${roleLabel} <i class="fas fa-pen" style="font-size:0.6rem; margin-left:4px; opacity:0.7;"></i>
-                </span>
-            </td>
-            <td>
-                <div style="display:flex; flex-direction:column; gap:0.4rem;">
-                    <div class="text-truncate-cell" title="${u.address || '未設置'}">
-                        <i class="fas fa-home" style="width:16px; color:#94a3b8;" title="主地址"></i>
-                        ${u.address || '<span style="color:#cbd5e1;">未設置</span>'}
-                    </div>
-                    ${u.address ? `
-                        <div class="text-truncate-cell" title="${u.backupAddress || '未設置'}">
-                            <i class="fas fa-map-pin" style="width:16px; color:#cbd5e1;" title="備用地址"></i>
-                            ${u.backupAddress
-                            ? `<span style="color:#64748b;">${u.backupAddress}</span>`
-                            : '<span style="color:#e2e8f0; font-size:0.8rem;">無備用</span>'}
+            return `
+                <tr>
+                    <td style="color: #94a3b8; font-weight: 600;">#${u.id}</td>
+                    <td><span class="uid-text">${u.uid || '-'}</span></td>
+                    <td>
+                        <div class="user-info-cell">
+                            <span class="user-name">${u.username}</span>
+                            <span class="user-email">${u.name || '未填寫姓名'}</span>
                         </div>
-                    ` : ''}
-                </div>
-            </td>
-            <td style="font-size: 0.85rem; color: #64748b; font-family: monospace;">
-                ${formatDate(u.createdAt)}
-            </td>
-
-            <!-- 新增：操作管理列 (2x2 網格) -->
-            <td style="text-align: center; vertical-align: middle;">
-                <div class="action-grid">
-                    <!-- 1. 查看評論 -->
-                    <button class="btn-action-sm btn-review" onclick="viewUserReviews('${u.username}')" title="查看該用戶的所有評論">
-                        <i class="fas fa-comments"></i> 評論
-                    </button>
-
-                    <!-- 2. 查看訂單 -->
-                    <button class="btn-action-sm btn-order" onclick="viewUserOrders('${u.username}')" title="查看該用戶的訂單記錄">
-                        <i class="fas fa-shopping-bag"></i> 訂單
-                    </button>
-
-                    <!-- 3. 查看處罰 -->
-                    <button class="btn-action-sm btn-penalty" onclick="viewUserPenalties('${u.username}')" title="查看禁言/拉黑記錄">
-                        <i class="fas fa-gavel"></i> 處罰
-                    </button>
-
-                    <!-- 4. 查看舉報 -->
-                    <button class="btn-action-sm btn-report" onclick="viewUserReports('${u.username}')" title="查看被舉報記錄">
-                        <i class="fas fa-flag"></i> 舉報
-                    </button>
-                </div>
-            </td>
-        </tr>`;
-            });
-
-            tbody.innerHTML = html;
+                    </td>
+                    <td>
+                        <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                            <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-envelope" style="width:16px; color:#94a3b8;"></i> ${u.email}</span>
+                            <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-phone" style="width:16px; color:#94a3b8;"></i> ${u.phone || '-'}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="role-badge ${roleClass}" style="cursor:pointer;"
+                              onclick="openUpdateRoleModal(${u.id}, '${u.username}', '${u.role}')"
+                              title="點擊修改權限">
+                            <i class="fas ${roleIcon}"></i> ${roleLabel}
+                            <i class="fas fa-pen" style="font-size:0.6rem; margin-left:4px; opacity:0.7;"></i>
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display:flex; flex-direction:column; gap:0.4rem;">
+                            <div class="text-truncate-cell" title="${u.address || '未設置'}">
+                                <i class="fas fa-home" style="width:16px; color:#94a3b8;"></i>
+                                ${u.address || '<span style="color:#cbd5e1;">未設置</span>'}
+                            </div>
+                            ${u.address ? `
+                                <div class="text-truncate-cell" title="${u.backupAddress || '未設置'}">
+                                    <i class="fas fa-map-pin" style="width:16px; color:#cbd5e1;"></i>
+                                    ${u.backupAddress ? `<span style="color:#64748b;">${u.backupAddress}</span>` : '<span style="color:#e2e8f0; font-size:0.8rem;">無備用</span>'}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </td>
+                    <td style="font-size: 0.85rem; color: #64748b; font-family: monospace;">
+                        ${formatDate(u.createdAt)}
+                    </td>
+                    <td style="text-align: center; vertical-align: middle;">
+                        <div class="action-grid">
+                            <button class="btn-action-sm btn-review" onclick="viewUserReviews('${u.username}')" title="查看評論">
+                                <i class="fas fa-comments"></i> 評論
+                            </button>
+                            <button class="btn-action-sm btn-order" onclick="viewUserOrders('${u.username}')" title="查看訂單">
+                                <i class="fas fa-shopping-bag"></i> 訂單
+                            </button>
+                            <button class="btn-action-sm btn-penalty" onclick="viewUserPenalties('${u.username}')" title="查看處罰">
+                                <i class="fas fa-gavel"></i> 處罰
+                            </button>
+                            <button class="btn-action-sm btn-report" onclick="viewUserReports('${u.username}')" title="查看舉報">
+                                <i class="fas fa-flag"></i> 舉報
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
         }
 
         // ==========================================
-        // 智能分頁渲染 (修復版：支持單頁顯示灰色按鈕)
-        // ==========================================
-        function renderPagination(current, total, smartPages) {
-            const container = document.getElementById('customers-pagination');
-
-            // 僅在完全沒有分頁數據時清空 (例如後端報錯或無數據)
-            if (!smartPages || smartPages.length === 0) {
-                container.innerHTML = '';
-                return;
-            }
-
-            let html = '<div class="pagination-wrapper" style="display:flex; justify-content:center; gap:0.5rem; flex-wrap:wrap; align-items:center;">';
-
-            // 1. 上一頁按鈕 (無論是否只有1頁，都顯示，只是狀態不同)
-            if (current > 0) {
-                html += `<button class="page-btn" onclick="loadCustomers(${current - 1})" style="padding:0.6rem 1.2rem; border:1px solid #e2e8f0; background:white; border-radius:8px; cursor:pointer; color:#475569; font-weight:500; transition:all 0.2s;"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
-            } else {
-                // 灰色禁用狀態
-                html += `<button class="page-btn disabled" disabled style="padding:0.6rem 1.2rem; border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px; color:#cbd5e1; cursor:not-allowed;"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
-            }
-
-            // 2. 頁碼按鈕 (遍歷後端傳來的 smartPages)
-            smartPages.forEach(item => {
-                if (item.isEllipsis) {
-                    html += `<span style="padding:0.6rem 0.5rem; color:#94a3b8; font-weight:bold;">...</span>`;
-                } else {
-                    const pageIndex = item.pageNumber - 1; // 後端是 1-based，前端是 0-based
-                    const isActive = pageIndex === current;
-
-                    // 當前頁金色高亮，其他頁白色
-                    const activeStyle = isActive
-                        ? 'background:var(--gold); color:white; border-color:var(--gold); box-shadow:0 4px 10px rgba(212,175,55,0.3); cursor:default;'
-                        : 'background:white; color:#475569; border:1px solid #e2e8f0; cursor:pointer;';
-
-                    html += `<button class="page-btn" onclick="loadCustomers(${pageIndex})" style="padding:0.6rem 1rem; border-radius:8px; font-weight:600; transition:all 0.2s; ${activeStyle}">${item.pageNumber}</button>`;
-                }
-            });
-
-            // 3. 下一頁按鈕 (無論是否只有1頁，都顯示，只是狀態不同)
-            if (current < total - 1) {
-                html += `<button class="page-btn" onclick="loadCustomers(${current + 1})" style="padding:0.6rem 1.2rem; border:1px solid #e2e8f0; background:white; border-radius:8px; cursor:pointer; color:#475569; font-weight:500; transition:all 0.2s;">下一頁 <i class="fas fa-chevron-right"></i></button>`;
-            } else {
-                // 灰色禁用狀態
-                html += `<button class="page-btn disabled" disabled style="padding:0.6rem 1.2rem; border:1px solid #e2e8f0; background:#f8fafc; border-radius:8px; color:#cbd5e1; cursor:not-allowed;">下一頁 <i class="fas fa-chevron-right"></i></button>`;
-            }
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        // ==========================================
-        // 輔助函數
+        // 輔助函數 (保持不變)
         // ==========================================
         function formatDate(dateStr) {
             if (!dateStr) return '-';
             const d = new Date(dateStr);
-            return d.toLocaleString('zh-TW', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            });
-        }
-
-        function resetFilters() {
-            document.getElementById('keywordInput').value = '';
-            document.getElementById('roleFilter').value = '';
-            loadCustomers(0);
+            return d.toLocaleString('zh-TW', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
         }
 
         // ==========================================
-        // 創建賬號邏輯 (修復版)
+        // 彈窗與業務邏輯 (保持不變)
         // ==========================================
         function openCreateUserModal() {
             document.getElementById('newUsername').value = '';
             document.getElementById('newRole').value = 'CUSTOMER';
             document.getElementById('createUserModal').style.display = 'flex';
         }
-
-        function closeCreateUserModal() {
-            document.getElementById('createUserModal').style.display = 'none';
-        }
+        function closeCreateUserModal() {document.getElementById('createUserModal').style.display = 'none';}
 
         async function submitCreateUser() {
             const username = document.getElementById('newUsername').value.trim();
             const role = document.getElementById('newRole').value;
-
-            if (!username) {
-                // 修復 1: 強制使用 window.showNotification
-                if (typeof window.showNotification === 'function') {
-                    window.showNotification('❌ 請輸入用戶名', true);
-                } else {
-                    alert('請輸入用戶名');
-                }
-                return;
-            }
-
+            if (!username) {showNotification('❌ 請輸入用戶名', true); return;}
             try {
-                const response = await fetch('/admin/api/customers/create', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({username: username, role: role})
-                });
-                const result = await response.json();
-
+                const res = await fetch('/admin/api/customers/create', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, role})});
+                const result = await res.json();
                 if (result.success) {
-                    // 修復 2: 強制使用 window.showNotification
-                    if (typeof window.showNotification === 'function') {
-                        window.showNotification('✅ 賬號創建成功！默認密碼為 123456');
-                    } else {
-                        console.warn('showNotification 未找到，使用 alert 降級');
-                        alert('✅ 賬號創建成功！默認密碼為 123456');
-                    }
-
+                    showNotification('✅ 賬號創建成功！默認密碼為 123456');
                     closeCreateUserModal();
-                    loadCustomers(currentPage); // 刷新當前頁
-                } else {
-                    // 修復 3: 錯誤提示
-                    if (typeof window.showNotification === 'function') {
-                        window.showNotification('❌ 創建失敗: ' + result.message, true);
-                    } else {
-                        alert('❌ 創建失敗: ' + result.message);
-                    }
-                }
-            } catch (error) {
-                console.error('創建賬號網絡錯誤:', error);
-                if (typeof window.showNotification === 'function') {
-                    window.showNotification('❌ 網絡錯誤，請稍後重試', true);
-                } else {
-                    alert('網絡錯誤');
-                }
-            }
+                    AdminTable.loadData(tableConfig); // 使用 AdminTable 刷新
+                } else {showNotification('❌ ' + result.message, true);}
+            } catch (e) {showNotification('❌ 網絡錯誤', true);}
         }
 
-        // ==========================================
-        // 修改權限邏輯 (修復版)
-        // ==========================================
         function openUpdateRoleModal(id, username, currentRole) {
             document.getElementById('roleTargetId').value = id;
             document.getElementById('roleTargetUsername').textContent = username;
             document.getElementById('updateRoleSelect').value = currentRole;
             document.getElementById('updateRoleModal').style.display = 'flex';
         }
-
-        function closeUpdateRoleModal() {
-            document.getElementById('updateRoleModal').style.display = 'none';
-        }
+        function closeUpdateRoleModal() {document.getElementById('updateRoleModal').style.display = 'none';}
 
         async function submitUpdateRole() {
             const id = document.getElementById('roleTargetId').value;
             const newRole = document.getElementById('updateRoleSelect').value;
-
             try {
-                const response = await fetch(`/admin/api/customers/${id}/role`, {
-                    method: 'PUT',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({role: newRole})
-                });
-                const result = await response.json();
-
+                const res = await fetch(`/admin/api/customers/${id}/role`, {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({role: newRole})});
+                const result = await res.json();
                 if (result.success) {
-                    // 修復 4: 權限更新成功提示
-                    if (typeof window.showNotification === 'function') {
-                        window.showNotification('✅ 權限更新成功');
-                    }
-
+                    showNotification('✅ 權限更新成功');
                     closeUpdateRoleModal();
-                    loadCustomers(currentPage); // 刷新列表以看到新顏色
-                } else {
-                    if (typeof window.showNotification === 'function') {
-                        window.showNotification('❌ 更新失敗: ' + result.message, true);
-                    } else {
-                        alert('❌ 更新失敗: ' + result.message);
-                    }
-                }
-            } catch (error) {
-                console.error('修改權限網絡錯誤:', error);
-                if (typeof window.showNotification === 'function') {
-                    window.showNotification('❌ 網絡錯誤，請稍後重試', true);
-                } else {
-                    alert('網絡錯誤');
-                }
-            }
+                    AdminTable.loadData(tableConfig); //  使用 AdminTable 刷新
+                } else {showNotification('❌ ' + result.message, true);}
+            } catch (e) {showNotification('❌ 網絡錯誤', true);}
         }
+
+        // 操作按鈕跳轉邏輯 (保持不變)
+        function viewUserReviews(username) {window.open(`/admin/reviews?username=${encodeURIComponent(username)}`, '_blank');}
+        function viewUserOrders(username) {showNotification(`📦 正在查詢 ${username} 的訂單記錄... (開發中)`);}
+        function viewUserPenalties(username) {showNotification(`⚖️ 正在查詢 ${username} 的處罰記錄... (開發中)`);}
+        function viewUserReports(username) {showNotification(`🚩 正在查詢 ${username} 的舉報記錄... (開發中)`);}
 
         // ==========================================
-        // 操作按鈕功能 (暫為佔位符)
-        // ==========================================
-
-        // 1. 查看評論 (修改後的邏輯)
-        function viewUserReviews(username) {
-            // 構建 URL，帶上 username 參數
-            // 使用 window.open 在新標籤頁打開
-            const url = `/admin/reviews?username=${encodeURIComponent(username)}`;
-            window.open(url, '_blank');
-        }
-
-        // 2. 查看訂單
-        function viewUserOrders(username) {
-            // 未來邏輯: window.location.href = `/admin/orders?username=${username}`;
-            if (typeof window.showNotification === 'function') {
-                window.showNotification(`📦 正在查詢 ${username} 的訂單記錄... (功能開發中)`);
-            } else {
-                alert(`正在查詢 ${username} 的訂單記錄... (功能開發中)`);
-            }
-        }
-
-        // 3. 查看處罰
-        function viewUserPenalties(username) {
-            // 未來邏輯: window.location.href = `/admin/penalties?username=${username}`;
-            if (typeof window.showNotification === 'function') {
-                window.showNotification(`⚖️ 正在查詢 ${username} 的處罰記錄... (功能開發中)`);
-            } else {
-                alert(`正在查詢 ${username} 的處罰記錄... (功能開發中)`);
-            }
-        }
-
-        // 4. 查看舉報
-        function viewUserReports(username) {
-            // 未來邏輯: window.location.href = `/admin/reports?username=${username}`;
-            if (typeof window.showNotification === 'function') {
-                window.showNotification(`🚩 正在查詢 ${username} 的舉報記錄... (功能開發中)`);
-            } else {
-                alert(`正在查詢 ${username} 的舉報記錄... (功能開發中)`);
-            }
-        }
-
-        // ==========================================
-        // 頁面初始化
+        //  頁面初始化：一行代碼啟動表格
         // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
-            loadCustomers(0);
+            AdminTable.loadData(tableConfig);
         });
     </script>
 </body>

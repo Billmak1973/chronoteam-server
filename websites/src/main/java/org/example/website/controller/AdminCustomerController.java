@@ -2,10 +2,11 @@ package org.example.website.controller;
 
 import org.example.website.entity.User;
 import org.example.website.repository.UserRepository;
+import org.example.website.util.PaginationUtils; // 引入分頁工具類
 import org.example.website.util.UidGenerator;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder; // 1. 導入 PasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -18,9 +19,8 @@ import java.util.stream.Collectors;
 public class AdminCustomerController {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder; // 2. 聲明變量
+    private final PasswordEncoder passwordEncoder;
 
-    // 3. 修改構造函數，注入 PasswordEncoder
     public AdminCustomerController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -81,14 +81,8 @@ public class AdminCustomerController {
             return item;
         }).collect(Collectors.toList());
 
-        int totalPages = usersPage.getTotalPages() == 0 ? 1 : usersPage.getTotalPages();
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("content", cleanUsers);
-        response.put("currentPage", usersPage.getNumber());
-        response.put("totalPages", totalPages);
-        response.put("totalElements", usersPage.getTotalElements());
-        response.put("smartPages", generateSmartPagination(usersPage.getNumber(), totalPages));
+        //  核心優化：使用 PaginationUtils 一行代碼構建標準分頁響應 (包含 smartPages)
+        Map<String, Object> response = PaginationUtils.buildPageResponse(usersPage, cleanUsers);
 
         return ResponseEntity.ok(response);
     }
@@ -96,7 +90,7 @@ public class AdminCustomerController {
     /**
      * 創建新手動賬號 (管理員專用)
      */
-    @PostMapping("/api/customers/create") // 建議路徑加上 /api 前綴以匹配前端 fetch
+    @PostMapping("/api/customers/create")
     @ResponseBody
     public ResponseEntity<?> createUser(@RequestBody Map<String, String> payload) {
         String username = payload.get("username");
@@ -116,7 +110,7 @@ public class AdminCustomerController {
             user.setEmail(username + "@chronoteam.internal"); // 默認郵箱
             user.setPhone("0000000000"); // 默認電話
 
-            // 【修復點】使用注入的 passwordEncoder
+            // 使用注入的 passwordEncoder
             user.setPassword(passwordEncoder.encode("123456"));
 
             // 設置角色
@@ -155,7 +149,7 @@ public class AdminCustomerController {
     /**
      * 修改用戶角色
      */
-    @PutMapping("/api/customers/{id}/role") // 建議路徑加上 /api 前綴
+    @PutMapping("/api/customers/{id}/role")
     @ResponseBody
     public ResponseEntity<?> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         String roleStr = payload.get("role");
@@ -178,46 +172,4 @@ public class AdminCustomerController {
         }
     }
 
-    // ==========================================
-    // 智能分頁算法
-    // ==========================================
-    private List<PageItem> generateSmartPagination(int currentPage, int totalPages) {
-        List<PageItem> pages = new ArrayList<>();
-        if (totalPages <= 0) {
-            pages.add(new PageItem(false, 1));
-            return pages;
-        }
-        if (totalPages <= 7) {
-            for (int i = 1; i <= totalPages; i++) pages.add(new PageItem(false, i));
-            return pages;
-        }
-        pages.add(new PageItem(false, 1));
-        int current1Based = currentPage + 1;
-        if (current1Based <= 3) {
-            for (int i = 2; i <= 4; i++) pages.add(new PageItem(false, i));
-            pages.add(new PageItem(true, null));
-        } else if (current1Based >= totalPages - 2) {
-            pages.add(new PageItem(true, null));
-            for (int i = totalPages - 3; i <= totalPages - 1; i++) pages.add(new PageItem(false, i));
-        } else {
-            pages.add(new PageItem(true, null));
-            pages.add(new PageItem(false, current1Based - 1));
-            pages.add(new PageItem(false, current1Based));
-            pages.add(new PageItem(false, current1Based + 1));
-            pages.add(new PageItem(true, null));
-        }
-        pages.add(new PageItem(false, totalPages));
-        return pages;
-    }
-
-    public static class PageItem {
-        private boolean isEllipsis;
-        private Integer pageNumber;
-        public PageItem(boolean isEllipsis, Integer pageNumber) {
-            this.isEllipsis = isEllipsis;
-            this.pageNumber = pageNumber;
-        }
-        public boolean isEllipsis() { return isEllipsis; }
-        public Integer getPageNumber() { return pageNumber; }
-    }
 }

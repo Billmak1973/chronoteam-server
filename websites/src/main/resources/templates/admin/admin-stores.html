@@ -637,16 +637,14 @@
         </button>
       </div>
       <div class="content-body">
-        <div id="storeLoading" style="text-align: center; padding: 3rem; color: var(--gray);">
-          <i class="fas fa-spinner fa-spin fa-2x"></i>
-          <p style="margin-top: 1rem;">加載店鋪數據中...</p>
+        <!-- 核心修改：使用 div 作為容器，AdminTable 會將 renderRow 返回的 HTML 塞入這裡 -->
+        <!-- 注意：AdminTable 會自動處理 Loading 和 Empty 狀態 -->
+        <div class="store-card-grid" id="storeGrid">
+          <!-- 數據將由 AdminTable 動態填充 -->
         </div>
-        <div class="store-card-grid" id="storeGrid" style="display: none;"></div>
-        <div id="storeEmpty" style="display: none; text-align: center; padding: 4rem 2rem; color: var(--gray);">
-          <i class="fas fa-store-slash" style="font-size: 4rem; color: #e9ecef; margin-bottom: 1.5rem;"></i>
-          <h3>暫無線下店鋪</h3>
-          <p>點擊右上角「新增店鋪」按鈕添加您的第一家實體店鋪。</p>
-        </div>
+
+        <!-- 分頁容器 -->
+        <div id="stores-pagination" style="margin-top: 2rem;"></div>
       </div>
       <footer class="admin-footer"
         style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 12px; text-align: center; color: rgba(255,255,255,0.7);">
@@ -659,7 +657,7 @@
     </main>
   </div>
 
-  <!-- 新增/編輯 Modal（雙保險：額外加上 inline display:none） -->
+  <!-- 新增/編輯 Modal -->
   <div id="storeModal" class="edit-modal-overlay" style="display: none;">
     <div class="edit-modal-box" style="max-width: 600px;">
       <div class="edit-modal-header">
@@ -687,17 +685,11 @@
             <label><i class="fas fa-phone"></i> 聯繫電話</label>
             <input type="text" id="storePhone" placeholder="例如: +852 2123 4567">
           </div>
-          <!--          <div class="form-group">-->
-          <!--            <label><i class="fas fa-clock"></i> 營業時間</label>-->
-          <!--            <input type="text" id="storeHours" placeholder="例如: 10:00 AM - 8:00 PM">-->
-          <!--          </div>-->
-          <!-- 營業時間 (修改為結構化輸入) -->
+          <!-- 營業時間 (結構化輸入) -->
           <div class="form-group">
             <label><i class="fas fa-clock"></i> 營業時間</label>
             <div
               style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; background: #f8f9fa; padding: 0.8rem; border-radius: 8px; border: 1px solid #e9ecef;">
-
-              <!-- 開始時間 -->
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">開始:</span>
                 <input type="number" id="startHour" min="1" max="12" placeholder="時"
@@ -711,10 +703,7 @@
                   <option value="PM">PM</option>
                 </select>
               </div>
-
               <span style="color: var(--gray); font-weight: bold;">至</span>
-
-              <!-- 結束時間 -->
               <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <span style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">結束:</span>
                 <input type="number" id="endHour" min="1" max="12" placeholder="時"
@@ -733,7 +722,7 @@
               <i class="fas fa-info-circle"></i> 請選擇上午 (AM) 或下午 (PM)，時數限制 1-12，分鐘限制 0-59。
             </small>
           </div>
-          <!-- === 新增：退貨設置區塊 === -->
+          <!-- 退貨設置區塊 -->
           <div style="border-top: 1px dashed #e9ecef; margin: 1.5rem 0 1rem; padding-top: 0.5rem;">
             <h4
               style="font-size: 1rem; color: var(--primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
@@ -745,23 +734,16 @@
                 <input type="number" id="returnAdvanceDays" min="0" placeholder="例如: 3 (0表示無限制)">
                 <small>用戶必須至少提前此天數才能預約到店退貨。</small>
               </div>
-              <!--将这两个日期字段放在同一个网格容器中-->
               <div class="form-group" style="grid-column: span 2;">
                 <label><i class="fas fa-calendar-alt"></i> 暫停退貨日期範圍</label>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                  <div>
-                    <input type="date" id="returnBlackoutStartDate" placeholder="開始日期">
-                  </div>
-                  <div>
-                    <input type="date" id="returnBlackoutEndDate" placeholder="結束日期">
-                  </div>
+                  <div><input type="date" id="returnBlackoutStartDate" placeholder="開始日期"></div>
+                  <div><input type="date" id="returnBlackoutEndDate" placeholder="結束日期"></div>
                 </div>
               </div>
-              <!-- === 新增：每週固定休息日選擇器 === -->
               <div class="form-group modal-grid-full">
                 <label><i class="fas fa-calendar-week"></i> 每週固定不處理退貨日</label>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
-                  <!-- 使用 data-val 對應 Java DayOfWeek.getValue() (1=週一, 7=週日) -->
                   <label
                     style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
                     <input type="checkbox" class="closed-day-checkbox" value="1" style="margin: 0;"> 週一
@@ -795,14 +777,12 @@
                   <i class="fas fa-info-circle"></i> 勾選的星期幾將無法預約到店退貨。若不勾選則表示每天都可處理。
                 </small>
               </div>
-              <!-- === 每週固定休息日結束 === -->
               <div class="form-group modal-grid-full">
                 <label><i class="fas fa-comment-dots"></i> 暫停退貨原因備註</label>
                 <input type="text" id="returnBlackoutReason" placeholder="例如: 農曆新年期間暫停退貨服務 或 店鋪年度盤點">
               </div>
             </div>
           </div>
-          <!-- === 退貨設置區塊結束 === -->
         </div>
         <div class="modal-actions">
           <button type="button" class="btn-modal-cancel" onclick="closeStoreModal()">取消</button>
@@ -813,7 +793,7 @@
   </div>
 
   <!-- 刪除店鋪確認彈窗 -->
-  <div id="deleteStoreModal" class="delete-store-overlay">
+  <div id="deleteStoreModal" class="delete-store-overlay" style="display: none;">
     <div class="delete-store-modal-box">
       <div class="modal-icon">
         <i class="fas fa-trash-alt"></i>
@@ -847,61 +827,81 @@
   </script>
   <script src="/js/common.js"></script>
   <script src="/js/admin.js"></script>
+  <!-- 引入通用表格管理器 -->
+  <script src="/js/admin-table.js"></script>
+
   <script>
-    let stores = [];
+    // ==========================================
+    // 全局變量
+    // ==========================================
     let pendingDeleteStoreId = null;
     let pendingDeleteStoreName = null;
 
-    document.addEventListener('DOMContentLoaded', loadStores);
+    // 緩存當前頁數據，用於編輯時查找
+    let currentStoresData = [];
 
-    async function loadStores() {
-      try {
-        const res = await fetch('/admin/stores/api/list');
-        if (res.ok) {stores = await res.json(); renderStores();}
-        else {
-          // 接口失敗時也要隱藏 loading，避免卡在加載中
-          document.getElementById('storeLoading').style.display = 'none';
-          document.getElementById('storeEmpty').style.display = 'block';
-        }
-      } catch (e) {
-        document.getElementById('storeLoading').style.display = 'none';
-        document.getElementById('storeEmpty').style.display = 'block';
-        showNotification('❌ 網絡錯誤', true);
+    // ==========================================
+    // 核心：使用 AdminTable 加載數據
+    // ==========================================
+    const storeTableConfig = {
+      apiUrl: '/admin/stores/api/list',
+      params: {page: 0, size: 12}, // 店鋪每頁顯示 12 個
+      tbodySelector: '#storeGrid', // 核心：指向 Grid 容器
+      paginationId: 'stores-pagination',
+      emptyText: '暫無線下店鋪，點擊右上角新增',
+
+      // 核心：渲染單個卡片 (返回 HTML 字符串)
+      renderRow: function (store) {
+        // 緩存數據以便編輯
+        if (!window.currentStoresMap) window.currentStoresMap = {};
+        window.currentStoresMap[store.storeId] = store;
+
+        const statusClass = store.isActive ? 'status-active' : 'status-inactive';
+        const statusText = store.isActive ? '顯示中' : '已隱藏';
+        const statusIcon = store.isActive ? 'eye' : 'eye-slash';
+        const cardClass = store.isActive ? 'store-card' : 'store-card hidden-store';
+        const toggleIcon = store.isActive ? 'eye-slash' : 'eye';
+        const toggleText = store.isActive ? '隱藏' : '顯示';
+
+        return `
+        <div class="${cardClass}">
+          <span class="status-badge-store ${statusClass}">
+            <i class="fas fa-${statusIcon}"></i> ${statusText}
+          </span>
+          <div class="store-name"><i class="fas fa-store"></i> ${store.name}</div>
+          <div class="store-code">${store.storeCode}</div>
+          <div class="store-info">
+            <div><i class="fas fa-map-marker-alt"></i> <span>${store.address || '未填寫'}</span></div>
+            <div><i class="fas fa-phone"></i> <span>${store.phone || '未填寫'}</span></div>
+            <div><i class="fas fa-clock"></i> <span>${store.hours || '未填寫'}</span></div>
+          </div>
+          <div class="store-actions">
+            <button class="btn-store btn-edit" onclick="openEditStoreModal(${store.storeId})"><i class="fas fa-edit"></i> 編輯</button>
+            <button class="btn-store btn-toggle ${!store.isActive ? 'is-hidden' : ''}" onclick="toggleStore(${store.storeId})">
+              <i class="fas fa-${toggleIcon}"></i> ${toggleText}
+            </button>
+            <button class="btn-store btn-delete" onclick="deleteStore(${store.storeId})"><i class="fas fa-trash-alt"></i></button>
+          </div>
+        </div>
+      `;
+      },
+
+      // 成功回調：更新緩存
+      onSuccess: function (data) {
+        currentStoresData = data.content;
+        window.currentStoresMap = {};
+        data.content.forEach(s => window.currentStoresMap[s.storeId] = s);
       }
-    }
+    };
 
-    function renderStores() {
-      const grid = document.getElementById('storeGrid');
-      const loading = document.getElementById('storeLoading');
-      const empty = document.getElementById('storeEmpty');
-      loading.style.display = 'none';
-      if (stores.length === 0) {grid.style.display = 'none'; empty.style.display = 'block'; return;}
-      empty.style.display = 'none'; grid.style.display = 'grid'; grid.innerHTML = '';
+    // 頁面加載完成後初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      AdminTable.loadData(storeTableConfig);
+    });
 
-      stores.forEach(store => {
-        const card = document.createElement('div');
-        card.className = `store-card ${!store.isActive ? 'hidden-store' : ''}`;
-        card.innerHTML = `
-              <span class="status-badge-store ${store.isActive ? 'status-active' : 'status-inactive'}">
-                  <i class="fas fa-${store.isActive ? 'eye' : 'eye-slash'}"></i> ${store.isActive ? '顯示中' : '已隱藏'}
-              </span>
-              <div class="store-name"><i class="fas fa-store"></i> ${store.name}</div>
-              <div class="store-code">${store.storeCode}</div>
-              <div class="store-info">
-                  <div><i class="fas fa-map-marker-alt"></i> <span>${store.address || '未填寫'}</span></div>
-                  <div><i class="fas fa-phone"></i> <span>${store.phone || '未填寫'}</span></div>
-                  <div><i class="fas fa-clock"></i> <span>${store.hours || '未填寫'}</span></div>
-              </div>
-              <div class="store-actions">
-                  <button class="btn-store btn-edit" onclick="openEditStoreModal(${store.storeId})"><i class="fas fa-edit"></i> 編輯</button>
-                  <button class="btn-store btn-toggle ${!store.isActive ? 'is-hidden' : ''}" onclick="toggleStore(${store.storeId})">
-                      <i class="fas fa-${store.isActive ? 'eye-slash' : 'eye'}"></i> ${store.isActive ? '隱藏' : '顯示'}
-                  </button>
-                  <button class="btn-store btn-delete" onclick="deleteStore(${store.storeId})"><i class="fas fa-trash-alt"></i></button>
-              </div>`;
-        grid.appendChild(card);
-      });
-    }
+    // ==========================================
+    // 業務邏輯函數
+    // ==========================================
 
     function openAddStoreModal() {
       document.getElementById('modalTitle').textContent = '新增店鋪';
@@ -912,8 +912,12 @@
     }
 
     function openEditStoreModal(id) {
-      const store = stores.find(s => s.storeId === id);
-      if (!store) return;
+      // 從緩存中獲取數據
+      const store = window.currentStoresMap ? window.currentStoresMap[id] : null;
+      if (!store) {
+        showNotification('❌ 找不到店鋪數據', true);
+        return;
+      }
 
       document.getElementById('modalTitle').textContent = '編輯店鋪';
       document.getElementById('storeId').value = store.storeId;
@@ -922,29 +926,26 @@
       document.getElementById('storeAddress').value = store.address;
       document.getElementById('storePhone').value = store.phone || '';
 
-      // === 新增：解析營業時間並填充 ===
+      // 解析營業時間
       if (store.hours) {
-        // 假設後端格式為 "10:00 AM - 8:00 PM"
         const parts = store.hours.split(' - ');
         if (parts.length === 2) {
-          const startParts = parts[0].trim().split(' '); // ["10:00", "AM"]
-          const endParts = parts[1].trim().split(' ');   // ["8:00", "PM"]
-
+          const startParts = parts[0].trim().split(' ');
+          const endParts = parts[1].trim().split(' ');
           if (startParts.length === 2) {
             const startTime = startParts[0].split(':');
             document.getElementById('startHour').value = startTime[0];
-            document.getElementById('startMinute').value = startTime[1] || '00'; // 容錯補零
+            document.getElementById('startMinute').value = startTime[1] || '00';
             document.getElementById('startPeriod').value = startParts[1];
           }
           if (endParts.length === 2) {
             const endTime = endParts[0].split(':');
             document.getElementById('endHour').value = endTime[0];
-            document.getElementById('endMinute').value = endTime[1] || '00'; // 容錯補零
+            document.getElementById('endMinute').value = endTime[1] || '00';
             document.getElementById('endPeriod').value = endParts[1];
           }
         }
       }
-      // ==============================
 
       document.getElementById('returnAdvanceDays').value = (store.returnAdvanceDays !== null && store.returnAdvanceDays !== undefined) ? store.returnAdvanceDays : '';
       document.getElementById('returnBlackoutStartDate').value = store.returnBlackoutStartDate ? store.returnBlackoutStartDate.substring(0, 10) : '';
@@ -952,15 +953,11 @@
       document.getElementById('returnBlackoutReason').value = store.returnBlackoutReason || '';
 
       const checkboxes = document.querySelectorAll('.closed-day-checkbox');
-      checkboxes.forEach(cb => cb.checked = false); // 先全部取消
-
+      checkboxes.forEach(cb => cb.checked = false);
       if (store.returnClosedDaysOfWeek) {
-        // 將 "1,3,7" 轉換為數組 ["1", "3", "7"]
         const closedDays = String(store.returnClosedDaysOfWeek).split(',').map(d => d.trim());
         checkboxes.forEach(cb => {
-          if (closedDays.includes(cb.value)) {
-            cb.checked = true;
-          }
+          if (closedDays.includes(cb.value)) cb.checked = true;
         });
       }
 
@@ -973,16 +970,11 @@
       document.body.style.overflow = '';
     }
 
-
     async function saveStore(e) {
       e.preventDefault();
-
       const checkedBoxes = Array.from(document.querySelectorAll('.closed-day-checkbox:checked'));
-      const closedDaysString = checkedBoxes.length > 0
-        ? checkedBoxes.map(cb => cb.value).join(',')
-        : null;
+      const closedDaysString = checkedBoxes.length > 0 ? checkedBoxes.map(cb => cb.value).join(',') : null;
 
-      // === 處理營業時間拼湊與驗證 ===
       const startH = document.getElementById('startHour').value;
       const startM = document.getElementById('startMinute').value || '00';
       const startP = document.getElementById('startPeriod').value;
@@ -990,54 +982,33 @@
       const endM = document.getElementById('endMinute').value || '00';
       const endP = document.getElementById('endPeriod').value;
 
-      // 1. 簡單驗證：是否填寫完整
       if (!startH || !endH) {
         showNotification('❌ 請填寫完整的營業時間', true);
         return;
       }
 
-      // 2. 【核心輔助】：將時間轉換為 24 小時制的分鐘數，方便精確比較
       function timeToMinutes(h, m, p) {
         let hour = parseInt(h);
         let min = parseInt(m);
-        // 如果是 PM 且不是 12 點，則加上 12 小時 (例如 1 PM = 13)
-        if (p === 'PM' && hour !== 12) {
-          hour += 12;
-        }
-        // 如果是 AM 且是 12 點，則視為 0 點 (午夜)
-        else if (p === 'AM' && hour === 12) {
-          hour = 0;
-        }
+        if (p === 'PM' && hour !== 12) hour += 12;
+        else if (p === 'AM' && hour === 12) hour = 0;
         return hour * 60 + min;
       }
 
-      const startMinutes = timeToMinutes(startH, startM, startP);
-      const endMinutes = timeToMinutes(endH, endM, endP);
-
-      // 3. 【核心修正】：只有當「同為 AM」或「同為 PM」時，才強制要求結束時間必須晚於開始時間
-      // (如果是 PM 到 AM，則視為跨天營業，直接允許通過，不作攔截)
-      if (startP === endP) {
-        if (startMinutes >= endMinutes) {
-          showNotification('❌ 同為 AM 或 PM 時，結束時間必須晚於開始時間！', true);
-          return;
-        }
+      if (startP === endP && timeToMinutes(startH, startM, startP) >= timeToMinutes(endH, endM, endP)) {
+        showNotification('❌ 同為 AM 或 PM 時，結束時間必須晚於開始時間！', true);
+        return;
       }
 
-      // 4. 格式化分鐘 (補零)
-      const formattedStartM = startM.padStart(2, '0');
-      const formattedEndM = endM.padStart(2, '0');
-
-      // 5. 拼湊成後端需要的格式: "10:00 AM - 8:00 PM"
-      const hoursString = `${startH}:${formattedStartM} ${startP} - ${endH}:${formattedEndM} ${endP}`;
-      // ==============================
-
+      const hoursString = `${startH}:${startM.padStart(2, '0')} ${startP} - ${endH}:${endM.padStart(2, '0')} ${endP}`;
       const id = document.getElementById('storeId').value;
+
       const payload = {
         storeCode: document.getElementById('storeCode').value.trim(),
         name: document.getElementById('storeName').value.trim(),
         address: document.getElementById('storeAddress').value.trim(),
         phone: document.getElementById('storePhone').value.trim(),
-        hours: hoursString, // 使用驗證並拼湊後的字符串
+        hours: hoursString,
         returnAdvanceDays: document.getElementById('returnAdvanceDays').value ? parseInt(document.getElementById('returnAdvanceDays').value) : null,
         returnBlackoutStartDate: document.getElementById('returnBlackoutStartDate').value || null,
         returnBlackoutEndDate: document.getElementById('returnBlackoutEndDate').value || null,
@@ -1062,7 +1033,8 @@
         if (res.ok) {
           showNotification('✅ ' + result.message);
           closeStoreModal();
-          loadStores();
+          // 核心：使用 AdminTable 刷新數據
+          AdminTable.loadData(storeTableConfig);
         } else {
           showNotification('❌ ' + (result.message || '操作失敗'), true);
         }
@@ -1077,17 +1049,19 @@
     async function toggleStore(id) {
       const res = await fetch(`/admin/stores/api/toggle/${id}`, {method: 'PUT'});
       const result = await res.json();
-      if (res.ok) {showNotification('✅ ' + result.message); loadStores();}
-      else {showNotification('❌ ' + (result.message || '操作失敗'), true);}
+      if (res.ok) {
+        showNotification('✅ ' + result.message);
+        AdminTable.loadData(storeTableConfig); // 刷新
+      } else {
+        showNotification('❌ ' + (result.message || '操作失敗'), true);
+      }
     }
 
-    function openDeleteStoreModal(id) {
-      const store = stores.find(s => s.storeId === id);
+    function deleteStore(id) {
+      const store = window.currentStoresMap ? window.currentStoresMap[id] : null;
       if (!store) return;
-
       pendingDeleteStoreId = id;
       pendingDeleteStoreName = store.name;
-
       document.getElementById('deleteStoreNameDisplay').textContent = pendingDeleteStoreName;
       document.getElementById('deleteStoreModal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
@@ -1102,16 +1076,14 @@
 
     async function confirmDeleteStore() {
       if (!pendingDeleteStoreId) return;
-
       const id = pendingDeleteStoreId;
-      closeDeleteStoreModal(); // 先關閉彈窗
-
+      closeDeleteStoreModal();
       try {
         const res = await fetch(`/admin/stores/api/delete/${id}`, {method: 'DELETE'});
         const result = await res.json();
         if (res.ok) {
           showNotification('✅ ' + result.message);
-          loadStores(); // 重新加載列表
+          AdminTable.loadData(storeTableConfig); // 刷新
         } else {
           showNotification('❌ ' + (result.message || '刪除失敗'), true);
         }
@@ -1120,38 +1092,21 @@
       }
     }
 
-    // 原本的 deleteStore 函數修改為打開彈窗
-    function deleteStore(id) {
-      openDeleteStoreModal(id);
-    }
-
-
     // ==========================================
-    // 全局事件監聽 (補充了你需要的遮罩層和 ESC 鍵關閉邏輯)
+    // 全局事件監聽
     // ==========================================
-
-    // 1. 點擊遮罩層關閉「新增/編輯」彈窗
     document.getElementById('storeModal')?.addEventListener('click', function (e) {
       if (e.target === this) closeStoreModal();
     });
 
-    // 2. 點擊遮罩層關閉「刪除確認」彈窗 (你要求的補充)
     document.getElementById('deleteStoreModal')?.addEventListener('click', function (e) {
       if (e.target === this) closeDeleteStoreModal();
     });
 
-    // 3. ESC 鍵關閉彈窗 (整合了兩個彈窗的判斷)
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
-        const storeModal = document.getElementById('storeModal');
-        if (storeModal && storeModal.style.display === 'flex') {
-          closeStoreModal();
-        }
-
-        const deleteModal = document.getElementById('deleteStoreModal');
-        if (deleteModal && deleteModal.style.display === 'flex') {
-          closeDeleteStoreModal();
-        }
+        if (document.getElementById('storeModal').style.display === 'flex') closeStoreModal();
+        if (document.getElementById('deleteStoreModal').style.display === 'flex') closeDeleteStoreModal();
       }
     });
   </script>

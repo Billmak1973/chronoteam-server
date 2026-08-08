@@ -403,21 +403,43 @@
                 </a>
             </div>
 
-            <!-- 分頁 -->
+            <!-- ========================================== -->
+            <!-- 【核心修改】：智能分頁導航 (替換原有的簡單分頁) -->
+            <!-- ========================================== -->
             <div class="pagination">
-                <!-- 上一頁 -->
-                <a th:if="${currentPage > 1}" th:href="@{/browse(page=${currentPage - 1}, ${currentFilters})}">
+                <!-- 1. 上一頁按鈕 -->
+                <a th:if="${currentPage > 1}"
+                    th:href="@{/browse(page=${currentPage - 1}, ${currentFilters}, sort=${currentSort})}"
+                    class="page-btn">
                     <i class="fas fa-chevron-left"></i> 上一頁
                 </a>
+                <span th:if="${currentPage <= 1}" class="page-btn disabled" style="pointer-events: none; opacity: 0.5;">
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                </span>
 
-                <!-- 頁碼數字 - 修改這裡：從 span 改成 a 標籤 -->
-                <a th:each="i : ${#numbers.sequence(1, totalPages)}" th:href="@{/browse(page=${i}, ${currentFilters})}"
-                    th:class="${i == currentPage} ? 'active' : ''" th:text="${i}">1</a>
+                <!-- 2. 智能頁碼遍歷 (核心邏輯) -->
+                <th:block th:each="item : ${smartPages}">
+                    <!-- 如果是省略號 "..." -->
+                    <span th:if="${item.isEllipsis}" class="page-ellipsis"
+                        style="padding: 0.6rem 0.5rem; color: #6c757d; font-weight: bold;">...</span>
 
-                <!-- 下一頁 -->
-                <a th:if="${currentPage < totalPages}" th:href="@{/browse(page=${currentPage + 1}, ${currentFilters})}">
+                    <!-- 如果是數字頁碼 -->
+                    <a th:unless="${item.isEllipsis}"
+                        th:href="@{/browse(page=${item.pageNumber}, ${currentFilters}, sort=${currentSort})}"
+                        th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
+                        th:text="${item.pageNumber}">1</a>
+                </th:block>
+
+                <!-- 3. 下一頁按鈕 -->
+                <a th:if="${currentPage < totalPages}"
+                    th:href="@{/browse(page=${currentPage + 1}, ${currentFilters}, sort=${currentSort})}"
+                    class="page-btn">
                     下一頁 <i class="fas fa-chevron-right"></i>
                 </a>
+                <span th:if="${currentPage >= totalPages}" class="page-btn disabled"
+                    style="pointer-events: none; opacity: 0.5;">
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                </span>
             </div>
         </section>
     </div>
@@ -447,6 +469,11 @@
             checkboxes.forEach(input => {
                 params.append(input.name, input.value);
             });
+            // 注意：這裡需要保留當前的 sort 參數，否則篩選後排序會重置
+            const currentSort = document.querySelector('.sort-dropdown').value;
+            if (currentSort) {
+                params.append('sort', currentSort);
+            }
             window.location.href = '/browse?' + params.toString();
         }
 
@@ -513,5 +540,7 @@
 
     </script>
 </body>
+
+</html>
 
 </html>

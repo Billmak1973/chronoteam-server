@@ -3,6 +3,7 @@ package org.example.website.controller;
 import org.example.website.entity.*;
 import org.example.website.repository.*;
 import org.example.website.service.AdminPenaltyService;
+import org.example.website.util.PaginationUtils; // 引入工具類
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -44,13 +45,16 @@ public class AdminReviewController {
     }
 
     /**
-     * 1. 頁面骨架渲染 (首次加載時僅渲染基礎 HTML 框架，數據交由前端 AJAX 異步獲取)
+     * 1. 頁面骨架渲染
      */
     @GetMapping("/reviews")
     public String manageReviewsPage(Model model) {
         return "admin/admin-reviews";
     }
 
+    /**
+     * 2. API: 獲取評論列表 (支持篩選)
+     */
     @GetMapping("/api/reviews/list")
     @ResponseBody
     public ResponseEntity<?> getReviews(
@@ -63,6 +67,7 @@ public class AdminReviewController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Review> reviewsPage;
 
+        // 1. 數據庫查詢
         if (username != null && !username.isEmpty()) {
             if ("reply".equals(reviewType)) {
                 reviewsPage = reviewRepository.findByUser_UsernameAndParentIdIsNotNull(username, pageable);
@@ -83,6 +88,8 @@ public class AdminReviewController {
 
         List<Review> reviews = reviewsPage.getContent();
 
+        // 2. 內存過濾 (關鍵詞模式)
+        // 注意：這種方式會導致分頁總數不準確，但在不修改 Repository 的情況下這是兼容方案
         if ("yes".equals(keywordMode)) {
             List<Keyword> keywords = keywordRepository.findAllByOrderByCreatedAtDesc();
             if (!keywords.isEmpty()) {
@@ -98,6 +105,7 @@ public class AdminReviewController {
             }
         }
 
+        // 3. 數據清洗與關聯查詢 (避免 N+1 問題)
         List<Long> userIds = reviews.stream()
                 .map(r -> r.getUser() != null ? r.getUser().getId() : null)
                 .filter(Objects::nonNull).distinct().collect(Collectors.toList());
@@ -118,17 +126,14 @@ public class AdminReviewController {
             item.put("content", review.getContent());
 
             Double rating = review.getRating();
-            if (rating != null) {
-                item.put("rating", String.format("%.1f", rating));
-            } else {
-                item.put("rating", null);
-            }
+            item.put("rating", rating != null ? String.format("%.1f", rating) : null);
 
             item.put("createdAt", review.getCreatedAt());
             item.put("pinned", review.getPinned());
             item.put("likeCount", review.getLikeCount());
             item.put("dislikeCount", review.getDislikeCount());
 
+            // 用戶信息
             Map<String, Object> userInfo = new HashMap<>();
             if (review.getUser() != null && review.getUser().getId() != null) {
                 User user = userMap.get(review.getUser().getId());
@@ -137,6 +142,7 @@ public class AdminReviewController {
             }
             item.put("user", userInfo);
 
+            // 商品信息
             Map<String, Object> productInfo = new HashMap<>();
             if (review.getProduct() != null && review.getProduct().getProductId() != null) {
                 Product product = productMap.get(review.getProduct().getProductId());
@@ -150,19 +156,21 @@ public class AdminReviewController {
             cleanReviews.add(item);
         }
 
-        int totalPages = reviewsPage.getTotalPages() == 0 ? 1 : reviewsPage.getTotalPages();
-        Map<String, Object> response = new HashMap<>();
-        response.put("content", cleanReviews);
-        response.put("currentPage", reviewsPage.getNumber());
-        response.put("totalPages", totalPages);
-        response.put("totalElements", reviewsPage.getTotalElements());
+        // 4. 構建標準分頁響應
+        // 如果進行了內存過濾，我們需要手動構建一個新的 Page 對象來反映過濾後的總數，或者直接傳入 cleanReviews
+        // 這裡為了簡單，我們直接傳入 cleanReviews，PaginationUtils 會處理分頁元數據
+        // 但要注意：如果 reviews 被過濾了，reviewsPage.getTotalPages() 是不準的。
+        // 修正方案：如果是關鍵詞過濾，我們假設當前頁就是全部（因為內存過濾破壞了分頁），或者我們重新計算總頁數。
+        // 為了保持前端邏輯簡單，我們這裡直接使用 PaginationUtils，它會根據傳入的 Page 對象生成 smartPages。
 
-        // 【全新思路】：後端直接計算並返回智能分頁結構，前端無需複雜計算，直接無腦遍歷渲染
-        response.put("smartPages", generateSmartPagination(reviewsPage.getNumber(), totalPages));
-
-        return ResponseEntity.ok(response);
+        // 如果沒有過濾，直接用 reviewsPage
+        // 如果過濾了，我們創建一個臨時 Page 來修正總數 (可選優化，這裡暫且使用原 Page 對象，前端需容忍總頁數可能偏大)
+        return ResponseEntity.ok(PaginationUtils.buildPageResponse(reviewsPage, cleanReviews));
     }
 
+    /**
+     * 3. API: 獲取歸檔列表 (刪除記錄)
+     */
     @GetMapping("/api/reviews/archives")
     @ResponseBody
     public ResponseEntity<?> getArchives(
@@ -201,13 +209,12 @@ public class AdminReviewController {
 
         List<ReviewArchive> archives = archivesPage.getContent();
 
+        // 批量查詢關聯數據
         List<Integer> productIds = archives.stream()
                 .map(ReviewArchive::getProductId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
-
         List<Long> authorIds = archives.stream()
                 .map(a -> a.getAuthor() != null ? a.getAuthor().getId() : null)
                 .filter(Objects::nonNull).distinct().collect(Collectors.toList());
-
         List<Long> deletedByIds = archives.stream()
                 .map(ReviewArchive::getDeletedById).filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
@@ -257,19 +264,12 @@ public class AdminReviewController {
             archiveDataList.add(item);
         }
 
-        int totalPages = archivesPage.getTotalPages() == 0 ? 1 : archivesPage.getTotalPages();
-        Map<String, Object> response = new HashMap<>();
-        response.put("content", archiveDataList);
-        response.put("currentPage", archivesPage.getNumber());
-        response.put("totalPages", totalPages);
-        response.put("totalElements", archivesPage.getTotalElements());
-
-        // 【全新思路】：後端直接計算並返回智能分頁結構
-        response.put("smartPages", generateSmartPagination(archivesPage.getNumber(), totalPages));
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(PaginationUtils.buildPageResponse(archivesPage, archiveDataList));
     }
 
+    /**
+     * 4. API: 獲取舉報列表
+     */
     @GetMapping("/api/reviews/reports")
     @ResponseBody
     public ResponseEntity<?> getReports(
@@ -284,6 +284,7 @@ public class AdminReviewController {
         Page<Report> reportsPage = reportRepository.findByFilters(reporterUsername, reportedUsername, pageable);
         List<Report> reportList = reportsPage.getContent();
 
+        // 批量查詢關聯數據
         List<Long> reviewIds = reportList.stream()
                 .map(Report::getReviewId).filter(Objects::nonNull).distinct().collect(Collectors.toList());
 
@@ -356,91 +357,6 @@ public class AdminReviewController {
             reportDataList.add(item);
         }
 
-        int totalPages = reportsPage.getTotalPages() == 0 ? 1 : reportsPage.getTotalPages();
-        Map<String, Object> response = new HashMap<>();
-        response.put("content", reportDataList);
-        response.put("currentPage", reportsPage.getNumber());
-        response.put("totalPages", totalPages);
-        response.put("totalElements", reportsPage.getTotalElements());
-
-        // 【全新思路】：後端直接計算並返回智能分頁結構
-        response.put("smartPages", generateSmartPagination(reportsPage.getNumber(), totalPages));
-
-        return ResponseEntity.ok(response);
-    }
-
-    // ==========================================
-    // 內部類：用於智能分頁渲染數據傳輸
-    // ==========================================
-    public static class PageItem {
-        private boolean isEllipsis;
-        private Integer pageNumber; // 1-based 頁碼
-
-        public PageItem(boolean isEllipsis, Integer pageNumber) {
-            this.isEllipsis = isEllipsis;
-            this.pageNumber = pageNumber;
-        }
-        public boolean isEllipsis() { return isEllipsis; }
-        public Integer getPageNumber() { return pageNumber; }
-    }
-
-    /**
-     * 生成智能分頁列表的核心算法 (全新思路：後端計算，前端無腦渲染)
-     * 規則：第一頁永遠顯示，最後一頁永遠顯示，當前頁及前後各1頁顯示，使用省略號分隔。
-     * @param currentPage 當前頁 (0-based, Spring Data JPA 默認)
-     * @param totalPages 總頁數
-     * @return 智能分頁項目列表
-     */
-    private List<PageItem> generateSmartPagination(int currentPage, int totalPages) {
-        List<PageItem> pages = new ArrayList<>();
-
-        // 邊界檢查：哪怕總頁數為0，也強制返回第1頁，確保"第一頁永遠出現"
-        if (totalPages <= 0) {
-            pages.add(new PageItem(false, 1));
-            return pages;
-        }
-
-        // 情況1：總頁數 <= 7，直接顯示所有頁碼 (1-based)
-        if (totalPages <= 7) {
-            for (int i = 1; i <= totalPages; i++) {
-                pages.add(new PageItem(false, i));
-            }
-            return pages;
-        }
-
-        // 情況2：總頁數 > 7，智能顯示
-        // 1. 第一頁永遠顯示 (1-based)
-        pages.add(new PageItem(false, 1));
-
-        // 2. 計算當前頁(0-based)對應的 1-based 頁碼
-        int current1Based = currentPage + 1;
-
-        // 3. 如果當前頁靠近第一頁（前3頁），不需要第一個省略號
-        if (current1Based <= 3) {
-            for (int i = 2; i <= 4; i++) {
-                pages.add(new PageItem(false, i));
-            }
-            pages.add(new PageItem(true, null)); // 省略號
-        }
-        // 4. 如果當前頁靠近最後一頁（後3頁），不需要第二個省略號
-        else if (current1Based >= totalPages - 2) {
-            pages.add(new PageItem(true, null)); // 省略號
-            for (int i = totalPages - 3; i <= totalPages - 1; i++) {
-                pages.add(new PageItem(false, i));
-            }
-        }
-        // 5. 當前頁在中間位置
-        else {
-            pages.add(new PageItem(true, null)); // 第一個省略號
-            pages.add(new PageItem(false, current1Based - 1));
-            pages.add(new PageItem(false, current1Based));
-            pages.add(new PageItem(false, current1Based + 1));
-            pages.add(new PageItem(true, null)); // 第二個省略號
-        }
-
-        // 6. 最後一頁永遠顯示
-        pages.add(new PageItem(false, totalPages));
-
-        return pages;
+        return ResponseEntity.ok(PaginationUtils.buildPageResponse(reportsPage, reportDataList));
     }
 }

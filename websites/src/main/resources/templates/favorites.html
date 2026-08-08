@@ -251,6 +251,129 @@
                 flex-direction: column;
             }
         }
+
+        /* ========================================== */
+        /*   自定義確認彈窗樣式 (取代原生 confirm)      */
+        /* ========================================== */
+        .custom-confirm-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            /* 毛玻璃效果 */
+            z-index: 9999;
+            display: none;
+            /* 默認隱藏 */
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .custom-confirm-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 4px solid var(--accent);
+            /* 頂部紅色裝飾條 */
+        }
+
+        .confirm-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1.5rem;
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            color: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            box-shadow: 0 4px 10px rgba(233, 69, 96, 0.2);
+        }
+
+        .confirm-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.8rem;
+        }
+
+        .confirm-message {
+            font-size: 0.95rem;
+            color: var(--gray);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-confirm-cancel,
+        .btn-confirm-delete {
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 0.95rem;
+            min-width: 100px;
+        }
+
+        .btn-confirm-cancel {
+            background: #f1f3f5;
+            color: #495057;
+        }
+
+        .btn-confirm-cancel:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirm-delete {
+            background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%);
+            color: white;
+            box-shadow: 0 4px 10px rgba(233, 69, 96, 0.3);
+        }
+
+        .btn-confirm-delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(233, 69, 96, 0.4);
+        }
+
+        /* 動畫定義 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 
@@ -284,8 +407,8 @@
                                 <i class="fas fa-eye"></i> 查看
                             </a>
                             <!--  取消收藏按鈕 -->
-                            <button class="btn-sm btn-remove"
-                                th:onclick="|removeFavorite(${fav.product.productId}, this)|">
+                            <button class="btn-sm btn-remove" th:data-product-id="${fav.product.productId}"
+                                onclick="removeFavorite(this.dataset.productId, this)">
                                 <i class="fas fa-heart-broken"></i> 取消
                             </button>
                         </div>
@@ -301,20 +424,17 @@
                 <a href="/browse" class="btn btn-gold"><i class="fas fa-search"></i> 瀏覽商品</a>
             </div>
 
-            <!-- ==================== 智能分頁導航 ==================== -->
-            <!-- 只有当总页数大于1时才显示分页 -->
-            <div class="pagination-wrapper" th:if="${totalPages > 1}">
+            <!-- ==================== 智能分頁導航 (優化版) ==================== -->
+            <div class="pagination-wrapper">
 
-                <!-- 上一頁按鈕 -->
-                <a th:href="@{/account/favorites(page=${currentPage - 1})}"
-                    th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'" th:if="${currentPage > 1}">
+                <!-- 上一頁按鈕 (確保 page 參數 >= 1) -->
+                <a th:href="@{/account/favorites(page=${currentPage > 1 ? currentPage - 1 : 1})}"
+                    th:class="${currentPage <= 1} ? 'page-btn disabled' : 'page-btn'">
                     <i class="fas fa-chevron-left"></i> 上一頁
                 </a>
-                <span th:if="${currentPage == 1}" class="page-btn disabled">
-                    <i class="fas fa-chevron-left"></i> 上一頁
-                </span>
 
-                <!-- 智能頁碼遍歷 (核心邏輯) -->
+                <!-- 智能頁碼遍歷 (核心邏輯 - 適配 PaginationUtils) -->
+                <!-- PaginationUtils 返回的 pageNumber 是 1-based，與 currentPage 一致 -->
                 <th:block th:each="item : ${smartPages}">
                     <!-- 如果是省略號 "..." -->
                     <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
@@ -325,20 +445,31 @@
                         th:text="${item.pageNumber}">1</a>
                 </th:block>
 
-                <!-- 下一頁按鈕 -->
-                <a th:href="@{/account/favorites(page=${currentPage + 1})}"
-                    th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
-                    th:if="${currentPage < totalPages}">
+                <!-- 下一頁按鈕 (確保 page 參數 <= totalPages) -->
+                <a th:href="@{/account/favorites(page=${currentPage < totalPages ? currentPage + 1 : totalPages})}"
+                    th:class="${currentPage >= totalPages} ? 'page-btn disabled' : 'page-btn'">
                     下一頁 <i class="fas fa-chevron-right"></i>
                 </a>
-                <span th:if="${currentPage == totalPages}" class="page-btn disabled">
-                    下一頁 <i class="fas fa-chevron-right"></i>
-                </span>
 
             </div>
-            <!-- ==================== 智能分頁導航結束 ==================== -->
-
         </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!--   自定義取消收藏確認彈窗                   -->
+    <!-- ========================================== -->
+    <div id="removeFavoriteModal" class="custom-confirm-overlay">
+        <div class="custom-confirm-box">
+            <div class="confirm-icon">
+                <i class="fas fa-heart-broken"></i>
+            </div>
+            <h3 class="confirm-title">確定要取消收藏嗎？</h3>
+            <p class="confirm-message">取消後，該商品將從您的收藏列表中移除。<br>您隨時可以重新收藏它。</p>
+            <div class="confirm-actions">
+                <button class="btn-confirm-cancel" onclick="closeRemoveFavoriteModal()">再想想</button>
+                <button class="btn-confirm-delete" id="confirmRemoveBtn">確認取消</button>
+            </div>
+        </div>
     </div>
 
     <footer class="footer">
@@ -348,52 +479,140 @@
 
     <div th:replace="~{fragments/common :: modals}"></div>
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
     <script src="/js/common.js"></script>
 
     <!--  取消收藏專屬 JS -->
+    <!--  取消收藏專屬 JS -->
     <script>
-        async function removeFavorite(productId, btn) {
-            if (!confirm('💔 確定要取消收藏該商品嗎？')) return;
+        // ==========================================
+        // 全局變量：暫存當前要操作的商品 ID 和按鈕元素
+        // ==========================================
+        let pendingRemoveProductId = null;
+        let pendingRemoveBtn = null;
+
+        // ==========================================
+        // 1. 觸發刪除 (取代原有的 removeFavorite)
+        // ==========================================
+        function removeFavorite(productId, btn) {
+            // 暫存數據
+            pendingRemoveProductId = productId;
+            pendingRemoveBtn = btn;
+
+            // 顯示自定義彈窗
+            const modal = document.getElementById('removeFavoriteModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            }
+        }
+
+        // ==========================================
+        // 2. 關閉彈窗
+        // ==========================================
+        function closeRemoveFavoriteModal() {
+            const modal = document.getElementById('removeFavoriteModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = ''; // 恢復背景滾動
+            }
+            // 【注意】這裡清空了全局變量，所以在調用此函數前必須先保存引用
+            pendingRemoveProductId = null;
+            pendingRemoveBtn = null;
+        }
+
+        // ==========================================
+        // 3. 執行真正的刪除邏輯 (綁定在彈窗的確認按鈕上)
+        // ==========================================
+        document.getElementById('confirmRemoveBtn').addEventListener('click', async function () {
+            if (!pendingRemoveProductId || !pendingRemoveBtn) return;
+
+            // 【核心修復 1】：在關閉彈窗（清空變量）之前，先將按鈕引用保存到局部變量
+            const currentBtn = pendingRemoveBtn;
+            const currentProductId = pendingRemoveProductId;
+
+            const originalText = this.innerHTML;
+
+            // 按鈕進入 Loading 狀態
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
 
             try {
-                // 復用之前的 toggle API (因為當前狀態是已收藏，調用後會變為取消收藏)
-                const response = await fetch(`/api/favorites/toggle/${productId}`, {
+                const response = await fetch(`/api/favorites/toggle/${currentProductId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: {'Content-Type': 'application/json'}
                 });
 
                 const result = await response.json();
 
                 if (response.ok && result.success) {
-                    showNotification('💔 已取消收藏');
+                    // 1. 先關閉彈窗 (這會清空 pendingRemoveBtn，但我們已經有 currentBtn 了)
+                    closeRemoveFavoriteModal();
 
-                    //  優雅的消失動畫
-                    const card = btn.closest('.favorite-card');
-                    card.style.transition = 'all 0.4s ease';
-                    card.style.opacity = '0';
-                    card.style.transform = 'scale(0.8)';
+                    // 2. 顯示成功提示
+                    if (typeof showNotification === 'function') {
+                        showNotification('💔 已取消收藏');
+                    }
 
-                    setTimeout(() => {
-                        card.remove();
-                        // 如果全部刪除完畢，刷新頁面以顯示空狀態
-                        if (document.querySelectorAll('.favorite-card').length === 0) {
-                            setTimeout(() => location.reload(), 500);
-                        } else {
-                            // 如果還有其他卡片，建議刷新頁面以更新分頁總數
-                            // 或者你可以選擇不刷新，但分頁按鈕可能會顯示錯誤的總頁數
-                            setTimeout(() => location.reload(), 500);
-                        }
-                    }, 400);
+                    // 3. 執行優雅的消失動畫 (使用局部變量 currentBtn)
+                    const card = currentBtn.closest('.favorite-card');
+                    if (card) {
+                        card.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.8) translateY(20px)';
+
+                        // 動畫結束後移除 DOM 並刷新分頁
+                        setTimeout(() => {
+                            card.remove();
+                            // 【重要】SSR 模式下，刪除後必須刷新頁面以更新分頁數據
+                            // 因為分頁數據 (totalPages, smartPages) 是在服務器端計算的
+                            setTimeout(() => location.reload(), 300);
+                        }, 400);
+                    } else {
+                        // 如果找不到卡片元素，直接刷新
+                        location.reload();
+                    }
                 } else {
-                    showNotification('❌ ' + (result.message || '操作失敗'), true);
+                    // 失敗處理
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + (result.message || '操作失敗'), true);
+                    }
+                    // 恢復按鈕狀態
+                    this.disabled = false;
+                    this.innerHTML = originalText;
                 }
             } catch (error) {
                 console.error('取消收藏錯誤:', error);
-                showNotification('❌ 網絡錯誤', true);
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 網絡錯誤', true);
+                }
+                // 恢復按鈕狀態
+                this.disabled = false;
+                this.innerHTML = originalText;
             }
-        }
+        });
+
+        // ==========================================
+        // 4. 點擊遮罩層也可以關閉彈窗
+        // ==========================================
+        document.getElementById('removeFavoriteModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeRemoveFavoriteModal();
+            }
+        });
+
+        // ==========================================
+        // 5. 按 ESC 鍵也可以關閉彈窗
+        // ==========================================
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('removeFavoriteModal');
+                if (modal && modal.style.display === 'flex') {
+                    closeRemoveFavoriteModal();
+                }
+            }
+        });
     </script>
 </body>
 
