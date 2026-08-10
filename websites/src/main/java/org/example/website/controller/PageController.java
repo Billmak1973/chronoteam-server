@@ -315,57 +315,6 @@ public class PageController {
         return "favorites";
     }
 
-    @GetMapping("/account/history")
-    public String myHistory(Model model,
-                            Authentication authentication,
-                            @RequestParam(defaultValue = "1") int page) { // 前端傳入 1-based
-        String username = authentication.getName();
-
-        // 1. 獲取 User 實體
-        User user = userService.findByUsername(username);
-
-        // 2. 獲取所有歷史記錄
-        List<ViewHistory> allHistoryList = viewHistoryService.getUserHistory(username);
-
-        // 3. 分頁參數計算
-        int size = 15;
-        int totalElements = allHistoryList.size();
-
-        // 【關鍵修正 1】：將 1-based 頁碼轉換為 0-based 索引進行計算
-        // 防止頁碼越界 (前端傳 1，索引為 0)
-        int pageIndex = page - 1;
-        if (pageIndex < 0) pageIndex = 0;
-
-        int totalPages = (int) Math.ceil((double) totalElements / size);
-        if (totalPages == 0) totalPages = 1; // 至少保持 1 頁
-        if (pageIndex >= totalPages) pageIndex = totalPages - 1;
-
-        // 4. 截取當前頁數據
-        int fromIndex = pageIndex * size;
-        int toIndex = Math.min(fromIndex + size, totalElements);
-        List<ViewHistory> pagedHistoryList = new ArrayList<>();
-        if (fromIndex < totalElements) {
-            pagedHistoryList = allHistoryList.subList(fromIndex, toIndex);
-        }
-
-        // 5. 【關鍵修正 2】：使用 PaginationUtils 生成智能分頁
-        // 注意：這裡傳入的是 0-based 的 pageIndex
-        List<PaginationUtils.PageItem> smartPages = PaginationUtils.generateSmartPagination(pageIndex, totalPages);
-
-        // 6. 傳遞數據到前端
-        model.addAttribute("user", user);
-        model.addAttribute("historyList", pagedHistoryList);
-
-        // 【關鍵修正 3】：傳遞給前端的 currentPage 必須轉回 1-based，方便前端顯示 "第 1 頁"
-        // 但 smartPages 內部的 pageNumber 已經是 1-based 了 (由工具類處理)
-        model.addAttribute("currentPage", page); // 保持 1-based 給前端顯示用
-        model.addAttribute("totalPages", totalPages);
-        model.addAttribute("totalElements", totalElements);
-        model.addAttribute("smartPages", smartPages);
-
-        return "history";
-    }
-
     /**
      *  新增：我的結算記錄頁面路由 (財務中心)
      */
@@ -435,40 +384,75 @@ public class PageController {
         return "reviews"; // 對應 templates/reviews.html
     }
 
+
+    /**
+     * 渲染通知頁面骨架 (不再加載任何數據，交由前端 AJAX 處理)
+     */
     @GetMapping("/account/notifications")
-    public String myNotifications(
-            @RequestParam(defaultValue = "0") int stockPage,   // 到貨通知當前頁
-            @RequestParam(defaultValue = "0") int adminPage,   // 管理通知當前頁
-            @RequestParam(defaultValue = "25") int size,       // 每頁 25 條
-            Model model, Authentication authentication) {
+    public String myNotificationsPage(Model model, Authentication authentication) {
+        String username = authentication.getName();
+        User user = userService.findByUsername(username);
+        model.addAttribute("user", user);
+        return "notifications"; // 對應 templates/notifications.html
+    }
+
+    /**
+     * 【API 1】獲取到貨通知列表 (獨立數據源: AnnouncementReceipt)
+     */
+    @GetMapping("/api/notifications/stock")
+    @ResponseBody
+    public ResponseEntity<?> getStockNotifications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size,
+            Authentication authentication) {
 
         String username = authentication.getName();
-        // 1. 獲取完整的 User 實體 (包含 ID)
-        User user = userService.findByUsername(username);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
-        // 2. 構建分頁對象
-        Pageable stockPageable = org.springframework.data.domain.PageRequest.of(
-                stockPage, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt")
-        );
-        Pageable adminPageable = org.springframework.data.domain.PageRequest.of(adminPage, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // 3. 【核心修復】：使用 user.getId() 進行查詢
-        Page<AnnouncementReceipt> stockReceiptPage = announcementReceiptRepository
-                .findByUser_IdAndAnnouncement_TypeOrderByCreatedAtDesc(user.getId(), Announcement.AnnouncementType.STOCK, stockPageable);
+        // 查詢到貨通知
+        Page<AnnouncementReceipt> receiptPage = announcementReceiptRepository
+                .findByUser_IdAndAnnouncement_TypeOrderByCreatedAtDesc(
+                        user.getId(), Announcement.AnnouncementType.STOCK, pageable);
 
-        // 進入頁面時，自動將該用戶的到貨通知標記為已讀 (使用 user.getId())
+        // 進入該接口時，自動標記為已讀
         announcementReceiptRepository.markAllAsReadByUserAndType(user.getId(), Announcement.AnnouncementType.STOCK);
+
+        // 使用 PaginationUtils 構建標準分頁響應
+        Map<String, Object> response = PaginationUtils.buildPageResponse(receiptPage, receiptPage.getContent());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 【API 2】獲取管理通知列表 (獨立數據源: Notification + AdminPenalty + Appeal)
+     */
+    @GetMapping("/api/notifications/admin")
+    @ResponseBody
+    public ResponseEntity<?> getAdminNotifications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用戶不存在"));
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 查詢系統管理通知
+        Page<Notification> notifPage = notificationRepository.findByTypeAndRecipient_UsernameOrderByCreatedAtDesc(
+                Notification.NotificationType.SYSTEM, username, pageable);
+
+        // 進入該接口時，自動標記為已讀
         notificationRepository.markAllAsReadByRecipientUserId(user.getId());
 
-        // ==========================================
-        // 【保持原樣】：管理通知依然從 Notification 查詢
-        // ==========================================
-        Page<Notification> adminPageResult = notificationRepository.findByTypeAndRecipient_UsernameOrderByCreatedAtDesc(
-                Notification.NotificationType.SYSTEM, username, adminPageable);
-        List<Notification> adminNotifications = adminPageResult.getContent();
+        List<Notification> adminNotifications = notifPage.getContent();
 
         // ==========================================
-        // 【核心重構】：計算每條管理通知的「綜合狀態」(支援禁言 + 永久拉黑)
+        // 計算每條管理通知的「綜合狀態」(支援禁言 + 永久拉黑 + 申訴)
         // ==========================================
         Map<Long, String> notificationStatusMap = new HashMap<>();
         Map<Long, Appeal> appealDataMap = new HashMap<>();
@@ -487,27 +471,25 @@ public class PageController {
                     Appeal latestAppeal = appeals.get(0);
                     appealDataMap.put(notif.getNotificationId(), latestAppeal);
 
-                    if (latestAppeal.getStatus() == Appeal.AppealStatus.PENDING) {
-                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_PENDING");
-                    } else if (latestAppeal.getStatus() == Appeal.AppealStatus.APPROVED) {
-                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_APPROVED");
-                    } else if (latestAppeal.getStatus() == Appeal.AppealStatus.REJECTED) {
-                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_REJECTED");
-                    } else if (latestAppeal.getStatus() == Appeal.AppealStatus.EXPIRED) {
-                        notificationStatusMap.put(notif.getNotificationId(), "APPEAL_EXPIRED");
+                    switch (latestAppeal.getStatus()) {
+                        case PENDING -> notificationStatusMap.put(notif.getNotificationId(), "APPEAL_PENDING");
+                        case APPROVED -> notificationStatusMap.put(notif.getNotificationId(), "APPEAL_APPROVED");
+                        case REJECTED -> notificationStatusMap.put(notif.getNotificationId(), "APPEAL_REJECTED");
+                        case EXPIRED -> notificationStatusMap.put(notif.getNotificationId(), "APPEAL_EXPIRED");
                     }
                 } else {
                     if (penaltyOpt.isPresent()) {
                         AdminPenalty penalty = penaltyOpt.get();
                         adminPenaltyService.checkAndUpdatePenaltyStatus(penalty.getPenaltyId());
-                        penalty = adminPenaltyRepository.findById(penalty.getPenaltyId()).get();
+                        // 重新獲取最新狀態
+                        penalty = adminPenaltyRepository.findById(penalty.getPenaltyId()).orElse(null);
 
-                        if (penalty.getStatus() == AdminPenalty.PenaltyStatus.ACTIVE) {
-                            notificationStatusMap.put(notif.getNotificationId(), "SHOW_APPEAL_BTN");
-                        } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.EXPIRED) {
-                            notificationStatusMap.put(notif.getNotificationId(), "EXPIRED_NO_APPEAL");
-                        } else if (penalty.getStatus() == AdminPenalty.PenaltyStatus.REVOKED) {
-                            notificationStatusMap.put(notif.getNotificationId(), "REVOKED_NO_APPEAL");
+                        if (penalty != null) {
+                            switch (penalty.getStatus()) {
+                                case ACTIVE -> notificationStatusMap.put(notif.getNotificationId(), "SHOW_APPEAL_BTN");
+                                case EXPIRED -> notificationStatusMap.put(notif.getNotificationId(), "EXPIRED_NO_APPEAL");
+                                case REVOKED -> notificationStatusMap.put(notif.getNotificationId(), "REVOKED_NO_APPEAL");
+                            }
                         }
                     } else {
                         notificationStatusMap.put(notif.getNotificationId(), "NO_PENALTY_RECORD");
@@ -517,55 +499,111 @@ public class PageController {
         }
 
         // ==========================================
-        // 傳遞數據到前端
+        // 使用 PaginationUtils 構建響應並合併額外狀態數據
         // ==========================================
+        Map<String, Object> extraData = new HashMap<>();
+        extraData.put("notificationStatusMap", notificationStatusMap);
+        extraData.put("appealDataMap", appealDataMap);
+        extraData.put("appealCountMap", appealCountMap);
+
+        Map<String, Object> response = PaginationUtils.buildPageResponse(notifPage, adminNotifications, extraData);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/account/history")
+    public String myHistory(Model model,
+                            Authentication authentication,
+                            @RequestParam(defaultValue = "1") int page) { // 【修復 1】默認值改為 1 (1-based)
+        String username = authentication.getName();
+
+        // 1. 獲取 User 實體
+        User user = userService.findByUsername(username);
+
+        // 2. 獲取所有歷史記錄
+        List<ViewHistory> allHistoryList = viewHistoryService.getUserHistory(username);
+
+        // 3. 分頁參數計算
+        int size = 15;
+        int totalElements = allHistoryList.size();
+
+        // 【修復 2】將 1-based 頁碼轉換為 0-based 索引進行計算
+        int pageIndex = page - 1;
+
+        // 邊界檢查 (防止用戶手動輸入 page=0 或負數)
+        if (pageIndex < 0) pageIndex = 0;
+
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        if (totalPages == 0) totalPages = 1; // 至少保持 1 頁
+        if (pageIndex >= totalPages) pageIndex = totalPages - 1; // 防止越界
+
+        // 4. 截取當前頁數據
+        int fromIndex = pageIndex * size;
+        int toIndex = Math.min(fromIndex + size, totalElements);
+        List<ViewHistory> pagedHistoryList = new ArrayList<>();
+        if (fromIndex < totalElements) {
+            pagedHistoryList = allHistoryList.subList(fromIndex, toIndex);
+        }
+
+        // 5. 生成智能分頁 (注意：這裡傳入的是 0-based 的 pageIndex，因為工具類內部邏輯是 0-based)
+        List<PaginationUtils.PageItem> smartPages = PaginationUtils.generateSmartPagination(pageIndex, totalPages);
+
+        // 6. 傳遞數據到前端
         model.addAttribute("user", user);
-        model.addAttribute("stockReceipts", stockReceiptPage.getContent()); // 注意變數名是 stockReceipts
-        model.addAttribute("adminNotifications", adminNotifications);
+        model.addAttribute("historyList", pagedHistoryList);
 
-        model.addAttribute("notificationStatusMap", notificationStatusMap);
-        model.addAttribute("appealDataMap", appealDataMap);
-        model.addAttribute("appealCountMap", appealCountMap);
+        // 【修復 3】關鍵！傳遞給前端的 currentPage 必須是 1-based 的 page
+        // 這樣前端 URL 才是 ?page=1，且 th:class="${currentPage == 1}" 才能正確生效
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalElements", totalElements);
+        model.addAttribute("smartPages", smartPages);
 
-        // 傳遞分頁相關數據
-        model.addAttribute("stockPage", stockPage);
-        model.addAttribute("stockTotalPages", stockReceiptPage.getTotalPages());
-        model.addAttribute("stockSmartPages", generateSmartPagination(stockPage, stockReceiptPage.getTotalPages()));
-
-        model.addAttribute("adminPage", adminPage);
-        model.addAttribute("adminTotalPages", adminPageResult.getTotalPages());
-        model.addAttribute("adminSmartPages", generateSmartPagination(adminPage, adminPageResult.getTotalPages()));
-
-        return "notifications";
+        return "history";
     }
 
     @GetMapping("/account/stock-notifications")
     public String stockNotifications(Model model,
-                                     @RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "1") int page, // 【修復 1】默認值改為 1 (1-based)
                                      @RequestParam(defaultValue = "12") int size,
                                      Authentication authentication) {
         String username = authentication.getName();
 
-        // 使用 UserService 獲取 User 實體
+        // 1. 獲取 User 實體
         User user = userService.findByUsername(username);
 
-        // 排序字段應為 createdAt (實體類中的字段名)
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // 【修復 2】將 1-based 頁碼轉換為 0-based 索引供 Spring Data JPA 使用
+        int pageIndex = page - 1;
+        if (pageIndex < 0) pageIndex = 0;
 
-        //調用 Repository 中新增的分頁方法
+        // 2. 構建分頁請求 (Spring Data JPA 需要 0-based)
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 3. 查詢數據
         Page<StockNotification> notificationPage = stockNotificationRepository
                 .findByUser_UsernameOrderByCreatedAtDesc(username, pageable);
 
-        // 將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
+        // 4. 使用 PaginationUtils 構建標準分頁響應
+        // 注意：buildPageResponse 內部會處理 smartPages 的生成，它接收的是 Page 對象 (0-based)
+        Map<String, Object> pageResponse = PaginationUtils.buildPageResponse(notificationPage, notificationPage.getContent());
+
+        // 5. 傳遞數據到前端
         model.addAttribute("user", user);
-        model.addAttribute("notifications", notificationPage.getContent());
-        model.addAttribute("currentPage", page);
+        model.addAttribute("notifications", pageResponse.get("content"));
+
+        // 【修復 3】關鍵！從 Page 對象獲取 0-based 頁碼，然後 +1 轉為 1-based 傳給前端
+        // 或者直接使用我們剛才計算的 page 變量 (已經做了邊界檢查)
+        // 為了確保與 smartPages 一致，我們重新計算一下安全的 1-based currentPage
+        int safePageIndex = notificationPage.getNumber(); // 0-based
+        int safeCurrentPage = safePageIndex + 1;        // 1-based
+
+        model.addAttribute("currentPage", safeCurrentPage);
         model.addAttribute("totalPages", notificationPage.getTotalPages());
         model.addAttribute("totalElements", notificationPage.getTotalElements());
+        model.addAttribute("smartPages", pageResponse.get("smartPages"));
 
         return "stock-notifications";
     }
-
     @DeleteMapping("/api/stock-notification/unsubscribe-by-id/{id}")
     public ResponseEntity<?> unsubscribeById(@PathVariable Long id, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -599,47 +637,6 @@ public class PageController {
         return "blocked-users";
     }
 
-    // ==========================================
-    // 內部類：用於智能分頁渲染 (如果之前沒加在 PageController，請加上)
-    // ==========================================
-    public static class PageItem {
-        private boolean isEllipsis;
-        private Integer pageNumber;
-
-        public PageItem(boolean isEllipsis, Integer pageNumber) {
-            this.isEllipsis = isEllipsis;
-            this.pageNumber = pageNumber;
-        }
-        public boolean isEllipsis() { return isEllipsis; }
-        public Integer getPageNumber() { return pageNumber; }
-    }
-
-    /**
-     * 生成智能分頁列表的核心算法
-     */
-    private List<PageItem> generateSmartPagination(int currentPage, int totalPages) {
-        List<PageItem> pages = new ArrayList<>();
-        if (totalPages <= 7) {
-            for (int i = 1; i <= totalPages; i++) {
-                pages.add(new PageItem(false, i));
-            }
-        } else {
-            pages.add(new PageItem(false, 1)); // 始終顯示第一頁
-            if (currentPage > 3) {
-                pages.add(new PageItem(true, null)); // 省略號
-            }
-            int start = Math.max(2, currentPage - 1);
-            int end = Math.min(totalPages - 1, currentPage + 1);
-            for (int i = start; i <= end; i++) {
-                pages.add(new PageItem(false, i));
-            }
-            if (currentPage < totalPages - 2) {
-                pages.add(new PageItem(true, null)); // 省略號
-            }
-            pages.add(new PageItem(false, totalPages)); // 始終顯示最後一頁
-        }
-        return pages;
-    }
 
     /**
      * 購物車頁面 (支援分頁 + 日期分組)

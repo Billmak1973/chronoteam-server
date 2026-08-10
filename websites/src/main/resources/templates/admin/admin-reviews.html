@@ -1796,13 +1796,13 @@
                                     <th style="width: 140px; text-align: center;">操作</th>
                                 </tr>
                             </thead>
-                            <!-- ✅ 修改點 1: 清空 tbody，加上 ID，由 JS 填充 -->
+                            <!--  修改點 1: 清空 tbody，加上 ID，由 JS 填充 -->
                             <tbody id="reviews-tbody">
                                 <!-- 數據將由 AdminTable 動態注入 -->
                             </tbody>
                         </table>
                     </div>
-                    <!-- ✅ 修改點 2: 分頁容器，由 AdminTable 動態注入 -->
+                    <!--  修改點 2: 分頁容器，由 AdminTable 動態注入 -->
                     <div id="reviews-pagination"></div>
                 </div>
 
@@ -1858,7 +1858,7 @@
                                     <th style="width: 100px; text-align: center;">操作</th>
                                 </tr>
                             </thead>
-                            <!-- ✅ 修改點 3: 清空 tbody -->
+                            <!--  修改點 3: 清空 tbody -->
                             <tbody id="archives-tbody"></tbody>
                         </table>
                     </div>
@@ -1917,7 +1917,7 @@
                                     <th style="width: 150px; text-align: center;">操作</th>
                                 </tr>
                             </thead>
-                            <!-- ✅ 修改點 4: 清空 tbody -->
+                            <!--  修改點 4: 清空 tbody -->
                             <tbody id="reports-tbody"></tbody>
                         </table>
                     </div>
@@ -2268,7 +2268,7 @@
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>
 
-    <!-- ✅ 核心修改：引入通用表格管理器 -->
+    <!--  核心修改：引入通用表格管理器 -->
     <script src="/js/admin-table.js"></script>
 
     <script>
@@ -2279,7 +2279,7 @@
         const tableConfigs = {
             reviews: {
                 apiUrl: '/admin/api/reviews/list',
-                params: {page: 0, size: 25, username: '', reviewType: 'all', keywordMode: 'no'},
+                params: {page: 1, size: 25, username: '', reviewType: 'all', keywordMode: 'no'},
                 tbodySelector: '#reviews-tbody',
                 paginationId: 'reviews-pagination',
                 emptyText: '暫無評論數據',
@@ -2287,7 +2287,7 @@
             },
             archives: {
                 apiUrl: '/admin/api/reviews/archives',
-                params: {page: 0, size: 25, authorUsername: '', deletedByUsername: ''},
+                params: {page: 1, size: 25, authorUsername: '', deletedByUsername: ''},
                 tbodySelector: '#archives-tbody',
                 paginationId: 'archives-pagination',
                 emptyText: '暫無刪除歸檔數據',
@@ -2295,7 +2295,7 @@
             },
             reports: {
                 apiUrl: '/admin/api/reviews/reports',
-                params: {page: 0, size: 25, reporterUsername: '', reportedUsername: ''},
+                params: {page: 1, size: 25, reporterUsername: '', reportedUsername: ''},
                 tbodySelector: '#reports-tbody',
                 paginationId: 'reports-pagination',
                 emptyText: '暫無舉報數據',
@@ -2489,7 +2489,7 @@
             document.getElementById('tab-' + tabName).classList.add('active');
 
             // 切換 Tab 時重置頁碼並加載數據
-            tableConfigs[tabName].params.page = 0;
+            tableConfigs[tabName].params.page = 1;
             AdminTable.loadData(tableConfigs[tabName]);
         }
 
@@ -2500,7 +2500,7 @@
             config.params.username = userMode === 'specific' ? document.getElementById('userSearchInput').value.trim() : '';
             config.params.reviewType = document.getElementById('reviewTypeFilter').value;
             config.params.keywordMode = document.getElementById('keywordFilterMode').value;
-            config.params.page = 0;
+            config.params.page = 1;
             AdminTable.loadData(config);
         }
 
@@ -2512,7 +2512,7 @@
             document.getElementById('keywordFilterMode').value = 'no';
 
             const config = tableConfigs.reviews;
-            config.params = {page: 0, size: 25, username: '', reviewType: 'all', keywordMode: 'no'};
+            config.params = {page: 1, size: 25, username: '', reviewType: 'all', keywordMode: 'no'};
             AdminTable.loadData(config);
         }
 
@@ -2523,7 +2523,7 @@
 
             config.params.authorUsername = authorMode === 'specific' ? document.getElementById('archiveAuthorSearchInput').value.trim() : '';
             config.params.deletedByUsername = deletedByMode === 'specific' ? document.getElementById('archiveDeletedBySearchInput').value.trim() : (deletedByMode === 'admin' ? 'admin' : '');
-            config.params.page = 0;
+            config.params.page = 1;
             AdminTable.loadData(config);
         }
 
@@ -2536,7 +2536,7 @@
             document.getElementById('archiveDeletedBySearchInput').style.display = 'none';
 
             const config = tableConfigs.archives;
-            config.params = {page: 0, size: 25, authorUsername: '', deletedByUsername: ''};
+            config.params = {page: 1, size: 25, authorUsername: '', deletedByUsername: ''};
             AdminTable.loadData(config);
         }
 
@@ -2547,7 +2547,7 @@
 
             config.params.reporterUsername = reporterMode === 'specific' ? document.getElementById('reporterSearchInput').value.trim() : '';
             config.params.reportedUsername = reportedMode === 'specific' ? document.getElementById('reportedUserSearchInput').value.trim() : '';
-            config.params.page = 0;
+            config.params.page = 1;
             AdminTable.loadData(config);
         }
 
@@ -2560,7 +2560,7 @@
             document.getElementById('reportedUserSearchInput').style.display = 'none';
 
             const config = tableConfigs.reports;
-            config.params = {page: 0, size: 25, reporterUsername: '', reportedUsername: ''};
+            config.params = {page: 1, size: 25, reporterUsername: '', reportedUsername: ''};
             AdminTable.loadData(config);
         }
 
@@ -2607,7 +2607,7 @@
                 config.params.username = targetUsername;
                 config.params.reviewType = 'all';
                 config.params.keywordMode = 'no';
-                config.params.page = 0;
+                config.params.page = 1;
             }
 
             // 初始加載當前 Tab 數據

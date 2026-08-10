@@ -58,11 +58,12 @@ public class AdminProductController {
 
     /**
      * 2. AJAX API: 獲取商品列表 (支持篩選、排序、分頁)
+     * 【核心修改】：接收 1-based 頁碼，內部轉 0-based 計算，返回 1-based 頁碼
      */
     @GetMapping("/api/products/list")
     @ResponseBody
     public ResponseEntity<?> getProductsList(
-            @RequestParam(defaultValue = "0") int page, // 前端傳入 0-based 頁碼
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "30") int size,
             @RequestParam(required = false) String currentBrand,
             @RequestParam(required = false) String currentCategory,
@@ -130,27 +131,39 @@ public class AdminProductController {
 
         // 4. 手動分頁 (將 List 轉為 Page 對象以適配 PaginationUtils)
         int totalElements = filteredProducts.size();
-        // 確保頁碼不越界
         int totalPages = (int) Math.ceil((double) totalElements / size);
-        if (page < 0) page = 0;
-        if (page >= totalPages && totalPages > 0) page = totalPages - 1;
 
-        int fromIndex = page * size;
+        // 【修改 2】將 1-based 頁碼轉換為 0-based 索引用於計算
+        int pageIndex = page - 1;
+
+        // 確保頁碼不越界 (0-based)
+        if (pageIndex < 0) pageIndex = 0;
+        if (totalPages > 0 && pageIndex >= totalPages) pageIndex = totalPages - 1;
+        if (totalPages == 0) totalPages = 1; // 至少顯示 1 頁
+
+        int fromIndex = pageIndex * size;
         int toIndex = Math.min(fromIndex + size, totalElements);
 
         List<Product> pagedContent = (totalElements > 0) ? filteredProducts.subList(fromIndex, toIndex) : new ArrayList<>();
 
-        // 創建 Pageable 和 PageImpl 對象
-        Pageable pageable = PageRequest.of(page, size);
+        // 創建 Pageable 和 PageImpl 對象 (注意：這裡依然使用 0-based 的 pageIndex，因為 Spring Data 需要)
+        Pageable pageable = PageRequest.of(pageIndex, size);
         Page<Product> productPage = new PageImpl<>(pagedContent, pageable, totalElements);
 
-        // 5. 數據清洗 (可選：如果前端只需要部分字段，可以在這裡轉換為 Map 列表)
-        // 這裡為了簡單，直接返回 Entity 列表，Jackson 會自動序列化
-        // 如果有循環引用問題，請使用 @JsonIgnore 或 DTO
-
-        // 6. 使用 PaginationUtils 構建標準響應
-        // 注意：因為我們沒有 extraData，所以調用兩參數的方法
+        // 5. 使用 PaginationUtils 構建標準響應 (包含 smartPages)
+        // 注意：PaginationUtils 內部生成的 smartPages 是基於 0-based 的 currentPage 計算的，這沒問題
+        // 但是 PaginationUtils 返回的 map 中 "currentPage" 是 0-based 的，我們需要覆蓋它
         Map<String, Object> response = PaginationUtils.buildPageResponse(productPage, null);
+
+        // 【修改 3】覆蓋 currentPage 為 1-based，以便前端直接使用
+        // 因為前端傳入的是 1，我們計算用的 0，現在返回給前端應該還是 1 (或者實際計算後的 1-based 頁碼)
+        // 實際當前頁碼 (1-based) = pageIndex + 1
+        response.put("currentPage", pageIndex + 1);
+
+        // 同時確保 totalPages 至少為 1 (防止前端報錯)
+        if ((int)response.get("totalPages") == 0) {
+            response.put("totalPages", 1);
+        }
 
         return ResponseEntity.ok(response);
     }

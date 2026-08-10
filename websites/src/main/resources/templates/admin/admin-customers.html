@@ -675,7 +675,7 @@
         // 定義全局配置對象
         const tableConfig = {
             apiUrl: '/admin/api/customers/list',
-            params: {page: 0, size: 25, keyword: '', role: ''},
+            params: {page: 1, size: 25, keyword: '', role: ''},
             tbodySelector: '#customersTableBody',
             paginationId: 'customers-pagination',
             emptyText: '暫無用戶數據，嘗試調整篩選條件',
@@ -686,7 +686,7 @@
         function searchCustomers() {
             tableConfig.params.keyword = document.getElementById('keywordInput').value.trim();
             tableConfig.params.role = document.getElementById('roleFilter').value;
-            tableConfig.params.page = 0; // 搜索時重置到第一頁
+            tableConfig.params.page = 1; // 搜索時重置到第一頁
             AdminTable.loadData(tableConfig);
         }
 
@@ -696,7 +696,7 @@
             document.getElementById('roleFilter').value = '';
             tableConfig.params.keyword = '';
             tableConfig.params.role = '';
-            tableConfig.params.page = 0;
+            tableConfig.params.page = 1;
             AdminTable.loadData(tableConfig);
         }
 

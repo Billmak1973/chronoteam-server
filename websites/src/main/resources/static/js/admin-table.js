@@ -1,45 +1,76 @@
 /** admin-table.js
- * 🚀 通用後台表格管理器 (AdminTable)
+ *  通用後台表格管理器 (AdminTable)
  * 消滅所有重複的 loadXXXData 和 renderPagination 函數
+ *
+ * 【修復】：恢復遍歷 smartPages 邏輯，正確顯示所有頁碼 (1, 2, 3...)
  */
 const AdminTable = {
+
     /**
-     * 1. 渲染分頁 (通用)
+     * 1. 渲染分頁 (通用 - 修正版：適配 1-based 頁碼)
+     * @param {string} containerId - 分頁容器 ID
+     * @param {number} currentPage - 當前頁 (1-based, 例如 1, 2, 3...)
+     * @param {number} totalPages - 總頁數
+     * @param {Array} smartPages - 智能分頁數組 (包含 {pageNumber: 1, isEllipsis: false}, ...)
+     * @param {number} totalElements - 總記錄數
+     * @param {Function} onPageChange - 翻頁回調 (注意：回調傳遞的依然是 1-based 頁碼)
      */
-    renderPagination: function(containerId, currentPage, totalPages, smartPages, onPageChange) {
+    renderPagination: function(containerId, currentPage, totalPages, smartPages, totalElements, onPageChange) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        if (!smartPages || smartPages.length === 0 || totalPages === 0) {
+        // 如果沒有數據，清空容器
+        if (!totalElements || totalElements <= 0) {
             container.innerHTML = '';
             return;
         }
 
         let html = '<div class="pagination-wrapper">';
-        // 上一頁
-        if (currentPage > 0) {
-            html += `<button class="page-btn" data-page="${currentPage - 1}"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+
+        // 1. 上一頁按鈕 (修正：1-based 邏輯，第1頁時 currentPage=1，不應顯示可點擊的上一頁)
+        if (currentPage > 1) {
+            html += `<button type="button" class="page-btn" data-page="${currentPage - 1}">
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                 </button>`;
         } else {
-            html += `<button class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+            // 第1頁時，顯示灰色的上一頁
+            html += `<button type="button" class="page-btn disabled" disabled>
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                 </button>`;
         }
 
-        // 頁碼遍歷
-        smartPages.forEach(item => {
-            if (item.isEllipsis) {
-                html += `<span class="page-ellipsis">...</span>`;
-            } else {
-                const pageIndex = item.pageNumber - 1; // 後端 1-based，前端 0-based
-                const isActive = pageIndex === currentPage ? 'active' : '';
-                html += `<button class="page-btn ${isActive}" data-page="${pageIndex}">${item.pageNumber}</button>`;
-            }
-        });
+        // 2. 遍歷 smartPages 數組渲染頁碼
+        if (smartPages && smartPages.length > 0) {
+            smartPages.forEach(item => {
+                if (item.isEllipsis) {
+                    html += `<span class="page-ellipsis">...</span>`;
+                } else {
+                    // 修正：後端 pageNumber 是 1-based，前端 currentPage 也是 1-based，直接比較！
+                    const isActive = item.pageNumber === currentPage ? 'active' : '';
 
-        // 下一頁
-        if (currentPage < totalPages - 1) {
-            html += `<button class="page-btn" data-page="${currentPage + 1}">下一頁 <i class="fas fa-chevron-right"></i></button>`;
+                    // 修正：data-page 直接存 1-based 的頁碼，不需要減 1
+                    html += `<button type="button" class="page-btn ${isActive}" data-page="${item.pageNumber}">
+                            ${item.pageNumber}
+                         </button>`;
+                }
+            });
         } else {
-            html += `<button class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
+            // 兜底邏輯
+            html += `<span class="page-btn active">${currentPage}</span>`;
         }
+
+        // 3. 下一頁按鈕 (修正：1-based 邏輯)
+        if (currentPage < totalPages) {
+            html += `<button type="button" class="page-btn" data-page="${currentPage + 1}">
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                 </button>`;
+        } else {
+            // 最後一頁時，顯示灰色的下一頁
+            html += `<button type="button" class="page-btn disabled" disabled>
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                 </button>`;
+        }
+
         html += '</div>';
         container.innerHTML = html;
 
@@ -47,7 +78,10 @@ const AdminTable = {
         container.querySelectorAll('.page-btn:not(.disabled)').forEach(btn => {
             btn.addEventListener('click', function() {
                 const newPage = parseInt(this.getAttribute('data-page'));
-                if (onPageChange) onPageChange(newPage);
+                if (!isNaN(newPage) && onPageChange) {
+                    // 傳遞 1-based 頁碼給回調
+                    onPageChange(newPage);
+                }
             });
         });
     },
@@ -58,19 +92,18 @@ const AdminTable = {
      */
     loadData: async function(config) {
         const {
-            apiUrl,         // API 路徑 (如 '/admin/api/customers/list')
-            params,         // 請求參數對象 (如 {page: 0, size: 25, keyword: 'test'})
-            tbodySelector,  // tbody 的選擇器 (如 '#customersTableBody')
-            paginationId,   // 分頁容器的 ID (如 'customers-pagination')
-            renderRow,      // 行渲染回調函數 (接收單條數據，返回 HTML 字符串)
+            apiUrl,         // API 路徑
+            params,         // 請求參數對象
+            tbodySelector,  // tbody 的選擇器
+            paginationId,   // 分頁容器的 ID
+            renderRow,      // 行渲染回調函數
             emptyText,      // 空數據提示語
-            onSuccess       // 成功後的回調 (可選)
+            onSuccess       // 成功後的回調
         } = config;
 
         const tbody = document.querySelector(tbodySelector);
         if (!tbody) return console.error(`找不到 tbody: ${tbodySelector}`);
 
-        // 計算 colSpan 用於 Loading 和 Empty 狀態
         const table = tbody.closest('table');
         const colSpan = table ? table.querySelectorAll('thead th').length : 10;
 
@@ -82,7 +115,7 @@ const AdminTable = {
             const response = await fetch(`${apiUrl}?${queryString}`);
             const data = await response.json();
 
-            if (data.content !== undefined) { // 後端標準返回格式
+            if (data.content !== undefined) {
                 if (data.content.length > 0) {
                     // 2. 渲染表格行
                     tbody.innerHTML = data.content.map(renderRow).join('');
@@ -95,14 +128,14 @@ const AdminTable = {
                     paginationId,
                     data.currentPage,
                     data.totalPages,
-                    data.smartPages,
+                    data.smartPages, // 【關鍵】確保後端返回了這個數組
+                    data.totalElements,
                     (newPage) => {
-                        params.page = newPage; // 更新參數中的頁碼
-                        this.loadData(config); // 遞歸調用，刷新數據
+                        params.page = newPage;
+                        this.loadData(config);
                     }
                 );
 
-                // 4. 觸發全局動態事件綁定 (如果頁面有定義 bindDynamicEvents)
                 if (typeof bindDynamicEvents === 'function') bindDynamicEvents();
                 if (onSuccess) onSuccess(data);
             } else {
@@ -111,6 +144,10 @@ const AdminTable = {
         } catch (error) {
             console.error('加載數據失敗:', error);
             tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding: 2rem; color: #ef4444;"><i class="fas fa-exclamation-triangle fa-2x"></i><p style="margin-top:1rem;">加載失敗，請檢查網絡或後端接口</p></td></tr>`;
+
+            const paginationContainer = document.getElementById(paginationId);
+            if (paginationContainer) paginationContainer.innerHTML = '';
+
             if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤或接口異常', true);
         }
     }

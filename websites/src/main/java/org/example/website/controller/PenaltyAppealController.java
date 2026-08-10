@@ -55,7 +55,7 @@ public class PenaltyAppealController {
     @GetMapping("/api/admin/penalties/list")
     @ResponseBody
     public ResponseEntity<?> getPenaltiesList(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "25") int size,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String status,
@@ -65,7 +65,10 @@ public class PenaltyAppealController {
         adminPenaltyService.updateExpiredStatus();
         adminPenaltyService.updateExpiredAppeals();
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startTime"));
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "startTime"));
+
+    //    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startTime"));
         Page<AdminPenalty> penaltiesPage;
 
         // 【核心修改】：根據參數動態調用不同的 Repository 方法
@@ -148,6 +151,7 @@ public class PenaltyAppealController {
 
         Map<String, Object> response = PaginationUtils.buildPageResponse(penaltiesPage, cleanPenalties, extraData);
 
+        response.put("currentPage", page);
         return ResponseEntity.ok(response);
     }
 
@@ -157,12 +161,14 @@ public class PenaltyAppealController {
     @GetMapping("/api/admin/appeals/list")
     @ResponseBody
     public ResponseEntity<?> getAppealsList(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "25") int size,
             @RequestParam(required = false) String appealType,
             @RequestParam(required = false) String status
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        //Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Appeal> appealsPage;
 
         if ((appealType == null || appealType.isEmpty()) && (status == null || status.isEmpty())) {
@@ -231,6 +237,7 @@ public class PenaltyAppealController {
 
         Map<String, Object> response = PaginationUtils.buildPageResponse(appealsPage, cleanAppeals, extraData);
 
+        response.put("currentPage", page);
         return ResponseEntity.ok(response);
     }
 
@@ -240,13 +247,15 @@ public class PenaltyAppealController {
     @GetMapping("/api/admin/rate-limits/list")
     @ResponseBody
     public ResponseEntity<?> getRateLimitsList(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "25") int size) {
 
         rateLimitService.updateExpiredBans();
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "actionTime"));
-        Page<RateLimitLog> rateLimitsPage = rateLimitLogRepository.findAll(pageable);
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "actionTime"));
+
+         Page<RateLimitLog> rateLimitsPage = rateLimitLogRepository.findAll(pageable);
 
         // 數據清洗
         List<Map<String, Object>> cleanRateLimits = rateLimitsPage.getContent().stream().map(log -> {
@@ -272,6 +281,7 @@ public class PenaltyAppealController {
         // 4. 使用 PaginationUtils 構建響應 (無 extraData)
         Map<String, Object> response = PaginationUtils.buildPageResponse(rateLimitsPage, cleanRateLimits);
 
+        response.put("currentPage", page);
         return ResponseEntity.ok(response);
     }
 

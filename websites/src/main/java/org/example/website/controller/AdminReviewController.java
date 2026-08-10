@@ -3,7 +3,7 @@ package org.example.website.controller;
 import org.example.website.entity.*;
 import org.example.website.repository.*;
 import org.example.website.service.AdminPenaltyService;
-import org.example.website.util.PaginationUtils; // 引入工具類
+import org.example.website.util.PaginationUtils;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -53,21 +53,24 @@ public class AdminReviewController {
     }
 
     /**
-     * 2. API: 獲取評論列表 (支持篩選)
+     * 2. API: 獲取評論列表 (支持篩選) - 【已修復為 1-based】
      */
     @GetMapping("/api/reviews/list")
     @ResponseBody
     public ResponseEntity<?> getReviews(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page, // 前端傳入 1-based
             @RequestParam(defaultValue = "25") int size,
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String reviewType,
             @RequestParam(required = false) String keywordMode) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // 1. 將 1-based 頁碼轉換為 0-based 索引供 Spring Data 使用
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
         Page<Review> reviewsPage;
 
-        // 1. 數據庫查詢
+        // 2. 數據庫查詢
         if (username != null && !username.isEmpty()) {
             if ("reply".equals(reviewType)) {
                 reviewsPage = reviewRepository.findByUser_UsernameAndParentIdIsNotNull(username, pageable);
@@ -88,8 +91,7 @@ public class AdminReviewController {
 
         List<Review> reviews = reviewsPage.getContent();
 
-        // 2. 內存過濾 (關鍵詞模式)
-        // 注意：這種方式會導致分頁總數不準確，但在不修改 Repository 的情況下這是兼容方案
+        // 3. 內存過濾 (關鍵詞模式)
         if ("yes".equals(keywordMode)) {
             List<Keyword> keywords = keywordRepository.findAllByOrderByCreatedAtDesc();
             if (!keywords.isEmpty()) {
@@ -105,7 +107,7 @@ public class AdminReviewController {
             }
         }
 
-        // 3. 數據清洗與關聯查詢 (避免 N+1 問題)
+        // 4. 數據清洗與關聯查詢
         List<Long> userIds = reviews.stream()
                 .map(r -> r.getUser() != null ? r.getUser().getId() : null)
                 .filter(Objects::nonNull).distinct().collect(Collectors.toList());
@@ -133,7 +135,6 @@ public class AdminReviewController {
             item.put("likeCount", review.getLikeCount());
             item.put("dislikeCount", review.getDislikeCount());
 
-            // 用戶信息
             Map<String, Object> userInfo = new HashMap<>();
             if (review.getUser() != null && review.getUser().getId() != null) {
                 User user = userMap.get(review.getUser().getId());
@@ -142,7 +143,6 @@ public class AdminReviewController {
             }
             item.put("user", userInfo);
 
-            // 商品信息
             Map<String, Object> productInfo = new HashMap<>();
             if (review.getProduct() != null && review.getProduct().getProductId() != null) {
                 Product product = productMap.get(review.getProduct().getProductId());
@@ -156,30 +156,37 @@ public class AdminReviewController {
             cleanReviews.add(item);
         }
 
-        // 4. 構建標準分頁響應
-        // 如果進行了內存過濾，我們需要手動構建一個新的 Page 對象來反映過濾後的總數，或者直接傳入 cleanReviews
-        // 這裡為了簡單，我們直接傳入 cleanReviews，PaginationUtils 會處理分頁元數據
-        // 但要注意：如果 reviews 被過濾了，reviewsPage.getTotalPages() 是不準的。
-        // 修正方案：如果是關鍵詞過濾，我們假設當前頁就是全部（因為內存過濾破壞了分頁），或者我們重新計算總頁數。
-        // 為了保持前端邏輯簡單，我們這裡直接使用 PaginationUtils，它會根據傳入的 Page 對象生成 smartPages。
+        // 5. 構建標準分頁響應
+        Map<String, Object> response;
+        if ("yes".equals(keywordMode)) {
+            // 內存過濾後，創建臨時 PageImpl 以修正總數
+            Page<Review> filteredPage = new PageImpl<>(reviews, pageable, reviews.size());
+            response = PaginationUtils.buildPageResponse(filteredPage, cleanReviews);
+        } else {
+            response = PaginationUtils.buildPageResponse(reviewsPage, cleanReviews);
+        }
 
-        // 如果沒有過濾，直接用 reviewsPage
-        // 如果過濾了，我們創建一個臨時 Page 來修正總數 (可選優化，這裡暫且使用原 Page 對象，前端需容忍總頁數可能偏大)
-        return ResponseEntity.ok(PaginationUtils.buildPageResponse(reviewsPage, cleanReviews));
+        // 【關鍵修復】：將 PaginationUtils 返回的 0-based currentPage 覆蓋為前端需要的 1-based page
+        // 注意：這裡必須操作 response 對象，並且最後 return response，而不是重新調用 buildPageResponse
+        response.put("currentPage", page);
+
+        return ResponseEntity.ok(response);
     }
 
     /**
-     * 3. API: 獲取歸檔列表 (刪除記錄)
+     * 3. API: 獲取歸檔列表 (刪除記錄) - 【已修復為 1-based】
      */
     @GetMapping("/api/reviews/archives")
     @ResponseBody
     public ResponseEntity<?> getArchives(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "25") int size,
             @RequestParam(required = false) String authorUsername,
             @RequestParam(required = false) String deletedByUsername) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "deletedAt"));
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "deletedAt"));
+
         Page<ReviewArchive> archivesPage;
 
         if (authorUsername != null && !authorUsername.isEmpty()) {
@@ -264,21 +271,29 @@ public class AdminReviewController {
             archiveDataList.add(item);
         }
 
-        return ResponseEntity.ok(PaginationUtils.buildPageResponse(archivesPage, archiveDataList));
+        // 【關鍵修復】：構建 response 對象
+        Map<String, Object> response = PaginationUtils.buildPageResponse(archivesPage, archiveDataList);
+
+        // 強制覆蓋 currentPage 為 1-based
+        response.put("currentPage", page);
+
+        // 【關鍵修復】：直接返回 response，不要重新調用 buildPageResponse
+        return ResponseEntity.ok(response);
     }
 
     /**
-     * 4. API: 獲取舉報列表
+     * 4. API: 獲取舉報列表 - 【已修復為 1-based】
      */
     @GetMapping("/api/reviews/reports")
     @ResponseBody
     public ResponseEntity<?> getReports(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "25") int size,
             @RequestParam(required = false) String reporterUsername,
             @RequestParam(required = false) String reportedUsername) {
 
-        Pageable pageable = PageRequest.of(page, size,
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size,
                 Sort.by(Sort.Direction.DESC, "status").and(Sort.by(Sort.Direction.DESC, "createdAt")));
 
         Page<Report> reportsPage = reportRepository.findByFilters(reporterUsername, reportedUsername, pageable);
@@ -357,6 +372,13 @@ public class AdminReviewController {
             reportDataList.add(item);
         }
 
-        return ResponseEntity.ok(PaginationUtils.buildPageResponse(reportsPage, reportDataList));
+        // 【關鍵修復】：構建 response 對象
+        Map<String, Object> response = PaginationUtils.buildPageResponse(reportsPage, reportDataList);
+
+        // 強制覆蓋 currentPage 為 1-based
+        response.put("currentPage", page);
+
+        // 【關鍵修復】：直接返回 response，不要重新調用 buildPageResponse
+        return ResponseEntity.ok(response);
     }
 }

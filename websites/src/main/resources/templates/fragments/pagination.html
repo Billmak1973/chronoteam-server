@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+    通用智能分頁組件 (Smart Pagination Fragment) - JS Function 模式
+    規則：
+    1. currentPage: 1-based (例如 1, 2, 3)
+    2. totalPages: 總頁數
+    3. smartPages: 後端傳來的智能分頁列表 (pageNumber 是 1-based)
+    4. changePageFunction: 前端 JS 函數名
+-->
+<div th:fragment="smartPagination(currentPage, totalPages, smartPages, changePageFunction)"
+     th:if="${totalElements > 0}"
+     class="pagination-wrapper">
+
+    <!-- 上一頁按鈕 -->
+    <!-- 邏輯：如果當前是第 1 頁，則禁用。點擊跳轉到 currentPage - 1 -->
+    <button type="button"
+            th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'"
+            th:disabled="${currentPage == 1}"
+            th:onclick="${currentPage > 1} ? 'changePage(' + (${currentPage - 1}) + ')' : 'return false;'">
+        <i class="fas fa-chevron-left"></i> 上一頁
+    </button>
+
+    <!-- 智能頁碼遍歷 -->
+    <th:block th:each="item : ${smartPages}">
+        <!-- 如果是省略號 -->
+        <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
+
+        <!-- 如果是數字頁碼 -->
+        <!-- 邏輯：後端 item.pageNumber 是 1-based，前端 currentPage 也是 1-based，直接比較 -->
+        <!-- 點擊跳轉直接使用 item.pageNumber -->
+        <button th:unless="${item.isEllipsis}"
+                type="button"
+                th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
+                th:onclick="'changePage(' + ${item.pageNumber} + ')'">
+            <span th:text="${item.pageNumber}">1</span>
+        </button>
+    </th:block>
+
+    <!-- 下一頁按鈕 -->
+    <!-- 邏輯：如果當前頁 >= 總頁數，則禁用。點擊跳轉到 currentPage + 1 -->
+    <button type="button"
+            th:class="${currentPage >= totalPages} ? 'page-btn disabled' : 'page-btn'"
+            th:disabled="${currentPage >= totalPages}"
+            th:onclick="${currentPage < totalPages} ? 'changePage(' + (${currentPage + 1}) + ')' : 'return false;'">
+        下一頁 <i class="fas fa-chevron-right"></i>
+    </button>
+
+</div>
+
+<!--
+    URL 跳轉模式 Fragment (供傳統 Thymeleaf 頁面使用)
+    規則同上：1-based
+-->
+<div th:fragment="pagination(currentPage, totalPages, smartPages, baseUrl, extraParams)"
+     th:if="${totalElements > 0}"
+     class="pagination-wrapper">
+
+    <button type="button"
+            th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'"
+            th:disabled="${currentPage == 1}"
+            th:onclick="${currentPage > 1} ? 'window.location.href=\'' + @{${baseUrl}(page=${currentPage - 1}, ${extraParams})} + '\'' : 'return false;'">
+        <i class="fas fa-chevron-left"></i> 上一頁
+    </button>
+
+    <th:block th:each="item : ${smartPages}">
+        <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
+        <button th:unless="${item.isEllipsis}"
+                type="button"
+                th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
+                th:onclick="'window.location.href=\'' + @{${baseUrl}(page=${item.pageNumber}, ${extraParams})} + '\''">
+            <span th:text="${item.pageNumber}">1</span>
+        </button>
+    </th:block>
+
+    <button type="button"
+            th:class="${currentPage >= totalPages} ? 'page-btn disabled' : 'page-btn'"
+            th:disabled="${currentPage >= totalPages}"
+            th:onclick="${currentPage < totalPages} ? 'window.location.href=\'' + @{${baseUrl}(page=${currentPage + 1}, ${extraParams})} + '\'' : 'return false;'">
+        下一頁 <i class="fas fa-chevron-right"></i>
+    </button>
+
+</div>
+
+</body>
+</html>

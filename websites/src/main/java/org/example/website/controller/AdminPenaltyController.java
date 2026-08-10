@@ -9,6 +9,7 @@ import org.example.website.repository.AdminPenaltyRepository;
 import org.example.website.repository.AppealRepository;
 import org.example.website.repository.NotificationRepository;
 import org.example.website.repository.UserRepository;
+import org.example.website.security.CustomUserDetails;
 import org.example.website.service.AdminPenaltyService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -16,10 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin/penalty")
@@ -31,7 +29,11 @@ public class AdminPenaltyController {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
-    public AdminPenaltyController(AdminPenaltyService adminPenaltyService, AdminPenaltyRepository adminPenaltyRepository, AppealRepository appealRepository, NotificationRepository notificationRepository, UserRepository userRepository) {
+    public AdminPenaltyController(AdminPenaltyService adminPenaltyService,
+                                  AdminPenaltyRepository adminPenaltyRepository,
+                                  AppealRepository appealRepository,
+                                  NotificationRepository notificationRepository,
+                                  UserRepository userRepository) {
         this.adminPenaltyService = adminPenaltyService;
         this.adminPenaltyRepository = adminPenaltyRepository;
         this.appealRepository = appealRepository;
@@ -39,7 +41,19 @@ public class AdminPenaltyController {
         this.userRepository = userRepository;
     }
 
-    // 拉黑
+    /**
+     * 核心修復：權限校驗基於 user_type (Role == ADMIN)，而非用戶名是否等於 "admin"
+     * CustomUserDetails 在登入時已從數據庫載入 Role 枚舉，直接判斷，零查庫開銷
+     */
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null
+                && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())
+                && authentication.getPrincipal() instanceof CustomUserDetails userDetails
+                && userDetails.getRole() == User.Role.ADMIN;
+    }
+
+    // ==================== 拉黑用戶 ====================
     @PostMapping("/blacklist/{targetUsername}")
     public ResponseEntity<ApiResponse> blacklistUser(
             @PathVariable String targetUsername,
@@ -48,7 +62,8 @@ public class AdminPenaltyController {
             @RequestParam(required = false) String reviewContent,
             Authentication authentication) {
 
-        if (!"admin".equals(authentication.getName())) {
+        // 【修改】使用角色校驗替換用戶名校驗
+        if (!isAdmin(authentication)) {
             return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
         }
 
@@ -60,12 +75,17 @@ public class AdminPenaltyController {
         }
     }
 
-    // 解除拉黑
+    // ==================== 解除拉黑 ====================
     @DeleteMapping("/blacklist/{targetUsername}")
     public ResponseEntity<ApiResponse> unblacklistUser(
             @PathVariable String targetUsername,
             Authentication authentication) {
-        if (!"admin".equals(authentication.getName())) return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
+
+        // 【修改】使用角色校驗替換用戶名校驗
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
+        }
+
         try {
             adminPenaltyService.unblacklistUser(targetUsername);
             return ResponseEntity.ok(ApiResponse.ok("已解除拉黑"));
@@ -74,6 +94,7 @@ public class AdminPenaltyController {
         }
     }
 
+    // ==================== 獲取申訴詳情 ====================
     @GetMapping("/appeal/{appealId}")
     @ResponseBody
     @Transactional(readOnly = true) // 關鍵：防止懶加載異常
@@ -104,19 +125,20 @@ public class AdminPenaltyController {
             return ResponseEntity.ok(ApiResponse.okWithData("獲取成功", data));
 
         } catch (Exception e) {
-            // 打印完整堆棧，方便你在後端控制台看到真實的報錯原因
             e.printStackTrace();
             String errorMsg = e.getMessage() != null ? e.getMessage() : "未知錯誤 (請查看後端控制台日誌)";
             return ResponseEntity.status(500).body(ApiResponse.error("獲取失敗: " + errorMsg));
         }
     }
 
+    // ==================== 撤銷處罰 ====================
     @PostMapping("/{penaltyId}/revoke")
     public ResponseEntity<ApiResponse> revokePenalty(
             @PathVariable Long penaltyId,
             Authentication authentication) {
 
-        if (!"admin".equals(authentication.getName())) {
+        // 【修改】使用角色校驗替換用戶名校驗
+        if (!isAdmin(authentication)) {
             return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
         }
 
@@ -128,8 +150,17 @@ public class AdminPenaltyController {
         }
     }
 
+    // ==================== 發送解除拉黑通知 ====================
     @PostMapping("/{penaltyId}/send-unblacklist-notification")
-    public ResponseEntity<ApiResponse> sendUnblacklistNotification(@PathVariable Long penaltyId) {
+    public ResponseEntity<ApiResponse> sendUnblacklistNotification(
+            @PathVariable Long penaltyId,
+            Authentication authentication) {
+
+        // 【修改】使用角色校驗替換用戶名校驗
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
+        }
+
         try {
             // 1. 獲取處罰記錄
             AdminPenalty penalty = adminPenaltyRepository.findById(penaltyId)
@@ -138,10 +169,13 @@ public class AdminPenaltyController {
             // 2. 獲取被解除拉黑的用戶
             User targetUser = penalty.getTargetUser();
 
-            // 3. 創建系統通知
+            // 3. 獲取當前操作的管理員實體作為 sender
+            User adminSender = userRepository.findByUsername(authentication.getName()).orElse(null);
+
+            // 4. 創建系統通知
             Notification notification = new Notification();
             notification.setRecipient(targetUser);
-            notification.setSender(userRepository.findByUsername("admin").orElse(null));
+            notification.setSender(adminSender);
             notification.setType(Notification.NotificationType.SYSTEM);
             notification.setTitle("🎉 您的帳戶已解除永久拉黑");
             notification.setContent(
@@ -156,7 +190,7 @@ public class AdminPenaltyController {
             );
             notification.setRead(false);
 
-            // 4. 保存通知
+            // 5. 保存通知
             notificationRepository.save(notification);
 
             return ResponseEntity.ok(ApiResponse.ok("通知已發送"));

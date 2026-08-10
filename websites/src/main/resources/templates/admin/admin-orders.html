@@ -637,11 +637,11 @@
         }
 
         // ==========================================
-        // ✅ 初始化：使用 AdminTable 加載數據
+        // ✅初始化：使用 AdminTable 加載數據
         // ==========================================
         const tableConfig = {
             apiUrl: '/admin/api/orders/list',
-            params: {page: 0, size: 25},
+            params: {page: 1, size: 25},
             tbodySelector: '#ordersTableBody',
             paginationId: 'orders-pagination',
             renderRow: renderOrderRow,

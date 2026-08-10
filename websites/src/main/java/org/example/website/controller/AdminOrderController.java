@@ -39,16 +39,21 @@ public class AdminOrderController {
         return "admin/admin-orders";
     }
 
+
     /**
      * 2. 【新增】標準化 API：獲取訂單列表 + 明細 (一次性返回，避免 N+1)
+     * 【修改點】：接收 1-based page，內部轉 0-based，返回 1-based
      */
     @GetMapping("/api/orders/list")
     @ResponseBody
     public ResponseEntity<?> getOrdersList(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page, // 【修改 1】默認值改為 1 (1-based)
             @RequestParam(defaultValue = "25") int size) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // 【修改 2】將 1-based 轉換為 0-based 供 Spring Data 使用
+        int pageIndex = Math.max(0, page - 1);
+
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<Order> ordersPage = orderRepository.findAllWithUsers(pageable);
 
         // 一次 SQL 查出當前頁所有訂單的明細，按 orderId 分組
@@ -103,8 +108,13 @@ public class AdminOrderController {
             return item;
         }).collect(Collectors.toList());
 
-        // 使用 PaginationUtils 構建標準響應
+        // 【修改 3】使用 PaginationUtils 構建標準響應
         Map<String, Object> response = PaginationUtils.buildPageResponse(ordersPage, cleanOrders);
+
+        // 【修改 4】關鍵！覆蓋 currentPage，將 0-based 轉回 1-based 返回給前端
+        // PaginationUtils 內部存的是 ordersPage.getNumber() (即 0)，前端需要 1
+        response.put("currentPage", page);
+
         return ResponseEntity.ok(response);
     }
 

@@ -838,9 +838,9 @@
         // 0. 全局變量聲明
         // ==========================================
         const tabState = {
-            penalties: {page: 0, size: 25, type: '', status: '', username: ''},
-            appeals: {page: 0, size: 25, appealType: '', status: ''},
-            rateLimits: {page: 0, size: 25}
+            penalties: {page: 1, size: 25, type: '', status: '', username: ''},
+            appeals: {page: 1, size: 25, appealType: '', status: ''},
+            rateLimits: {page: 1, size: 25}
         };
 
         let currentActiveTab = 'penalties';
@@ -861,13 +861,13 @@
 
             // 切換 Tab 時重置頁碼並加載數據
             if (tabName === 'penalties') {
-                tabState.penalties.page = 0;
+                tabState.penalties.page = 1;
                 loadPenaltiesData();
             } else if (tabName === 'appeals') {
-                tabState.appeals.page = 0;
+                tabState.appeals.page = 1;
                 loadAppealsData();
             } else if (tabName === 'rate-limits') {
-                tabState.rateLimits.page = 0;
+                tabState.rateLimits.page = 1;
                 loadRateLimitsData();
             }
         }
@@ -1090,7 +1090,7 @@
             tabState.penalties.username = (userMode === 'specific') ? userInput : '';
             tabState.penalties.type = document.getElementById('filterType').value;
             tabState.penalties.status = document.getElementById('filterStatus').value;
-            tabState.penalties.page = 0;
+            tabState.penalties.page = 1;
             loadPenaltiesData();
         }
 
@@ -1110,7 +1110,7 @@
                 document.getElementById('appealStatusFilter').value = '';
                 tabState.appeals.appealType = '';
                 tabState.appeals.status = '';
-                tabState.appeals.page = 0;
+                tabState.appeals.page = 1;
                 loadAppealsData();
             }
         }
@@ -1118,7 +1118,7 @@
         function filterAppeals() {
             tabState.appeals.appealType = document.getElementById('appealTypeFilter').value;
             tabState.appeals.status = document.getElementById('appealStatusFilter').value;
-            tabState.appeals.page = 0;
+            tabState.appeals.page = 1;
             loadAppealsData();
         }
 
@@ -1166,12 +1166,12 @@
 
             if (type === 'BLACKLIST') {
                 actionName = '解除黑名單';
-                // 假設後端有這個接口，或者你可以複用 revokePenalty 邏輯
+                // 後端有這個接口，或者你可以複用 revokePenalty 邏輯
                 apiUrl = `/api/admin/penalty/blacklist/${appealId}/revoke`;
             }
             if (type === 'DELETE_REVIEW') {
                 actionName = '恢復評論';
-                // 假設後端有這個接口來根據申訴恢復評論
+                // 後端有這個接口來根據申訴恢復評論
                 apiUrl = `/api/admin/appeal/${appealId}/restore`;
             }
 

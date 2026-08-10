@@ -35,17 +35,20 @@ public class AdminCustomerController {
     }
 
     /**
-     * 2. AJAX API: 獲取用戶列表
+     * 2. AJAX API: 獲取用戶列表 (修正版：支持 1-based 頁碼)
      */
     @GetMapping("/api/customers/list")
     @ResponseBody
     public ResponseEntity<?> getCustomers(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page, // 前端傳入 1-based (1, 2, 3...)
             @RequestParam(defaultValue = "25") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String role) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // 1. 轉換為 0-based 索引供 Spring Data JPA 使用
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
         Page<User> usersPage;
 
         try {
@@ -81,8 +84,12 @@ public class AdminCustomerController {
             return item;
         }).collect(Collectors.toList());
 
-        //  核心優化：使用 PaginationUtils 一行代碼構建標準分頁響應 (包含 smartPages)
+        // 2. 使用 PaginationUtils 構建基礎響應 (包含 smartPages, totalPages 等)
         Map<String, Object> response = PaginationUtils.buildPageResponse(usersPage, cleanUsers);
+
+        // 3. 【關鍵修正】：覆蓋 currentPage，將 0-based 轉回 1-based 返回給前端
+        // PaginationUtils 內部存的是 usersPage.getNumber() (即 0)，前端需要 1
+        response.put("currentPage", page);
 
         return ResponseEntity.ok(response);
     }

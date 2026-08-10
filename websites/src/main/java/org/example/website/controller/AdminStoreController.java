@@ -52,16 +52,19 @@ public class AdminStoreController {
     }
 
     /**
-     * API: 獲取所有店鋪 (已修復：支持分頁 + 避免序列化錯誤)
+     * API: 獲取所有店鋪 (已修復：支持 1-based 分頁 + 避免序列化錯誤)
      */
     @GetMapping("/api/list")
     @ResponseBody
     public ResponseEntity<?> getAllStores(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page, // 【修改 1】默認值改為 1 (1-based)
             @RequestParam(defaultValue = "12") int size) {
 
+        // 【修改 2】將 1-based 頁碼轉換為 0-based 索引供 Spring Data JPA 使用
+        int pageIndex = Math.max(0, page - 1);
+
         // 1. 按創建時間倒序分頁查詢
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<OfflineStore> storesPage = storeRepository.findAll(pageable);
 
         // 2. 【核心修復】：數據清洗 (Data Cleaning)
@@ -90,6 +93,10 @@ public class AdminStoreController {
         // 3. 使用 PaginationUtils 構建標準響應
         // 傳入 cleanStores 而不是 null，確保返回的是純淨的 JSON 數據
         Map<String, Object> response = PaginationUtils.buildPageResponse(storesPage, cleanStores);
+
+        // 【修改 3】關鍵步驟：覆蓋 currentPage 為 1-based
+        // PaginationUtils 內部使用的是 storesPage.getNumber() (0-based)，這裡強制改回前端傳入的 page (1-based)
+        response.put("currentPage", page);
 
         return ResponseEntity.ok(response);
     }

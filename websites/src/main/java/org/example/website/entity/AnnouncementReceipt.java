@@ -1,5 +1,6 @@
 package org.example.website.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
         @Index(name = "idx_receipt_user_read", columnList = "user_id, is_read")
 })
 @Data
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})// 告訴 Jackson 序列化時忽略 Hibernate 懶加載生成的代理對象內部字段，防止轉換 JSON 時報錯
 public class AnnouncementReceipt {
 
     @Id

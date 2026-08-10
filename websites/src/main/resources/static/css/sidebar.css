@@ -96,3 +96,72 @@
     position: static;
   }
 }
+
+/* ========================================== */
+/*   分页组件样式 */
+/* ========================================== */
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  padding: 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.page-btn {
+  padding: 0.6rem 1.2rem;
+  border: 2px solid #e9ecef;
+  background: white;
+  color: var(--primary);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* 悬停效果 */
+.page-btn:hover:not(:disabled):not(.disabled) {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(212, 175, 55, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
+}
+
+/* 激活状态（当前页） */
+.page-btn.active {
+  background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+  color: white;
+  border-color: var(--gold);
+  cursor: default;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+  transform: translateY(-1px);
+}
+
+/* 禁用状态 */
+.page-btn.disabled,
+.page-btn:disabled {
+  background: #f8f9fa;
+  color: #adb5bd;
+  border-color: #e9ecef;
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+  transform: none;
+}
+
+/* 省略号样式 */
+.page-ellipsis {
+  padding: 0.6rem 0.5rem;
+  color: var(--gray);
+  font-weight: bold;
+  letter-spacing: 2px;
+  user-select: none;
+}
