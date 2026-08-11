@@ -1,6 +1,8 @@
 package org.example.website.repository;
 
 import org.example.website.entity.UserBlock;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,11 +16,7 @@ public interface UserBlockRepository extends JpaRepository<UserBlock, Long> {
     // 查询 A 是否禁言了 B
     Optional<UserBlock> findByBlocker_UsernameAndBlockedUser_Username(String blocker, String blocked);
 
-    // 查询用户禁言的所有人
-    List<UserBlock> findByBlocker_Username(String blocker);
-
-    // 查询禁言某用户的所有人
-    List<UserBlock> findByBlockedUser_Username(String blocked);
+    Page<UserBlock> findByBlocker_Username(String blocker, Pageable pageable);
 
     // 核心：检查 A 和 B 之间是否存在双向禁言（任意一方禁言都算）
     @Query("SELECT COUNT(ub) > 0 FROM UserBlock ub WHERE " +

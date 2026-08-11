@@ -377,7 +377,7 @@
 
   <!--  5. 注入登录状态变量 (必须在 common.js 之前，用于购物车拦截) -->
   <script th:inline="javascript">
-    const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
   </script>
 
   <!--  6. 引入公共 JS (包含购物车逻辑、弹窗控制、登出等) -->
@@ -391,14 +391,10 @@
       const form = event.target;
       const btn = form.querySelector('button[type="submit"]');
 
-      // 模擬提交狀態
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
 
       setTimeout(() => {
         alert('✅ 感谢您的留言！我們的團隊會在 24 小時內透過電子郵件回覆您。');
         form.reset();
-        btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-paper-plane"></i> 提交留言';
       }, 1500);
     }

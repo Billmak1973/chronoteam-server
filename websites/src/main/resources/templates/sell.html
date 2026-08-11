@@ -528,7 +528,7 @@
   <!-- 引入公共組件與腳本 -->
   <div th:replace="~{fragments/common :: modals}"></div>
   <script th:inline="javascript">
-    const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
   </script>
   <script src="/js/common.js"></script>
 
@@ -568,10 +568,6 @@
       // 準備 FormData（支持文件上傳）
       const formData = new FormData(this);
 
-      // 按鈕 Loading
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
-
       try {
         const response = await fetch('/sell/submit', {
           method: 'POST',
@@ -590,14 +586,12 @@
 
         } else {
           showNotification('❌ ' + (result.message || '提交失敗'), true);
-          btn.disabled = false;
           btn.innerHTML = originalText;
         }
 
       } catch (error) {
         console.error('提交錯誤:', error);
         showNotification('❌ 網絡錯誤，請檢查連接', true);
-        btn.disabled = false;
         btn.innerHTML = originalText;
       }
     });

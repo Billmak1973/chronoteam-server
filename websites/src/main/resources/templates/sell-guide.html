@@ -267,10 +267,122 @@
                 gap: 1rem;
             }
         }
+        /* ========================================== */
+        /* ========== 晚上模式 (Night Mode) ========== */
+        /* ========================================== */
+
+        /* 1. 全局背景與文字 */
+        body.night-mode {
+            background: linear-gradient(180deg, #0a0e27 0%, #0f1535 50%, #16213e 100%);
+            background-attachment: fixed;
+            color: #e0e0e0;
+        }
+
+        /* 2. Hero 區域星空特效 */
+        body.night-mode .page-hero {
+            background: linear-gradient(135deg, #0a0e27 0%, #16213e 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        body.night-mode .page-hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                    radial-gradient(2px 2px at 50px 30px, #ffd700, transparent),
+                    radial-gradient(1px 1px at 100px 80px, #00d4ff, transparent),
+                    radial-gradient(2px 2px at 200px 50px, #ffd700, transparent),
+                    radial-gradient(1px 1px at 300px 100px, #00d4ff, transparent);
+            background-repeat: repeat;
+            background-size: 500px 200px;
+            opacity: 0.4;
+            animation: starsTwinkle 5s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        /* 3. 標題與文字顏色調整 */
+        body.night-mode .section-title h2,
+        body.night-mode .step-content h3,
+        body.night-mode .tip-card h3,
+        body.night-mode .faq-question {
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        body.night-mode .section-title p,
+        body.night-mode .step-content p,
+        body.night-mode .tip-card ul li,
+        body.night-mode .faq-answer {
+            color: #b0b8c4;
+        }
+
+        /* 4. 卡片容器深色化 + 霓虹邊框 */
+        body.night-mode .step-card,
+        body.night-mode .tip-card,
+        body.night-mode .faq-item {
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        body.night-mode .step-card:hover,
+        body.night-mode .tip-card:hover {
+            transform: translateX(10px) translateY(-5px);
+            border-color: rgba(0, 212, 255, 0.4);
+            box-shadow: 0 8px 30px rgba(0, 212, 255, 0.15);
+        }
+
+        /* 5. 步驟編號圓圈發光 */
+        body.night-mode .step-number {
+            background: linear-gradient(135deg, #00d4ff 0%, #7b2cbf 100%);
+            color: white;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+
+        /* 6. Feature Tag 標籤深色適配 */
+        body.night-mode .feature-tag {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+        }
+
+        body.night-mode .feature-tag i {
+            color: #ffd700;
+        }
+
+        /* 7. FAQ 展開/收合適配 */
+        body.night-mode .faq-question:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        body.night-mode .faq-item.active {
+            border-left: 3px solid #00d4ff;
+        }
+
+        /* 8. CTA 行動呼籲區域 */
+        body.night-mode .cta-section {
+            background: linear-gradient(135deg, #16213e 0%, #0a0e27 100%);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            box-shadow: 0 0 40px rgba(0, 212, 255, 0.1);
+        }
+
+        /* 9. 頁腳融合 */
+        body.night-mode .footer {
+            background: #050816;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* 星星閃爍動畫 */
+        @keyframes starsTwinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
     </style>
 </head>
 
-<body>
+<!--<body>-->
+<body th:classappend="${cardTheme == 'night'} ? 'night-mode' : ''">
 
     <!--  3. 引入公共導航欄 (自動處理登入狀態、購物車下拉等) -->
     <div th:replace="~{fragments/common :: navbar}"></div>

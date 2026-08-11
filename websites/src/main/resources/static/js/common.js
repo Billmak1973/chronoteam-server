@@ -68,7 +68,7 @@ function calculateSelectedTotal() {
 // 這樣即使後端返回的 totalAmount 有延遲，前端也能立刻根據 DOM 狀態修正顯示
 async function loadCartItems() {
     try {
-        const response = await fetch('/api/cart/list');
+        const response = await fetch('/cart/api/list');
         const data = await response.json();
 
         if (data.success) {
@@ -160,7 +160,7 @@ async function toggleCartItemSelection(cartId, isChecked) {
 
     // 2. 调用后端 API 同步到数据库
     try {
-        await fetch(`/api/cart/toggle-selection/${cartId}?isSelected=${isChecked}`, {
+        await fetch(`/cart/api/toggle-selection/${cartId}?isSelected=${isChecked}`, {
             method: 'PUT'
         });
 
@@ -270,7 +270,7 @@ async function updateCartQuantity(cartId, newQuantity) {
 
     // 2. 調用後端 API 同步到數據庫
     try {
-        const response = await fetch(`/api/cart/update/${cartId}?quantity=${newQuantity}`, {
+        const response = await fetch(`/cart/api/update/${cartId}?quantity=${newQuantity}`, {
             method: 'PUT'
         });
         const data = await response.json();
@@ -340,7 +340,7 @@ async function confirmCartDelete() {
   const detailCartItem = document.querySelector(`.cart-items-list [data-product-id="${cartDeleteProductId}"]`);
 
   try {
-    const response = await fetch(`/api/cart/remove/${cartDeleteProductId}`, {
+    const response = await fetch(`/cart/api/remove/${cartDeleteProductId}`, {
       method: 'DELETE'
     });
 
@@ -467,7 +467,7 @@ async function addToCart(productId) {
         return;
     }
     try {
-        const response = await fetch(`/api/cart/add/${productId}`, { method: 'POST' });
+        const response = await fetch(`/cart/api/add/${productId}`, { method: 'POST' });
         const data = await response.json();
         if (response.ok) { showNotification('✅ 已加入購物車'); loadCartItems(); }
         else { showNotification('❌ ' + (data.message || '加入失敗'), true); }

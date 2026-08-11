@@ -281,52 +281,6 @@
             margin-bottom: 0.5rem;
         }
 
-        /* 分頁 */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.5rem;
-            margin-top: auto;
-            /* 【核心修改 4】：使用 margin-top: auto 將分頁器推到 .main-content 的最底部 */
-            padding-top: 2rem;
-            border-top: 1px solid #f1f3f5;
-            /* 加一條分隔線更美觀 */
-        }
-
-        .pagination button {
-            padding: 0.6rem 1rem;
-            border: 2px solid var(--light);
-            background: white;
-            color: var(--primary);
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-
-        .pagination button:hover:not(:disabled) {
-            border-color: var(--gold);
-            color: var(--gold);
-        }
-
-        .pagination button.active {
-            background: var(--gold);
-            border-color: var(--gold);
-            color: white;
-        }
-
-        .pagination button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .pagination-info {
-            margin: 0 1rem;
-            color: var(--gray);
-            font-size: 0.9rem;
-        }
-
         /* 響應式 */
         @media (max-width: 1024px) {
             .notifications-grid {
@@ -703,8 +657,6 @@
 
             // 按鈕進入 Loading 狀態
             const originalText = confirmBtn.innerHTML;
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
 
             try {
                 const response = await fetch(`/api/stock-notification/unsubscribe-by-id/${notificationId}`, {
@@ -750,14 +702,12 @@
                 } else {
                     showNotification('❌ ' + result.message, true);
                     // 失敗時恢復按鈕
-                    confirmBtn.disabled = false;
                     confirmBtn.innerHTML = originalText;
                 }
             } catch (error) {
                 console.error('取消訂閱錯誤:', error);
                 showNotification('❌ 網絡錯誤，請稍後重試', true);
                 // 報錯時恢復按鈕
-                confirmBtn.disabled = false;
                 confirmBtn.innerHTML = originalText;
             }
         }

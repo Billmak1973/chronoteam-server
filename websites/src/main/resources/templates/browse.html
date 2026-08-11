@@ -7,7 +7,7 @@
     <title th:text="${pageTitle} + ' - ChronoTeam'">瀏覽商品</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!--  1. 引入公共 CSS (包含導航欄、按鈕、購物車下拉等所有公共樣式) -->
+    <!--  1. 引入公共 CSS -->
     <link rel="stylesheet" href="/css/common.css">
 
     <!--  2. 僅保留 browse 頁面專屬的 CSS -->
@@ -19,6 +19,9 @@
             display: grid;
             grid-template-columns: 250px 1fr;
             gap: 2rem;
+            /* 【核心修改】：設定最小高度，確保容器夠高，能把分頁器擠到底部 */
+            min-height: calc(100vh - 4rem);
+            align-items: stretch;
         }
 
         .filter-sidebar {
@@ -62,9 +65,13 @@
             margin-right: 0.5rem;
         }
 
+        /* 【核心修改】：商品區域改為 Flex 佈局 */
         .products-section {
             display: flex;
             flex-direction: column;
+            background: white; /* 可選：給右側加個白底，看需求 */
+            border-radius: 12px;
+            /* padding: 2rem; 如果不需要內邊距可以去掉，或者保留 */
         }
 
         .products-header {
@@ -72,6 +79,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1.5rem;
+            flex-shrink: 0; /* 防止頭部被壓縮 */
         }
 
         .products-count {
@@ -87,10 +95,18 @@
             cursor: pointer;
         }
 
+        /* 【核心修改】：新增包裹層，佔滿中間空間 */
+        .content-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
         .products-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 1.5rem;
+            /* 不需要 flex: 1，由 content-wrapper 負責撐開 */
         }
 
         .product-card {
@@ -106,7 +122,6 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
-        /*  修改：加入 position: relative 用於定位愛心按鈕 */
         .product-img {
             position: relative;
             height: 250px;
@@ -115,7 +130,6 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            /* 防止愛心按鈕超出邊界 */
         }
 
         .product-img img {
@@ -124,7 +138,6 @@
             object-fit: cover;
         }
 
-        /*  新增：收藏愛心按鈕樣式 */
         .favorite-btn {
             position: absolute;
             top: 12px;
@@ -177,33 +190,63 @@
             margin: 0.5rem 0;
         }
 
-        .pagination {
+        /* 【核心修改】：引入標準分頁樣式 */
+        .pagination-wrapper {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap: 0.5rem;
-            margin-top: 3rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f1f3f5;
+            /* 不需要 margin-top: auto，因為父級 content-wrapper 已經是 flex: 1 */
         }
 
-        .pagination a,
-        .pagination span {
+        .page-btn {
             padding: 0.6rem 1rem;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            text-decoration: none;
+            border: 1px solid #e9ecef;
+            background: white;
             color: var(--primary);
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
             transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
         }
 
-        .pagination a:hover {
+        .page-btn:hover:not(.disabled) {
             border-color: var(--gold);
-            background: var(--gold);
-            color: white;
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+            transform: translateY(-1px);
         }
 
-        .pagination .active {
+        .page-btn.active {
             background: var(--gold);
-            border-color: var(--gold);
             color: white;
+            border-color: var(--gold);
+            font-weight: 600;
+            cursor: default;
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+        }
+
+        .page-btn.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+            background: #f8f9fa;
+            border-color: #e9ecef;
+        }
+
+        .page-ellipsis {
+            padding: 0.6rem 0.5rem;
+            color: var(--gray);
+            font-weight: bold;
+            letter-spacing: 2px;
+            user-select: none;
         }
 
         /* 響應式調整 */
@@ -234,133 +277,146 @@
             text-align: center;
             margin-top: 3rem;
         }
+
+        /* 空狀態樣式補充 */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: 12px;
+            flex: 1; /* 讓空狀態也佔滿空間 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
     </style>
 </head>
 
 <body>
-    <!--  3. 引入公共導航欄 (自動包含完整的購物車下拉菜單和用戶菜單) -->
-    <div th:replace="~{fragments/common :: navbar}"></div>
+<!--  3. 引入公共導航欄 -->
+<div th:replace="~{fragments/common :: navbar}"></div>
 
-    <div class="browse-container">
-        <!-- 側邊篩選欄 -->
-        <aside class="filter-sidebar">
-            <!-- 分類篩選 -->
-            <div class="filter-section">
-                <h3><i class="fas fa-th-large"></i> 分類</h3>
-                <label class="filter-option">
-                    <input type="checkbox" name="category" value="dress"
-                        th:checked="${currentFilters['category'] != null && #lists.contains(currentFilters['category'], 'dress')}">
-                    正裝錶
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" name="category" value="dive"
-                        th:checked="${currentFilters['category'] != null && #lists.contains(currentFilters['category'], 'dive')}">
-                    潛水錶
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" name="category" value="chronograph"
-                        th:checked="${currentFilters['category'] != null && #lists.contains(currentFilters['category'], 'chronograph')}">
-                    計時碼錶
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" name="category" value="vintage"
-                        th:checked="${currentFilters['category'] != null && #lists.contains(currentFilters['category'], 'vintage')}">
-                    古董錶
-                </label>
-            </div>
+<div class="browse-container">
+    <!-- 側邊篩選欄 -->
+    <aside class="filter-sidebar">
+        <!-- 分類篩選 -->
+        <div class="filter-section">
+            <h3><i class="fas fa-th-large"></i> 分類</h3>
+            <label class="filter-option">
+                <input type="checkbox" name="category" value="dress"
+                       th:checked="${currentFilters['category'] != null && #lists.contains(currentFilters['category'], 'dress')}">
+                正裝錶
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" name="category" value="dive"
+                       th:checked="${currentFilters['category'] != null && #lists.contains(currentFilters['category'], 'dive')}">
+                潛水錶
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" name="category" value="chronograph"
+                       th:checked="${currentFilters['category'] != null && #lists.contains(currentFilters['category'], 'chronograph')}">
+                計時碼錶
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" name="category" value="vintage"
+                       th:checked="${currentFilters['category'] != null && #lists.contains(currentFilters['category'], 'vintage')}">
+                古董錶
+            </label>
+        </div>
 
-            <!-- 品牌篩選 -->
-            <div class="filter-section">
-                <h3><i class="fas fa-crown"></i> 品牌</h3>
-                <label class="filter-option">
-                    <input type="checkbox" name="brand" value="rolex"
-                        th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'rolex')}">
-                    Rolex 勞力士
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" name="brand" value="omega"
-                        th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'omega')}">
-                    Omega 歐米茄
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" name="brand" value="patek"
-                        th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'patek')}">
-                    Patek Philippe 百達翡麗
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" name="brand" value="ap"
-                        th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'ap')}">
-                    Audemars Piguet 愛彼
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" name="brand" value="cartier"
-                        th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'cartier')}">
-                    Cartier 卡地亞
-                </label>
-                <label class="filter-option">
-                    <input type="checkbox" name="brand" value="others"
-                        th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'others')}">
-                    其他品牌
-                </label>
-            </div>
+        <!-- 品牌篩選 -->
+        <div class="filter-section">
+            <h3><i class="fas fa-crown"></i> 品牌</h3>
+            <label class="filter-option">
+                <input type="checkbox" name="brand" value="rolex"
+                       th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'rolex')}">
+                Rolex 勞力士
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" name="brand" value="omega"
+                       th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'omega')}">
+                Omega 歐米茄
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" name="brand" value="patek"
+                       th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'patek')}">
+                Patek Philippe 百達翡麗
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" name="brand" value="ap"
+                       th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'ap')}">
+                Audemars Piguet 愛彼
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" name="brand" value="cartier"
+                       th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'cartier')}">
+                Cartier 卡地亞
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" name="brand" value="others"
+                       th:checked="${currentFilters['brand'] != null && #lists.contains(currentFilters['brand'], 'others')}">
+                其他品牌
+            </label>
+        </div>
 
-            <!-- 價格區間 -->
-            <div class="filter-section">
-                <h3><i class="fas fa-tag"></i> 價格區間</h3>
-                <label class="filter-option">
-                    <input type="radio" name="priceRange" value="0-5000"
-                        th:checked="${currentFilters['priceRange'] == '0-5000'}">
-                    HK$ 0 - 5,000
-                </label>
-                <label class="filter-option">
-                    <input type="radio" name="priceRange" value="5000-20000"
-                        th:checked="${currentFilters['priceRange'] == '5000-20000'}">
-                    HK$ 5,000 - 20,000
-                </label>
-                <label class="filter-option">
-                    <input type="radio" name="priceRange" value="20000-50000"
-                        th:checked="${currentFilters['priceRange'] == '20000-50000'}">
-                    HK$ 20,000 - 50,000
-                </label>
-                <label class="filter-option">
-                    <input type="radio" name="priceRange" value="50000+"
-                        th:checked="${currentFilters['priceRange'] == '50000+'}">
-                    HK$ 50,000+
-                </label>
-            </div>
+        <!-- 價格區間 -->
+        <div class="filter-section">
+            <h3><i class="fas fa-tag"></i> 價格區間</h3>
+            <label class="filter-option">
+                <input type="radio" name="priceRange" value="0-5000"
+                       th:checked="${currentFilters['priceRange'] == '0-5000'}">
+                HK$ 0 - 5,000
+            </label>
+            <label class="filter-option">
+                <input type="radio" name="priceRange" value="5000-20000"
+                       th:checked="${currentFilters['priceRange'] == '5000-20000'}">
+                HK$ 5,000 - 20,000
+            </label>
+            <label class="filter-option">
+                <input type="radio" name="priceRange" value="20000-50000"
+                       th:checked="${currentFilters['priceRange'] == '20000-50000'}">
+                HK$ 20,000 - 50,000
+            </label>
+            <label class="filter-option">
+                <input type="radio" name="priceRange" value="50000+"
+                       th:checked="${currentFilters['priceRange'] == '50000+'}">
+                HK$ 50,000+
+            </label>
+        </div>
 
-            <button type="button" class="btn btn-primary" onclick="applyFilters()"
+        <button type="button" class="btn btn-primary" onclick="applyFilters()"
                 style="width: 100%; padding: 0.8rem;">
-                <i class="fas fa-filter"></i> 套用篩選
-            </button>
-        </aside>
+            <i class="fas fa-filter"></i> 套用篩選
+        </button>
+    </aside>
 
-        <!-- 商品區域 -->
-        <section class="products-section">
-            <div class="products-header">
+    <!-- 商品區域 -->
+    <section class="products-section">
+        <div class="products-header">
                 <span class="products-count">
                     共 <strong th:text="${totalElements}">0</strong> 件商品
                 </span>
-                <select class="sort-dropdown" onchange="changeSort(this.value)">
-                    <option value="newest" th:selected="${currentSort == null || currentSort == 'newest'}">最新上架</option>
-                    <option value="price-asc" th:selected="${currentSort == 'price-asc'}">價格：低到高</option>
-                    <option value="price-desc" th:selected="${currentSort == 'price-desc'}">價格：高到低</option>
-                </select>
-            </div>
+            <select class="sort-dropdown" onchange="changeSort(this.value)">
+                <option value="newest" th:selected="${currentSort == null || currentSort == 'newest'}">最新上架</option>
+                <option value="price-asc" th:selected="${currentSort == 'price-asc'}">價格：低到高</option>
+                <option value="price-desc" th:selected="${currentSort == 'price-desc'}">價格：高到低</option>
+            </select>
+        </div>
 
+        <!-- 【核心修改】：新增 content-wrapper 包裹層 -->
+        <div class="content-wrapper">
             <!-- 商品網格 -->
             <div class="products-grid" th:if="${not #lists.isEmpty(products)}">
                 <div class="product-card" th:each="product : ${products}">
                     <div class="product-img">
                         <img th:src="@{/images/products/{img}(img=${product.image})}" th:alt="${product.description}"
-                            onerror="this.src='/images/placeholder.png'">
+                             onerror="this.src='/images/placeholder.png'">
 
-                        <!--  新增：收藏按鈕 -->
                         <button class="favorite-btn" th:onclick="|toggleFavorite(${product.productId}, this)|"
-                            title="收藏商品">
-                            <!-- 根據後端傳入的 favoriteProductIds 判斷初始狀態 -->
+                                title="收藏商品">
                             <i th:class="${favoriteProductIds != null && favoriteProductIds.contains(product.productId)} ? 'fas fa-heart' : 'far fa-heart'"
-                                th:style="${favoriteProductIds != null && favoriteProductIds.contains(product.productId)} ? 'color: var(--accent);' : 'color: #999;'"></i>
+                               th:style="${favoriteProductIds != null && favoriteProductIds.contains(product.productId)} ? 'color: var(--accent);' : 'color: #999;'"></i>
                         </button>
                     </div>
                     <div class="product-info">
@@ -370,21 +426,19 @@
                             HK$ <span
                                 th:text="${#numbers.formatDecimal(product.price, 1, 'COMMA', 0, 'POINT')}">0</span>
                         </div>
-                        <!-- 如果库存为0，显示已售罄提示 -->
                         <div th:if="${product.stock != null and product.stock == 0}"
-                            style="color: var(--accent); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">
+                             style="color: var(--accent); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem;">
                             (已售罄)
                         </div>
 
                         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                             <a th:href="@{/product/{id}(id=${product.productId})}" class="btn btn-outline"
-                                style="flex: 1; text-align: center; padding: 0.5rem;">
+                               style="flex: 1; text-align: center; padding: 0.5rem;">
                                 <i class="fas fa-eye"></i> 詳情
                             </a>
-                            <!-- 修改：加入按钮逻辑。如果库存为0，调用提示函数；否则调用 addToCart -->
                             <button type="button"
-                                th:onclick="${product.stock != null and product.stock == 0} ? 'showSoldOutHint()' : |addToCart(${product.productId})|"
-                                class="btn btn-primary" style="flex: 1; text-align: center; padding: 0.5rem;">
+                                    th:onclick="${product.stock != null and product.stock == 0} ? 'showSoldOutHint()' : |addToCart(${product.productId})|"
+                                    class="btn btn-primary" style="flex: 1; text-align: center; padding: 0.5rem;">
                                 <i class="fas fa-cart-plus"></i> 加入
                             </button>
                         </div>
@@ -393,8 +447,7 @@
             </div>
 
             <!-- 無商品提示 -->
-            <div th:if="${#lists.isEmpty(products)}"
-                style="text-align: center; padding: 4rem 2rem; background: white; border-radius: 12px;">
+            <div th:if="${#lists.isEmpty(products)}" class="empty-state">
                 <i class="fas fa-search" style="font-size: 4rem; color: #e9ecef; margin-bottom: 1rem;"></i>
                 <h3 style="color: var(--primary); margin-bottom: 0.5rem;">暫無商品</h3>
                 <p style="color: #6c757d;">抱歉，沒有符合條件的商品</p>
@@ -402,145 +455,134 @@
                     <i class="fas fa-undo"></i> 清除篩選
                 </a>
             </div>
+        </div>
+        <!-- content-wrapper 結束 -->
 
-            <!-- ========================================== -->
-            <!-- 【核心修改】：智能分頁導航 (替換原有的簡單分頁) -->
-            <!-- ========================================== -->
-            <div class="pagination">
-                <!-- 1. 上一頁按鈕 -->
-                <a th:if="${currentPage > 1}"
-                    th:href="@{/browse(page=${currentPage - 1}, ${currentFilters}, sort=${currentSort})}"
-                    class="page-btn">
-                    <i class="fas fa-chevron-left"></i> 上一頁
-                </a>
-                <span th:if="${currentPage <= 1}" class="page-btn disabled" style="pointer-events: none; opacity: 0.5;">
+        <!-- ========================================== -->
+        <!-- 【核心修改】：智能分頁導航 (替換原有的簡單分頁) -->
+        <!-- 只有當總數大於 0 時才顯示 -->
+        <!-- ========================================== -->
+        <div class="pagination-wrapper" th:if="${totalElements > 0}">
+            <!-- 1. 上一頁按鈕 -->
+            <a th:if="${currentPage > 1}"
+               th:href="@{/browse(page=${currentPage - 1}, ${currentFilters}, sort=${currentSort})}"
+               class="page-btn">
+                <i class="fas fa-chevron-left"></i> 上一頁
+            </a>
+            <span th:if="${currentPage <= 1}" class="page-btn disabled">
                     <i class="fas fa-chevron-left"></i> 上一頁
                 </span>
 
-                <!-- 2. 智能頁碼遍歷 (核心邏輯) -->
-                <th:block th:each="item : ${smartPages}">
-                    <!-- 如果是省略號 "..." -->
-                    <span th:if="${item.isEllipsis}" class="page-ellipsis"
-                        style="padding: 0.6rem 0.5rem; color: #6c757d; font-weight: bold;">...</span>
+            <!-- 2. 智能頁碼遍歷 (核心邏輯) -->
+            <th:block th:each="item : ${smartPages}">
+                <!-- 如果是省略號 "..." -->
+                <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
 
-                    <!-- 如果是數字頁碼 -->
-                    <a th:unless="${item.isEllipsis}"
-                        th:href="@{/browse(page=${item.pageNumber}, ${currentFilters}, sort=${currentSort})}"
-                        th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
-                        th:text="${item.pageNumber}">1</a>
-                </th:block>
+                <!-- 如果是數字頁碼 -->
+                <a th:unless="${item.isEllipsis}"
+                   th:href="@{/browse(page=${item.pageNumber}, ${currentFilters}, sort=${currentSort})}"
+                   th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
+                   th:text="${item.pageNumber}">1</a>
+            </th:block>
 
-                <!-- 3. 下一頁按鈕 -->
-                <a th:if="${currentPage < totalPages}"
-                    th:href="@{/browse(page=${currentPage + 1}, ${currentFilters}, sort=${currentSort})}"
-                    class="page-btn">
-                    下一頁 <i class="fas fa-chevron-right"></i>
-                </a>
-                <span th:if="${currentPage >= totalPages}" class="page-btn disabled"
-                    style="pointer-events: none; opacity: 0.5;">
+            <!-- 3. 下一頁按鈕 -->
+            <a th:if="${currentPage < totalPages}"
+               th:href="@{/browse(page=${currentPage + 1}, ${currentFilters}, sort=${currentSort})}"
+               class="page-btn">
+                下一頁 <i class="fas fa-chevron-right"></i>
+            </a>
+            <span th:if="${currentPage >= totalPages}" class="page-btn disabled">
                     下一頁 <i class="fas fa-chevron-right"></i>
                 </span>
-            </div>
-        </section>
-    </div>
+        </div>
+    </section>
+</div>
 
-    <footer class="footer">
-        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
-            Rights Reserved.</p>
-    </footer>
+<footer class="footer">
+    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+        Rights Reserved.</p>
+</footer>
 
-    <!--  4. 引入公共登入/註冊彈窗 HTML -->
-    <div th:replace="~{fragments/common :: modals}"></div>
+<!--  4. 引入公共登入/註冊彈窗 HTML -->
+<div th:replace="~{fragments/common :: modals}"></div>
 
-    <!--  5. 注入後端登入狀態變量 (必須在 common.js 之前) -->
-    <script th:inline="javascript">
-        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-    </script>
+<!--  5. 注入後端登入狀態變量 -->
+<script th:inline="javascript">
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+</script>
 
-    <!--  6. 引入公共 JS (包含購物車下拉、加入購物車、登入/登出邏輯等) -->
-    <script src="/js/common.js"></script>
+<!--  6. 引入公共 JS -->
+<script src="/js/common.js"></script>
 
-    <!--  7. 僅保留 browse 頁面專屬的 JS -->
-    <script>
-        // 套用篩選
-        function applyFilters() {
-            const checkboxes = document.querySelectorAll('.filter-sidebar input:checked');
-            const params = new URLSearchParams();
-            checkboxes.forEach(input => {
-                params.append(input.name, input.value);
+<!--  7. 僅保留 browse 頁面專屬的 JS -->
+<script>
+    // 套用篩選
+    function applyFilters() {
+        const checkboxes = document.querySelectorAll('.filter-sidebar input:checked');
+        const params = new URLSearchParams();
+        checkboxes.forEach(input => {
+            params.append(input.name, input.value);
+        });
+        const currentSort = document.querySelector('.sort-dropdown').value;
+        if (currentSort) {
+            params.append('sort', currentSort);
+        }
+        window.location.href = '/browse?' + params.toString();
+    }
+
+    // 改變排序
+    function changeSort(value) {
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('sort', value);
+        window.location.href = currentUrl.toString();
+    }
+
+    //  新增：收藏/取消收藏功能
+    async function toggleFavorite(productId, btn) {
+        if (typeof isLoggedIn === 'undefined' || !isLoggedIn) {
+            showNotification('❌ 請先登入後再收藏商品！', true);
+            setTimeout(() => openLoginModal(), 500);
+            return;
+        }
+
+        const icon = btn.querySelector('i');
+        const isCurrentlyFavorite = icon.classList.contains('fas');
+
+        try {
+            const response = await fetch(`/api/favorites/toggle/${productId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
             });
-            // 注意：這裡需要保留當前的 sort 參數，否則篩選後排序會重置
-            const currentSort = document.querySelector('.sort-dropdown').value;
-            if (currentSort) {
-                params.append('sort', currentSort);
-            }
-            window.location.href = '/browse?' + params.toString();
-        }
 
-        // 改變排序
-        function changeSort(value) {
-            const currentUrl = new URL(window.location.href);
-            currentUrl.searchParams.set('sort', value);
-            window.location.href = currentUrl.toString();
-        }
+            const result = await response.json();
 
-        //  新增：收藏/取消收藏功能
-        async function toggleFavorite(productId, btn) {
-            // 1. 檢查是否登入
-            if (typeof isLoggedIn === 'undefined' || !isLoggedIn) {
-                showNotification('❌ 請先登入後再收藏商品！', true);
-                setTimeout(() => openLoginModal(), 500);
-                return;
-            }
-
-            const icon = btn.querySelector('i');
-            // fas 代表實心(已收藏)，far 代表空心(未收藏)
-            const isCurrentlyFavorite = icon.classList.contains('fas');
-
-            try {
-                // 2. 調用後端 API 切換狀態
-                const response = await fetch(`/api/favorites/toggle/${productId}`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'}
-                });
-
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    if (isCurrentlyFavorite) {
-                        // 3a. 取消收藏：變為空心灰色
-                        icon.classList.remove('fas');
-                        icon.classList.add('far');
-                        icon.style.color = '#999';
-                        showNotification('💔 已取消收藏');
-                    } else {
-                        // 3b. 添加收藏：變為實心紅色，並加上彈跳動畫
-                        icon.classList.remove('far');
-                        icon.classList.add('fas');
-                        icon.style.color = 'var(--accent)';
-                        showNotification('❤️ 已加入收藏');
-
-                        // 彈跳動畫反饋
-                        btn.style.transform = 'scale(1.3)';
-                        setTimeout(() => btn.style.transform = 'scale(1)', 200);
-                    }
+            if (response.ok && result.success) {
+                if (isCurrentlyFavorite) {
+                    icon.classList.remove('fas');
+                    icon.classList.add('far');
+                    icon.style.color = '#999';
+                    showNotification('💔 已取消收藏');
                 } else {
-                    showNotification('❌ ' + (result.message || '操作失敗'), true);
+                    icon.classList.remove('far');
+                    icon.classList.add('fas');
+                    icon.style.color = 'var(--accent)';
+                    showNotification('❤️ 已加入收藏');
+                    btn.style.transform = 'scale(1.3)';
+                    setTimeout(() => btn.style.transform = 'scale(1)', 200);
                 }
-            } catch (error) {
-                console.error('收藏操作失敗:', error);
-                showNotification('❌ 網絡錯誤', true);
+            } else {
+                showNotification('❌ ' + (result.message || '操作失敗'), true);
             }
+        } catch (error) {
+            console.error('收藏操作失敗:', error);
+            showNotification('❌ 網絡錯誤', true);
         }
+    }
 
-        function showSoldOutHint() {
-            // 使用项目通用的 showNotification 进行提示
-            showNotification('⚠️ 商品已售罄，请进入详情页查看或选择到货通知', true);
-        }
-
-    </script>
+    function showSoldOutHint() {
+        showNotification('⚠️ 商品已售罄，请进入详情页查看或选择到货通知', true);
+    }
+</script>
 </body>
-
-</html>
 
 </html>

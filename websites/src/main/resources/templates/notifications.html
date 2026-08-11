@@ -7,10 +7,12 @@
   <title>系統通知 - ChronoTeam</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/common.css">
+  <!-- 【關鍵】引入 sidebar.css 以獲得分頁樣式 (.pagination-wrapper, .page-btn) -->
   <link rel="stylesheet" href="/css/sidebar.css">
+
   <style>
     /* ========================================== */
-    /* 頁面佈局與基礎樣式 (保持不變)               */
+    /* 1. 頁面佈局 (完全參考互動中心成功案例) */
     /* ========================================== */
     .dashboard-container {
       display: flex;
@@ -19,30 +21,7 @@
       margin: 2rem auto;
       padding: 0 1rem;
       gap: 2rem;
-      align-items: flex-start;
-    }
-
-    .sidebar {
-      width: 280px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-      padding: 1.5rem;
-      position: sticky;
-      top: 100px;
-      height: calc(100vh - 120px);
-      overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: var(--gold) transparent;
-    }
-
-    .sidebar::-webkit-scrollbar { width: 6px; }
-    .sidebar::-webkit-scrollbar-track { background: transparent; }
-    .sidebar::-webkit-scrollbar-thumb { background: #e9ecef; border-radius: 3px; }
-    .sidebar::-webkit-scrollbar-thumb:hover { background: var(--gold); }
-
-    @media (max-width: 900px) {
-      .sidebar { position: static; height: auto; width: 100%; margin-bottom: 2rem; }
+      align-items: stretch;
     }
 
     .main-content {
@@ -51,7 +30,8 @@
       border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
       padding: 2.5rem;
-      min-height: 900px;
+      display: flex;
+      flex-direction: column;
     }
 
     .page-title {
@@ -65,7 +45,9 @@
       padding-bottom: 1rem;
     }
 
-    .page-title i { color: var(--gold); }
+    .page-title i {
+      color: var(--gold);
+    }
 
     /* Tab 切換樣式 */
     .notification-tabs {
@@ -91,11 +73,35 @@
       margin-bottom: -2px;
     }
 
-    .tab-btn:hover { color: var(--primary); }
-    .tab-btn.active { color: var(--primary); border-bottom-color: var(--gold); }
+    .tab-btn:hover {
+      color: var(--primary);
+    }
 
-    /* 通知列表與卡片 */
-    .notification-list { display: flex; flex-direction: column; gap: 1rem; }
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--gold);
+    }
+
+    /* ========================================== */
+    /* 2. 內容區域修復 (解決包裹層阻擋問題) */
+    /* ========================================== */
+    .tab-content {
+      display: none;
+      flex: 1;
+      flex-direction: column;
+    }
+
+    .tab-content.active {
+      display: flex;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .notification-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      flex: 1;
+    }
 
     .notification-card {
       background: white;
@@ -107,333 +113,470 @@
       overflow: hidden;
     }
 
-    .notification-card:hover { box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05); transform: translateY(-2px); }
-    .notification-card.unread { border-left: 4px solid var(--accent); background: #fff9fa; }
-    .notification-card.stock-notif { border-left-color: var(--gold); background: #fffef5; }
+    .notification-card:hover {
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      transform: translateY(-2px);
+    }
 
-    .notif-header { display: flex; justify-content: space-between; margin-bottom: 0.8rem; }
-    .notif-title { font-weight: 700; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem; }
-    .notif-date { color: var(--gray); font-size: 0.85rem; }
-    .notif-content { color: #555; line-height: 1.6; margin-bottom: 1rem; }
+    .notification-card.unread {
+      border-left: 4px solid var(--accent);
+      background: #fff9fa;
+    }
 
-    /* 特殊區塊樣式 */
-    .delete-reason-box { background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; padding: 1rem; margin-top: 0.5rem; color: #856404; }
-    .delete-reason-box strong { display: block; margin-bottom: 0.3rem; color: #664d03; }
+    .notification-card.stock-notif {
+      border-left-color: var(--gold);
+      background: #fffef5;
+    }
 
-    .stock-info { background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%); border-left: 4px solid var(--gold); padding: 1rem; border-radius: 8px; margin-top: 0.5rem; }
-    .stock-info strong { color: #856404; display: block; margin-bottom: 0.5rem; }
-    .stock-info .product-name { color: var(--primary); font-weight: 600; text-decoration: none; }
-    .stock-info .stock-count { color: var(--accent); font-weight: 700; }
+    .notif-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.8rem;
+    }
 
-    .violation-content-box { margin-top: 1rem; padding: 1rem; background: #f8f9fa; border: 1px dashed #dee2e6; border-radius: 8px; }
-    .violation-label { font-size: 0.85rem; color: #6c757d; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-    .violation-text { font-style: italic; color: #495057; padding: 0.5rem; background: white; border-radius: 4px; }
+    .notif-title {
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
 
-    .appeal-info-box { margin-top: 1rem; padding: 1rem; border-radius: 8px; border-left: 4px solid var(--gold); }
-    .appeal-info-box.pending { background: #fff3cd; border-color: #ffc107; }
-    .appeal-info-box.approved { background: #d4edda; border-color: #28a745; }
-    .appeal-info-box.rejected { background: #f8d7da; border-color: #dc3545; }
-    .appeal-label { font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
-    .appeal-content { font-size: 0.95rem; line-height: 1.6; padding: 0.8rem; background: rgba(255, 255, 255, 0.6); border-radius: 6px; margin-top: 0.5rem; }
-    .admin-response-box { margin-top: 1rem; padding: 1rem; background: #e7f3ff; border-left: 4px solid #0066cc; border-radius: 8px; }
-    .admin-response-label { font-weight: 600; color: #0066cc; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .notif-date {
+      color: var(--gray);
+      font-size: 0.85rem;
+    }
 
-    .empty-state { text-align: center; padding: 4rem 2rem; color: var(--gray); }
-    .empty-state i { font-size: 4rem; margin-bottom: 1rem; color: #ddd; }
+    .notif-content {
+      color: #555;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
 
-    .tab-content { display: none; }
-    .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .delete-reason-box {
+      background: #fff3cd;
+      border: 1px solid #ffeeba;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 0.5rem;
+      color: #856404;
+    }
 
-    /* 智能分頁組件樣式 */
-    .pagination-wrapper { display: flex; justify-content: center; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #f1f3f5; }
-    .page-btn { padding: 0.6rem 1rem; border: 1px solid #e9ecef; background: white; color: var(--primary); border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; }
-    .page-btn:hover:not(.disabled) { border-color: var(--gold); color: var(--gold); background: rgba(212, 175, 55, 0.05); transform: translateY(-1px); }
-    .page-btn.active { background: var(--gold); color: white; border-color: var(--gold); font-weight: 600; cursor: default; box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3); }
-    .page-btn.disabled { color: #ccc; cursor: not-allowed; background: #f8f9fa; border-color: #e9ecef; }
-    .page-ellipsis { padding: 0.6rem 0.5rem; color: var(--gray); font-weight: bold; letter-spacing: 2px; user-select: none; }
+    .delete-reason-box strong {
+      display: block;
+      margin-bottom: 0.3rem;
+      color: #664d03;
+    }
 
-    .footer { background: var(--primary); color: rgba(255, 255, 255, 0.7); padding: 2rem; text-align: center; margin-top: 3rem; }
+    .stock-info {
+      background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+      border-left: 4px solid var(--gold);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 0.5rem;
+    }
+
+    .stock-info strong {
+      color: #856404;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .stock-info .product-name {
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .stock-info .stock-count {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .violation-content-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #f8f9fa;
+      border: 1px dashed #dee2e6;
+      border-radius: 8px;
+    }
+
+    .violation-label {
+      font-size: 0.85rem;
+      color: #6c757d;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .violation-text {
+      font-style: italic;
+      color: #495057;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 4px;
+    }
+
+    .appeal-info-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      border-left: 4px solid var(--gold);
+    }
+
+    .appeal-info-box.pending {
+      background: #fff3cd;
+      border-color: #ffc107;
+    }
+
+    .appeal-info-box.approved {
+      background: #d4edda;
+      border-color: #28a745;
+    }
+
+    .appeal-info-box.rejected {
+      background: #f8d7da;
+      border-color: #dc3545;
+    }
+
+    .appeal-label {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .appeal-content {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      padding: 0.8rem;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 6px;
+      margin-top: 0.5rem;
+    }
+
+    .admin-response-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #e7f3ff;
+      border-left: 4px solid #0066cc;
+      border-radius: 8px;
+    }
+
+    .admin-response-label {
+      font-weight: 600;
+      color: #0066cc;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--gray);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .empty-state i {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      color: #ddd;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 注意：分頁樣式已由 sidebar.css 提供，此處不再重複定義 */
+
+    .footer {
+      background: var(--primary);
+      color: rgba(255, 255, 255, 0.7);
+      padding: 2rem;
+      text-align: center;
+      margin-top: 3rem;
+    }
 
     @media (max-width: 900px) {
-      .dashboard-container { flex-direction: column; }
-      .notification-tabs { flex-direction: column; gap: 0.5rem; }
-      .tab-btn { width: 100%; justify-content: center; }
+      .dashboard-container {
+        flex-direction: column;
+      }
+
+      .notification-tabs {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .tab-btn {
+        width: 100%;
+        justify-content: center;
+      }
     }
   </style>
 </head>
 
 <body>
-<div th:replace="~{fragments/common :: navbar}"></div>
+  <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="dashboard-container">
-  <!-- 側邊欄 -->
-  <div th:replace="~{fragments/sidebar :: sidebar(activePage='notifications')}"></div>
+  <div class="dashboard-container">
+    <div th:replace="~{fragments/sidebar :: sidebar(activePage='notifications')}"></div>
 
-  <main class="main-content">
-    <h2 class="page-title"><i class="fas fa-bell"></i> 系統通知</h2>
+    <main class="main-content">
+      <h2 class="page-title"><i class="fas fa-bell"></i> 系統通知</h2>
 
-    <!-- Tab 切換按鈕 -->
-    <div class="notification-tabs">
-      <button class="tab-btn active" id="tab-btn-stock" onclick="switchTab('stock', this)">
-        <i class="fas fa-bell" style="color: var(--gold);"></i> 到貨通知
-      </button>
-      <button class="tab-btn" id="tab-btn-admin" onclick="switchTab('admin', this)">
-        <i class="fas fa-exclamation-triangle" style="color: var(--accent);"></i> 管理通知
-      </button>
-    </div>
-
-    <!-- ======================= -->
-    <!-- 到貨通知 Tab Content    -->
-    <!-- ======================= -->
-    <div id="tab-stock" class="tab-content active">
-      <!-- Loading State -->
-      <div id="stock-loading" class="empty-state" style="display:none;">
-        <i class="fas fa-spinner fa-spin"></i>
-        <p>正在加載到貨通知...</p>
+      <div class="notification-tabs">
+        <button class="tab-btn active" id="tab-btn-stock" onclick="switchTab('stock', this)">
+          <i class="fas fa-bell" style="color: var(--gold);"></i> 到貨通知
+        </button>
+        <button class="tab-btn" id="tab-btn-admin" onclick="switchTab('admin', this)">
+          <i class="fas fa-exclamation-triangle" style="color: var(--accent);"></i> 管理通知
+        </button>
       </div>
 
-      <!-- Data Container -->
-      <div id="stock-list-container" class="notification-list"></div>
-
-      <!-- Empty State (Hidden by default) -->
-      <div id="stock-empty" class="empty-state" style="display:none;">
-        <i class="fas fa-bell-slash"></i>
-        <h3>暫無到貨通知</h3>
-        <p>當您關注的商品補貨時，這裡會收到通知</p>
+      <!-- 到貨通知 Tab -->
+      <div id="tab-stock" class="tab-content active">
+        <div id="stock-loading" class="empty-state" style="display:none;">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>正在加載到貨通知...</p>
+        </div>
+        <div id="stock-list-container" class="notification-list"></div>
+        <div id="stock-empty" class="empty-state" style="display:none;">
+          <i class="fas fa-bell-slash"></i>
+          <h3>暫無到貨通知</h3>
+          <p>當您關注的商品補貨時，這裡會收到通知</p>
+        </div>
+        <!-- 分頁容器 -->
+        <div id="stock-pagination"></div>
       </div>
 
-      <!-- Pagination Container -->
-      <div id="stock-pagination" class="pagination-wrapper"></div>
-    </div>
-
-    <!-- ======================= -->
-    <!-- 管理通知 Tab Content    -->
-    <!-- ======================= -->
-    <div id="tab-admin" class="tab-content">
-      <!-- Loading State -->
-      <div id="admin-loading" class="empty-state" style="display:none;">
-        <i class="fas fa-spinner fa-spin"></i>
-        <p>正在加載管理通知...</p>
+      <!-- 管理通知 Tab -->
+      <div id="tab-admin" class="tab-content">
+        <div id="admin-loading" class="empty-state" style="display:none;">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>正在加載管理通知...</p>
+        </div>
+        <div id="admin-list-container" class="notification-list"></div>
+        <div id="admin-empty" class="empty-state" style="display:none;">
+          <i class="fas fa-shield-alt"></i>
+          <h3>暫無管理通知</h3>
+          <p>當您的評論被處理或帳戶有重要變動時，這裡會收到通知</p>
+        </div>
+        <!-- 分頁容器 -->
+        <div id="admin-pagination"></div>
       </div>
 
-      <!-- Data Container -->
-      <div id="admin-list-container" class="notification-list"></div>
-
-      <!-- Empty State (Hidden by default) -->
-      <div id="admin-empty" class="empty-state" style="display:none;">
-        <i class="fas fa-shield-alt"></i>
-        <h3>暫無管理通知</h3>
-        <p>當您的評論被處理或帳戶有重要變動時，這裡會收到通知</p>
+      <!-- 申訴模態框 -->
+      <div id="appealModal" class="modal" style="display: none; z-index: 9999;">
+        <div class="modal-content" style="max-width: 500px;">
+          <button class="modal-close" onclick="closeAppealModal()">&times;</button>
+          <h3 style="margin-bottom: 1.5rem; color: var(--primary);">
+            <i class="fas fa-file-alt" style="color: var(--gold); margin-right: 0.5rem;"></i> 提交申訴
+          </h3>
+          <form id="appealForm" onsubmit="submitAppeal(event)">
+            <input type="hidden" id="appealNotificationId">
+            <input type="hidden" id="appealType" value="BAN">
+            <div style="margin-bottom: 1.5rem;">
+              <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">
+                申訴原因 <span style="color: var(--accent);">*</span>
+              </label>
+              <textarea id="appealReason" required rows="5" placeholder="請詳細說明您的申訴理由..."
+                style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+              <button type="button" onclick="closeAppealModal()"
+                style="padding: 0.6rem 1.5rem; background: #e9ecef; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary);">取消</button>
+              <button type="submit"
+                style="padding: 0.6rem 1.5rem; background: var(--gold); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary);">
+                <i class="fas fa-paper-plane"></i> 提交申訴
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
-      <!-- Pagination Container -->
-      <div id="admin-pagination" class="pagination-wrapper"></div>
-    </div>
+    </main>
+  </div>
 
-    <!-- ========================================== -->
-    <!-- 申訴模態框 (保持原有結構，供 JS 調用)      -->
-    <!-- ========================================== -->
-    <div id="appealModal" class="modal" style="display: none; z-index: 9999;">
-      <div class="modal-content" style="max-width: 500px;">
-        <button class="modal-close" onclick="closeAppealModal()">&times;</button>
-        <h3 style="margin-bottom: 1.5rem; color: var(--primary);">
-          <i class="fas fa-file-alt" style="color: var(--gold); margin-right: 0.5rem;"></i> 提交申訴
-        </h3>
-        <form id="appealForm" onsubmit="submitAppeal(event)">
-          <input type="hidden" id="appealNotificationId">
-          <input type="hidden" id="appealType" value="BAN">
-          <div style="margin-bottom: 1.5rem;">
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">
-              申訴原因 <span style="color: var(--accent);">*</span>
-            </label>
-            <textarea id="appealReason" required rows="5" placeholder="請詳細說明您的申訴理由..."
-                      style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-family: inherit; font-size: 0.95rem; resize: vertical;"></textarea>
-          </div>
-          <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-            <button type="button" onclick="closeAppealModal()"
-                    style="padding: 0.6rem 1.5rem; background: #e9ecef; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary);">取消</button>
-            <button type="submit"
-                    style="padding: 0.6rem 1.5rem; background: var(--gold); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--primary);">
-              <i class="fas fa-paper-plane"></i> 提交申訴
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+  <footer class="footer">
+    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights
+      Reserved.</p>
+  </footer>
 
-  </main>
-</div>
+  <div th:replace="~{fragments/common :: modals}"></div>
 
-<footer class="footer">
-  <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
-</footer>
+  <script th:inline="javascript">
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+  </script>
 
-<div th:replace="~{fragments/common :: modals}"></div>
+  <script src="/js/common.js"></script>
 
-<!-- 僅保留登入狀態變量，數據全部交由 AJAX 獲取 -->
-<script th:inline="javascript">
-  const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-</script>
+  <script>
+    // ==========================================
+    // 全局狀態管理 (1-based)
+    // ==========================================
+    const state = {
+      stock: {page: 1, size: 25, loading: false},
+      admin: {page: 1, size: 25, loading: false}
+    };
 
-<script src="/js/common.js"></script>
+    function switchTab(tabName, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
 
-<script>
-  // ==========================================
-  // 全局狀態管理
-  // ==========================================
-  const state = {
-    stock: { page: 0, size: 25, loading: false },
-    admin: { page: 0, size: 25, loading: false }
-  };
-
-  // ==========================================
-  // 核心：Tab 切換邏輯
-  // ==========================================
-  function switchTab(tabName, btn) {
-    // UI 切換
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    if(btn) btn.classList.add('active');
-    document.getElementById('tab-' + tabName).classList.add('active');
-
-    // 數據加載 (如果該 Tab 還沒加載過數據，或者需要刷新)
-    if (tabName === 'stock') {
-      loadStockNotifications(state.stock.page);
-    } else if (tabName === 'admin') {
-      loadAdminNotifications(state.admin.page);
-    }
-  }
-
-  // ==========================================
-  // API 1: 加載到貨通知
-  // ==========================================
-  async function loadStockNotifications(page) {
-    if (state.stock.loading) return;
-    state.stock.loading = true;
-    state.stock.page = page;
-
-    const listContainer = document.getElementById('stock-list-container');
-    const loadingEl = document.getElementById('stock-loading');
-    const emptyEl = document.getElementById('stock-empty');
-    const paginationEl = document.getElementById('stock-pagination');
-
-    // 顯示 Loading
-    listContainer.innerHTML = '';
-    emptyEl.style.display = 'none';
-    paginationEl.innerHTML = '';
-    loadingEl.style.display = 'block';
-
-    try {
-      const response = await fetch(`/api/notifications/stock?page=${page}&size=${state.stock.size}`);
-      const data = await response.json();
-
-      loadingEl.style.display = 'none';
-
-      if (!data.content || data.content.length === 0) {
-        emptyEl.style.display = 'block';
-      } else {
-        // 渲染列表
-        let html = '';
-        data.content.forEach(receipt => {
-          const isUnread = !receipt.isRead ? 'unread' : '';
-          const dateStr = formatDate(receipt.createdAt);
-          // 注意：AnnouncementReceipt 嵌套了 Announcement 對象
-          const announcement = receipt.announcement || {};
-
-          html += `
-                    <div class="notification-card stock-notif ${isUnread}">
-                        <div class="notif-header">
-                            <div class="notif-title">
-                                <i class="fas fa-bell" style="color: var(--gold);"></i>
-                                <span>${escapeHtml(announcement.title || '到貨通知')}</span>
-                            </div>
-                            <div class="notif-date">${dateStr}</div>
-                        </div>
-                        <div class="notif-content">${escapeHtml(announcement.content || '')}</div>
-                        <div class="stock-info">
-                            <strong><i class="fas fa-box-open"></i> 商品資訊</strong>
-                            <a href="/product/${announcement.targetId}"
-                               class="product-name"
-                               onclick="clearStockNotification(event, ${announcement.targetId})">
-                                <i class="fas fa-external-link-alt" style="font-size: 0.8rem; margin-right: 0.3rem;"></i> 點擊查看商品詳情
-                            </a>
-                            <div style="margin-top: 0.5rem; font-size: 0.9rem;">
-                                <span class="stock-count"><i class="fas fa-check-circle"></i> 庫存充足，立即搶購！</span>
-                            </div>
-                        </div>
-                    </div>`;
-        });
-        listContainer.innerHTML = html;
-
-        // 渲染分頁
-        renderPagination(paginationEl, data.currentPage, data.totalPages, 'stock');
+      if (tabName === 'stock') {
+        loadStockNotifications(state.stock.page);
+      } else if (tabName === 'admin') {
+        loadAdminNotifications(state.admin.page);
       }
-    } catch (error) {
-      console.error('加載到貨通知失敗:', error);
-      loadingEl.style.display = 'none';
-      listContainer.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>加載失敗，請刷新重試</p></div>';
-    } finally {
-      state.stock.loading = false;
     }
-  }
 
-  // ==========================================
-  // API 2: 加載管理通知
-  // ==========================================
-  async function loadAdminNotifications(page) {
-    if (state.admin.loading) return;
-    state.admin.loading = true;
-    state.admin.page = page;
+    // ==========================================
+    // API 1: 加載到貨通知
+    // ==========================================
+    async function loadStockNotifications(page) {
+      if (state.stock.loading) return;
+      state.stock.loading = true;
+      state.stock.page = page;
 
-    const listContainer = document.getElementById('admin-list-container');
-    const loadingEl = document.getElementById('admin-loading');
-    const emptyEl = document.getElementById('admin-empty');
-    const paginationEl = document.getElementById('admin-pagination');
+      const listContainer = document.getElementById('stock-list-container');
+      const loadingEl = document.getElementById('stock-loading');
+      const emptyEl = document.getElementById('stock-empty');
+      const paginationEl = document.getElementById('stock-pagination');
 
-    listContainer.innerHTML = '';
-    emptyEl.style.display = 'none';
-    paginationEl.innerHTML = '';
-    loadingEl.style.display = 'block';
+      listContainer.innerHTML = '';
+      emptyEl.style.display = 'none';
+      paginationEl.innerHTML = '';
+      loadingEl.style.display = 'block';
 
-    try {
-      const response = await fetch(`/api/notifications/admin?page=${page}&size=${state.admin.size}`);
-      const data = await response.json();
+      try {
+        const response = await fetch(`/api/notifications/stock?page=${page}&size=${state.stock.size}`);
+        const data = await response.json();
 
-      loadingEl.style.display = 'none';
+        loadingEl.style.display = 'none';
 
-      if (!data.content || data.content.length === 0) {
-        emptyEl.style.display = 'block';
-      } else {
-        let html = '';
-        data.content.forEach(notif => {
-          const isUnread = !notif.read ? 'unread' : '';
-          const dateStr = formatDate(notif.createdAt);
-          const status = data.notificationStatusMap ? data.notificationStatusMap[notif.notificationId] : null;
-          const appeal = data.appealDataMap ? data.appealDataMap[notif.notificationId] : null;
-          const appealCount = data.appealCountMap ? data.appealCountMap[notif.notificationId] : 0;
+        if (!data.content || data.content.length === 0) {
+          emptyEl.style.display = 'block';
+          // 即使沒有數據，如果總頁數大於0（理論上不會），也渲染分頁，否則清空
+          if (data.totalPages > 0) {
+            renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'stock');
+          }
+        } else {
+          let html = '';
+          data.content.forEach(receipt => {
+            const unreadFlag = (receipt.read === false || receipt.isRead === false);
+            const isUnreadClass = unreadFlag ? 'unread' : '';
+            const dateStr = formatDate(receipt.createdAt);
+            const announcement = receipt.announcement || {};
 
-          html += buildAdminNotifCard(notif, status, appeal, appealCount, dateStr, isUnread);
-        });
-        listContainer.innerHTML = html;
-
-        renderPagination(paginationEl, data.currentPage, data.totalPages, 'admin');
+            html += `
+            <div class="notification-card stock-notif ${isUnreadClass}">
+                <div class="notif-header">
+                    <div class="notif-title">
+                        <i class="fas fa-bell" style="color: var(--gold);"></i>
+                        <span>${escapeHtml(announcement.title || '到貨通知')}</span>
+                    </div>
+                    <div class="notif-date">${dateStr}</div>
+                </div>
+                <div class="notif-content">${escapeHtml(announcement.content || '')}</div>
+                <div class="stock-info">
+                    <strong><i class="fas fa-box-open"></i> 商品資訊</strong>
+                    <a href="/product/${announcement.targetId}" class="product-name" onclick="clearStockNotification(event, ${announcement.targetId})">
+                        <i class="fas fa-external-link-alt" style="font-size: 0.8rem; margin-right: 0.3rem;"></i> 點擊查看商品詳情
+                    </a>
+                    <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                        <span class="stock-count"><i class="fas fa-check-circle"></i> 庫存充足，立即搶購！</span>
+                    </div>
+                </div>
+            </div>`;
+          });
+          listContainer.innerHTML = html;
+          renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'stock');
+        }
+      } catch (error) {
+        console.error('加載失敗:', error);
+        loadingEl.style.display = 'none';
+        listContainer.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>加載失敗，請刷新重試</p></div>';
+      } finally {
+        state.stock.loading = false;
       }
-    } catch (error) {
-      console.error('加載管理通知失敗:', error);
-      loadingEl.style.display = 'none';
-      listContainer.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>加載失敗，請刷新重試</p></div>';
-    } finally {
-      state.admin.loading = false;
     }
-  }
 
-  // ==========================================
-  // 輔助函數：構建管理通知卡片 HTML
-  // (完整還原原 Thymeleaf 模板的複雜邏輯)
-  // ==========================================
-  function buildAdminNotifCard(notif, status, appeal, appealCount, dateStr, isUnreadClass) {
-    let html = `
+    // ==========================================
+    // API 2: 加載管理通知
+    // ==========================================
+    async function loadAdminNotifications(page) {
+      if (state.admin.loading) return;
+      state.admin.loading = true;
+      state.admin.page = page;
+
+      const listContainer = document.getElementById('admin-list-container');
+      const loadingEl = document.getElementById('admin-loading');
+      const emptyEl = document.getElementById('admin-empty');
+      const paginationEl = document.getElementById('admin-pagination');
+
+      listContainer.innerHTML = '';
+      emptyEl.style.display = 'none';
+      paginationEl.innerHTML = '';
+      loadingEl.style.display = 'block';
+
+      try {
+        const response = await fetch(`/api/notifications/admin?page=${page}&size=${state.admin.size}`);
+        const data = await response.json();
+
+        loadingEl.style.display = 'none';
+
+        if (!data.content || data.content.length === 0) {
+          emptyEl.style.display = 'block';
+          if (data.totalPages > 0) {
+            renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'admin');
+          }
+        } else {
+          let html = '';
+          data.content.forEach(notif => {
+            const unreadFlag = (notif.read === false || notif.isRead === false);
+            const isUnreadClass = unreadFlag ? 'unread' : '';
+            const dateStr = formatDate(notif.createdAt);
+            const status = data.notificationStatusMap ? data.notificationStatusMap[notif.notificationId] : null;
+            const appeal = data.appealDataMap ? data.appealDataMap[notif.notificationId] : null;
+            const appealCount = data.appealCountMap ? data.appealCountMap[notif.notificationId] : 0;
+            html += buildAdminNotifCard(notif, status, appeal, appealCount, dateStr, isUnreadClass);
+          });
+          listContainer.innerHTML = html;
+          renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'admin');
+        }
+      } catch (error) {
+        console.error('加載失敗:', error);
+        loadingEl.style.display = 'none';
+        listContainer.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>加載失敗，請刷新重試</p></div>';
+      } finally {
+        state.admin.loading = false;
+      }
+    }
+
+    // ==========================================
+    // 輔助函數：構建管理通知卡片
+    // ==========================================
+    function buildAdminNotifCard(notif, status, appeal, appealCount, dateStr, isUnreadClass) {
+      let html = `
         <div class="notification-card ${isUnreadClass}">
             <div class="notif-header">
                 <div class="notif-title">
@@ -444,28 +587,25 @@
             </div>
             <div class="notif-content">${escapeHtml(notif.content || '')}</div>`;
 
-    // 違規內容預覽
-    if (notif.deleteReason || (notif.title && notif.title.includes('禁言'))) {
-      html += `
+      if (notif.deleteReason || (notif.title && notif.title.includes('禁言'))) {
+        html += `
             <div class="violation-content-box">
                 <div class="violation-label"><i class="fas fa-quote-left"></i> 違規內容：</div>
                 <div class="violation-text">${escapeHtml(notif.deletedContent || '無記錄')}</div>
             </div>`;
-    }
+      }
 
-    // === 禁言通知專屬樣式 ===
-    if (notif.title && notif.title.includes('禁言')) {
-      html += `
+      if (notif.title && notif.title.includes('禁言')) {
+        html += `
             <div class="delete-reason-box" style="background: #fff3cd; border-color: #ffc107;">
                 <strong><i class="fas fa-gavel"></i> 禁言詳情：</strong>
                 ${notif.deleteReason ? `<p style="margin:0.5rem 0;"><strong>原因：</strong><span>${escapeHtml(notif.deleteReason)}</span></p>` : ''}
                 <div style="margin-top: 1rem;">${getPenaltyStatusHtml(status, appeal, notif.notificationId, 'BAN')}</div>
             </div>`;
-    }
+      }
 
-    // === 永久拉黑通知專屬樣式 ===
-    if (notif.title && notif.title.includes('永久拉黑') && notif.deleteReason) {
-      html += `
+      if (notif.title && notif.title.includes('永久拉黑') && notif.deleteReason) {
+        html += `
             <div class="delete-reason-box" style="background: #f8d7da; border-color: #dc3545; padding: 1.5rem;">
                 <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.8rem;">
                     <i class="fas fa-user-slash" style="color: #dc3545;"></i> 永久拉黑详情：
@@ -473,31 +613,26 @@
                 <p style="margin: 0.5rem 0; color: #721c24;"><strong>原因：</strong><span>${escapeHtml(notif.deleteReason)}</span></p>
                 <div style="margin-top: 1.5rem;">${getPenaltyStatusHtml(status, appeal, notif.notificationId, 'BLACKLIST', appealCount)}</div>
             </div>`;
-    }
+      }
 
-    // === 一般刪除評論通知 ===
-    if (notif.deleteReason && (!notif.title || (!notif.title.includes('禁言') && !notif.title.includes('永久拉黑')))) {
-      html += `
+      if (notif.deleteReason && (!notif.title || (!notif.title.includes('禁言') && !notif.title.includes('永久拉黑')))) {
+        html += `
             <div class="delete-reason-box">
                 <strong><i class="fas fa-exclamation-triangle"></i> 管理員處理原因：</strong>
                 <p style="margin:0;">${escapeHtml(notif.deleteReason)}</p>
             </div>`;
+      }
+
+      html += `</div>`;
+      return html;
     }
 
-    html += `</div>`; // End card
-    return html;
-  }
+    function getPenaltyStatusHtml(status, appeal, notifId, type, appealCount = 0) {
+      if (!status) return '';
 
-  // ==========================================
-  // 輔助函數：根據狀態生成對應的 HTML 片段
-  // ==========================================
-  function getPenaltyStatusHtml(status, appeal, notifId, type, appealCount = 0) {
-    if (!status) return '';
-
-    // 情況 1: SHOW_APPEAL_BTN (未申訴且仍在處罰期)
-    if (status === 'SHOW_APPEAL_BTN') {
-      const msg = type === 'BLACKLIST' ? '您已被永久拉黑，如有异议可提交申诉。' : '您目前處於禁言狀態，如有異議可提交申訴。';
-      return `
+      if (status === 'SHOW_APPEAL_BTN') {
+        const msg = type === 'BLACKLIST' ? '您已被永久拉黑，如有异议可提交申诉。' : '您目前處於禁言狀態，如有異議可提交申訴。';
+        return `
             <div style="display: flex; align-items: center; justify-content: space-between; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; padding: 0.8rem 1rem;">
                 <div style="color: #856404; font-size: 0.95rem;">
                     <i class="fas fa-exclamation-circle" style="margin-right: 0.5rem;"></i> ${msg}
@@ -507,11 +642,10 @@
                     <i class="fas fa-file-alt"></i> 提交申訴
                 </button>
             </div>`;
-    }
+      }
 
-    // 情況 2: APPEAL_PENDING
-    if (status === 'APPEAL_PENDING') {
-      return `
+      if (status === 'APPEAL_PENDING') {
+        return `
             <div class="appeal-info-box pending">
                 <div class="appeal-label"><i class="fas fa-hourglass-half"></i> 申訴審核中</div>
                 <div class="appeal-content">
@@ -522,12 +656,11 @@
                     <i class="fas fa-info-circle"></i> 管理員正在審核中，請耐心等待。
                 </div>
             </div>`;
-    }
+      }
 
-    // 情況 3: APPEAL_APPROVED
-    if (status === 'APPEAL_APPROVED') {
-      const successMsg = type === 'BLACKLIST' ? '您的申诉已通过，永久拉黑已解除。' : '您的申訴已通過，禁言處罰已提前解除。';
-      return `
+      if (status === 'APPEAL_APPROVED') {
+        const successMsg = type === 'BLACKLIST' ? '您的申诉已通过，永久拉黑已解除。' : '您的申訴已通過，禁言處罰已提前解除。';
+        return `
             <div class="appeal-info-box approved">
                 <div class="appeal-label"><i class="fas fa-check-circle"></i> 申訴成功！</div>
                 <div class="appeal-content">
@@ -543,16 +676,14 @@
                     <i class="fas fa-check-circle"></i> ${successMsg}
                 </div>
             </div>`;
-    }
+      }
 
-    // 情況 4: APPEAL_REJECTED
-    if (status === 'APPEAL_REJECTED') {
-      let extraHtml = '';
-      // 如果是 BLACKLIST 且被駁回，需要顯示剩餘次數和再次申訴按鈕
-      if (type === 'BLACKLIST') {
-        const remaining = 3 - appealCount;
-        if (remaining > 0) {
-          extraHtml = `
+      if (status === 'APPEAL_REJECTED') {
+        let extraHtml = '';
+        if (type === 'BLACKLIST') {
+          const remaining = 3 - appealCount;
+          if (remaining > 0) {
+            extraHtml = `
                     <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px dashed #f5c6cb; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap;">
                         <span style="font-size: 0.9rem; color: #721c24; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center;">
                             <span>(您還有</span>
@@ -564,23 +695,22 @@
                             <i class="fas fa-redo"></i> 再次申訴
                         </button>
                     </div>`;
-        } else {
-          extraHtml = `
+          } else {
+            extraHtml = `
                     <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px dashed #f5c6cb; text-align: center;">
                         <span style="font-size: 0.9rem; color: #721c24;">
                             <i class="fas fa-exclamation-triangle"></i> 管理員維持原判，您已用盡申訴機會。
                         </span>
                     </div>`;
-        }
-      } else {
-        // BAN 被駁回
-        extraHtml = `
+          }
+        } else {
+          extraHtml = `
                 <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #721c24;">
                     <i class="fas fa-exclamation-triangle"></i> 管理員維持原判，請遵守社區規範。
                 </div>`;
-      }
+        }
 
-      return `
+        return `
             <div class="appeal-info-box rejected">
                 <div class="appeal-label"><i class="fas fa-times-circle"></i> 申訴被駁回</div>
                 <div class="appeal-content">
@@ -594,183 +724,163 @@
                 </div>` : ''}
                 ${extraHtml}
             </div>`;
-    }
+      }
 
-    // 情況 5: EXPIRED_NO_APPEAL
-    if (status === 'EXPIRED_NO_APPEAL') {
-      return `
+      if (status === 'EXPIRED_NO_APPEAL') {
+        return `
             <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 0.8rem 1rem; color: #6c757d; font-size: 0.95rem;">
                 <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
                 禁言期已滿，您的帳戶已自動恢復正常。
             </div>`;
-    }
+      }
 
-    // 情況 6: REVOKED_NO_APPEAL
-    if (status === 'REVOKED_NO_APPEAL') {
-      return `
+      if (status === 'REVOKED_NO_APPEAL') {
+        return `
             <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 0.8rem 1rem; color: #0c5460; font-size: 0.95rem; font-weight: 500;">
                 <i class="fas fa-user-shield" style="margin-right: 0.5rem;"></i>
                 <strong>處罰已撤銷。</strong> 管理員已為您提前解除禁言。
             </div>`;
-    }
-
-    return '';
-  }
-
-  // ==========================================
-  // 輔助函數：渲染智能分頁
-  // ==========================================
-  function renderPagination(container, currentPage, totalPages, type) {
-    if (!container || totalPages <= 1) {
-      if(container) container.innerHTML = '';
-      return;
-    }
-
-    let html = '';
-    // 上一頁
-    if (currentPage > 0) {
-      html += `<button class="page-btn" onclick="load${type === 'stock' ? 'Stock' : 'Admin'}Notifications(${currentPage - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
-    } else {
-      html += `<button class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
-    }
-
-    // 智能頁碼算法 (與後端 generateSmartPagination 保持一致)
-    // 由於後端已經返回了 smartPages 結構，但為了減少傳輸數據量，這裡我們直接用 JS 復現同樣的算法
-    // 或者如果您希望完全依賴後端，可以在 API 返回中加入 smartPages 數組
-    // 這裡為了穩妥，直接在 JS 端計算 (邏輯與後端 PageController 一致)
-
-    const pages = [];
-    if (totalPages <= 7) {
-      for (let i = 0; i < totalPages; i++) pages.push(i);
-    } else {
-      pages.push(0); // 第一頁
-      if (currentPage > 3) pages.push(-1); // 省略號
-
-      const start = Math.max(1, currentPage - 1);
-      const end = Math.min(totalPages - 2, currentPage + 1);
-      for (let i = start; i <= end; i++) pages.push(i);
-
-      if (currentPage < totalPages - 3) pages.push(-1); // 省略號
-      pages.push(totalPages - 1); // 最後一頁
-    }
-
-    pages.forEach(p => {
-      if (p === -1) {
-        html += `<span class="page-ellipsis">...</span>`;
-      } else {
-        const isActive = p === currentPage ? 'active' : '';
-        const funcName = type === 'stock' ? 'loadStockNotifications' : 'loadAdminNotifications';
-        html += `<button class="page-btn ${isActive}" onclick="${funcName}(${p})">${p + 1}</button>`;
       }
-    });
-
-    // 下一頁
-    if (currentPage < totalPages - 1) {
-      html += `<button class="page-btn" onclick="load${type === 'stock' ? 'Stock' : 'Admin'}Notifications(${currentPage + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
-    } else {
-      html += `<button class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
+      return '';
     }
 
-    container.innerHTML = html;
-  }
+    // ==========================================
+    // 核心：渲染智能分頁 (1-based, 依賴後端 smartPages, 居中)
+    // ==========================================
+    function renderPagination(container, currentPage, totalPages, smartPages, type) {
+      if (!container) return;
 
-  // ==========================================
-  // 工具函數
-  // ==========================================
-  function formatDate(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
+      // 如果沒有分頁數據，清空容器
+      if (!smartPages || smartPages.length === 0 || totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+      }
 
-  function escapeHtml(text) {
-    if (!text) return '';
-    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-    return text.replace(/[&<>"']/g, m => map[m]);
-  }
+      // 使用 pagination-wrapper 類來實現居中 (CSS 在 sidebar.css 中定義)
+      let html = '<div class="pagination-wrapper">';
 
-  // ==========================================
-  // 申訴模態框邏輯 (保持原有功能)
-  // ==========================================
-  function openAppealModal(notificationId, appealType) {
-    document.getElementById('appealNotificationId').value = notificationId;
-    document.getElementById('appealType').value = appealType;
-    document.getElementById('appealReason').value = '';
-    document.getElementById('appealModal').style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-  }
-
-  function closeAppealModal() {
-    document.getElementById('appealModal').style.display = 'none';
-    document.body.style.overflow = '';
-  }
-
-  async function submitAppeal(event) {
-    event.preventDefault();
-    const notificationId = document.getElementById('appealNotificationId').value;
-    const reason = document.getElementById('appealReason').value.trim();
-    const appealType = document.getElementById('appealType').value;
-
-    if (!reason) { showNotification('❌ 請填寫申訴原因', true); return; }
-
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
-
-    try {
-      const response = await fetch('/api/appeal/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationId, reason, appealType })
-      });
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        showNotification('✅ ' + result.message);
-        closeAppealModal();
-        // 提交成功後，重新加載當前頁的管理通知以顯示最新的「審核中」狀態
-        loadAdminNotifications(state.admin.page);
+      // 1. 上一頁按鈕
+      if (currentPage > 1) {
+        html += `<button class="page-btn" onclick="load${type === 'stock' ? 'Stock' : 'Admin'}Notifications(${currentPage - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
       } else {
-        showNotification('❌ ' + (result.message || '提交失敗'), true);
-        submitBtn.disabled = false;
+        html += `<button class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+      }
+
+      // 2. 智能頁碼 (直接使用後端返回的 smartPages)
+      // 刪除了原有的 else 兜底邏輯，完全信任後端數據
+      if (smartPages && smartPages.length > 0) {
+        smartPages.forEach(item => {
+          if (item.ellipsis) {
+            html += `<span class="page-ellipsis">...</span>`;
+          } else {
+            // item.pageNumber 是 1-based，currentPage 也是 1-based，直接比較
+            const isActive = item.pageNumber === currentPage ? 'active' : '';
+            const funcName = type === 'stock' ? 'loadStockNotifications' : 'loadAdminNotifications';
+            html += `<button class="page-btn ${isActive}" onclick="${funcName}(${item.pageNumber})">${item.pageNumber}</button>`;
+          }
+        });
+      }
+
+      // 3. 下一頁按鈕
+      if (currentPage < totalPages) {
+        html += `<button class="page-btn" onclick="load${type === 'stock' ? 'Stock' : 'Admin'}Notifications(${currentPage + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
+      } else {
+        html += `<button class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
+      }
+
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    // ==========================================
+    // 工具函數
+    // ==========================================
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // ==========================================
+    // 申訴模態框邏輯
+    // ==========================================
+    function openAppealModal(notificationId, appealType) {
+      document.getElementById('appealNotificationId').value = notificationId;
+      document.getElementById('appealType').value = appealType;
+      document.getElementById('appealReason').value = '';
+      document.getElementById('appealModal').style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeAppealModal() {
+      document.getElementById('appealModal').style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    async function submitAppeal(event) {
+      event.preventDefault();
+      const notificationId = document.getElementById('appealNotificationId').value;
+      const reason = document.getElementById('appealReason').value.trim();
+      const appealType = document.getElementById('appealType').value;
+
+      if (!reason) {showNotification('❌ 請填寫申訴原因', true); return;}
+
+      const submitBtn = event.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+
+      try {
+        const response = await fetch('/api/appeal/submit', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({notificationId, reason, appealType})
+        });
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          showNotification('✅ ' + result.message);
+          closeAppealModal();
+          loadAdminNotifications(state.admin.page);
+        } else {
+          showNotification('❌ ' + (result.message || '提交失敗'), true);
+          submitBtn.innerHTML = originalText;
+        }
+      } catch (error) {
+        console.error('提交申訴錯誤:', error);
+        showNotification('❌ 網絡錯誤，請稍後重試', true);
         submitBtn.innerHTML = originalText;
       }
-    } catch (error) {
-      console.error('提交申訴錯誤:', error);
-      showNotification('❌ 網絡錯誤，請稍後重試', true);
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = originalText;
     }
-  }
 
-  document.getElementById('appealModal')?.addEventListener('click', function (e) {
-    if (e.target === this) closeAppealModal();
-  });
+    document.getElementById('appealModal')?.addEventListener('click', function (e) {
+      if (e.target === this) closeAppealModal();
+    });
 
-  /**
-   * 點擊查看詳情時，異步清除 stock_notification 記錄
-   */
-  function clearStockNotification(event, productId) {
-    if (typeof isLoggedIn !== 'undefined' && isLoggedIn) {
-      const url = `/api/stock-notification/clear-on-view/${productId}`;
-      fetch(url, {
-        method: 'DELETE',
-        keepalive: true,
-        credentials: 'same-origin'
-      }).catch(err => console.error('清除到貨通知記錄失敗:', err));
+    function clearStockNotification(event, productId) {
+      if (typeof isLoggedIn !== 'undefined' && isLoggedIn) {
+        const url = `/api/stock-notification/clear-on-view/${productId}`;
+        fetch(url, {
+          method: 'DELETE',
+          keepalive: true,
+          credentials: 'same-origin'
+        }).catch(err => console.error('清除記錄失敗:', err));
+      }
     }
-  }
 
-  // ==========================================
-  // 頁面初始化
-  // ==========================================
-  document.addEventListener('DOMContentLoaded', function () {
-    // 默認加載到貨通知
-    loadStockNotifications(0);
-  });
+    // ==========================================
+    // 頁面初始化
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function () {
+      loadStockNotifications(1);
+    });
 
-</script>
+  </script>
 </body>
+
 </html>

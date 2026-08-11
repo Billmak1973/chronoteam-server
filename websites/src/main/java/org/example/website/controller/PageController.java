@@ -52,6 +52,7 @@ public class PageController {
     private final AnnouncementReceiptRepository announcementReceiptRepository;
     private final OrderRepository orderRepository;
     private final SystemConfigService systemConfigService;
+    private final ReviewRepository reviewRepository;
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
@@ -65,9 +66,9 @@ public class PageController {
                           AppealRepository appealRepository,
                           SecurityQuestionRepository securityQuestionRepository,
                           AdminPenaltyRepository adminPenaltyRepository,
-                          AdminPenaltyService adminPenaltyService,SystemConfigService systemConfigService,
+                          AdminPenaltyService adminPenaltyService, SystemConfigService systemConfigService,
                           CartService cartService, ProductService productService, AnnouncementReceiptRepository announcementReceiptRepository,
-                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository) {
+                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository) {
         this.userService = userService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -88,6 +89,7 @@ public class PageController {
         this.announcementReceiptRepository = announcementReceiptRepository;
         this.orderRepository = orderRepository;
         this.systemConfigService = systemConfigService; // 新增賦值
+        this.reviewRepository = reviewRepository;
     }
 
     @GetMapping("/")
@@ -148,52 +150,175 @@ public class PageController {
     }
 
     @GetMapping("/about")
-    public String about() {
+    public String about(Model model) {
+        // 【新增】獲取並傳遞卡片邊框主題 (day 或 night) 到前端
+        // 確保 about 頁面也能讀取全局主題設置，保持全站視覺一致性
+        String cardTheme = siteSettingService.getCardBorderTheme();
+        model.addAttribute("cardTheme", cardTheme);
+
         return "about";
     }
+
+//    @GetMapping("/about")
+//    public String about() {
+//        return "about";
+//    }
 
     @GetMapping("/authentication")
     public String authentication() {
         return "authentication";
     }
 
+
+    /**
+     * 頁面骨架渲染（僅傳遞配置參數，訂單數據由下方 API 異步加載）
+     */
     @GetMapping("/account/orders")
     public String myOrders(Model model, Authentication authentication) {
         String username = authentication.getName();
         User user = userService.findByUsername(username);
-        List<Order> orders = orderService.getUserOrders(username);
-
-        // 【修改点 1】：待付款（仅包含线上支付 PayPal/信用卡，且状态为 UNPAID）
-        List<Order> unpaidOrders = orders.stream()
-                .filter(order -> "PAYPAL_SIM".equals(order.getPaymentMethod()) &&
-                        order.getPaymentStatus() == Order.PaymentStatus.UNPAID)
-                .collect(Collectors.toList());
-
-        // 【修改点 2】：新增待线下付款列表（支付方式为 OFFLINE_STORE 且状态为 PENDING_OFFLINE）
-        List<Order> pendingOfflineOrders = orders.stream()
-                .filter(order -> "OFFLINE_STORE".equals(order.getPaymentMethod()) &&
-                        order.getPaymentStatus() == Order.PaymentStatus.PENDING_OFFLINE)
-                .collect(Collectors.toList());
-
-        // 已支付订单逻辑保持不变
-        List<Order> paidOrders = orders.stream()
-                .filter(order -> order.getPaymentStatus() == Order.PaymentStatus.PAID_SIMULATED ||
-                        order.getPaymentStatus() == Order.PaymentStatus.PAID_REAL ||
-                        order.getPaymentStatus() == Order.PaymentStatus.PAID_OFFLINE)
-                .collect(Collectors.toList());
 
         model.addAttribute("user", user);
-        model.addAttribute("unpaidOrders", unpaidOrders);
-        model.addAttribute("pendingOfflineOrders", pendingOfflineOrders); // 【修改点 3】：传入新列表
-        model.addAttribute("paidOrders", paidOrders);
         model.addAttribute("returnDays", systemConfigService.getReturnDays());
         model.addAttribute("exchangeDays", systemConfigService.getExchangeDays());
 
         return "orders";
     }
 
+    /**
+     * 【API】獲取待付款訂單（分頁 + 數據清洗）
+     */
+    @GetMapping("/api/account/orders/unpaid")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getUnpaidOrders(
+            @RequestParam(defaultValue = "1") int page,
+            Authentication authentication) {
+        String username = authentication.getName();
+        int zeroBasedPage = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(zeroBasedPage, 25);
+
+        Page<Order> orderPage = orderRepository.findUnpaidOrders(username, pageable);
+
+        // 核心修復：手動清洗數據，避免 LazyInitializationException 和循環引用
+        List<Map<String, Object>> cleanOrders = orderPage.getContent().stream().map(order -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("orderNo", order.getOrderNo());
+            map.put("totalAmount", order.getTotalAmount());
+            map.put("paymentMethod", order.getPaymentMethod());
+            map.put("paymentStatus", order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null);
+            map.put("status", order.getStatus() != null ? order.getStatus().name() : null);
+            map.put("createdAt", order.getCreatedAt());
+            map.put("paidAt", order.getPaidAt());
+            map.put("receivedAt", order.getReceivedAt());
+
+            // 安全提取關聯對象字段（避免 LAZY 代理序列化）
+            if (order.getOfflineStore() != null) {
+                Map<String, Object> storeMap = new HashMap<>();
+                storeMap.put("name", order.getOfflineStore().getName());
+                storeMap.put("address", order.getOfflineStore().getAddress());
+                map.put("offlineStore", storeMap);
+            } else {
+                map.put("offlineStore", null);
+            }
+
+            return map;
+        }).collect(Collectors.toList());
+
+        //  使用清洗後的數據構建響應，而非原始 Entity
+        Map<String, Object> response = PaginationUtils.buildPageResponse(orderPage, cleanOrders);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 【API】獲取待線下付款訂單（分頁 + 數據清洗）
+     */
+    @GetMapping("/api/account/orders/pending-offline")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getPendingOfflineOrders(
+            @RequestParam(defaultValue = "1") int page,
+            Authentication authentication) {
+        String username = authentication.getName();
+        int zeroBasedPage = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(zeroBasedPage, 25);
+
+        Page<Order> orderPage = orderRepository.findPendingOfflineOrders(username, pageable);
+
+        //  核心修復：手動清洗數據
+        List<Map<String, Object>> cleanOrders = orderPage.getContent().stream().map(order -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("orderNo", order.getOrderNo());
+            map.put("totalAmount", order.getTotalAmount());
+            map.put("paymentMethod", order.getPaymentMethod());
+            map.put("paymentStatus", order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null);
+            map.put("status", order.getStatus() != null ? order.getStatus().name() : null);
+            map.put("createdAt", order.getCreatedAt());
+            map.put("paidAt", order.getPaidAt());
+            map.put("receivedAt", order.getReceivedAt());
+
+            // 待線下付款訂單必然關聯店鋪，但仍做 null 防護
+            if (order.getOfflineStore() != null) {
+                Map<String, Object> storeMap = new HashMap<>();
+                storeMap.put("name", order.getOfflineStore().getName());
+                storeMap.put("address", order.getOfflineStore().getAddress());
+                map.put("offlineStore", storeMap);
+            } else {
+                map.put("offlineStore", null);
+            }
+
+            return map;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> response = PaginationUtils.buildPageResponse(orderPage, cleanOrders);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 【API】獲取已支付訂單（分頁 + 數據清洗）
+     */
+    @GetMapping("/api/account/orders/paid")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getPaidOrders(
+            @RequestParam(defaultValue = "1") int page,
+            Authentication authentication) {
+        String username = authentication.getName();
+        int zeroBasedPage = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(zeroBasedPage, 25);
+
+        Page<Order> orderPage = orderRepository.findPaidOrders(username, pageable);
+
+        //  核心修復：手動清洗數據
+        List<Map<String, Object>> cleanOrders = orderPage.getContent().stream().map(order -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("orderNo", order.getOrderNo());
+            map.put("totalAmount", order.getTotalAmount());
+            map.put("paymentMethod", order.getPaymentMethod());
+            map.put("paymentStatus", order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null);
+            map.put("status", order.getStatus() != null ? order.getStatus().name() : null);
+            map.put("createdAt", order.getCreatedAt());
+            map.put("paidAt", order.getPaidAt());
+            map.put("receivedAt", order.getReceivedAt());
+
+            // 已支付訂單可能來自線上或線下，安全提取店鋪信息
+            if (order.getOfflineStore() != null) {
+                Map<String, Object> storeMap = new HashMap<>();
+                storeMap.put("name", order.getOfflineStore().getName());
+                storeMap.put("address", order.getOfflineStore().getAddress());
+                map.put("offlineStore", storeMap);
+            } else {
+                map.put("offlineStore", null);
+            }
+
+            return map;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> response = PaginationUtils.buildPageResponse(orderPage, cleanOrders);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/sell-guide")
-    public String sellGuide() {
+    public String sellGuide(Model model) {
+        String cardTheme = siteSettingService.getCardBorderTheme();
+        model.addAttribute("cardTheme", cardTheme);
         return "sell-guide";
     }
 
@@ -372,18 +497,153 @@ public class PageController {
     }
 
     @GetMapping("/account/reviews")
-    public String myReviewsPage(Model model, Authentication authentication) {
-        // 這裡不需要傳太多數據，因為前端會通過 AJAX 加載
+    public String myReviewsPage(Model model,
+                                Authentication authentication,
+                                @RequestParam(defaultValue = "1") int page, // 1-based
+                                @RequestParam(defaultValue = "MY") String type) {
+
         String username = authentication.getName();
-
-        // 【修改處 1】：使用 UserService 獲取 User 實體
         User user = userService.findByUsername(username);
-
-        // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
         model.addAttribute("user", user);
-        return "reviews"; // 對應 templates/reviews.html
+
+        // ==========================================
+        // 核心邏輯：使用 PaginationUtils 進行後端分頁
+        // ==========================================
+        int pageSize = 30;
+        // Spring Data 需要 0-based，所以這裡 page - 1
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page - 1, pageSize);
+
+        List<Map<String, Object>> cleanReviews = new java.util.ArrayList<>();
+        int totalPages = 1;
+        long totalElements = 0;
+        // 用於存儲最終的分頁數據結構
+        List<PaginationUtils.PageItem> smartPages = new java.util.ArrayList<>();
+
+        try {
+            switch (type) {
+                case "REPLY":
+                    // 回復我的
+                    var replyPage = reviewRepository.findByReplyToUserAndUser_UsernameNotOrderByCreatedAtDesc(username, username, pageable);
+                    cleanReviews = convertReviewsToMap(replyPage.getContent());
+                    totalPages = replyPage.getTotalPages();
+                    totalElements = replyPage.getTotalElements();
+                    // 使用工具類生成智能分頁 (傳入 0-based 的 page number)
+                    smartPages = PaginationUtils.generateSmartPagination(replyPage.getNumber(), totalPages);
+                    break;
+
+                case "MENTION":
+                    // @ 提到我的
+                    var mentionPage = reviewRepository.findMentions("@" + username, username, pageable);
+                    cleanReviews = convertReviewsToMap(mentionPage.getContent());
+                    totalPages = mentionPage.getTotalPages();
+                    totalElements = mentionPage.getTotalElements();
+                    smartPages = PaginationUtils.generateSmartPagination(mentionPage.getNumber(), totalPages);
+                    break;
+
+                case "LIKED_BY_ME":
+                    // 我點贊的
+                    var likedByMePage = reviewRepository.findReviewsLikedByMe(username, pageable);
+                    cleanReviews = convertReviewsToMap(likedByMePage.getContent());
+                    totalPages = likedByMePage.getTotalPages();
+                    totalElements = likedByMePage.getTotalElements();
+                    smartPages = PaginationUtils.generateSmartPagination(likedByMePage.getNumber(), totalPages);
+                    break;
+
+                case "LIKED_ME":
+                    // 點贊我的 (特殊處理：Repository 返回 Object[])
+                    // findLikesOnMyReviews 返回 Page<Object[]> -> [Review, likerUsername, likeTime]
+                    var likesPage = reviewRepository.findLikesOnMyReviews(username, username, pageable);
+
+                    for (Object[] row : likesPage.getContent()) {
+                        Review r = (Review) row[0];
+                        String likerUsername = (String) row[1];
+                        java.time.LocalDateTime likeTime = (java.time.LocalDateTime) row[2];
+
+                        Map<String, Object> map = new java.util.HashMap<>();
+                        map.put("id", r.getReviewId());
+                        map.put("content", r.getContent());
+                        map.put("createdAt", r.getCreatedAt());
+                        map.put("updatedAt", likeTime); // 點贊時間
+                        map.put("rating", r.getRating());
+                        map.put("likeCount", r.getLikeCount());
+                        map.put("parentId", r.getParentId());
+                        map.put("replyToUser", r.getReplyToUser());
+
+                        // 點贊者信息
+                        map.put("customer", java.util.Map.of("username", likerUsername));
+
+                        // 商品信息
+                        if (r.getProduct() != null) {
+                            map.put("product", java.util.Map.of(
+                                    "id", r.getProduct().getProductId(),
+                                    "desc", r.getProduct().getDescription(),
+                                    "image", r.getProduct().getImage()
+                            ));
+                        }
+                        cleanReviews.add(map);
+                    }
+
+                    totalPages = likesPage.getTotalPages();
+                    totalElements = likesPage.getTotalElements();
+                    smartPages = PaginationUtils.generateSmartPagination(likesPage.getNumber(), totalPages);
+                    break;
+
+                case "MY":
+                default:
+                    // 我的評論
+                    var myPage = reviewRepository.findByUser_UsernameOrderByCreatedAtDesc(username, pageable);
+                    cleanReviews = convertReviewsToMap(myPage.getContent());
+                    totalPages = myPage.getTotalPages();
+                    totalElements = myPage.getTotalElements();
+                    smartPages = PaginationUtils.generateSmartPagination(myPage.getNumber(), totalPages);
+                    break;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 容錯：如果出錯，保持空列表，分頁設為默認
+            smartPages = PaginationUtils.generateSmartPagination(0, 1);
+        }
+
+        // ==========================================
+        // 傳遞數據給 Thymeleaf
+        // ==========================================
+        model.addAttribute("reviews", cleanReviews);
+        model.addAttribute("currentPage", page); // 保持 1-based 給前端
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalElements", totalElements);
+        model.addAttribute("smartPages", smartPages);
+        model.addAttribute("currentType", type);
+
+        return "reviews";
     }
 
+    // 輔助方法：將 Review 列表轉換為 Map 列表 (避免 LazyInitializationException)
+    private List<Map<String, Object>> convertReviewsToMap(List<Review> reviews) {
+        List<Map<String, Object>> list = new java.util.ArrayList<>();
+        for (Review r : reviews) {
+            Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", r.getReviewId());
+            map.put("content", r.getContent());
+            map.put("createdAt", r.getCreatedAt());
+            map.put("rating", r.getRating());
+            map.put("likeCount", r.getLikeCount());
+            map.put("parentId", r.getParentId());
+            map.put("replyToUser", r.getReplyToUser());
+
+            if (r.getProduct() != null) {
+                map.put("product", java.util.Map.of(
+                        "id", r.getProduct().getProductId(),
+                        "desc", r.getProduct().getDescription(),
+                        "image", r.getProduct().getImage()
+                ));
+            }
+            if (r.getUser() != null) {
+                map.put("customer", java.util.Map.of("username", r.getUser().getUsername()));
+            }
+            list.add(map);
+        }
+        return list;
+    }
 
     /**
      * 渲染通知頁面骨架 (不再加載任何數據，交由前端 AJAX 處理)
@@ -398,11 +658,12 @@ public class PageController {
 
     /**
      * 【API 1】獲取到貨通知列表 (獨立數據源: AnnouncementReceipt)
+     * 修改：支持 1-based 分頁
      */
     @GetMapping("/api/notifications/stock")
     @ResponseBody
     public ResponseEntity<?> getStockNotifications(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page, // 改為默認 1
             @RequestParam(defaultValue = "25") int size,
             Authentication authentication) {
 
@@ -410,7 +671,10 @@ public class PageController {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // 核心修改：前端傳入 1-based，JPA 需要 0-based，所以這裡 page - 1
+        // 同時防止 page < 1 的情況
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         // 查詢到貨通知
         Page<AnnouncementReceipt> receiptPage = announcementReceiptRepository
@@ -421,18 +685,25 @@ public class PageController {
         announcementReceiptRepository.markAllAsReadByUserAndType(user.getId(), Announcement.AnnouncementType.STOCK);
 
         // 使用 PaginationUtils 構建標準分頁響應
+        // PaginationUtils 內部會處理 smartPages 的生成 (它通常期望 0-based 的 currentPage 來計算，但返回的 pageNumber 是 1-based)
+        // 如果 PaginationUtils.buildPageResponse 內部使用的是 page.getNumber() (0-based)，則直接傳入 receiptPage 即可
         Map<String, Object> response = PaginationUtils.buildPageResponse(receiptPage, receiptPage.getContent());
+
+        // 確保返回給前端的 currentPage 是 1-based (方便前端直接用)
+        // 如果 PaginationUtils 已經處理了，這行可選；如果沒處理，手動覆蓋一下
+        response.put("currentPage", page);
 
         return ResponseEntity.ok(response);
     }
 
     /**
      * 【API 2】獲取管理通知列表 (獨立數據源: Notification + AdminPenalty + Appeal)
+     * 修改：支持 1-based 分頁
      */
     @GetMapping("/api/notifications/admin")
     @ResponseBody
     public ResponseEntity<?> getAdminNotifications(
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "1") int page, // 改為默認 1
             @RequestParam(defaultValue = "25") int size,
             Authentication authentication) {
 
@@ -440,7 +711,9 @@ public class PageController {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // 核心修改：1-based 轉 0-based
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
         // 查詢系統管理通知
         Page<Notification> notifPage = notificationRepository.findByTypeAndRecipient_UsernameOrderByCreatedAtDesc(
@@ -481,7 +754,6 @@ public class PageController {
                     if (penaltyOpt.isPresent()) {
                         AdminPenalty penalty = penaltyOpt.get();
                         adminPenaltyService.checkAndUpdatePenaltyStatus(penalty.getPenaltyId());
-                        // 重新獲取最新狀態
                         penalty = adminPenaltyRepository.findById(penalty.getPenaltyId()).orElse(null);
 
                         if (penalty != null) {
@@ -507,6 +779,9 @@ public class PageController {
         extraData.put("appealCountMap", appealCountMap);
 
         Map<String, Object> response = PaginationUtils.buildPageResponse(notifPage, adminNotifications, extraData);
+
+        // 確保返回給前端的 currentPage 是 1-based
+        response.put("currentPage", page);
 
         return ResponseEntity.ok(response);
     }
@@ -604,6 +879,7 @@ public class PageController {
 
         return "stock-notifications";
     }
+
     @DeleteMapping("/api/stock-notification/unsubscribe-by-id/{id}")
     public ResponseEntity<?> unsubscribeById(@PathVariable Long id, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -621,110 +897,46 @@ public class PageController {
         return ResponseEntity.badRequest().body(ApiResponse.error("找不到該訂閱記錄"));
     }
 
+
+
     @GetMapping("/account/blocked-users")
-    public String blockedUsers(Model model, Authentication authentication) {
+    public String blockedUsers(Model model,
+                               Authentication authentication,
+                               @RequestParam(defaultValue = "1") int page) { // 1. 接收頁碼，默認第1頁
+
         String username = authentication.getName();
 
         // 【修改處 1】：使用 UserService 獲取 User 實體
         User user = userService.findByUsername(username);
 
-        // 查詢當前用戶禁言的所有記錄
-        List<UserBlock> blockedUsers = userBlockRepository.findByBlocker_Username(username);
+        // 2. 構建分頁請求 (前端傳入 1-based，Spring Data 需要 0-based)
+        // 假設每頁顯示 10 條記錄
+        int pageSize = 10;
+        int pageIndex = Math.max(0, page - 1);
+        org.springframework.data.domain.Pageable pageable =
+                org.springframework.data.domain.PageRequest.of(pageIndex, pageSize);
 
-        // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
+        // 3. 調用 Repository 進行分頁查詢
+        org.springframework.data.domain.Page<UserBlock> blockedUsersPage =
+                userBlockRepository.findByBlocker_Username(username, pageable);
+
+        // 4. 使用 PaginationUtils 構建標準分頁響應
+        // 這裡不需要 extraData，所以調用重載方法或傳入 null
+        Map<String, Object> pageData = PaginationUtils.buildPageResponse(blockedUsersPage, blockedUsersPage.getContent());
+
+        // 5. 將數據傳遞給前端
         model.addAttribute("user", user);
-        model.addAttribute("blockedUsers", blockedUsers);
+
+        // 傳遞列表內容
+        model.addAttribute("blockedUsers", pageData.get("content"));
+
+        // 傳遞分頁相關變量 (供 Thymeleaf 渲染分頁組件使用)
+        model.addAttribute("currentPage", page); // 保持 1-based 給前端顯示
+        model.addAttribute("totalPages", pageData.get("totalPages"));
+        model.addAttribute("totalElements", pageData.get("totalElements"));
+        model.addAttribute("smartPages", pageData.get("smartPages"));
+
         return "blocked-users";
-    }
-
-
-    /**
-     * 購物車頁面 (支援分頁 + 日期分組)
-     * 【重構】：利用 PaginationUtils 統一生成智能分頁列表
-     */
-    @GetMapping("/cart/view")
-    public String viewCartPage(
-            @RequestParam(defaultValue = "1") int page, // 當前頁碼 (1-based)
-            Model model,
-            Authentication authentication) {
-
-        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
-            return "redirect:/";
-        }
-
-        String username = authentication.getName();
-        User user = userService.findByUsername(username);
-        model.addAttribute("user", user);
-
-        // 1. 獲取所有購物車數據
-        List<Cart> allCartItems = cartService.getCartItems(username);
-        long cartCount = cartService.getCartCount(username);
-
-        // 2. 計算總價 (基於所有選中商品，不受分頁影響，符合電商常規邏輯)
-        double totalAmount = allCartItems.stream()
-                .filter(Cart::getSelected)
-                .mapToDouble(item -> item.getPrice().doubleValue() * item.getQuantity())
-                .sum();
-
-        // ================= 核心修正：分頁 + 按日期分組 =================
-        int size = 20; // 每頁只加載 20 條數據
-        int totalElements = allCartItems.size();
-        int totalPages = (int) Math.ceil((double) totalElements / size);
-
-        // 防止頁碼越界 (確保 page 在 1 到 totalPages 之間)
-        if (page < 1) page = 1;
-        if (totalPages > 0 && page > totalPages) page = totalPages;
-
-        // 3. 先對所有商品按時間倒序排序
-        allCartItems.sort(Comparator.comparing(Cart::getCreatedAt).reversed());
-
-        // 4. 截取當前頁的數據
-        int fromIndex = (page - 1) * size;
-        int toIndex = Math.min(fromIndex + size, totalElements);
-        List<Cart> pagedCartItems = (totalElements > 0) ? allCartItems.subList(fromIndex, toIndex) : new ArrayList<>();
-
-        // 5. 【關鍵】僅對【當前頁的數據】進行日期分組
-        // 這樣即使分頁切斷了同一天的商品，當前頁也能正確顯示它所包含的日期標題，不會錯亂
-        Map<String, List<Cart>> groupedPagedCartItems = pagedCartItems.stream()
-                .collect(Collectors.groupingBy(
-                        item -> {
-                            LocalDate date = item.getCreatedAt().toLocalDate();
-                            LocalDate today = LocalDate.now();
-                            if (date.getYear() == today.getYear() && date.getMonth() == today.getMonth()) {
-                                return date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-                            } else if (date.getYear() == today.getYear()) {
-                                return date.format(DateTimeFormatter.ofPattern("yyyy-MM"));
-                            } else {
-                                return String.valueOf(date.getYear());
-                            }
-                        },
-                        () -> new TreeMap<String, List<Cart>>(Comparator.reverseOrder()),
-                        Collectors.collectingAndThen(
-                                Collectors.toList(),
-                                (List<Cart> list) -> {
-                                    list.sort(Comparator.comparing(Cart::getCreatedAt).reversed());
-                                    return list;
-                                }
-                        )
-                ));
-
-        // 6. 【核心重構】：利用 PaginationUtils 生成智能分頁列表
-        // 注意：PaginationUtils.generateSmartPagination 接收的是 0-based 的 currentPage
-        // 而這裡的 page 變量是 1-based，所以需要傳入 page - 1
-        List<PaginationUtils.PageItem> smartPages = PaginationUtils.generateSmartPagination(page - 1, totalPages);
-
-        // 傳遞分頁後的數據給前端
-        model.addAttribute("cartItems", pagedCartItems);
-        model.addAttribute("groupedCartItems", groupedPagedCartItems);
-        model.addAttribute("totalAmount", totalAmount);
-        model.addAttribute("cartCount", cartCount);
-
-        // 傳遞分頁相關變量
-        model.addAttribute("currentPage", page); // 保持 1-based 給前端 Thymeleaf 使用
-        model.addAttribute("totalPages", totalPages);
-        model.addAttribute("smartPages", smartPages); // 傳遞智能分頁列表
-
-        return "cart-detail";
     }
 
     /**

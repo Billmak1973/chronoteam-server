@@ -577,8 +577,9 @@ const ReplySection = ({
                                         <div className="reply-header">
                                             <div className="reply-user">
                                                 <strong>{reply.customer.username}</strong>
-                                                {reply.replyToUser && <span className="reply-to"> 回復 @{reply.replyToUser}</span>}
+                                                {/* 將 "我" 的徽章移到 "回復 @..." 之前，緊貼用戶名 */}
                                                 {reply.customer.username === currentUsername && <span className="reply-badge">我</span>}
+                                                {reply.replyToUser && <span className="reply-to"> 回復 @{reply.replyToUser}</span>}
                                             </div>
                                             <div className="reply-date">{formatDate(reply.createdAt)}</div>
                                         </div>

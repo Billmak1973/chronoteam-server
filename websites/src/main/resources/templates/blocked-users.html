@@ -16,6 +16,8 @@
             margin: 2rem auto;
             padding: 0 1rem;
             gap: 2rem;
+            /* 【新增】確保子元素拉伸，讓 main-content 撐滿高度 */
+            align-items: stretch;
         }
 
         .main-content {
@@ -24,6 +26,10 @@
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             padding: 2.5rem;
+
+            /* 【核心修改 1】：啟用 Flex 佈局，垂直排列 */
+            display: flex;
+            flex-direction: column;
         }
 
         .page-title {
@@ -52,6 +58,8 @@
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            /* 【核心修改 2】：讓列表區域佔滿中間空間 */
+            flex: 1;
         }
 
         .blocked-row {
@@ -61,7 +69,6 @@
             background: #f8f9fa;
             border: 1px solid #e9ecef;
             border-left: 4px solid var(--accent);
-            /* 左側紅色邊框代表禁言狀態 */
             border-radius: 8px;
             padding: 1rem 1.5rem;
             transition: all 0.3s;
@@ -71,7 +78,6 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             transform: translateX(5px);
             border-left-color: var(--gold);
-            /* 懸停時變為金色 */
         }
 
         .user-info {
@@ -124,10 +130,17 @@
             color: white;
         }
 
+        /* 【核心修改 3】：讓空狀態也佔滿空間並居中 */
         .empty-state {
             text-align: center;
             padding: 4rem 2rem;
             color: var(--gray);
+            flex: 1;
+            /* 關鍵：佔滿空間 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         .empty-state i {
@@ -135,12 +148,184 @@
             color: #ddd;
             margin-bottom: 1rem;
         }
+
+
         .footer {
             background: var(--primary);
             color: rgba(255, 255, 255, 0.7);
             padding: 2rem;
             text-align: center;
             margin-top: 3rem;
+        }
+
+        /* ========================================== */
+        /*   解除禁言彈窗樣式 (精美版) */
+        /* ========================================== */
+        .unblock-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .unblock-modal-box {
+            background: white;
+            width: 90%;
+            max-width: 420px;
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-top: 5px solid var(--gold);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 頂部裝飾光暈 */
+        .unblock-modal-box::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .unblock-icon {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 1.5rem;
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(0, 188, 212, 0.2);
+            animation: iconPulse 2s infinite;
+        }
+
+        .unblock-icon i {
+            font-size: 2rem;
+            color: #00acc1;
+        }
+
+        .unblock-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .unblock-content p {
+            color: var(--gray);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .unblock-hint {
+            background: #f8f9fa;
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border: 1px dashed #dee2e6;
+        }
+
+        .unblock-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .btn-unblock-cancel,
+        .btn-unblock-confirm {
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .btn-unblock-cancel {
+            background: #f1f3f5;
+            color: var(--primary);
+        }
+
+        .btn-unblock-cancel:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .btn-unblock-confirm {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-unblock-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        /* 動畫定義 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes iconPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
         }
     </style>
 </head>
@@ -156,7 +341,8 @@
             <p class="page-subtitle">以下是您已禁言的用戶，雙方將無法在評論區互相回覆。</p>
 
             <!--  列表區域 (行的方式) -->
-            <div class="blocked-list" th:if="${blockedUsers != null and !blockedUsers.isEmpty()}">
+            <!-- 注意：這裡不需要額外的 div 包裹，因為 .blocked-list 已經設為 flex: 1 -->
+            <div class="blocked-list" th:if="${totalElements > 0}">
                 <div class="blocked-row" th:each="block : ${blockedUsers}">
                     <div class="user-info">
                         <div class="user-avatar">
@@ -179,12 +365,56 @@
             </div>
 
             <!-- 空狀態 -->
-            <div th:if="${blockedUsers == null or blockedUsers.isEmpty()}" class="empty-state">
+            <!-- 注意：.empty-state 已經設為 flex: 1，會自動填滿中間空白 -->
+            <div th:if="${totalElements == 0}" class="empty-state">
                 <i class="fas fa-shield-alt"></i>
                 <h3>您還沒有禁言任何用戶</h3>
                 <p>當您在評論區禁言某人後，他們將會出現在這裡。</p>
             </div>
+
+            <!-- ========================================== -->
+            <!--  引入智能分頁組件 (引用文件 1) -->
+            <!-- 由於 .main-content 是 flex column，且上面的列表/空狀態是 flex: 1 -->
+            <!-- 這個分頁器會自動被推到最底部 -->
+            <!-- ========================================== -->
+            <div
+                th:replace="~{fragments/pagination :: smartPagination(${currentPage}, ${totalPages}, ${smartPages}, 'changePage')}">
+            </div>
+
         </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!--  解除禁言確認彈窗 (精美版) -->
+    <!-- ========================================== -->
+    <div id="unblockModal" class="unblock-modal-overlay" style="display: none;">
+        <div class="unblock-modal-box">
+            <!-- 頂部圖標 -->
+            <div class="unblock-icon">
+                <i class="fas fa-unlock-alt"></i>
+            </div>
+
+            <!-- 標題 -->
+            <h3 class="unblock-title">解除禁言確認</h3>
+
+            <!-- 內容 -->
+            <div class="unblock-content">
+                <p>確定要解除對用戶 <strong id="unblockTargetName" style="color: var(--accent);">User</strong> 的禁言嗎？</p>
+                <div class="unblock-hint">
+                    <i class="fas fa-info-circle"></i> 解除後，雙方將恢復在評論區的互相回覆權限。
+                </div>
+            </div>
+
+            <!-- 按鈕區域 -->
+            <div class="unblock-actions">
+                <button class="btn-unblock-cancel" onclick="closeUnblockModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-unblock-confirm" id="confirmUnblockBtn" onclick="executeUnblock()">
+                    <i class="fas fa-check"></i> 確認解除
+                </button>
+            </div>
+        </div>
     </div>
 
     <footer class="footer">
@@ -194,55 +424,126 @@
 
     <div th:replace="~{fragments/common :: modals}"></div>
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
     <script src="/js/common.js"></script>
 
     <script>
+        // ==========================================
+        //  新增：分頁跳轉函數 (供 Fragment 調用)
+        // ==========================================
+        function changePage(page) {
+            // 跳轉到當前 URL 並帶上新的 page 參數
+            window.location.href = '/account/blocked-users?page=' + page;
+        }
+
         //  修復：從 data-* 屬性讀取用戶名
-        async function unblockUser(btn) {
+        // ==========================================
+        //  全局變量：存儲當前要操作的按鈕和用戶名
+        // ==========================================
+        let currentUnblockBtn = null;
+        let currentUnblockUsername = null;
+
+        // 1. 點擊按鈕時觸發：打開彈窗 (不再直接執行刪除)
+        function unblockUser(btn) {
+            // 從 data-* 屬性讀取用戶名
             const targetUsername = btn.getAttribute('data-username');
 
-            if (!confirm(`確定要解除對 "${targetUsername}" 的禁言嗎？\n解除後雙方將可以互相回覆。`)) return;
+            // 保存當前上下文
+            currentUnblockBtn = btn;
+            currentUnblockUsername = targetUsername;
 
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+            // 更新彈窗中的用戶名顯示
+            document.getElementById('unblockTargetName').textContent = targetUsername;
+
+            // 顯示彈窗
+            const modal = document.getElementById('unblockModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            }
+        }
+
+        // 2. 關閉彈窗
+        function closeUnblockModal() {
+            const modal = document.getElementById('unblockModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = ''; // 恢復背景滾動
+            }
+            // 清空上下文
+            currentUnblockBtn = null;
+            currentUnblockUsername = null;
+        }
+
+        // 3. 點擊彈窗中的「確認解除」按鈕時執行
+        async function executeUnblock() {
+            if (!currentUnblockBtn || !currentUnblockUsername) return;
+
+            const btn = currentUnblockBtn;
+            const targetUsername = currentUnblockUsername;
 
             try {
-                // 調用你現有的 UserBlockController 中的 unblock 接口
+                // 調用後端接口
                 const response = await fetch(`/api/user/${targetUsername}/unblock`, {
                     method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: {'Content-Type': 'application/json'}
                 });
                 const result = await response.json();
 
                 if (response.ok && result.success) {
+                    // 1. 先關閉彈窗
+                    closeUnblockModal();
+
+                    // 2. 顯示成功提示
                     showNotification('✅ ' + result.message);
-                    // 優雅地移除該行 (動畫效果)
+
+                    // 3. 優雅地移除該行 (動畫效果)
                     const row = btn.closest('.blocked-row');
-                    row.style.transition = 'all 0.4s ease';
-                    row.style.opacity = '0';
-                    row.style.transform = 'translateX(50px)';
-                    setTimeout(() => {
-                        row.remove();
-                        // 如果列表空了，刷新頁面顯示空狀態
-                        if (document.querySelectorAll('.blocked-row').length === 0) {
+                    if (row) {
+                        row.style.transition = 'all 0.4s ease';
+                        row.style.opacity = '0';
+                        row.style.transform = 'translateX(50px)';
+
+                        setTimeout(() => {
+                            row.remove();
+                            // 無論是否為空，都刷新頁面以確保分頁組件和數據狀態最新
+                            // (如果您希望不刷新，可以保留之前的判斷邏輯，但刷新是最穩妥的)
                             setTimeout(() => location.reload(), 500);
-                        }
-                    }, 400);
+                        }, 400);
+                    } else {
+                        // 如果找不到 DOM 元素，直接刷新
+                        setTimeout(() => location.reload(), 500);
+                    }
                 } else {
+                    // 失敗處理：關閉彈窗並報錯
+                    closeUnblockModal();
                     showNotification('❌ ' + (result.message || '解除失敗'), true);
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
                 }
             } catch (error) {
                 console.error('解除禁言錯誤:', error);
+                closeUnblockModal();
                 showNotification('❌ 網絡錯誤', true);
-                btn.disabled = false;
-                btn.innerHTML = originalText;
             }
         }
+
+        // 4. 點擊遮罩層也可以關閉彈窗
+        document.addEventListener('click', function (e) {
+            const modal = document.getElementById('unblockModal');
+            if (modal && e.target === modal) {
+                closeUnblockModal();
+            }
+        });
+
+        // 5. ESC 鍵關閉彈窗
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('unblockModal');
+                if (modal && modal.style.display === 'flex') {
+                    closeUnblockModal();
+                }
+            }
+        });
     </script>
 </body>
 

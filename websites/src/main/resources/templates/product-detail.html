@@ -1325,6 +1325,51 @@
             color: white !important;
         }
 
+        /* ========================================== */
+        /*  修復：樓中樓解除禁言按鈕樣式 (強制覆蓋灰色背景) */
+        /* ========================================== */
+        .reply-action-btn.btn-unblock {
+            /* 1. 強制使用綠色漸變背景 */
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+
+            /* 2. 強制白色文字 */
+            color: white !important;
+
+            /* 3. 移除基礎樣式帶來的灰色邊框 */
+            border: none !important;
+
+            /* 4. 確保字體清晰 */
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            /* 增加一點文字陰影讓白字更清晰 */
+
+            /* 5. 保持與其他按鈕一致的內邊距和圓角 */
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+
+            /* 6. 陰影效果 */
+            box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+
+            /* 佈局修正 */
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        /* 鼠標懸停效果 (Hover) */
+        .reply-action-btn.btn-unblock:hover {
+            background: linear-gradient(135deg, #218838 0%, #1ea980 100%) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
+            color: white !important;
+            /* 再次確保 hover 時文字不變色 */
+        }
+
+        /* 圖標顏色修正 */
+        .reply-action-btn.btn-unblock i {
+            color: white !important;
+        }
+
         /* === 樓中樓動畫效果 === */
         .reply-action-btn.btn-like:active,
         .reply-action-btn.btn-dislike:active {
@@ -3854,11 +3899,11 @@
     <!-- 1. 統一在這裡獲取所有 Thymeleaf 後端變量 -->
     <!-- ========================================== -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-        const currentProductId = [[${ product.productId }]];
-        const currentUsername = [[${ #authentication.name }]];
-        const isAdmin = [[${ #authentication.name == 'admin' }]];
-        const currentStock = [[${ product.stock }]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        const currentProductId = [[${product.productId}]];
+        const currentUsername = [[${#authentication.name}]];
+        const isAdmin = [[${#authentication.name == 'admin'}]];
+        const currentStock = [[${product.stock}]];
     </script>
 
     <script src="/js/common.js"></script>
@@ -3995,7 +4040,7 @@
             }
 
             try {
-                const response = await fetch(url, { method: 'POST', credentials: 'same-origin' });
+                const response = await fetch(url, {method: 'POST', credentials: 'same-origin'});
                 const result = await response.json();
                 if (response.ok && result.success) {
                     if (typeof showNotification === 'function') {
@@ -4004,7 +4049,7 @@
                         alert('✅ ' + result.message);
                     }
                     closeBlacklistConfirmModal();
-                    setTimeout(() => { window.location.reload(); }, 1000);
+                    setTimeout(() => {window.location.reload();}, 1000);
                 } else {
                     if (typeof showNotification === 'function') {
                         showNotification('❌ ' + (result.message || '操作失敗'), true);
@@ -4187,16 +4232,16 @@
 
         // 定義舉報分類與原因映射
         const reportConfig = {
-            "ILLEGAL": { label: "違法信息", reasons: ["开盒挂人", "售卖个人信息", "涉枪爆刀", "毒品", "赌博", "假证假票", "售卖考试答案", "其他违禁品"] },
-            "PORNOGRAPHY": { label: "色情低俗", reasons: ["色情引流", "低俗信息", "招嫖信息", "色情图文", "头像昵称违规"] },
-            "HARMFUL": { label: "有害信息", reasons: ["邪教", "暴恐血腥", "虐杀动物", "其他有害信息"] },
-            "CYBERBULLYING_ME": { label: "網暴信息", reasons: ["網暴我", "網暴他人"] },
-            "PERSONAL_ATTACK": { label: "人身攻擊", reasons: ["不友善言论", "侮辱谩骂", "宣扬仇恨与歧视", "其他攻击行为"] },
-            "CYBER_VIOLENCE": { label: "网络暴力", reasons: ["恶意评价", "拉踩引战", "恶意P图", "侵犯隐私", "造谣爆料", "谩骂"] },
-            "MINOR": { label: "涉及未成年人", reasons: ["低俗软色情", "诱导不良行为", "伤害未成年人"] },
-            "FRAUD": { label: "詐騙信息", reasons: ["兼职诈骗", "票务诈骗", "仿冒他人诈骗", "仿冒我詐騙", "其他诈骗"] },
-            "SPAM": { label: "垃圾行爲或内容", reasons: ["骚扰信息", "虚假互动", "无意义评论", "违规招募", "违规导流", "其他垃圾信息"] },
-            "NOT_INTERESTED": { label: "不感興趣", reasons: ["不喜欢该内容", "观点与我不一致", "引起我的不适"] }
+            "ILLEGAL": {label: "違法信息", reasons: ["开盒挂人", "售卖个人信息", "涉枪爆刀", "毒品", "赌博", "假证假票", "售卖考试答案", "其他违禁品"]},
+            "PORNOGRAPHY": {label: "色情低俗", reasons: ["色情引流", "低俗信息", "招嫖信息", "色情图文", "头像昵称违规"]},
+            "HARMFUL": {label: "有害信息", reasons: ["邪教", "暴恐血腥", "虐杀动物", "其他有害信息"]},
+            "CYBERBULLYING_ME": {label: "網暴信息", reasons: ["網暴我", "網暴他人"]},
+            "PERSONAL_ATTACK": {label: "人身攻擊", reasons: ["不友善言论", "侮辱谩骂", "宣扬仇恨与歧视", "其他攻击行为"]},
+            "CYBER_VIOLENCE": {label: "网络暴力", reasons: ["恶意评价", "拉踩引战", "恶意P图", "侵犯隐私", "造谣爆料", "谩骂"]},
+            "MINOR": {label: "涉及未成年人", reasons: ["低俗软色情", "诱导不良行为", "伤害未成年人"]},
+            "FRAUD": {label: "詐騙信息", reasons: ["兼职诈骗", "票务诈骗", "仿冒他人诈骗", "仿冒我詐騙", "其他诈骗"]},
+            "SPAM": {label: "垃圾行爲或内容", reasons: ["骚扰信息", "虚假互动", "无意义评论", "违规招募", "违规导流", "其他垃圾信息"]},
+            "NOT_INTERESTED": {label: "不感興趣", reasons: ["不喜欢该内容", "观点与我不一致", "引起我的不适"]}
         };
 
         let selectedCategory = null;
@@ -4292,7 +4337,7 @@
 
             document.getElementById('agreementSection').style.display = 'none';
             document.getElementById('submitReportBtn').disabled = true;
-            reasonSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            reasonSection.scrollIntoView({behavior: 'smooth', block: 'nearest'});
         }
 
         function renderReasons(reasons) {
@@ -4312,7 +4357,7 @@
             btnElement.classList.add('selected');
             selectedReason = reasonText;
             document.getElementById('agreementSection').style.display = 'block';
-            document.getElementById('agreementSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            document.getElementById('agreementSection').scrollIntoView({behavior: 'smooth', block: 'nearest'});
         }
 
         document.getElementById('reportAgreement').addEventListener('change', function () {
@@ -4338,13 +4383,11 @@
             const submitBtn = document.getElementById('submitReportBtn');
             const originalText = submitBtn.innerHTML;
 
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 提交中...';
 
             try {
                 const response = await fetch('/api/report/submit', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         reviewId: reviewId || null,
                         reportedUsername: reportedUsername,
@@ -4391,13 +4434,12 @@
                             alert('❌ ' + (result.message || '提交失敗'));
                         }
                     }
-                    submitBtn.disabled = false;
+
                     submitBtn.innerHTML = originalText;
                 }
             } catch (error) {
                 console.error('舉報錯誤:', error);
                 alert('❌ 網絡錯誤');
-                submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
         }
@@ -4538,7 +4580,7 @@
                     successMsg = '✅ 訂閱成功！到貨後將第一時間通知您！';
                 }
 
-                const res = await fetch(url, { method: method });
+                const res = await fetch(url, {method: method});
                 const data = await res.json();
 
                 if (data.success) {
@@ -4566,7 +4608,7 @@
                 if (isConfirmed) {
                     const notifyBtn = document.getElementById('notifyBtn'); // 修復：直接用 ID 獲取
                     if (notifyBtn) {
-                        notifyBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        notifyBtn.scrollIntoView({behavior: 'smooth', block: 'center'});
                         notifyBtn.style.boxShadow = "0 0 15px var(--accent)";
                         notifyBtn.style.transition = "box-shadow 0.5s ease";
                         setTimeout(() => {
@@ -4636,11 +4678,9 @@
             const btn = document.getElementById('sendNotifyBtn');
             const originalText = btn.innerHTML;
 
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
 
             try {
-                const res = await fetch(`/api/stock-notification/notify/${productId}`, { method: 'POST' });
+                const res = await fetch(`/api/stock-notification/notify/${productId}`, {method: 'POST'});
                 const data = await res.json();
 
                 if (data.success) {
@@ -4650,12 +4690,10 @@
                     loadNotificationStatus();
                 } else {
                     showNotification('❌ ' + data.message, true);
-                    btn.disabled = false;
                     btn.innerHTML = originalText;
                 }
             } catch (e) {
                 showNotification('❌ 網絡錯誤', true);
-                btn.disabled = false;
                 btn.innerHTML = originalText;
             }
         }
@@ -4685,10 +4723,6 @@
 
             const submitBtn = event.target.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
-
-            // 显示加载状态
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
 
             // 收集表单数据
             const formData = {
@@ -4721,13 +4755,11 @@
                     }, 1000);
                 } else {
                     showNotification('❌ ' + (result.message || '修改失败'), true);
-                    submitBtn.disabled = false;
                     submitBtn.innerHTML = originalText;
                 }
             } catch (error) {
                 console.error('保存失败:', error);
                 showNotification('❌ 网络错误，请稍后重试', true);
-                submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
         }

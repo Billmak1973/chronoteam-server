@@ -86,6 +86,123 @@
             color: var(--gray);
         }
 
+        /* ========================================== */
+        /* ========== 夜間模式專屬樣式 (Night Mode) ========== */
+        /* ========================================== */
+
+        /* 【新增】0. 全局夜間背景與基礎文字顏色 */
+        body.night-mode {
+            background: linear-gradient(180deg, #0a0e27 0%, #0f1535 50%, #16213e 100%);
+            background-attachment: fixed;
+            color: #e0e0e0;
+        }
+
+        /* 【新增】容器在夜間模式下不需要額外背景，保持透明 */
+        body.night-mode .container {
+            background: transparent;
+        }
+
+        /* 【新增】CTA 區域文字在夜間模式下的顏色 */
+        body.night-mode .section h2[style*="border: none"] {
+            color: #e0e0e0 !important;
+        }
+
+        /* 1. Hero 區域 - 深邃星空感 */
+        body.night-mode .page-hero {
+            background: linear-gradient(135deg, #0a0e27 0%, #16213e 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Hero 區域星星裝飾 (可選，增加氛圍感) */
+        body.night-mode .page-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(2px 2px at 20px 30px, #ffd700, transparent),
+                radial-gradient(1px 1px at 100px 80px, #00d4ff, transparent),
+                radial-gradient(2px 2px at 200px 50px, #ffd700, transparent);
+            background-repeat: repeat;
+            background-size: 400px 200px;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        body.night-mode .page-hero h1 {
+            background: linear-gradient(to right, #fff, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        body.night-mode .page-hero p {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        /* 2. 容器與文字顏色調整 */
+        body.night-mode .container {
+            background: transparent;
+            /* 確保不會遮擋全局深色背景 */
+        }
+
+        body.night-mode .section h2 {
+            color: #e0e0e0;
+            border-left-color: #00d4ff;
+            /* 夜間使用科技藍作為強調色 */
+        }
+
+        body.night-mode .section p {
+            color: #a0a0a0;
+        }
+
+        /* 3. 核心價值卡片 - 玻璃擬態/深色卡片 */
+        body.night-mode .value-card {
+            background: linear-gradient(135deg, rgba(26, 26, 46, 0.9) 0%, rgba(22, 33, 62, 0.9) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        body.night-mode .value-card:hover {
+            transform: translateY(-5px);
+            border-color: #00d4ff;
+            box-shadow: 0 8px 30px rgba(0, 212, 255, 0.15);
+        }
+
+        body.night-mode .value-card i {
+            color: #00d4ff;
+            /* 圖標改為發光藍 */
+            filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.4));
+        }
+
+        body.night-mode .value-card h3 {
+            color: #ffffff;
+        }
+
+        body.night-mode .value-card p {
+            color: #b0b0b0;
+        }
+
+        /* 4. CTA 按鈕區域適配 */
+        body.night-mode .btn-outline {
+            border-color: #00d4ff;
+            color: #00d4ff;
+        }
+
+        body.night-mode .btn-outline:hover {
+            background: #00d4ff;
+            color: #0a0e27;
+        }
+
+        /* 5. 頁腳適配 (如果全局 common.css 沒覆蓋到的話) */
+        body.night-mode .footer {
+            background: #050814;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
         .footer {
             background: var(--primary);
             color: rgba(255, 255, 255, 0.7);
@@ -96,8 +213,9 @@
     </style>
 </head>
 
-<body>
+<!--<body>-->
 
+<body th:classappend="${cardTheme == 'night'} ? 'night-mode' : ''">
     <!--  3. 引入公共導航欄 (自動包含購物車下拉菜單、登入狀態判斷等) -->
     <div th:replace="~{fragments/common :: navbar}"></div>
 
@@ -158,7 +276,7 @@
 
     <!--  5. 注入登入狀態變量 (必須在 common.js 之前) -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
 
     <!--  6. 引入公共 JS (包含購物車邏輯、彈窗控制、登出等) -->

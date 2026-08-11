@@ -406,10 +406,6 @@
             const btn = document.getElementById(btnId);
             const originalText = btn.innerHTML;
 
-            // 进入 Loading 状态
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
-
             try {
                 const res = await fetch(url, {
                     method: 'POST',

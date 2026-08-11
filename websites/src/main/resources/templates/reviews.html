@@ -9,7 +9,9 @@
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <style>
-        /* 页面布局 */
+        /* ========================================== */
+        /* 1. 頁面佈局 (完全參考禁言名單成功案例) */
+        /* ========================================== */
         .dashboard-container {
             display: flex;
             min-height: calc(100vh - 150px);
@@ -17,6 +19,8 @@
             margin: 2rem auto;
             padding: 0 1rem;
             gap: 2rem;
+            /* 【關鍵】確保子元素拉伸，讓 main-content 撐滿高度 */
+            align-items: stretch;
         }
 
         .main-content {
@@ -25,104 +29,77 @@
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             padding: 2.5rem;
-        }
 
-        /*  核心修改：Sidebar 黏性導航樣式 */
-        .sidebar {
-            width: 280px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            padding: 1.5rem;
-
-            /* === 核心修改開始 === */
-            height: fit-content;
-            /* 讓高度適應內容，避免過長溢出 */
-            position: sticky;
-            /* 啟用黏性定位 */
-            top: 100px;
-            /* 距離頂部 100px 時開始固定 (根據你的 Navbar 高度調整) */
-            max-height: calc(100vh - 120px);
-            /* 防止側邊欄過長溢出屏幕 */
-            overflow-y: auto;
-            /* 如果菜單太多，允許側邊欄內部滾動 */
-            /* === 核心修改結束 === */
-        }
-
-        /* 美化側邊欄內部滾動條 (可選) */
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .sidebar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .sidebar::-webkit-scrollbar-thumb {
-            background: #e9ecef;
-            border-radius: 3px;
-        }
-
-        .sidebar::-webkit-scrollbar-thumb:hover {
-            background: var(--gold);
-        }
-
-        /* Tab 样式 */
-        .tabs {
+            /* 【核心修改 1】：啟用 Flex 佈局，垂直排列 */
             display: flex;
-            border-bottom: 2px solid #e9ecef;
-            margin-bottom: 2rem;
-            gap: 2rem;
+            flex-direction: column;
         }
 
-        .tab-btn {
-            padding: 1rem 0;
-            background: none;
-            border: none;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #6c757d;
-            cursor: pointer;
-            position: relative;
-            transition: color 0.3s;
-        }
-
-        .tab-btn.active {
+        .page-title {
+            font-size: 1.8rem;
             color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            border-bottom: 2px solid var(--light);
+            padding-bottom: 1rem;
         }
 
-        .tab-btn.active::after {
-            content: '';
-            position: absolute;
-            bottom: -2px;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: var(--gold);
-            border-radius: 2px 2px 0 0;
-        }
-
-        .tab-btn:hover {
+        .page-title i {
             color: var(--gold);
         }
 
-        .badge-count {
-            background: var(--accent);
-            color: white;
-            font-size: 0.75rem;
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-left: 5px;
-            vertical-align: middle;
+        .page-subtitle {
+            color: var(--gray);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
         }
 
-        /* 卡片列表样式 (非表格) */
+        /* ========================================== */
+        /* 2. 內容區域修復 (解決包裹層阻擋問題) */
+        /* ========================================== */
+
+        /* 【核心修改 2】：讓 content-area 這個包裹層參與 Flex 佈局並佔滿空間 */
+        /* 注意：這裡絕對不能用 display: contents，否則無法撐開高度 */
+        #content-area {
+            flex: 1;
+            /* 佔滿 main-content 剩餘空間 */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 卡片列表容器 */
         .review-list {
             display: flex;
             flex-direction: column;
             gap: 1rem;
+            /* 【核心修改 3】：讓列表區域佔滿中間空間，把分頁擠下去 */
+            flex: 1;
         }
 
+        /* 空狀態容器 */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--gray);
+            /* 【核心修改 4】：讓空狀態也佔滿空間並居中 */
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: #ddd;
+            margin-bottom: 1rem;
+        }
+
+        /* ========================================== */
+        /* 3. 卡片與其他樣式 (保持不變) */
+        /* ========================================== */
         .review-card {
             background: #f8f9fa;
             border: 1px solid #e9ecef;
@@ -169,15 +146,6 @@
             white-space: pre-wrap;
         }
 
-        .highlight-mention {
-            color: var(--accent);
-            font-weight: 600;
-            background: #fff0f0;
-            padding: 0 2px;
-        }
-
-        /* 高亮 @用户名 */
-
         .card-footer {
             display: flex;
             justify-content: space-between;
@@ -201,7 +169,6 @@
             color: var(--primary);
         }
 
-        /* 删除按钮样式 */
         .btn-delete-review {
             background: transparent;
             color: var(--accent);
@@ -222,72 +189,64 @@
             color: white;
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: var(--gray);
-        }
-
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            color: #ddd;
-        }
-
-        /*  新增：分頁組件樣式 */
-        .pagination-wrapper {
+        /* Tab 下拉菜單 */
+        .tab-dropdown-container {
             display: flex;
-            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            border: 2px solid var(--light);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-dropdown-label {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1rem;
+            display: flex;
             align-items: center;
             gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-top: 2rem;
         }
 
-        .page-btn {
-            padding: 0.5rem 1rem;
-            border: 1px solid #e9ecef;
-            background: white;
-            color: var(--primary);
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            font-weight: 500;
-        }
-
-        .page-btn:hover:not(.disabled):not(.active) {
-            border-color: var(--gold);
+        .tab-dropdown-label i {
             color: var(--gold);
-            background: rgba(212, 175, 55, 0.05);
         }
 
-        .page-btn.active {
-            background: var(--gold);
-            color: white;
+        .tab-dropdown-select {
+            flex: 1;
+            max-width: 400px;
+            padding: 0.8rem 1.2rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--primary);
+            background: white;
+            border: 2px solid var(--gold);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            outline: none;
+            box-shadow: 0 2px 5px rgba(212, 175, 55, 0.1);
+        }
+
+        .tab-dropdown-select:hover {
+            border-color: #b8972b;
+            box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .tab-dropdown-select:focus {
             border-color: var(--gold);
-            font-weight: 600;
-            cursor: default;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
         }
 
-        .page-btn.disabled {
-            color: #ccc;
-            cursor: not-allowed;
-            background: #f8f9fa;
-            border-color: #e9ecef;
+        .tab-dropdown-select option {
+            padding: 0.8rem;
+            font-size: 1rem;
         }
 
-        .page-ellipsis {
-            padding: 0 0.5rem;
-            color: var(--gray);
-            font-weight: bold;
-            letter-spacing: 2px;
-        }
-
-        /* 删除确认弹窗样式 */
+        /* 刪除彈窗 */
         .delete-modal-overlay {
             position: fixed;
             top: 0;
@@ -301,6 +260,10 @@
             justify-content: center;
             align-items: center;
             animation: fadeIn 0.3s ease;
+        }
+
+        .delete-modal-overlay[style*="flex"] {
+            display: flex;
         }
 
         .delete-modal-box {
@@ -427,130 +390,19 @@
             }
         }
 
-        .empty-state {
+        .footer {
+            background: var(--primary);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 2rem;
             text-align: center;
-            padding: 3rem;
-            color: var(--gray);
+            margin-top: 3rem;
         }
 
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            color: #ddd;
-        }
-
-        /*  新增：分頁組件樣式 */
-        .pagination-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-top: 2rem;
-        }
-
-        .page-btn {
-            padding: 0.5rem 1rem;
-            border: 1px solid #e9ecef;
-            background: white;
-            color: var(--primary);
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 0.9rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            font-weight: 500;
-        }
-
-        .page-btn:hover:not(.disabled):not(.active) {
-            border-color: var(--gold);
-            color: var(--gold);
-            background: rgba(212, 175, 55, 0.05);
-        }
-
-        .page-btn.active {
-            background: var(--gold);
-            color: white;
-            border-color: var(--gold);
-            font-weight: 600;
-            cursor: default;
-        }
-
-        .page-btn.disabled {
-            color: #ccc;
-            cursor: not-allowed;
-            background: #f8f9fa;
-            border-color: #e9ecef;
-        }
-
-        .page-ellipsis {
-            padding: 0 0.5rem;
-            color: var(--gray);
-            font-weight: bold;
-            letter-spacing: 2px;
-        }
-
-        /* Tab 下拉菜单样式 */
-        .tab-dropdown-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            padding: 1rem 1.5rem;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 12px;
-            border: 2px solid var(--light);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .tab-dropdown-label {
-            font-weight: 600;
-            color: var(--primary);
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .tab-dropdown-label i {
-            color: var(--gold);
-        }
-
-        .tab-dropdown-select {
-            flex: 1;
-            max-width: 400px;
-            padding: 0.8rem 1.2rem;
-            font-size: 1rem;
-            font-weight: 500;
-            color: var(--primary);
-            background: white;
-            border: 2px solid var(--gold);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            outline: none;
-            box-shadow: 0 2px 5px rgba(212, 175, 55, 0.1);
-        }
-
-        .tab-dropdown-select:hover {
-            border-color: #b8972b;
-            box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
-        }
-
-        .tab-dropdown-select:focus {
-            border-color: var(--gold);
-            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
-        }
-
-        .tab-dropdown-select option {
-            padding: 0.8rem;
-            font-size: 1rem;
-        }
-
-        /* 响应式设计 */
         @media (max-width: 768px) {
+            .dashboard-container {
+                flex-direction: column;
+            }
+
             .tab-dropdown-container {
                 flex-direction: column;
                 align-items: stretch;
@@ -566,13 +418,9 @@
             }
         }
 
-        .footer {
-            background: var(--primary);
-            color: rgba(255, 255, 255, 0.7);
-            padding: 2rem;
-            text-align: center;
-            margin-top: 3rem;
-        }
+        /* ========================================== */
+        /*   分頁組件的 CSS 統統刪除！(由 sidebar.css 提供) */
+        /* ========================================== */
     </style>
 </head>
 
@@ -584,39 +432,122 @@
         <div th:replace="~{fragments/sidebar :: sidebar(activePage='reviews')}"></div>
 
         <main class="main-content">
-            <h2 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fas fa-comments" style="color: var(--gold);"></i> 互動中心
-            </h2>
+            <h2 class="page-title"><i class="fas fa-comments" style="color: var(--gold);"></i> 互動中心</h2>
+            <p class="page-subtitle">查看您的評論互動記錄</p>
 
             <!-- Tab 下拉菜单 -->
             <div class="tab-dropdown-container">
                 <label for="tabSelect" class="tab-dropdown-label">
                     <i class="fas fa-filter"></i> 筛选：
                 </label>
-                <select id="tabSelect" class="tab-dropdown-select" onchange="handleTabChange(this.value)">
-                    <option value="MY" selected>✏️ 我的評論</option>
-                    <option value="REPLY">↩️ 回復我的</option>
-                    <option value="MENTION">@ 提到我的</option>
-                    <option value="LIKED_BY_ME">👍 我的點贊</option>
-                    <option value="LIKED_ME">❤️ 點贊我的</option>
+                <select id="tabSelect" class="tab-dropdown-select" onchange="switchTab(this.value)">
+                    <option value="MY" th:selected="${currentType == 'MY'}">✏️ 我的評論</option>
+                    <option value="REPLY" th:selected="${currentType == 'REPLY'}">↩️ 回復我的</option>
+                    <option value="MENTION" th:selected="${currentType == 'MENTION'}">@ 提到我的</option>
+                    <option value="LIKED_BY_ME" th:selected="${currentType == 'LIKED_BY_ME'}">👍 我的點贊</option>
+                    <option value="LIKED_ME" th:selected="${currentType == 'LIKED_ME'}">❤️ 點贊我的</option>
                 </select>
             </div>
 
             <!-- 内容区域 -->
+            <!-- 【核心修改】：移除 style="display: contents;"，改為由 CSS 控制 flex: 1 -->
             <div id="content-area">
-                <div class="empty-state">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>加載中...</p>
+
+                <!-- 空狀態 -->
+                <div th:if="${#lists.isEmpty(reviews)}" class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h3>暫無數據</h3>
+                    <p>這裡還沒有任何記錄</p>
+                </div>
+
+                <!-- 列表區域 -->
+                <div th:unless="${#lists.isEmpty(reviews)}" class="review-list">
+                    <div th:each="item : ${reviews}" class="review-card">
+                        <!-- 點贊我的特殊樣式 -->
+                        <div th:if="${currentType == 'LIKED_ME'}">
+                            <div
+                                style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(233, 69, 96, 0.1) 100%); padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.8rem; border-left: 4px solid var(--gold);">
+                                <div
+                                    style="display: flex; align-items: center; gap: 0.5rem; color: var(--primary); font-weight: 600;">
+                                    <i class="fas fa-heart" style="color: var(--accent);"></i>
+                                    <span style="color: var(--gold);" th:text="${item.customer.username}">User</span>
+                                    <span style="color: var(--gray); font-weight: 400;">点赞了您的评论</span>
+                                </div>
+                                <div style="margin-top: 0.3rem; font-size: 0.85rem; color: var(--gray);">
+                                    <i class="fas fa-clock"></i> 点赞时间：<span
+                                        th:text="${#temporals.format(item.updatedAt, 'yyyy-MM-dd HH:mm')}">2026-01-01</span>
+                                </div>
+                            </div>
+                            <div
+                                style="background: white; padding: 1rem; border-radius: 8px; border: 1px dashed #e9ecef;">
+                                <div style="font-size: 0.85rem; color: var(--gray); margin-bottom: 0.5rem;">
+                                    <i class="fas fa-quote-left" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                                    您的评论（发表于 <span
+                                        th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}"></span>）：
+                                </div>
+                                <div style="color: var(--primary); line-height: 1.6; font-size: 0.95rem;"
+                                    th:text="${item.content}">Content</div>
+                            </div>
+                        </div>
+
+                        <!-- 其他類型通用樣式 -->
+                        <div th:unless="${currentType == 'LIKED_ME'}">
+                            <div class="card-header">
+                                <div>
+                                    <span class="card-user" th:text="${item.customer.username}">User</span>
+                                    <span th:if="${item.parentId != null}"
+                                        style="background:#e9ecef; padding:2px 6px; border-radius:4px; font-size:0.75rem; margin-left:5px;">樓中樓</span>
+                                    <span style="margin-left:10px; color:#999;"
+                                        th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}">2026-01-01</span>
+                                </div>
+                                <a th:href="@{/product/{id}(id=${item.product.id})}" class="card-product"
+                                    target="_blank">
+                                    <i class="fas fa-link"></i> 查看商品: <span
+                                        th:text="${item.product.desc}">Product</span>
+                                </a>
+                            </div>
+                            <div class="card-content" th:text="${item.content}">Content</div>
+                        </div>
+
+                        <!-- 底部操作欄 -->
+                        <div class="card-footer"
+                            style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px dashed #ddd;">
+                            <a th:href="@{/product/{id}(id=${item.product.id})}" class="card-product" target="_blank"
+                                th:if="${currentType == 'LIKED_ME'}">
+                                <i class="fas fa-link"></i> 商品：<span th:text="${item.product.desc}">Product</span>
+                            </a>
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-left: auto;">
+                                <span
+                                    style="color: var(--gold); font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem;">
+                                    <i class="fas fa-thumbs-up"></i>
+                                    <span th:text="${item.likeCount}">0</span>
+                                </span>
+                                <button class="btn-delete-review" th:onclick="'confirmDelete(' + ${item.id} + ')'">
+                                    <i class="fas fa-trash-alt"></i> 刪除
+                                </button>
+                                <a th:href="@{/product/{id}(id=${item.product.id})}" class="btn-view-detail">
+                                    前往查看 <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!--  新增：分頁組件容器 -->
-            <div id="pagination-area"></div>
+            <!-- ==================== 智能分頁導航 (引用 Fragment) ==================== -->
+            <!-- 由於 .main-content 是 flex column，且上面的 #content-area 是 flex: 1 -->
+            <!-- 這個分頁器會自動被推到最底部 -->
+            <!-- ========================================== -->
+            <div
+                th:replace="~{fragments/pagination :: smartPagination(${currentPage}, ${totalPages}, ${smartPages}, 'goToPage')}">
+            </div>
+            <!-- ====================================================================== -->
+
         </main>
     </div>
 
     <!-- 删除确认弹窗 -->
-    <div id="deleteModal" class="delete-modal-overlay">
+    <div id="deleteModal" class="delete-modal-overlay" style="display: none;">
         <div class="delete-modal-box">
             <div class="delete-modal-icon">
                 <i class="fas fa-exclamation-triangle"></i>
@@ -628,294 +559,44 @@
             </p>
             <div class="delete-modal-actions">
                 <button class="btn-cancel-delete" onclick="closeDeleteModal()">取消</button>
-                <button class="btn-confirm-delete" onclick="confirmDeleteAction()">
+                <button class="btn-confirm-delete" onclick="executeDelete()">
                     <i class="fas fa-trash-alt"></i> 确认删除
                 </button>
             </div>
         </div>
     </div>
 
-
     <footer class="footer">
         <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
             Rights Reserved.</p>
     </footer>
 
-    <!-- 在这里引入公共弹窗 (包含登出、登录、注册等弹窗) -->
     <div th:replace="~{fragments/common :: modals}"></div>
 
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-        const currentUsername = [[${ #authentication.name }]];
-    </script>
-    <script src="/js/common.js"></script>
-    <script>
-        let currentPage = 0; // 當前頁碼 (從 0 開始)
-        let totalPages = 0;  // 總頁數
-        let currentType = 'MY';
-        const pageSize = 30; //  每頁 30 條
-        let deleteReviewId = null; // 存储待删除的评论ID
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        const currentType = [[${currentType}]];
+        let deleteReviewId = null;
 
-        //  新增：標記全部已讀並刷新導航欄紅點
-        async function markAllNotificationsAsRead() {
-            try {
-                const response = await fetch('/api/notifications/read-all', { method: 'PUT' });
-                if (response.ok) {
-                    // 調用 common.js 中暴露的全局函數，立即刷新導航欄的紅點
-                    if (typeof window.refreshNotificationBadge === 'function') {
-                        window.refreshNotificationBadge();
-                    }
-                }
-            } catch (error) {
-                console.error('標記已讀失敗', error);
-            }
+        // ==========================================
+        // 1. Tab 切換邏輯 (URL 跳轉)
+        // ==========================================
+        function switchTab(type) {
+            window.location.href = `/account/reviews?page=1&type=${type}`;
         }
 
-        // 初始化加載
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. 加載列表邏輯 (帶分頁參數)
-            loadData('MY', 0);
-
-            // 2.  核心：進入互動中心頁面時，自動標記全部已讀並消除導航欄紅點
-            markAllNotificationsAsRead();
-        });
-
-        // 处理下拉菜单选择
-        function handleTabChange(type) {
-            currentType = type;
-            currentPage = 0; // 切换时重置到第一页
-
-            // 更新下拉菜单的选中状态（可选的视觉反馈）
-            const select = document.getElementById('tabSelect');
-            select.value = type;
-
-            loadData(type, 0);
+        // ==========================================
+        // 2. 分頁跳轉邏輯 (供 Fragment 調用)
+        // ==========================================
+        function goToPage(page) {
+            window.location.href = `/account/reviews?page=${page}&type=${currentType}`;
         }
 
-        // 保留原来的 switchTab 函数作为兼容（如果其他地方有调用）
-        function switchTab(type, btnElement) {
-            handleTabChange(type);
-        }
-
-        // 加載數據
-        async function loadData(type, page) {
-            currentPage = page;
-            const container = document.getElementById('content-area');
-            container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>加載中...</p></div>';
-
-            // 清空分頁
-            document.getElementById('pagination-area').innerHTML = '';
-
-            try {
-                const response = await fetch(`/api/review/interactions?type=${type}&page=${page}&size=${pageSize}`);
-                const result = await response.json();
-
-                if (result.success && result.data) {
-                    totalPages = result.data.totalPages;
-
-                    if (result.data.content.length > 0) {
-                        renderList(result.data.content, type);
-                        renderPagination(page, totalPages); // 🟢 渲染分頁
-                    } else {
-                        container.innerHTML = `
-                        <div class="empty-state">
-                            <i class="fas fa-inbox"></i>
-                            <h3>暫無數據</h3>
-                            <p>這裡還沒有任何記錄</p>
-                        </div>
-                    `;
-                        // 即使當前頁沒數據，如果總頁數大於1，也保留分頁組件
-                        if (totalPages > 1) renderPagination(page, totalPages);
-                    }
-                } else {
-                    container.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><h3>加載失敗</h3></div>`;
-                }
-            } catch (error) {
-                console.error(error);
-                container.innerHTML = '<div class="empty-state">加載失敗，請刷新重試</div>';
-            }
-        }
-
-        //  核心：渲染智能分頁組件 (第1頁、當前頁+-2、最後一頁)
-        function renderPagination(current, total) {
-            const paginationContainer = document.getElementById('pagination-area');
-            if (!paginationContainer) return;
-
-            if (total <= 1) {
-                paginationContainer.innerHTML = ''; // 只有 1 頁或 0 頁時隱藏分頁
-                return;
-            }
-
-            let html = '<div class="pagination-wrapper">';
-
-            // 上一頁按鈕
-            if (current > 0) {
-                html += `<button class="page-btn" onclick="loadData('${currentType}', ${current - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
-            } else {
-                html += `<button class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
-            }
-
-            // 智能頁碼邏輯：收集需要顯示的頁碼索引
-            let pagesToShow = new Set();
-            pagesToShow.add(0); // 第1頁 (索引0)
-            pagesToShow.add(total - 1); // 最後一頁
-
-            // 當前頁 +-2 頁
-            for (let i = current - 2; i <= current + 2; i++) {
-                if (i >= 0 && i < total) {
-                    pagesToShow.add(i);
-                }
-            }
-
-            // 排序頁碼
-            let sortedPages = Array.from(pagesToShow).sort((a, b) => a - b);
-
-            let lastPage = -1;
-            for (let p of sortedPages) {
-                // 如果頁碼不連續，插入省略號
-                if (p - lastPage > 1) {
-                    html += `<span class="page-ellipsis">...</span>`;
-                }
-                // 渲染頁碼按鈕
-                if (p === current) {
-                    html += `<button class="page-btn active">${p + 1}</button>`;
-                } else {
-                    html += `<button class="page-btn" onclick="loadData('${currentType}', ${p})">${p + 1}</button>`;
-                }
-                lastPage = p;
-            }
-
-            // 下一頁按鈕
-            if (current < total - 1) {
-                html += `<button class="page-btn" onclick="loadData('${currentType}', ${current + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
-            } else {
-                html += `<button class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
-            }
-
-            html += '</div>';
-            paginationContainer.innerHTML = html;
-        }
-
-        // --- 渲染列表 (非表格，使用卡片) ---
-        function renderList(reviews, type) {
-            const container = document.getElementById('content-area');
-            let html = '<div class="review-list">';
-
-            reviews.forEach(item => {
-                // 处理高亮 @用户名
-                let displayContent = item.content;
-                if (type === 'MENTION') {
-                    const regex = new RegExp(`@${currentUsername}`, 'g');
-                    displayContent = displayContent.replace(regex, `<span class="highlight-mention">@${currentUsername}</span>`);
-                }
-
-                // 判断是根评论还是回复
-                let typeLabel = '';
-                if (item.parentId !== null) {
-                    typeLabel = `<span style="background:#e9ecef; padding:2px 6px; border-radius:4px; font-size:0.75rem; margin-right:5px;">樓中樓</span>`;
-                }
-
-                // ========== 修改开始：点赞我的特殊格式 ==========
-                if (type === 'LIKED_ME') {
-                    // 显示：谁点赞了 + 被赞的评论 + 评论时间 + 点赞时间
-                    html += `
-                <div class="review-card">
-                    <!-- 点赞者信息 -->
-                    <div style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(233, 69, 96, 0.1) 100%); padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.8rem; border-left: 4px solid var(--gold);">
-                        <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--primary); font-weight: 600;">
-                            <i class="fas fa-heart" style="color: var(--accent);"></i>
-                            <span style="color: var(--gold);">${item.customer.username}</span>
-                            <span style="color: var(--gray); font-weight: 400;">点赞了您的评论</span>
-                        </div>
-                        <div style="margin-top: 0.3rem; font-size: 0.85rem; color: var(--gray);">
-                            <i class="fas fa-clock"></i> 点赞时间：${formatDate(item.updatedAt || item.createdAt)}
-                        </div>
-                    </div>
-
-                    <!-- 被点赞的评论内容 -->
-                    <div style="background: white; padding: 1rem; border-radius: 8px; border: 1px dashed #e9ecef;">
-                        <div style="font-size: 0.85rem; color: var(--gray); margin-bottom: 0.5rem;">
-                            <i class="fas fa-quote-left" style="color: var(--gold); margin-right: 0.3rem;"></i>
-                            您的评论（发表于 ${formatDate(item.createdAt)}）：
-                        </div>
-                        <div style="color: var(--primary); line-height: 1.6; font-size: 0.95rem;">
-                            ${displayContent}
-                        </div>
-                    </div>
-
-                    <!-- 底部操作栏 -->
-                    <div class="card-footer" style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px dashed #ddd;">
-                        <a href="/product/${item.product.id}" class="card-product" target="_blank">
-                            <i class="fas fa-link"></i> 商品：${item.product.desc}
-                        </a>
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            <span style="color: var(--gold); font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem;">
-                                <i class="fas fa-thumbs-up"></i>
-                                <span>共 ${item.likeCount || 0} 个赞</span>
-                            </span>
-                            <button class="btn-delete-review" onclick="openDeleteModal(${item.id})">
-                                <i class="fas fa-trash-alt"></i> 刪除
-                            </button>
-                            <a href="/product/${item.product.id}" class="btn-view-detail">
-                                前往查看 <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            `;
-                } else {
-                    // ========== 其他类型的原有逻辑 ==========
-                    html += `
-                <div class="review-card">
-                    <div class="card-header">
-                        <div>
-                            <span class="card-user">${item.customer.username}</span>
-                            ${typeLabel}
-                            <span style="margin-left:10px; color:#999;">${formatDate(item.createdAt)}</span>
-                        </div>
-                        <a href="/product/${item.product.id}" class="card-product" target="_blank">
-                            <i class="fas fa-link"></i> 查看商品: ${item.product.desc}
-                        </a>
-                    </div>
-
-                    <div class="card-content">${displayContent}</div>
-
-                    <div class="card-footer">
-                        <span style="font-size:0.85rem; color:#6c757d;">
-                            ${item.replyToUser ? '回復了 @' + item.replyToUser : '發表了評論'}
-                        </span>
-                        <div style="display: flex; align-items: center; gap: 1rem;">
-                            <!-- 点赞数量和图标 -->
-                            <span style="color: var(--gold); font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem;">
-                                <i class="fas fa-thumbs-up"></i>
-                                <span>${item.likeCount || 0}</span>
-                            </span>
-                            <button class="btn-delete-review" onclick="openDeleteModal(${item.id})">
-                                <i class="fas fa-trash-alt"></i> 刪除
-                            </button>
-                            <a href="/product/${item.product.id}" class="btn-view-detail">
-                                前往查看 <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            `;
-                }
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            const date = new Date(dateStr);
-            return date.toLocaleString('zh-TW', { hour12: false });
-        }
-
-        // 删除评论功能
-        function openDeleteModal(reviewId) {
-            deleteReviewId = reviewId;
+        // ==========================================
+        // 3. 刪除邏輯 (AJAX 刪除後刷新頁面)
+        // ==========================================
+        function confirmDelete(id) {
+            deleteReviewId = id;
             document.getElementById('deleteModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
         }
@@ -926,63 +607,38 @@
             deleteReviewId = null;
         }
 
-        async function confirmDeleteAction() {
+        async function executeDelete() {
             if (!deleteReviewId) return;
-
             const btn = document.querySelector('.btn-confirm-delete');
-            btn.disabled = true; // 僅禁用按鈕防止重複點擊，不改變文字
-
             try {
                 const response = await fetch(`/api/review/${deleteReviewId}`, {
                     method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers: {'Content-Type': 'application/json'}
                 });
-
                 const result = await response.json();
 
                 if (response.ok && result.success) {
-                    // 删除成功，关闭弹窗
                     closeDeleteModal();
-
-                    // 显示成功提示
-                    if (typeof showNotification === 'function') {
-                        showNotification('✅ 评论已删除');
-                    }
-
-                    // 重新加载当前列表
-                    loadData(currentType, currentPage);
+                    if (typeof showNotification === 'function') showNotification('✅ 评论已删除');
+                    setTimeout(() => location.reload(), 500);
                 } else {
-                    // 删除失败
-                    if (typeof showNotification === 'function') {
-                        showNotification('❌ ' + (result.message || '删除失败'), true);
-                    }
-                    btn.disabled = false; // 失敗時恢復按鈕可點擊
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '删除失败'), true);
                 }
             } catch (error) {
                 console.error('删除评论错误:', error);
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ 网络错误，请稍后重试', true);
-                }
-                btn.disabled = false; // 報錯時恢復按鈕可點擊
+                if (typeof showNotification === 'function') showNotification('❌ 网络错误，请稍后重试', true);
             }
         }
 
-        // 点击遮罩层关闭弹窗
+        // 事件監聽
         document.getElementById('deleteModal')?.addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeDeleteModal();
-            }
+            if (e.target === this) closeDeleteModal();
         });
 
-        // ESC键关闭弹窗
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 const modal = document.getElementById('deleteModal');
-                if (modal && modal.style.display === 'flex') {
-                    closeDeleteModal();
-                }
+                if (modal && modal.style.display === 'flex') closeDeleteModal();
             }
         });
     </script>

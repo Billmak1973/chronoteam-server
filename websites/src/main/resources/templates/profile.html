@@ -1048,7 +1048,7 @@
     <!--  注入登录状态变量與內聯編輯 JS 邏輯 -->
     <script th:inline="javascript">
         // 獲取 Spring Security 狀態
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
 
         // ==========================================
         //  地址級聯選擇器數據
@@ -1317,17 +1317,14 @@
 
             // 顯示 Loading 狀態 (可選)
             const btn = input.parentElement.querySelector('.btn-save');
-            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中'; }
 
             fetch('/api/user/update-profile', {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(data)
             })
                 .then(response => response.json())
                 .then(result => {
-                    if (btn) { btn.disabled = false; btn.innerHTML = '保存'; } // 恢復按鈕
-
                     if (result.success) {
                         // 1. 更新頁面上的顯示文本
                         const valueSpan = document.querySelector('#view-' + fieldName + ' .info-value');
@@ -1338,7 +1335,7 @@
                         const addBtn = document.querySelector('#view-' + fieldName + ' .btn-add');
 
                         if (newValue) {
-                            if (editBtn) { editBtn.style.display = 'inline-flex'; editBtn.dataset.val = newValue; }
+                            if (editBtn) {editBtn.style.display = 'inline-flex'; editBtn.dataset.val = newValue;}
                             if (addBtn) addBtn.style.display = 'none';
                         } else {
                             if (editBtn) editBtn.style.display = 'none';
@@ -1354,7 +1351,7 @@
 
                             // 2. 延遲 3 秒後強制登出並跳轉回首頁 (與彈窗消失時間同步)
                             setTimeout(() => {
-                                fetch('/logout', { method: 'POST' })
+                                fetch('/logout', {method: 'POST'})
                                     .then(() => {
                                         window.location.href = '/'; // 登出成功，跳轉首頁
                                     })
@@ -1386,7 +1383,6 @@
                     }
                 })
                 .catch(error => {
-                    if (btn) { btn.disabled = false; btn.innerHTML = '保存'; }
                     console.error('Error:', error);
                     //  网络错误也要关闭编辑模式
                     cancelEdit(fieldName);
@@ -1413,7 +1409,7 @@
             try {
                 const response = await fetch('/api/user/update-profile', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         address: backupAddress,
                         backupAddress: address
@@ -1470,14 +1466,11 @@
             // 获取按钮并设置 Loading 状态
             const btn = document.getElementById('confirmDeleteBackupBtn');
             const originalHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
-
             try {
                 const response = await fetch('/api/user/update-profile', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ backupAddress: '' }) // 清空备用地址
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({backupAddress: ''}) // 清空备用地址
                 });
 
                 const result = await response.json();
@@ -1525,7 +1518,6 @@
                 }
             } finally {
                 // 恢复按钮状态
-                btn.disabled = false;
                 btn.innerHTML = originalHtml;
             }
         }
@@ -1594,7 +1586,7 @@
                 // 调用后端更新接口
                 const response = await fetch('/api/user/update-profile', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         address: newMainAddress,
                         backupAddress: newBackupAddress
@@ -1631,7 +1623,6 @@
                         showNotification('❌ ' + (result.message || '交換失敗'), true);
                     }
                     // 恢复按钮
-                    btn.disabled = false;
                     btn.innerHTML = originalHtml;
                 }
             } catch (error) {
@@ -1641,8 +1632,6 @@
                 } else if (typeof showNotification === 'function') {
                     showNotification('❌ 網絡錯誤，請稍後重試', true);
                 }
-                // 恢复按钮
-                btn.disabled = false;
                 btn.innerHTML = originalHtml;
             }
         }

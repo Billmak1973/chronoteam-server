@@ -22,49 +22,6 @@
             /* 關鍵：防止子元素拉伸，讓 sticky 生效 */
         }
 
-        /*
-         * 【核心修復】側邊欄樣式
-         * 使用 sticky 定位 + 固定高度計算，確保它獨立於右側內容長度
-         */
-        .sidebar {
-            width: 280px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            padding: 1.5rem;
-
-            /* 1. 啟用黏性定位，距離頂部 100px 時開始固定 (根據 Navbar 高度調整) */
-            position: sticky;
-            top: 100px;
-
-            /* 2. 設定最大高度為視窗高度減去上下間距，防止溢出螢幕 */
-            max-height: calc(100vh - 120px);
-
-            /* 3. 當菜單過長時，允許側邊欄內部獨立滾動，不影響頁面整體滾動 */
-            overflow-y: auto;
-
-            /* 4. 隱藏預設滾動條但保留功能 (可選美化) */
-            scrollbar-width: thin;
-            scrollbar-color: var(--gold) transparent;
-        }
-
-        /* Webkit 瀏覽器滾動條美化 */
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .sidebar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .sidebar::-webkit-scrollbar-thumb {
-            background: #e9ecef;
-            border-radius: 3px;
-        }
-
-        .sidebar::-webkit-scrollbar-thumb:hover {
-            background: var(--gold);
-        }
 
         /* 主內容區樣式 */
         .main-content {
@@ -583,12 +540,6 @@
             box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
         }
 
-        .page-btn.disabled {
-            color: #ccc;
-            cursor: not-allowed;
-            background: #f8f9fa;
-            border-color: #e9ecef;
-        }
 
         .page-ellipsis {
             padding: 0.6rem 0.5rem;
@@ -720,7 +671,7 @@
             </div>
 
             <!-- ==================== 智能分頁導航 ==================== -->
-            <div  th:if="${totalElements > 0}" class="pagination-wrapper">
+            <div th:if="${totalElements > 0}" class="pagination-wrapper">
 
                 <!-- 上一頁按鈕 -->
                 <a th:href="@{/cart/view(page=${currentPage - 1})}"
@@ -785,7 +736,7 @@
 
     <!-- 注入登錄狀態 -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
     <script src="/js/common.js"></script>
     <script>
@@ -823,9 +774,9 @@
                 cartItem.classList.add('not-selected');
             }
 
-            // 2. 異步同步後端
+            // 2. 異步同步後端 (✅ 路徑已更新為 /cart/api/)
             try {
-                await fetch(`/api/cart/toggle-selection/${cartId}?isSelected=${isChecked}`, { method: 'PUT' });
+                await fetch(`/cart/api/toggle-selection/${cartId}?isSelected=${isChecked}`, {method: 'PUT'});
 
                 // 3. 同步導航欄下拉菜單 (如果有)
                 if (typeof loadCartItems === 'function') loadCartItems();
@@ -858,11 +809,11 @@
             const isChecked = selectAllCheckbox.checked;
             const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
 
-            // 批量發送請求
+            // 批量發送請求 (✅ 路徑已更新為 /cart/api/)
             const promises = [];
             checkboxes.forEach(cb => {
                 if (cb.checked !== isChecked) {
-                    promises.push(fetch(`/api/cart/toggle-selection/${cb.dataset.cartId}?isSelected=${isChecked}`, { method: 'PUT' }));
+                    promises.push(fetch(`/cart/api/toggle-selection/${cb.dataset.cartId}?isSelected=${isChecked}`, {method: 'PUT'}));
                 }
             });
 
@@ -926,8 +877,8 @@
                 updateCartTotal();
                 updateSelectedCount();
 
-                // 3. 發送 API 請求更新後端
-                const response = await fetch(`/api/cart/update/${cartId}?quantity=${newQty}`, { method: 'PUT' });
+                // 3. 發送 API 請求更新後端 (✅ 路徑已更新為 /cart/api/)
+                const response = await fetch(`/cart/api/update/${cartId}?quantity=${newQty}`, {method: 'PUT'});
 
                 if (response.ok) {
                     showNotification('✅ 數量更新成功');
@@ -987,7 +938,7 @@
             selectAll.checked = (checkboxes.length > 0 && checkedCount === checkboxes.length);
         }
 
-        // 結賬邏輯
+        // 結賬邏輯 (✅ /checkout/api/create 路徑不變，屬於 CheckoutController)
         async function checkout() {
             if (window.selectedCartItems.size === 0) {
                 showNotification('❌ 請至少選擇一件商品！', true);
@@ -996,8 +947,8 @@
             try {
                 const response = await fetch('/checkout/api/create', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ selectedCartIds: Array.from(window.selectedCartItems) })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({selectedCartIds: Array.from(window.selectedCartItems)})
                 });
                 const result = await response.json();
                 if (response.ok && result.success) {
@@ -1044,16 +995,14 @@
             const btn = document.querySelector('.btn-confirm-remove');
             const originalText = btn.innerHTML;
 
-            // 按鈕進入 Loading 狀態，防止重複點擊
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
 
             try {
-                const response = await fetch(`/api/cart/remove/${productId}`, { method: 'DELETE' });
+                //  路徑已更新為 /cart/api/
+                const response = await fetch(`/cart/api/remove/${productId}`, {method: 'DELETE'});
 
                 if (response.ok) {
                     //  核心修復 1：無論購物車是否為空，先顯示成功提示
-                    showNotification('✅ 商品已移除');
+                    showNotification(' 商品已移除');
 
                     // 先關閉彈窗
                     closeCartRemoveModal();
@@ -1094,10 +1043,6 @@
             } catch (error) {
                 console.error('移除失敗:', error);
                 showNotification('❌ 網絡錯誤', true);
-            } finally {
-                // 恢復按鈕狀態
-                btn.disabled = false;
-                btn.innerHTML = originalText;
             }
         }
 

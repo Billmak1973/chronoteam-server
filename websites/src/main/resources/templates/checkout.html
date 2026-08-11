@@ -2557,11 +2557,6 @@
             }
             // ==========================================
 
-            // 驗證全部通過，開始處理支付邏輯
-            btn.disabled = true;
-            const originalBtnText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> 處理中...';
-
             try {
                 if (isOnline) {
                     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -2646,9 +2641,6 @@
             const btn = document.querySelector('.btn-confirm-delete');
             const originalText = btn.innerHTML;
 
-            // 1. 进入 Loading 状态
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
 
             try {
                 const response = await fetch(`/api/order/${pendingDeleteOrderNo}`, {
