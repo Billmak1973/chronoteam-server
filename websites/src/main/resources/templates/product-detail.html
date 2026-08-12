@@ -7,9 +7,73 @@
     <title th:text="${product.description} + ' - ChronoTeam'">商品詳情</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
-
+    <link rel="stylesheet" th:href="@{/react-assets/assets/index.css}" />
     <style>
-        /* === 商品詳情樣式 === */
+        /* ========================================== */
+        /*  0. 全局修復與變數 (確保優先級) */
+        /* ========================================== */
+        :root {
+            --primary: #1a1a2e;
+            --secondary: #16213e;
+            --accent: #e94560;
+            /* 紅色 */
+            --gold: #d4af37;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+        }
+
+        /* 強制修復標題字體過大問題 */
+        .detail-info h1 {
+            font-size: 1.6rem !important;
+            /* 從默認的巨大字體縮小到 1.8rem */
+            line-height: 1.3 !important;
+            margin-bottom: 1rem !important;
+            color: var(--primary) !important;
+        }
+
+        /* 強制修復價格字體 */
+        .price {
+            font-size: 1.5rem !important;
+            /* 稍微縮小一點，避免過大 */
+            color: var(--accent) !important;
+            font-weight: bold;
+        }
+
+        /* ========================================== */
+        /* 【緊急修復】強制鎖定導航欄字體大小 (防止被頁面樣式污染) */
+        /* ========================================== */
+        .navbar {
+            font-size: 0.8rem !important;
+            /* 基準大小 */
+        }
+
+        .navbar .logo {
+            font-size: 1.5rem !important;
+            /* Logo 大小 */
+        }
+
+        .navbar .nav-links a,
+        .navbar .nav-links button,
+        .navbar .btn {
+            font-size: 0.95rem !important;
+            /* 導航鏈接和按鈕大小 (關鍵修復) */
+            font-weight: 500 !important;
+        }
+
+        .navbar .cart-badge {
+            font-size: 0.75rem !important;
+            /* 購物車角標大小 */
+        }
+
+        .navbar .nav-dropdown-menu a,
+        .navbar .nav-dropdown-menu button {
+            font-size: 0.95rem !important;
+            /* 下拉菜單文字大小 */
+        }
+
+        /* ========================================== */
+        /*  1. 商品詳情佈局樣式 (保持原樣) */
+        /* ========================================== */
         .detail-container {
             max-width: 1200px;
             margin: 2rem auto;
@@ -95,13 +159,6 @@
             flex: 1;
         }
 
-        .price {
-            color: var(--accent);
-            font-size: 2rem;
-            font-weight: 700;
-            margin: 1rem 0;
-        }
-
         .details-text {
             white-space: pre-wrap;
             line-height: 1.8;
@@ -143,7 +200,58 @@
         }
 
         /* ========================================== */
-        /*  評論區基礎樣式 */
+        /*  2. 核心修復：按鈕顏色強制覆蓋 (解決紫色問題) */
+        /* ========================================== */
+
+        /* 修復：加入購物車、提交評價按鈕 (必須是紅色) */
+        .btn-primary,
+        button.btn-primary,
+        .review-form .btn-primary,
+        .btn-submit-reply {
+            background-color: var(--accent) !important;
+            /* 強制紅色 */
+            color: white !important;
+            border: none !important;
+        }
+
+        .btn-primary:hover,
+        button.btn-primary:hover,
+        .review-form .btn-primary:hover,
+        .btn-submit-reply:hover {
+            background-color: #c73e54 !important;
+            /* 深紅色 Hover */
+            transform: translateY(-2px);
+        }
+
+        /* 修復：刪除按鈕 (必須是紅色) */
+        .btn-delete,
+        .reply-action-btn.delete,
+        .btn-confirm-delete {
+            background-color: var(--accent) !important;
+            /* 強制紅色 */
+            color: white !important;
+            border: none !important;
+        }
+
+        .btn-delete:hover,
+        .reply-action-btn.delete:hover,
+        .btn-confirm-delete:hover {
+            background-color: #c73e54 !important;
+            transform: translateY(-2px);
+        }
+
+        /* 修復：確保金色按鈕不被覆蓋 */
+        .btn-gold {
+            background-color: var(--gold) !important;
+            color: var(--primary) !important;
+        }
+
+        .btn-gold:hover {
+            background-color: #b8972b !important;
+        }
+
+        /* ========================================== */
+        /*  3. 評論區基礎樣式 (保持原樣) */
         /* ========================================== */
         .reviews-section {
             max-width: 1200px;
@@ -168,6 +276,8 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            font-size: 1.5rem;
+            /* 限制評論區標題大小 */
         }
 
         .reviews-header h2 i {
@@ -222,13 +332,11 @@
             margin-top: 0.8rem;
             font-size: 2.2rem;
             cursor: pointer;
-            /* 默認顏色設為淺灰，作為未選中狀態的基底 */
             color: #ddd;
         }
 
         .rating-star {
             transition: transform 0.15s, color 0.15s;
-            /* 確保圖標繼承父級顏色，或者在這裡直接定義默認色 */
             color: #ddd;
         }
 
@@ -236,16 +344,11 @@
             transform: scale(1.15);
         }
 
-        /*  核心修復：定義「被選中/激活」狀態的顏色 */
-        /* 你的 React 代碼中使用了 fa-star (實心) 和 fa-star-half-alt (半星) */
-        /* 我們需要強制讓這兩種圖標在顯示時變成金色 */
         .rating-stars .fas.fa-star,
         .rating-stars .fas.fa-star-half-alt {
             color: var(--gold) !important;
-            /* 強制變為金色 */
         }
 
-        /* 可選：為了讓交互更順滑，可以給未選中的空心星星也加個過渡 */
         .rating-stars .far.fa-star {
             color: #ddd;
         }
@@ -273,7 +376,6 @@
             gap: 1.5rem;
         }
 
-        /* 基礎卡片樣式 */
         .review-card {
             padding: 1.5rem;
             background: var(--light);
@@ -364,7 +466,6 @@
         /* ========================================== */
         /*  重點修復：點贊/踩按鈕樣式 (高權重 + !important) */
         /* ========================================== */
-        /* === 點贊按鈕樣式 === */
         .btn-like {
             background: #e9ecef;
             color: #495057;
@@ -372,13 +473,11 @@
             transition: all 0.3s;
         }
 
-        /* 默認 hover（未激活狀態） */
         .btn-like:hover:not(.active) {
             background: #dee2e6;
             transform: translateY(-2px);
         }
 
-        /* 激活狀態 - 天藍色漸變 */
         .btn-like.active {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
             color: white !important;
@@ -386,18 +485,15 @@
             box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
         }
 
-        /* 激活狀態的 hover - 增強效果 */
         .btn-like.active:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6) !important;
         }
 
-        /* 激活狀態的圖標 */
         .btn-like.active i {
             color: white !important;
         }
 
-        /* === 踩按鈕樣式 === */
         .btn-dislike {
             background: #e9ecef;
             color: #495057;
@@ -405,13 +501,11 @@
             transition: all 0.3s;
         }
 
-        /* 默認 hover（未激活狀態） */
         .btn-dislike:hover:not(.active) {
             background: #dee2e6;
             transform: translateY(-2px);
         }
 
-        /* 激活狀態 - 青綠色漸變 */
         .btn-dislike.active {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%) !important;
             color: white !important;
@@ -419,7 +513,6 @@
             box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
         }
 
-        /* 激活狀態的 hover - 增強效果 */
         .btn-dislike.active:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(17, 153, 142, 0.6) !important;
@@ -612,36 +705,26 @@
             transform: translateY(-2px);
         }
 
-        /* ========================================== */
-        /*   核心修復：修改按鈕的禁用狀態 (徹底變灰且鎖死 Hover) */
-        /* ========================================== */
         .btn-edit:disabled {
             background: #e9ecef !important;
-            /* 強制變成標準的淺灰色背景 */
             color: #adb5bd !important;
-            /* 強制變成灰色文字/圖標 */
             cursor: not-allowed !important;
-            /* 強制顯示「禁止」光標  */
             opacity: 1 !important;
-            /* 拒絕半透明，使用實色灰 */
             transform: none !important;
-            /* 徹底取消 hover 時的上浮動畫 */
             box-shadow: none !important;
-            /* 取消陰影 */
             pointer-events: none;
-            /* 徹底屏蔽所有鼠標事件，防止任何 hover 觸發 */
         }
 
-        /* 防止 hover 狀態下 CSS 動畫復活 */
         .btn-edit:disabled:hover {
             background: #e9ecef !important;
             transform: none !important;
             box-shadow: none !important;
         }
 
+        /* 這裡再次強調刪除按鈕顏色 */
         .btn-delete {
-            background: var(--accent);
-            color: white;
+            background: var(--accent) !important;
+            color: white !important;
             padding: 0.4rem 0.8rem;
             border: none;
             border-radius: 6px;
@@ -655,7 +738,7 @@
         }
 
         .btn-delete:hover {
-            background: #c73e54;
+            background: #c73e54 !important;
             transform: translateY(-2px);
         }
 
@@ -679,50 +762,33 @@
             transform: translateY(-2px);
         }
 
-        /* === 解除禁言按钮样式 === */
         .btn-unblock {
-            /* 绿色渐变背景，看起来更有质感 */
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
             border: none;
-
-            /* 尺寸与排版 */
             padding: 0.4rem 0.9rem;
             border-radius: 6px;
             font-size: 0.85rem;
             font-weight: 600;
             letter-spacing: 0.3px;
-
-            /* 布局 */
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            /* 图标和文字的间距 */
-
-            /* 交互效果 */
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            /* 带一点Q弹的动画 */
             box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
-            /* 淡淡的绿色阴影 */
         }
 
-        /* 鼠标悬停效果 */
         .btn-unblock:hover {
             transform: translateY(-2px) scale(1.02);
-            /* 上浮并轻微放大 */
             box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
-            /* 阴影加深 */
             filter: brightness(1.1);
-            /* 变亮一点 */
         }
 
-        /* 点击瞬间效果 */
         .btn-unblock:active {
             transform: scale(0.95);
         }
 
-        /* 图标样式微调 */
         .btn-unblock i {
             font-size: 0.9rem;
         }
@@ -747,7 +813,6 @@
             transform: translateY(-2px);
         }
 
-        /* 舉報按鈕樣式 */
         .btn-report {
             background: #fd7e14;
             color: white;
@@ -767,7 +832,6 @@
             background: #e96b0a;
             transform: translateY(-2px);
         }
-
 
         .btn-pin {
             background: #17a2b8;
@@ -797,7 +861,6 @@
             background: #218838;
         }
 
-        /*  表單樣式 */
         .reply-form {
             margin-top: 0.5rem;
             padding: 1rem;
@@ -842,9 +905,11 @@
             justify-content: flex-end;
         }
 
+        /* 修復：提交回覆按鈕顏色 */
         .btn-submit-reply {
-            background: #6c757d;
-            color: white;
+            background: var(--accent) !important;
+            /* 強制紅色 */
+            color: white !important;
             padding: 0.5rem 1rem;
             border: none;
             border-radius: 6px;
@@ -853,7 +918,7 @@
         }
 
         .btn-submit-reply:hover {
-            background: #5a6268;
+            background: #c73e54 !important;
         }
 
         .btn-cancel-reply {
@@ -1014,12 +1079,8 @@
             transform: translateY(-2px);
         }
 
-        /* ========================================== */
-        /*  重點修復：置頂樣式 (簡化選擇器，避免干擾按鈕) */
-        /* ========================================== */
         .review-card.pinned {
             border-left: 4px solid #17a2b8;
-            /* 使用極淺的背景，確保不影響內部按鈕顏色顯示 */
             background: linear-gradient(135deg, #f0f8ff 0%, #e6f7ff 100%);
             position: relative;
         }
@@ -1039,9 +1100,6 @@
             z-index: 1;
         }
 
-        /* ========================================== */
-        /*  React 評論區補充樣式 */
-        /* ========================================== */
         .review-rating-summary {
             display: flex;
             align-items: center;
@@ -1188,7 +1246,6 @@
             margin-top: 0.5rem;
         }
 
-        /* 基础楼中楼按钮样式 */
         .reply-action-btn {
             padding: 0.2rem 0.5rem;
             font-size: 0.8rem;
@@ -1205,14 +1262,12 @@
             background: #dee2e6;
         }
 
-        /* 楼中楼删除按钮 */
         .reply-action-btn.delete {
             background: none;
             color: var(--accent);
             border: none;
         }
 
-        /* 楼中楼举报按钮 */
         .reply-action-btn.btn-report {
             background: #fd7e14;
             color: white;
@@ -1224,10 +1279,8 @@
             border-color: #e96b0a;
         }
 
-        /* 楼中楼拉黑按钮样式 - 新增或修改这段 */
         .reply-action-btn.btn-blacklist {
             background: #6c757d;
-            /* 与父回复保持一致的灰色 */
             color: white;
             border: none;
             padding: 0.4rem 0.8rem;
@@ -1243,31 +1296,21 @@
 
         .reply-action-btn.btn-blacklist:hover {
             background: #5a6268;
-            /* hover 时变深灰色 */
             transform: translateY(-2px);
         }
 
-        /* === 楼中楼回复的禁言按钮样式（与父回复保持一致）=== */
         .reply-action-btn.btn-ban {
             background: #ffc107;
-            /* 黄色背景，与父回复一致 */
             color: #212529;
-            /* 深色文字 */
             border: none;
             font-weight: 600;
         }
 
         .reply-action-btn.btn-ban:hover {
             background: #e0a800;
-            /* hover 时变深黄色 */
             transform: translateY(-2px);
         }
 
-        /* ========================================== */
-        /*  樓中樓點贊/踩按鈕樣式 (與父回復完全一致) */
-        /* ========================================== */
-
-        /* === 樓中樓點贊按鈕 === */
         .reply-action-btn.btn-like {
             background: #e9ecef;
             color: #495057;
@@ -1296,7 +1339,6 @@
             color: white !important;
         }
 
-        /* === 樓中樓踩按鈕 === */
         .reply-action-btn.btn-dislike {
             background: #e9ecef;
             color: #495057;
@@ -1325,52 +1367,31 @@
             color: white !important;
         }
 
-        /* ========================================== */
-        /*  修復：樓中樓解除禁言按鈕樣式 (強制覆蓋灰色背景) */
-        /* ========================================== */
         .reply-action-btn.btn-unblock {
-            /* 1. 強制使用綠色漸變背景 */
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
-
-            /* 2. 強制白色文字 */
             color: white !important;
-
-            /* 3. 移除基礎樣式帶來的灰色邊框 */
             border: none !important;
-
-            /* 4. 確保字體清晰 */
             font-weight: 600;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-            /* 增加一點文字陰影讓白字更清晰 */
-
-            /* 5. 保持與其他按鈕一致的內邊距和圓角 */
             padding: 0.4rem 0.8rem;
             border-radius: 6px;
-
-            /* 6. 陰影效果 */
             box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
-
-            /* 佈局修正 */
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
         }
 
-        /* 鼠標懸停效果 (Hover) */
         .reply-action-btn.btn-unblock:hover {
             background: linear-gradient(135deg, #218838 0%, #1ea980 100%) !important;
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
             color: white !important;
-            /* 再次確保 hover 時文字不變色 */
         }
 
-        /* 圖標顏色修正 */
         .reply-action-btn.btn-unblock i {
             color: white !important;
         }
 
-        /* === 樓中樓動畫效果 === */
         .reply-action-btn.btn-like:active,
         .reply-action-btn.btn-dislike:active {
             transform: scale(0.9);
@@ -1402,7 +1423,6 @@
             color: var(--gray);
         }
 
-        /* === 響應式 === */
         @media (max-width: 768px) {
             .detail-container {
                 flex-direction: column;
@@ -1487,7 +1507,6 @@
             color: white !important;
         }
 
-        /*  全局禁言彈窗樣式 */
         .global-ban-modal {
             position: fixed;
             top: 0;
@@ -1562,11 +1581,6 @@
             }
         }
 
-        /* ========================================== */
-        /*  🚫 永久拉黑確認彈窗 — 完整樣式 */
-        /* ========================================== */
-
-        /* 遮罩層 */
         .custom-modal-overlay {
             position: fixed;
             top: 0;
@@ -1593,7 +1607,6 @@
             }
         }
 
-        /* 彈窗主體容器 */
         .custom-modal-content.blacklist-modal {
             background: #fff;
             width: 92%;
@@ -1602,15 +1615,12 @@
             padding: 2.5rem 2rem 2rem;
             text-align: center;
             position: relative;
-            box-shadow:
-                0 20px 60px rgba(0, 0, 0, 0.3),
-                0 0 0 1px rgba(220, 53, 69, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(220, 53, 69, 0.1);
             border-top: 5px solid #dc3545;
             animation: modalSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             overflow: hidden;
         }
 
-        /* 頂部紅色裝飾光暈 */
         .custom-modal-content.blacklist-modal::before {
             content: '';
             position: absolute;
@@ -1635,7 +1645,6 @@
             }
         }
 
-        /* 頂部警告圖標 */
         .modal-icon.warning-icon {
             width: 80px;
             height: 80px;
@@ -1645,9 +1654,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow:
-                0 8px 25px rgba(220, 53, 69, 0.35),
-                0 0 0 8px rgba(220, 53, 69, 0.08);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.35), 0 0 0 8px rgba(220, 53, 69, 0.08);
             animation: iconPulse 2s ease-in-out infinite;
         }
 
@@ -1668,7 +1675,6 @@
             }
         }
 
-        /* 標題 */
         .modal-title {
             font-size: 1.4rem;
             font-weight: 700;
@@ -1678,14 +1684,12 @@
             letter-spacing: 0.5px;
         }
 
-        /* 正文區域 */
         .modal-body {
             text-align: center;
             margin: 0;
             padding: 0;
         }
 
-        /* 提示文字 */
         .modal-message {
             font-size: 1rem;
             color: #555;
@@ -1694,7 +1698,6 @@
             text-align: center;
         }
 
-        /* 高亮用戶名 */
         .username-highlight {
             color: #dc3545;
             font-weight: 700;
@@ -1704,7 +1707,6 @@
             font-size: 1.05em;
         }
 
-        /* 警告框 */
         .warning-box {
             background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
             border: 1px solid rgba(220, 53, 69, 0.15);
@@ -1735,7 +1737,6 @@
             font-weight: 700;
         }
 
-        /* 限制列表 - 修改為 2x2 網格佈局 */
         .restriction-list {
             list-style: none;
             padding: 0;
@@ -1774,7 +1775,6 @@
             flex-shrink: 0;
         }
 
-        /* 原因輸入組 */
         .reason-input-group {
             margin: 1.5rem auto 0;
             text-align: center;
@@ -1821,7 +1821,6 @@
             color: #adb5bd;
         }
 
-        /* 底部按鈕組 */
         .modal-actions {
             display: flex;
             justify-content: center;
@@ -1832,7 +1831,6 @@
             border-top: 1px solid #f1f3f5;
         }
 
-        /* 取消按鈕 */
         .modal-actions .btn-cancel {
             padding: 0.7rem 1.8rem;
             background: #f1f3f5;
@@ -1858,7 +1856,6 @@
             transform: scale(0.96);
         }
 
-        /* 確認拉黑按鈕 */
         .modal-actions .btn-confirm {
             padding: 0.7rem 1.8rem;
             background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
@@ -1886,7 +1883,6 @@
             transform: scale(0.96);
         }
 
-        /* 手機響應式 */
         @media (max-width: 576px) {
             .custom-modal-content.blacklist-modal {
                 padding: 2rem 1.2rem 1.5rem;
@@ -1928,11 +1924,6 @@
             }
         }
 
-        /* ========================================== */
-        /*  🚨 舉報彈窗專屬樣式 */
-        /* ========================================== */
-
-        /* === 舉報彈窗容器居中樣式 === */
         #reportModal {
             position: fixed;
             top: 0;
@@ -1945,7 +1936,6 @@
             z-index: 9999;
         }
 
-        /* 當彈窗顯示時 */
         #reportModal.modal-show {
             display: flex !important;
         }
@@ -1964,7 +1954,6 @@
             overflow-y: auto;
         }
 
-        /* 覆蓋層 */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -1990,7 +1979,6 @@
             font-size: 1rem;
         }
 
-        /* 網格佈局 */
         .category-grid,
         .reason-grid {
             display: grid;
@@ -1999,7 +1987,6 @@
             margin-bottom: 1rem;
         }
 
-        /* 選項卡片樣式 */
         .report-option {
             background: #f5f5f5;
             border: 2px solid transparent;
@@ -2019,18 +2006,14 @@
             transform: translateY(-2px);
         }
 
-        /* 選中狀態 (模仿截圖的橙色高亮) */
         .report-option.selected {
             background: #fff3e0;
-            /* 淺橙色背景 */
             border-color: var(--gold);
-            /* 金色邊框 */
             color: var(--gold);
             font-weight: 600;
             box-shadow: 0 2px 8px rgba(212, 175, 55, 0.2);
         }
 
-        /* 自定義 Checkbox */
         .checkbox-container {
             display: flex;
             align-items: center;
@@ -2069,7 +2052,6 @@
             transform: rotate(45deg);
         }
 
-        /* 按鈕區域 */
         .report-actions {
             display: flex;
             justify-content: flex-end;
@@ -2098,7 +2080,6 @@
         .btn-submit {
             padding: 0.6rem 2rem;
             background: var(--gold);
-            /* 使用金色或橙色 */
             color: white;
             border: none;
             border-radius: 6px;
@@ -2124,7 +2105,6 @@
             box-shadow: none;
         }
 
-        /* 動畫 */
         @keyframes slideUp {
             from {
                 opacity: 0;
@@ -2137,7 +2117,6 @@
             }
         }
 
-        /* 響應式 */
         @media (max-width: 600px) {
 
             .category-grid,
@@ -2151,7 +2130,6 @@
             }
         }
 
-        /* 🚨 自定義舉報重複提示彈窗樣式 */
         .custom-modal {
             position: fixed;
             top: 0;
@@ -2251,7 +2229,6 @@
             transform: translateY(0);
         }
 
-        /* 動畫效果 */
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -2288,7 +2265,6 @@
             }
         }
 
-        /* 響應式 */
         @media (max-width: 480px) {
             .modal-container {
                 padding: 2rem 1.5rem;
@@ -2312,9 +2288,6 @@
             }
         }
 
-        /* ========================================== */
-        /*  🚫 未登入提示彈窗樣式 */
-        /* ========================================== */
         .login-modal-overlay {
             position: fixed;
             top: 0;
@@ -2323,7 +2296,6 @@
             height: 100%;
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
-            /* 背景模糊效果 */
             z-index: 10000;
             display: flex;
             justify-content: center;
@@ -2430,7 +2402,6 @@
             background: #dee2e6;
         }
 
-        /* 動畫定義 */
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -2453,14 +2424,9 @@
             }
         }
 
-        /* ========================================== */
-        /*  評價狀態提示區塊美化 */
-        /* ========================================== */
         .already-reviewed {
             max-width: 1200px;
-            /* 【新增】限制最大宽度 */
             margin: 0 auto 2rem auto;
-            /* 【修改】居中，并保留底部 2rem 间距 */
             background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             border-left: 5px solid #28a745;
             border-radius: 12px;
@@ -2511,14 +2477,9 @@
             }
         }
 
-        /* ========================================== */
-        /*  未購買提示區塊美化 */
-        /* ========================================== */
         .no-purchase-prompt {
             max-width: 1200px;
-            /* 【新增】限制最大宽度 */
             margin: 0 auto 2rem auto;
-            /* 【修改】居中，并保留底部 2rem 间距 */
             background: linear-gradient(135deg, #fff9f0 0%, #fff5e6 100%);
             border: 2px dashed var(--gold);
             border-radius: 16px;
@@ -2588,14 +2549,9 @@
             box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
         }
 
-        /* ========================================== */
-        /*  未登入提示區塊美化 */
-        /* ========================================== */
         .login-required-prompt {
             max-width: 1200px;
-            /* 【新增】限制最大宽度 */
             margin: 0 auto 2rem auto;
-            /* 【修改】居中，并保留底部 2rem 间距 */
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border: 2px solid #dee2e6;
             border-radius: 16px;
@@ -2676,21 +2632,20 @@
             font-weight: 600;
             font-size: 1.05rem;
             transition: all 0.3s ease;
+            background-color: var(--accent) !important;
+            /* 強制紅色 */
+            color: white !important;
         }
 
         .login-required-prompt .btn-primary:hover {
             transform: translateY(-3px);
             box-shadow: 0 8px 25px rgba(233, 69, 96, 0.4);
+            background-color: #c73e54 !important;
         }
 
-        /* ========================================== */
-        /*  無評論時的佔位提示美化 */
-        /* ========================================== */
         .reviews-list .no-reviews {
             max-width: 1200px;
-            /* 【新增】限制最大宽度 */
             margin: 2rem auto;
-            /* 【修改】居中，并保留上下 2rem 间距 */
             background: linear-gradient(135deg, #fff9f0 0%, #fff5e6 100%);
             border: 3px dashed var(--gold);
             border-radius: 20px;
@@ -2752,7 +2707,6 @@
             font-weight: 500;
         }
 
-        /* 響應式優化 */
         @media (max-width: 768px) {
 
             .already-reviewed,
@@ -2779,7 +2733,6 @@
             }
         }
 
-        /* 成色按钮样式 */
         .condition-btn {
             padding: 0.6rem 1.2rem;
             border: 2px solid #e9ecef;
@@ -2801,7 +2754,6 @@
             box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
         }
 
-        /* 当前选中的成色高亮 */
         .condition-btn.active {
             background: var(--gold);
             color: white;
@@ -2817,9 +2769,6 @@
             font-size: 0.7rem;
         }
 
-        /* ========================================== */
-        /*  刪除確認彈窗樣式 (漂亮版) */
-        /* ========================================== */
         .delete-modal-overlay {
             position: fixed;
             top: 0;
@@ -2828,9 +2777,7 @@
             height: 100%;
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
-            /* 毛玻璃背景模糊 */
             z-index: 10000;
-            /* 確保在最上層 */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -2846,14 +2793,11 @@
             text-align: center;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            /* Q彈動畫 */
             border-top: 5px solid var(--accent);
-            /* 頂部紅色裝飾條 */
             position: relative;
             overflow: hidden;
         }
 
-        /* 頂部警告圖標 */
         .modal-icon.warning-icon {
             width: 70px;
             height: 70px;
@@ -2910,8 +2854,9 @@
 
         .btn-confirm-delete {
             padding: 0.7rem 1.5rem;
-            background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%) !important;
+            /* 強制紅色 */
+            color: white !important;
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -2926,9 +2871,9 @@
         .btn-confirm-delete:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
+            background: #c73e54 !important;
         }
 
-        /* 動畫定義 */
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -2965,13 +2910,9 @@
             }
         }
 
-        /* ========================================== */
-        /*  富文本內容排版樣式 (適配 Review 和 Reply) */
-        /* ========================================== */
         .review-content img,
         .reply-content img {
             max-width: 100%;
-            /* 防止圖片撐破屏幕 */
             height: auto;
             border-radius: 8px;
             margin: 0.5rem 0;
@@ -2983,7 +2924,6 @@
         .review-content ol,
         .reply-content ol {
             padding-left: 20px;
-            /* 讓列表有正常的縮進 */
             margin: 0.5rem 0;
         }
 
@@ -2995,19 +2935,15 @@
         .review-content a,
         .reply-content a {
             color: var(--accent);
-            /* 連結顏色 */
             text-decoration: underline;
             word-break: break-all;
-            /* 防止長連結撐破屏幕 */
         }
 
         .review-content span[style],
         .reply-content span[style] {
-            /* 確保前端編輯器設置的顏色/背景色能生效 */
             display: inline;
         }
 
-        /* 修復粗體、斜體、下劃線、刪除線的默認樣式 */
         .review-content b,
         .review-content strong {
             font-weight: 700;
@@ -3026,9 +2962,6 @@
             text-decoration: line-through;
         }
 
-        /* ========================================== */
-        /*   管理員權限提示彈窗樣式                  */
-        /* ========================================== */
         .admin-permission-overlay {
             position: fixed;
             top: 0;
@@ -3039,7 +2972,6 @@
             backdrop-filter: blur(5px);
             -webkit-backdrop-filter: blur(5px);
             z-index: 10002;
-            /* 確保在所有彈窗之上 */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -3056,12 +2988,10 @@
             position: relative;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(212, 175, 55, 0.1);
             border-top: 5px solid var(--gold);
-            /* 金色裝飾條，代表管理員/系統權限 */
             animation: modalSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             overflow: hidden;
         }
 
-        /* 頂部金色裝飾光暈 */
         .admin-permission-box::before {
             content: '';
             position: absolute;
@@ -3154,7 +3084,6 @@
             transform: scale(0.96);
         }
 
-        /* 動畫定義 */
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -3189,7 +3118,6 @@
             }
         }
 
-        /* 響應式優化 */
         @media (max-width: 576px) {
             .admin-permission-box {
                 padding: 2rem 1.2rem 1.5rem;
@@ -3214,9 +3142,6 @@
             }
         }
 
-        /* ========================================== */
-        /*   解除禁言确认弹窗样式 */
-        /* ========================================== */
         .unblock-modal-overlay {
             position: fixed;
             top: 0;
@@ -3360,6 +3285,72 @@
             transform: scale(0.96);
         }
 
+        .pagination-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            padding: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .page-btn {
+            padding: 0.6rem 1.2rem;
+            border: 2px solid #e9ecef;
+            background: white;
+            color: var(--primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 悬停效果 */
+        .page-btn:hover:not(:disabled):not(.disabled) {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
+        }
+
+        /* 激活状态（当前页） */
+        .page-btn.active {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            border-color: var(--gold);
+            cursor: default;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* 禁用状态 */
+        .page-btn.disabled,
+        .page-btn:disabled {
+            background: #f8f9fa;
+            color: #adb5bd;
+            border-color: #e9ecef;
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* 省略号样式 */
+        .page-ellipsis {
+            padding: 0.6rem 0.5rem;
+            color: var(--gray);
+            font-weight: bold;
+            letter-spacing: 2px;
+            user-select: none;
+        }
+
         .footer {
             background: var(--primary);
             color: rgba(255, 255, 255, 0.7);
@@ -3368,13 +3359,6 @@
             margin-top: 3rem;
         }
     </style>
-
-    <!-- ========================================== -->
-    <!--  在這裡插入 React 和 Babel 的 CDN 腳本 -->
-    <!-- ========================================== -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 
 <body>
@@ -3432,8 +3416,8 @@
                 <a href="/browse" class="btn btn-outline" style="padding: 0.8rem 2rem; font-size: 1rem;">
                     <i class="fas fa-arrow-left"></i> 返回瀏覽
                 </a>
-                <button th:if="${#authentication.name == 'admin'}" type="button" class="btn-stock"
-                    onclick="openEditModal()">
+                <!-- 使用 sec:authorize 檢查是否具有 ROLE_ADMIN 權限 -->
+                <button sec:authorize="hasRole('ADMIN')" type="button" class="btn-stock" onclick="openEditModal()">
                     <i class="fas fa-edit"></i> 编辑商品
                 </button>
             </div>
@@ -3443,18 +3427,17 @@
     <!-- ========================================== -->
     <!--  全新的 React 評論區掛載點 -->
     <!-- ========================================== -->
-    <div id="reviews-react-root" class="reviews-react-wrapper"
+    <div id="reviews-react-root"
         th:attr="data-product-id=${product.productId},
               data-current-username=${#authentication.name},
-              data-is-admin=${#authentication.name == 'admin'},
+              data-is-admin=${isAdmin},
               data-can-review=${canReview},
               data-review-order-no=${reviewOrderNo},
               data-total-review-count=${product.totalReviewCount != null ? product.totalReviewCount : 0},
               data-initial-avg-rating=${product.totalReviewCount != null && product.totalReviewCount > 0 ? (product.totalScore / product.totalReviewCount) : 0.0}">
-        <!-- 載入佔位符 -->
-        <div style="text-align:center; padding: 4rem; color: var(--gray);">
-            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
-            <p>評論區載入中...</p>
+        <!-- SSR fallback / Loading 狀態 -->
+        <div style="text-align:center; padding:4rem; color:#999;">
+            <i class="fas fa-spinner fa-spin"></i> 評論區載入中...
         </div>
     </div>
 
@@ -3487,6 +3470,15 @@
             <p style="font-size: 1.1rem; color: var(--gray); margin-top: 1rem;">該產品還沒有用戶發表評價！</p>
             <p style="font-size: 0.9rem; color: var(--gray); margin-top: 0.5rem;">成為第一個留下評論的人吧</p>
         </div>
+    </div>
+
+    <!-- 只要 totalElements > 0 (有评论)，就显示分页区域 -->
+    <div th:if="${totalElements > 0}" style="margin-top: 2rem;">
+        <div th:replace="~{fragments/pagination :: smartPagination(
+        currentPage=${currentPage},
+        totalPages=${totalPages},
+        smartPages=${smartPages},
+        changePageFunction='changePage')}"></div>
     </div>
 
     <footer class="footer">
@@ -3902,14 +3894,23 @@
         const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
         const currentProductId = [[${product.productId}]];
         const currentUsername = [[${#authentication.name}]];
-        const isAdmin = [[${#authentication.name == 'admin'}]];
+        const isAdmin = [[${isAdmin}]];
         const currentStock = [[${product.stock}]];
     </script>
 
     <script src="/js/common.js"></script>
     <script type="module" th:src="@{/react-assets/assets/index.js}"></script>
-
     <script>
+
+        // ==========================================
+        // 分頁跳轉函數 (供 Fragment 調用)
+        // ==========================================
+        function changePage(page) {
+            // 構建新的 URL，保留當前的 sort 參數
+            const currentSort = '[[${sortOrder}]]'; // 從 Thymeleaf 獲取當前排序
+            window.location.href = `/product/${currentProductId}?page=${page}&sort=${currentSort}`;
+        }
+
         // ==========================================
         // 全局變量聲明 (拉黑相關)
         // ==========================================
@@ -4896,11 +4897,6 @@
 
     </script>
 
-
-    <!-- ========================================== -->
-    <!-- 引入外部的 React 評價表單組件 (彻底解决 Thymeleaf 解析报错) -->
-    <!-- ========================================== -->
-    <script type="text/babel" src="/js/review-form.js" th:inline="none"></script>
 
 </body>
 

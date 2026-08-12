@@ -130,8 +130,16 @@ public class StockNotificationController {
      */
     @GetMapping("/waitlist/{productId}")
     public ResponseEntity<?> getWaitlist(@PathVariable Integer productId, Authentication authentication) {
-        if (authentication == null || !"admin".equals(authentication.getName())) {
-            return ResponseEntity.status(403).body(ApiResponse.error("無權訪問"));
+
+        if (authentication == null || !authentication.isAuthenticated() ||
+                "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+        }
+
+        // 2. 【核心修復】：使用 SecurityUtils 進行嚴格的 Role 權限校驗
+        // 這會從 SecurityContext 中獲取 CustomUserDetails 並檢查 Role 枚舉
+        if (!org.example.website.util.SecurityUtils.isAdmin()) {
+            return ResponseEntity.status(403).body(ApiResponse.error("無權訪問，僅限管理員 (Role: ADMIN)"));
         }
 
         List<StockNotification> list = stockNotificationRepository.findByProduct_ProductIdAndNotifiedFalseOrderByCreatedAtAsc(productId);
@@ -156,8 +164,16 @@ public class StockNotificationController {
     @PostMapping("/notify/{productId}")
     @Transactional
     public ResponseEntity<?> notifyWaitlist(@PathVariable Integer productId, Authentication authentication) {
-        if (authentication == null || !"admin".equals(authentication.getName())) {
-            return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
+
+        if (authentication == null || !authentication.isAuthenticated() ||
+                "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+        }
+
+        // 2. 【核心修復】：使用 SecurityUtils 進行嚴格的 Role 權限校驗
+        // 這會從 SecurityContext 中獲取 CustomUserDetails 並檢查 Role 枚舉
+        if (!org.example.website.util.SecurityUtils.isAdmin()) {
+            return ResponseEntity.status(403).body(ApiResponse.error("無權訪問，僅限管理員 (Role: ADMIN)"));
         }
 
         Product product = productRepository.findById(productId)

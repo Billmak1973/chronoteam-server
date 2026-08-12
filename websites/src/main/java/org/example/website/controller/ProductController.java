@@ -6,13 +6,16 @@ import org.example.website.dto.ProductVariantDTO;
 import org.example.website.entity.Order;
 import org.example.website.entity.Product;
 import org.example.website.entity.Review;
+import org.example.website.entity.User;
 import org.example.website.repository.FavoriteRepository;
 import org.example.website.repository.OrderItemRepository;
 import org.example.website.repository.OrderRepository;
 import org.example.website.repository.ProductRepository;
 import org.example.website.repository.ReviewRepository;
+import org.example.website.security.CustomUserDetails;
 import org.example.website.service.ProductService;
 import org.example.website.service.ViewHistoryService;
+import org.example.website.util.PaginationUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -52,6 +55,18 @@ public class ProductController {
         this.productService = productService;
     }
 
+    /**
+     * 核心修復：權限校驗基於 user_type (Role == ADMIN)，而非用戶名是否等於 "admin"
+     * CustomUserDetails 在登入時已從數據庫載入 Role 枚舉，直接判斷，零查庫開銷
+     */
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null
+                && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())
+                && authentication.getPrincipal() instanceof CustomUserDetails userDetails
+                && userDetails.getRole() == User.Role.ADMIN;
+    }
+
     @GetMapping("/product/{id}")
     public String productDetail(@PathVariable Integer id,
                                 Model model,
@@ -69,7 +84,6 @@ public class ProductController {
         Sort dynamicSort;
         switch (sort) {
             case "newest":
-                // 最新發布也要保證置頂的在最前面
                 dynamicSort = Sort.by(
                         Sort.Order.desc("pinned"),
                         Sort.Order.desc("createdAt")
@@ -83,34 +97,38 @@ public class ProductController {
                 break;
             case "popular":
             default:
-                // 核心修改：按 置頂狀態 -> 點贊數 -> 時間 降序排列
                 dynamicSort = Sort.by(
-                        Sort.Order.desc("pinned"),      // 置頂的永遠在最前
-                        Sort.Order.desc("likeCount"),   // 然後按點贊數
-                        Sort.Order.desc("createdAt")    // 最後按時間
+                        Sort.Order.desc("pinned"),
+                        Sort.Order.desc("likeCount"),
+                        Sort.Order.desc("createdAt")
                 );
                 break;
         }
 
         // 3. 使用分頁 + 動態排序查詢根評論（每頁30條）
+        // 注意：Spring Data JPA 的 PageRequest 是從 0 開始的，所以這裡要 page - 1
         Pageable pageable = PageRequest.of(page - 1, 30, dynamicSort);
         Page<Review> rootReviewsPage = reviewRepository.findByProduct_ProductIdAndParentIdIsNull(id, pageable);
 
         // 4. 傳遞分頁相關數據到前端
         model.addAttribute("reviews", rootReviewsPage.getContent());
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", page); // 保持 1-based 給前端顯示
         model.addAttribute("totalPages", rootReviewsPage.getTotalPages());
         model.addAttribute("totalElements", rootReviewsPage.getTotalElements());
         model.addAttribute("sortOrder", sort);
 
-        // 5. 智能頁碼列表（顯示當前頁 ±2 的頁碼）
-        List<Integer> pageNumberList = new ArrayList<>();
-        int startPage = Math.max(1, page - 2);
-        int endPage = Math.min(rootReviewsPage.getTotalPages(), page + 2);
-        for (int i = startPage; i <= endPage; i++) {
-            pageNumberList.add(i);
-        }
-        model.addAttribute("pageNumberList", pageNumberList);
+        // ==========================================
+        // 5. 【核心修改】使用 PaginationUtils 生成智能分頁列表
+        // ==========================================
+        // 原來的代碼是手動計算 page-2 到 page+2，現在改用工具類
+        // 注意：generateSmartPagination 接收的是 0-based 的 currentPage (即 page.getNumber())
+        // 但你的 page 變量是 1-based，所以傳入 page - 1
+        List<PaginationUtils.PageItem> smartPages = PaginationUtils.generateSmartPagination(page - 1, rootReviewsPage.getTotalPages());
+        model.addAttribute("smartPages", smartPages);
+
+        // 如果你還想保留舊的 pageNumberList 變量名以兼容舊的前端代碼，可以這樣做：
+        // model.addAttribute("pageNumberList", smartPages);
+        // 但建議前端也對應修改為使用 smartPages 對象列表
 
         // 6. 統計每條根評論的樓中樓回復數量
         Map<Long, Long> replyCounts = new HashMap<>();
@@ -157,9 +175,9 @@ public class ProductController {
             // ==========================================
             // 【核心新增】：管理員專屬邏輯 (繞過訂單校驗)
             // ==========================================
-            if ("admin".equals(username)) {
+            if (isAdmin(authentication)) {
                 canReview = true;
-                reviewOrderNo = "ADMIN_COMMENT"; // 給一個特殊標識，前端提交時會帶上
+                reviewOrderNo = "ADMIN_COMMENT";
             }
             // ==========================================
             // 普通用戶邏輯 (基於訂單狀態)
@@ -226,7 +244,7 @@ public class ProductController {
 
         // 無論用戶是否登入，都將收藏狀態傳遞給前端
         model.addAttribute("isFavorite", isFavorite);
-
+        model.addAttribute("isAdmin", isAdmin(authentication));
         return "product-detail";
     }
 
@@ -243,7 +261,7 @@ public class ProductController {
         }
 
         // 权限检查
-        if (!"admin".equals(authentication.getName())) {
+        if (!isAdmin(authentication)) {
             return ResponseEntity.status(403)
                     .body(ApiResponse.error("无权操作，仅限管理员"));
         }
