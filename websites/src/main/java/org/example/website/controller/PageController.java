@@ -1,5 +1,6 @@
 package org.example.website.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.example.website.dto.ApiResponse;
 import org.example.website.entity.*;
 import org.example.website.repository.*;
@@ -19,6 +20,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -53,6 +55,8 @@ public class PageController {
     private final OrderRepository orderRepository;
     private final SystemConfigService systemConfigService;
     private final ReviewRepository reviewRepository;
+    private final NotificationService notificationService; // 新增注入
+    private final ReviewReactionRepository reviewReactionRepository; // 新增依賴
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
@@ -68,7 +72,7 @@ public class PageController {
                           AdminPenaltyRepository adminPenaltyRepository,
                           AdminPenaltyService adminPenaltyService, SystemConfigService systemConfigService,
                           CartService cartService, ProductService productService, AnnouncementReceiptRepository announcementReceiptRepository,
-                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository) {
+                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository, NotificationService notificationService, ReviewReactionRepository reviewReactionRepository) {
         this.userService = userService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -90,6 +94,8 @@ public class PageController {
         this.orderRepository = orderRepository;
         this.systemConfigService = systemConfigService; // 新增賦值
         this.reviewRepository = reviewRepository;
+        this.notificationService = notificationService;
+        this.reviewReactionRepository = reviewReactionRepository;
     }
 
     @GetMapping("/")
@@ -496,64 +502,123 @@ public class PageController {
         return "settlement";
     }
 
+
     @GetMapping("/account/reviews")
     public String myReviewsPage(Model model,
                                 Authentication authentication,
-                                @RequestParam(defaultValue = "1") int page, // 1-based
+                                @RequestParam(defaultValue = "1") int page, // 前端傳入 1-based 頁碼
                                 @RequestParam(defaultValue = "MY") String type) {
 
+        // 1. 獲取當前登錄用戶信息
         String username = authentication.getName();
         User user = userService.findByUsername(username);
         model.addAttribute("user", user);
 
         // ==========================================
-        // 核心邏輯：使用 PaginationUtils 進行後端分頁
+        // 【核心邏輯 A】：計算各 Tab 的未讀數量 (用於導航欄或 Tab 上的紅點 Badge)
+        // 注意：這必須在 markAsRead 之前執行，否則數字會變成 0
+        // ==========================================
+        long unreadReplyCount = notificationService.getUnreadCount(username, NotificationService.TYPE_REVIEW_REPLY);
+        long unreadMentionCount = notificationService.getUnreadCount(username, NotificationService.TYPE_REVIEW_MENTION);
+        long unreadLikeCount = notificationService.getUnreadCount(username, NotificationService.TYPE_LIKED_ME);
+
+        // 將未讀數傳遞給前端 Thymeleaf
+        model.addAttribute("unreadReplyCount", unreadReplyCount);
+        model.addAttribute("unreadMentionCount", unreadMentionCount);
+        model.addAttribute("unreadLikeCount", unreadLikeCount);
+
+        // ==========================================
+        // 【核心邏輯 B】：根據當前 Tab 類型，自動標記為「已讀」
+        // 這會更新 UserInteractionStats 表的 lastViewedAt 為當前時間
+        // ==========================================
+        if (authentication != null && authentication.isAuthenticated()) {
+            switch (type) {
+                case "REPLY":
+                    // 標記「回復我的」為已讀
+                    notificationService.markAsRead(username, NotificationService.TYPE_REVIEW_REPLY);
+                    break;
+                case "MENTION":
+                    // 標記「@我的」為已讀
+                    notificationService.markAsRead(username, NotificationService.TYPE_REVIEW_MENTION);
+                    break;
+                case "LIKED_ME":
+                    // 標記「點贊我的」為已讀
+                    notificationService.markAsRead(username, NotificationService.TYPE_LIKED_ME);
+                    break;
+                case "MY":
+                case "LIKED_BY_ME":
+                default:
+                    // 「我的評論」和「我點贊的」不需要標記未讀邏輯
+                    break;
+            }
+        }
+
+        // ==========================================
+        // 【核心邏輯 C】：後端分頁查詢與數據組裝
         // ==========================================
         int pageSize = 30;
-        // Spring Data 需要 0-based，所以這裡 page - 1
+        // Spring Data JPA 使用 0-based 索引，所以這裡要 page - 1
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page - 1, pageSize);
 
         List<Map<String, Object>> cleanReviews = new java.util.ArrayList<>();
         int totalPages = 1;
         long totalElements = 0;
-        // 用於存儲最終的分頁數據結構
         List<PaginationUtils.PageItem> smartPages = new java.util.ArrayList<>();
 
         try {
             switch (type) {
                 case "REPLY":
-                    // 回復我的
+                    // 查詢別人回復我的評論 (排除我自己回復自己的)
                     var replyPage = reviewRepository.findByReplyToUserAndUser_UsernameNotOrderByCreatedAtDesc(username, username, pageable);
-                    cleanReviews = convertReviewsToMap(replyPage.getContent());
+                    // 【性能優化】傳入 username 進行批量點贊狀態查詢，避免 N+1 問題
+                    cleanReviews = convertReviewsToMap(replyPage.getContent(), username);
                     totalPages = replyPage.getTotalPages();
                     totalElements = replyPage.getTotalElements();
-                    // 使用工具類生成智能分頁 (傳入 0-based 的 page number)
                     smartPages = PaginationUtils.generateSmartPagination(replyPage.getNumber(), totalPages);
                     break;
 
                 case "MENTION":
-                    // @ 提到我的
+                    // 查詢內容包含 @username 的評論
                     var mentionPage = reviewRepository.findMentions("@" + username, username, pageable);
-                    cleanReviews = convertReviewsToMap(mentionPage.getContent());
+                    cleanReviews = convertReviewsToMap(mentionPage.getContent(), username);
                     totalPages = mentionPage.getTotalPages();
                     totalElements = mentionPage.getTotalElements();
                     smartPages = PaginationUtils.generateSmartPagination(mentionPage.getNumber(), totalPages);
                     break;
 
                 case "LIKED_BY_ME":
-                    // 我點贊的
+                    // 查詢我點贊過的評論
                     var likedByMePage = reviewRepository.findReviewsLikedByMe(username, pageable);
-                    cleanReviews = convertReviewsToMap(likedByMePage.getContent());
+                    cleanReviews = convertReviewsToMap(likedByMePage.getContent(), username);
                     totalPages = likedByMePage.getTotalPages();
                     totalElements = likedByMePage.getTotalElements();
                     smartPages = PaginationUtils.generateSmartPagination(likedByMePage.getNumber(), totalPages);
                     break;
 
                 case "LIKED_ME":
-                    // 點贊我的 (特殊處理：Repository 返回 Object[])
-                    // findLikesOnMyReviews 返回 Page<Object[]> -> [Review, likerUsername, likeTime]
+                    // 查詢別人點贊我的評論 (特殊處理：Repository 返回 Object[] 數組)
                     var likesPage = reviewRepository.findLikesOnMyReviews(username, username, pageable);
 
+                    // 【性能優化】針對 LIKED_ME 的特殊批量查詢邏輯
+                    // 1. 收集當前頁所有被點贊的評論 ID
+                    List<Long> reviewIds = likesPage.getContent().stream()
+                            .map(row -> ((Review) row[0]).getReviewId())
+                            .collect(java.util.stream.Collectors.toList());
+
+                    // 2. 一次性查出當前用戶對這些評論的點贊記錄 (雖然在這個 Tab 下用戶不太可能點贊自己的評論，但為了數據準確性)
+                    java.util.Set<Long> likedReviewIds = new java.util.HashSet<>();
+                    if (!reviewIds.isEmpty()) {
+                        // 假設 ReviewReactionRepository 中有 findByReviewIdInAndUser_Username 方法
+                        List<org.example.website.entity.ReviewReaction> reactions =
+                                reviewReactionRepository.findByReviewIdInAndUser_Username(reviewIds, username);
+
+                        likedReviewIds = reactions.stream()
+                                .filter(r -> "LIKE".equals(r.getReactionType()))
+                                .map(org.example.website.entity.ReviewReaction::getReviewId)
+                                .collect(java.util.stream.Collectors.toSet());
+                    }
+
+                    // 3. 遍歷組裝數據
                     for (Object[] row : likesPage.getContent()) {
                         Review r = (Review) row[0];
                         String likerUsername = (String) row[1];
@@ -563,11 +628,14 @@ public class PageController {
                         map.put("id", r.getReviewId());
                         map.put("content", r.getContent());
                         map.put("createdAt", r.getCreatedAt());
-                        map.put("updatedAt", likeTime); // 點贊時間
+                        map.put("updatedAt", likeTime); // 點贊時間作為更新時間
                         map.put("rating", r.getRating());
                         map.put("likeCount", r.getLikeCount());
                         map.put("parentId", r.getParentId());
                         map.put("replyToUser", r.getReplyToUser());
+
+                        // 【關鍵】注入點贊狀態 (從內存 Set 中判斷，O(1) 複雜度)
+                        map.put("isLikedByMe", likedReviewIds.contains(r.getReviewId()));
 
                         // 點贊者信息
                         map.put("customer", java.util.Map.of("username", likerUsername));
@@ -590,25 +658,25 @@ public class PageController {
 
                 case "MY":
                 default:
-                    // 我的評論
+                    // 查詢我自己發表的所有評論
                     var myPage = reviewRepository.findByUser_UsernameOrderByCreatedAtDesc(username, pageable);
-                    cleanReviews = convertReviewsToMap(myPage.getContent());
+                    cleanReviews = convertReviewsToMap(myPage.getContent(), username);
                     totalPages = myPage.getTotalPages();
                     totalElements = myPage.getTotalElements();
                     smartPages = PaginationUtils.generateSmartPagination(myPage.getNumber(), totalPages);
                     break;
             }
         } catch (Exception e) {
+            // 容錯處理：如果出錯，保持空列表，分頁設為默認
             e.printStackTrace();
-            // 容錯：如果出錯，保持空列表，分頁設為默認
             smartPages = PaginationUtils.generateSmartPagination(0, 1);
         }
 
         // ==========================================
-        // 傳遞數據給 Thymeleaf
+        // 【核心邏輯 D】：傳遞數據給 Thymeleaf 模板
         // ==========================================
         model.addAttribute("reviews", cleanReviews);
-        model.addAttribute("currentPage", page); // 保持 1-based 給前端
+        model.addAttribute("currentPage", page); // 保持 1-based 給前端顯示
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalElements", totalElements);
         model.addAttribute("smartPages", smartPages);
@@ -617,9 +685,35 @@ public class PageController {
         return "reviews";
     }
 
-    // 輔助方法：將 Review 列表轉換為 Map 列表 (避免 LazyInitializationException)
-    private List<Map<String, Object>> convertReviewsToMap(List<Review> reviews) {
+    /**
+     * 輔助方法：將 Review 實體列表轉換為 Map 列表
+     * 【性能優化】：批量查詢當前用戶對這些評論的點贊狀態，避免 N+1 查詢問題
+     */
+    private List<Map<String, Object>> convertReviewsToMap(List<Review> reviews, String currentUsername) {
         List<Map<String, Object>> list = new java.util.ArrayList<>();
+
+        // 1. 【性能優化核心】：收集當前頁所有評論的 ID
+        List<Long> reviewIds = reviews.stream()
+                .map(Review::getReviewId)
+                .collect(java.util.stream.Collectors.toList());
+
+        // 2. 【性能優化核心】：一次性查出當前用戶對這些評論的所有反應 (LIKE/DISLIKE)
+        // 這樣無論當前頁有 30 條還是 100 條評論，都只執行 1 次 SQL 查詢，而不是 30/100 次
+        java.util.Set<Long> likedReviewIds = new java.util.HashSet<>();
+        if (!reviewIds.isEmpty() && currentUsername != null) {
+            // 假設 ReviewReactionRepository 中有 findByReviewIdInAndUser_Username 方法
+            // 如果沒有，需要在 Repository 接口中添加：
+            // List<ReviewReaction> findByReviewIdInAndUser_Username(List<Long> reviewIds, String username);
+            List<org.example.website.entity.ReviewReaction> reactions =
+                    reviewReactionRepository.findByReviewIdInAndUser_Username(reviewIds, currentUsername);
+
+            likedReviewIds = reactions.stream()
+                    .filter(r -> "LIKE".equals(r.getReactionType()))
+                    .map(org.example.website.entity.ReviewReaction::getReviewId)
+                    .collect(java.util.stream.Collectors.toSet());
+        }
+
+        // 3. 遍歷組裝數據
         for (Review r : reviews) {
             Map<String, Object> map = new java.util.HashMap<>();
             map.put("id", r.getReviewId());
@@ -630,6 +724,10 @@ public class PageController {
             map.put("parentId", r.getParentId());
             map.put("replyToUser", r.getReplyToUser());
 
+            // 【關鍵修復】：從內存 Set 中判斷是否點贊，O(1) 複雜度，極快
+            map.put("isLikedByMe", likedReviewIds.contains(r.getReviewId()));
+
+            // 商品信息
             if (r.getProduct() != null) {
                 map.put("product", java.util.Map.of(
                         "id", r.getProduct().getProductId(),
@@ -637,6 +735,8 @@ public class PageController {
                         "image", r.getProduct().getImage()
                 ));
             }
+
+            // 用戶信息
             if (r.getUser() != null) {
                 map.put("customer", java.util.Map.of("username", r.getUser().getUsername()));
             }
@@ -786,13 +886,14 @@ public class PageController {
         return ResponseEntity.ok(response);
     }
 
+
     @GetMapping("/account/history")
     public String myHistory(Model model,
                             Authentication authentication,
-                            @RequestParam(defaultValue = "1") int page) { // 【修復 1】默認值改為 1 (1-based)
-        String username = authentication.getName();
+                            @RequestParam(defaultValue = "1") int page,
+                            RedirectAttributes redirectAttributes) { // 【修改 1】注入 RedirectAttributes
 
-        // 1. 獲取 User 實體
+        String username = authentication.getName();
         User user = userService.findByUsername(username);
 
         // 2. 獲取所有歷史記錄
@@ -802,34 +903,55 @@ public class PageController {
         int size = 15;
         int totalElements = allHistoryList.size();
 
-        // 【修復 2】將 1-based 頁碼轉換為 0-based 索引進行計算
-        int pageIndex = page - 1;
-
-        // 邊界檢查 (防止用戶手動輸入 page=0 或負數)
-        if (pageIndex < 0) pageIndex = 0;
-
+        // 計算總頁數
         int totalPages = (int) Math.ceil((double) totalElements / size);
-        if (totalPages == 0) totalPages = 1; // 至少保持 1 頁
-        if (pageIndex >= totalPages) pageIndex = totalPages - 1; // 防止越界
+        if (totalPages == 0) totalPages = 1;
+
+        // ==========================================
+        // 【核心修復】：頁碼越界 -> 觸發 HTTP 重定向 (302)
+        // ==========================================
+        boolean needRedirect = false;
+        int safePage = page;
+
+        if (page > totalPages) {
+            safePage = totalPages;
+            needRedirect = true;
+        } else if (page < 1) {
+            safePage = 1;
+            needRedirect = true;
+        }
+
+        // 如果頁碼不合法，直接重定向到合法的 URL
+        // 例如：用戶訪問 ?page=2，但只有 1 頁 -> 重定向到 /account/history?page=1
+        if (needRedirect) {
+            return "redirect:/account/history?page=" + safePage;
+        }
+
+        // ==========================================
+        // 以下是頁碼合法時的正常渲染邏輯
+        // ==========================================
+
+        // 轉換為 0-based index
+        int pageIndex = safePage - 1;
 
         // 4. 截取當前頁數據
         int fromIndex = pageIndex * size;
         int toIndex = Math.min(fromIndex + size, totalElements);
+
         List<ViewHistory> pagedHistoryList = new ArrayList<>();
         if (fromIndex < totalElements) {
             pagedHistoryList = allHistoryList.subList(fromIndex, toIndex);
         }
 
-        // 5. 生成智能分頁 (注意：這裡傳入的是 0-based 的 pageIndex，因為工具類內部邏輯是 0-based)
+        // 5. 生成智能分頁
         List<PaginationUtils.PageItem> smartPages = PaginationUtils.generateSmartPagination(pageIndex, totalPages);
 
         // 6. 傳遞數據到前端
         model.addAttribute("user", user);
         model.addAttribute("historyList", pagedHistoryList);
 
-        // 【修復 3】關鍵！傳遞給前端的 currentPage 必須是 1-based 的 page
-        // 這樣前端 URL 才是 ?page=1，且 th:class="${currentPage == 1}" 才能正確生效
-        model.addAttribute("currentPage", page);
+        // 這裡傳入 safePage (其實就是 page，因為如果不 redirect，page 本身就是合法的)
+        model.addAttribute("currentPage", safePage);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalElements", totalElements);
         model.addAttribute("smartPages", smartPages);

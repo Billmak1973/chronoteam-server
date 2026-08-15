@@ -22,12 +22,12 @@ public class NotificationController {
     private final NotificationRepository notificationRepository;
     private final NotificationService notificationService;
     private final AnnouncementReceiptRepository announcementReceiptRepository;
-    private final UserRepository userRepository; // 【新增】注入 UserRepository
+    private final UserRepository userRepository;
 
     public NotificationController(NotificationRepository notificationRepository,
                                   NotificationService notificationService,
                                   AnnouncementReceiptRepository announcementReceiptRepository,
-                                  UserRepository userRepository) { // 【新增】構造函數參數
+                                  UserRepository userRepository) {
         this.notificationRepository = notificationRepository;
         this.notificationService = notificationService;
         this.announcementReceiptRepository = announcementReceiptRepository;

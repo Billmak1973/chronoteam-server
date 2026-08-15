@@ -3459,7 +3459,7 @@
     <div th:if="${#authorization.expression('!isAuthenticated()')}" class="login-required-prompt">
         <i class="fas fa-lock" style="font-size: 2rem; color: var(--gold); margin-bottom: 1rem;"></i>
         <p style="color: var(--gray); margin-bottom: 1rem; font-size: 1.1rem; font-weight: 500;">請登入後購買商品並發表評價</p>
-        <button onclick="openLoginModal()" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> 立即登入</button>
+        <button onclick="Auth.openLoginModal()" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> 立即登入</button>
     </div>
 
     <!-- 無評論時的佔位提示 (React 加載前顯示) -->
@@ -3900,35 +3900,62 @@
 
     <script src="/js/common.js"></script>
     <script type="module" th:src="@{/react-assets/assets/index.js}"></script>
-    <script>
+    <script th:inline="javascript">
+        // ==========================================
+        // 0. 從 Thymeleaf 安全注入後端變數
+        // ==========================================
+        const SERVER_DATA = {
+            productId: [[${product.productId}]],
+            sortOrder: '[[${sortOrder}]]',
+            currentUsername: '[[${#authentication?.name}]]' || '',
+            isAdmin: [[${isAdmin}]] || false
+        };
 
         // ==========================================
-        // 分頁跳轉函數 (供 Fragment 調用)
+        // 1. 命名空間初始化 (避免全域污染)
         // ==========================================
-        function changePage(page) {
-            // 構建新的 URL，保留當前的 sort 參數
-            const currentSort = '[[${sortOrder}]]'; // 從 Thymeleaf 獲取當前排序
-            window.location.href = `/product/${currentProductId}?page=${page}&sort=${currentSort}`;
-        }
+        window.ChronoTeamProduct = window.ChronoTeamProduct || {
+            // 拉黑相關狀態
+            blacklistTargetUser: '',
+            blacklistReviewId: null,
+            blacklistReviewContent: null,
+
+            // 刪除確認回調
+            deleteConfirmCallback: null,
+
+            // 解除禁言狀態
+            unblockTargetUser: '',
+            unblockCallback: null
+        };
+
+        // 簡寫引用 (可選，方便內部使用)
+        const CTP = window.ChronoTeamProduct;
 
         // ==========================================
-        // 全局變量聲明 (拉黑相關)
+        // 2. 分頁跳轉函數 (供 Fragment 調用)
         // ==========================================
-        let blacklistTargetUser = '';
-        let blacklistReviewId = null;
-        let blacklistReviewContent = null;
+        window.changePage = function (page) {
+            // 修復：使用 SERVER_DATA.productId 而非未定義的 currentProductId
+            if (!SERVER_DATA.productId) {
+                console.error('缺少 Product ID，無法進行分頁跳轉');
+                return;
+            }
+            const sort = SERVER_DATA.sortOrder || 'popular';
+            window.location.href = `/product/${SERVER_DATA.productId}?page=${page}&sort=${sort}`;
+        };
 
         // ==========================================
-        // 1. 全局彈窗 JS (普通禁言 + 管理員全局禁言 + 拉黑確認 + 未登入提示 + 自定義刪除 + 解除禁言)
+        // 3. 全域彈窗函數 (Bridge Layer)
+        // 確保 React 組件與 HTML onclick 均可調用
         // ==========================================
 
-        // 全局彈窗函數，供 React 評論區組件調用 (普通用戶互相禁言)
+        // --- 普通用戶互相禁言提示 ---
         window.showBlockedModal = function (message) {
             const modal = document.getElementById('blockedModal');
             const msgEl = document.getElementById('blockedModalMessage');
             if (msgEl) msgEl.textContent = message || '您已經被對方禁言，無法回復！！！';
             if (modal) modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            document.body.style.overflow = 'hidden';
         };
 
         window.closeBlockedModal = function () {
@@ -3937,145 +3964,132 @@
             document.body.style.overflow = '';
         };
 
-        // 新增：管理員全局禁言彈窗函數，供 React 評論區組件調用
+        // --- 管理員全局禁言提示 ---
         window.showGlobalBanModal = function (username, expiresAtStr) {
             const modal = document.getElementById('globalBanModal');
             const msgEl = document.getElementById('banMessageText');
+            if (!modal || !msgEl) return;
 
-            // 格式化時間 (將 ISO 字符串轉為本地時間)
-            const date = new Date(expiresAtStr);
-            const dateStr = date.toLocaleString('zh-TW', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit'
-            });
-
-            // 設置消息
-            if (msgEl) {
+            try {
+                const date = new Date(expiresAtStr);
+                const dateStr = date.toLocaleString('zh-TW', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                });
                 msgEl.textContent = `${username}，你因之前的評論不當已被禁言至 ${dateStr}！`;
+            } catch (e) {
+                msgEl.textContent = `${username}，你的帳號已被限制操作！`;
             }
 
-            // 顯示彈窗
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
 
-                // 4秒後自動消失
-                setTimeout(() => {
-                    closeGlobalBanModal();
-                }, 4000);
-            }
+            // 清除舊的計時器，避免重複關閉
+            if (modal._autoCloseTimer) clearTimeout(modal._autoCloseTimer);
+            modal._autoCloseTimer = setTimeout(() => {
+                window.closeGlobalBanModal();
+            }, 4000);
         };
 
-        // 關閉全局禁言彈窗
         window.closeGlobalBanModal = function () {
             const modal = document.getElementById('globalBanModal');
             if (modal) {
                 modal.style.display = 'none';
                 document.body.style.overflow = '';
+                if (modal._autoCloseTimer) clearTimeout(modal._autoCloseTimer);
             }
         };
 
-        // ==========================================
-        // 2. 永久拉黑彈窗函數 (與全局禁言區分)
-        // ==========================================
+        // --- 永久拉黑提示 (僅顯示結果) ---
         window.showBlacklistedModal = function (reason) {
             const modal = document.getElementById('blacklistedModal');
             const msgEl = document.getElementById('blacklistMessageText');
+            if (!modal) return;
 
-            if (msgEl && reason) {
-                msgEl.textContent = `您因「${reason}」已被管理員永久拉黑，無法進行任何互動操作（點贊、踩、評價、回復）。`;
-            } else if (msgEl) {
-                msgEl.textContent = `您因嚴重違反社區規範，已被管理員永久拉黑，無法進行任何互動操作（點贊、踩、評價、回復）。`;
+            if (msgEl) {
+                msgEl.textContent = reason
+                    ? `您因「${reason}」已被管理員永久拉黑，無法進行任何互動操作。`
+                    : '您因嚴重違反社區規範，已被管理員永久拉黑，無法進行任何互動操作。';
             }
-
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
         };
 
         window.closeBlacklistedModal = function () {
             const modal = document.getElementById('blacklistedModal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = '';
-            }
+            if (modal) modal.style.display = 'none';
+            document.body.style.overflow = '';
         };
 
-        // ==========================================
-        // 3. 永久拉黑確認彈窗邏輯 (管理員操作) - 【已更新支援 reviewId 與 reviewContent】
-        // ==========================================
+        // --- 永久拉黑確認彈窗 (管理員操作) ---
         window.openBlacklistConfirmModal = function (username, reviewId, reviewContent) {
-            blacklistTargetUser = username;
-            blacklistReviewId = reviewId || null;
-            blacklistReviewContent = reviewContent || null;
+            CTP.blacklistTargetUser = username;
+            CTP.blacklistReviewId = reviewId || null;
+            CTP.blacklistReviewContent = reviewContent || null;
 
-            document.getElementById('blacklistTargetUsername').textContent = username;
-            document.getElementById('blacklistReason').value = '嚴重違反社區規範';
-            document.getElementById('blacklistConfirmModal').style.display = 'flex';
+            const targetEl = document.getElementById('blacklistTargetUsername');
+            const reasonInput = document.getElementById('blacklistReason');
+            const modal = document.getElementById('blacklistConfirmModal');
+
+            if (targetEl) targetEl.textContent = username;
+            if (reasonInput) reasonInput.value = '嚴重違反社區規範';
+            if (modal) modal.style.display = 'flex';
+
             document.body.style.overflow = 'hidden';
         };
 
         window.closeBlacklistConfirmModal = function () {
-            document.getElementById('blacklistConfirmModal').style.display = 'none';
+            const modal = document.getElementById('blacklistConfirmModal');
+            if (modal) modal.style.display = 'none';
             document.body.style.overflow = '';
-            blacklistTargetUser = '';
-            blacklistReviewId = null;
-            blacklistReviewContent = null;
+
+            // 清空命名空間中的敏感數據
+            CTP.blacklistTargetUser = '';
+            CTP.blacklistReviewId = null;
+            CTP.blacklistReviewContent = null;
         };
 
         window.confirmBlacklistAction = async function () {
-            const reason = document.getElementById('blacklistReason').value.trim();
+            const reasonInput = document.getElementById('blacklistReason');
+            const reason = reasonInput ? reasonInput.value.trim() : '';
+
             if (!reason) {
                 alert('請輸入拉黑原因');
                 return;
             }
 
-            // 構建 URL 參數
-            let url = `/api/admin/penalty/blacklist/${encodeURIComponent(blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`;
-            if (blacklistReviewId) {
-                url += `&reviewId=${blacklistReviewId}`;
-            }
-            if (blacklistReviewContent) {
-                url += `&reviewContent=${encodeURIComponent(blacklistReviewContent)}`;
-            }
+            let url = `/api/admin/penalty/blacklist/${encodeURIComponent(CTP.blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`;
+            if (CTP.blacklistReviewId) url += `&reviewId=${CTP.blacklistReviewId}`;
+            if (CTP.blacklistReviewContent) url += `&reviewContent=${encodeURIComponent(CTP.blacklistReviewContent)}`;
 
             try {
                 const response = await fetch(url, {method: 'POST', credentials: 'same-origin'});
                 const result = await response.json();
+
                 if (response.ok && result.success) {
-                    if (typeof showNotification === 'function') {
-                        showNotification('✅ ' + result.message);
-                    } else {
-                        alert('✅ ' + result.message);
-                    }
-                    closeBlacklistConfirmModal();
-                    setTimeout(() => {window.location.reload();}, 1000);
+                    if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
+                    else alert('✅ ' + result.message);
+
+                    window.closeBlacklistConfirmModal();
+                    setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    if (typeof showNotification === 'function') {
-                        showNotification('❌ ' + (result.message || '操作失敗'), true);
-                    } else {
-                        alert('❌ ' + (result.message || '操作失敗'));
-                    }
+                    const errMsg = result.message || '操作失敗';
+                    if (typeof showNotification === 'function') showNotification('❌ ' + errMsg, true);
+                    else alert('❌ ' + errMsg);
                 }
             } catch (error) {
                 console.error('拉黑失敗:', error);
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ 網絡錯誤，請稍後重試', true);
-                } else {
-                    alert('❌ 網絡錯誤，請稍後重試');
-                }
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
+                else alert('❌ 網絡錯誤，請稍後重試');
             }
         };
 
-        // ==========================================
-        // 4. 未登入提示彈窗邏輯
-        // ==========================================
+        // --- 未登入提示彈窗 ---
         window.showLoginRequiredModal = function () {
             const modal = document.getElementById('loginRequiredModal');
             if (modal) {
                 modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+                document.body.style.overflow = 'hidden';
             }
         };
 
@@ -4083,26 +4097,25 @@
             const modal = document.getElementById('loginRequiredModal');
             if (modal) {
                 modal.style.display = 'none';
-                document.body.style.overflow = ''; // 恢復背景滾動
+                document.body.style.overflow = '';
             }
         };
 
+        // 修復：統一調用 common.js 中的 openLoginModal
         window.handleLoginFromModal = function () {
-            closeLoginRequiredModal();
-            // 調用 common.js 中的全局登入函數
-            if (typeof openLoginModal === 'function') {
-                setTimeout(openLoginModal, 300); // 延遲一點點，讓關閉動畫先開始
-            } else {
-                window.location.href = '/login';
-            }
+            window.closeLoginRequiredModal();
+            setTimeout(() => {
+                // 優先檢查全域函數 (來自 common.js)
+                if (typeof openLoginModal === 'function') {
+                    openLoginModal();
+                } else {
+                    console.warn("openLoginModal 尚未加載，跳轉至登入頁");
+                    window.location.href = '/login';
+                }
+            }, 300);
         };
 
-        // ==========================================
-        // 5. 自定義刪除確認彈窗邏輯 (主回復/樓中樓刪除)
-        // ==========================================
-        let deleteConfirmCallback = null;
-
-        // 打開自定義刪除彈窗
+        // --- 自定義刪除確認彈窗 ---
         window.openDeleteModal = function (message, onConfirm) {
             const modal = document.getElementById('deleteConfirmModal');
             const msgEl = document.getElementById('deleteModalMessage');
@@ -4110,129 +4123,96 @@
             if (msgEl) msgEl.textContent = message || '確定要刪除這條內容嗎？';
             if (modal) modal.style.display = 'flex';
 
-            // 保存回調函數
-            deleteConfirmCallback = onConfirm;
-
-            // 禁止背景滾動
+            CTP.deleteConfirmCallback = onConfirm;
             document.body.style.overflow = 'hidden';
         };
 
-        // 關閉彈窗
         window.closeDeleteModal = function () {
             const modal = document.getElementById('deleteConfirmModal');
             if (modal) modal.style.display = 'none';
-            deleteConfirmCallback = null;
-            document.body.style.overflow = ''; // 恢復滾動
+            CTP.deleteConfirmCallback = null;
+            document.body.style.overflow = '';
         };
 
-        // 點擊「確認刪除」按鈕時執行
         window.confirmDeleteAction = function () {
-            if (deleteConfirmCallback) {
-                deleteConfirmCallback(); // 執行真正的刪除邏輯
+            if (typeof CTP.deleteConfirmCallback === 'function') {
+                CTP.deleteConfirmCallback();
             }
-            closeDeleteModal();
+            window.closeDeleteModal();
         };
 
-        // ==========================================
-        // 6. 解除禁言彈窗邏輯
-        // ==========================================
-        let unblockTargetUser = '';
-        let unblockCallback = null;
-
+        // --- 解除禁言彈窗 ---
         window.openUnblockModal = function (username, onConfirm) {
-            unblockTargetUser = username;
-            unblockCallback = onConfirm;
-            document.getElementById('unblockTargetUsername').textContent = username;
-            document.getElementById('unblockConfirmModal').style.display = 'flex';
+            CTP.unblockTargetUser = username;
+            CTP.unblockCallback = onConfirm;
+
+            const targetEl = document.getElementById('unblockTargetUsername');
+            const modal = document.getElementById('unblockConfirmModal');
+
+            if (targetEl) targetEl.textContent = username;
+            if (modal) modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
         };
 
         window.closeUnblockModal = function () {
-            document.getElementById('unblockConfirmModal').style.display = 'none';
+            const modal = document.getElementById('unblockConfirmModal');
+            if (modal) modal.style.display = 'none';
             document.body.style.overflow = '';
-            unblockTargetUser = '';
-            unblockCallback = null;
+            CTP.unblockTargetUser = '';
+            CTP.unblockCallback = null;
         };
 
         window.confirmUnblockAction = function () {
-            if (unblockCallback) {
-                unblockCallback(unblockTargetUser);
+            if (typeof CTP.unblockCallback === 'function') {
+                CTP.unblockCallback(CTP.unblockTargetUser);
             }
-            closeUnblockModal();
+            window.closeUnblockModal();
         };
 
         // ==========================================
-        // 7. 點擊遮罩層關閉 (整合所有彈窗，避免重複綁定)
+        // 4. 全域事件監聽 (遮罩層點擊 + ESC 鍵)
         // ==========================================
         document.addEventListener('click', function (e) {
-            // 1. 關閉普通禁言彈窗
-            const modal1 = document.getElementById('blockedModal');
-            if (modal1 && e.target === modal1) closeBlockedModal();
-
-            // 2. 關閉全局禁言彈窗
-            const modal2 = document.getElementById('globalBanModal');
-            if (modal2 && e.target === modal2) closeGlobalBanModal();
-
-            // 3. 關閉永久拉黑確認彈窗
-            const modal3 = document.getElementById('blacklistConfirmModal');
-            if (modal3 && e.target === modal3) closeBlacklistConfirmModal();
-
-            // 4. 關閉未登入提示彈窗
-            const modal4 = document.getElementById('loginRequiredModal');
-            if (modal4 && e.target === modal4) closeLoginRequiredModal();
-
-            // 5. 關閉自定義刪除確認彈窗
-            const modal5 = document.getElementById('deleteConfirmModal');
-            if (modal5 && e.target === modal5) closeDeleteModal();
-
-            // 6. 關閉解除禁言確認彈窗
-            const modal6 = document.getElementById('unblockConfirmModal');
-            if (modal6 && e.target === modal6) closeUnblockModal();
+            if (e.target.id === 'blockedModal') window.closeBlockedModal();
+            if (e.target.id === 'globalBanModal') window.closeGlobalBanModal();
+            if (e.target.id === 'blacklistConfirmModal') window.closeBlacklistConfirmModal();
+            if (e.target.id === 'loginRequiredModal') window.closeLoginRequiredModal();
+            if (e.target.id === 'deleteConfirmModal') window.closeDeleteModal();
+            if (e.target.id === 'unblockConfirmModal') window.closeUnblockModal();
         });
 
-        // ==========================================
-        // 8. ESC鍵關閉彈窗 (整合所有需要ESC關閉的彈窗)
-        // ==========================================
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                // 關閉拉黑確認彈窗
-                const confirmModal = document.getElementById('blacklistConfirmModal');
-                if (confirmModal && confirmModal.style.display === 'flex') {
-                    closeBlacklistConfirmModal();
-                    return; // 關閉一個即可，避免同時觸發
-                }
+            if (e.key !== 'Escape') return;
 
-                // 關閉未登入提示彈窗
-                const loginReqModal = document.getElementById('loginRequiredModal');
-                if (loginReqModal && loginReqModal.style.display === 'flex') {
-                    closeLoginRequiredModal();
-                    return;
-                }
+            // 按優先級關閉，一次只關一個
+            const modals = [
+                {id: 'blacklistConfirmModal', closeFn: window.closeBlacklistConfirmModal},
+                {id: 'loginRequiredModal', closeFn: window.closeLoginRequiredModal},
+                {id: 'deleteConfirmModal', closeFn: window.closeDeleteModal},
+                {id: 'unblockConfirmModal', closeFn: window.closeUnblockModal},
+                {id: 'globalBanModal', closeFn: window.closeGlobalBanModal},
+                {id: 'blockedModal', closeFn: window.closeBlockedModal}
+            ];
 
-                // 關閉自定義刪除確認彈窗
-                const deleteModal = document.getElementById('deleteConfirmModal');
-                if (deleteModal && deleteModal.style.display === 'flex') {
-                    closeDeleteModal();
-                    return;
-                }
-
-                // 關閉解除禁言確認彈窗
-                const unblockModal = document.getElementById('unblockConfirmModal');
-                if (unblockModal && unblockModal.style.display === 'flex') {
-                    closeUnblockModal();
-                    return;
+            for (const m of modals) {
+                const el = document.getElementById(m.id);
+                if (el && el.style.display === 'flex') {
+                    m.closeFn();
+                    break;
                 }
             }
         });
     </script>
 
+
     <script>
         // ==========================================
-        //  🚨 舉報功能邏輯 (兩級選擇 + 紅點刷新 + 重複舉報美化彈窗)
+        // 🚨 舉報功能模組 (全局化版本)
+        // 所有公開 API 均已掛載至 window 對象
         // ==========================================
 
-        // 定義舉報分類與原因映射
-        const reportConfig = {
+        // 1. 定義舉報分類與原因映射 (全局常量)
+        const REPORT_CONFIG = {
             "ILLEGAL": {label: "違法信息", reasons: ["开盒挂人", "售卖个人信息", "涉枪爆刀", "毒品", "赌博", "假证假票", "售卖考试答案", "其他违禁品"]},
             "PORNOGRAPHY": {label: "色情低俗", reasons: ["色情引流", "低俗信息", "招嫖信息", "色情图文", "头像昵称违规"]},
             "HARMFUL": {label: "有害信息", reasons: ["邪教", "暴恐血腥", "虐杀动物", "其他有害信息"]},
@@ -4245,145 +4225,204 @@
             "NOT_INTERESTED": {label: "不感興趣", reasons: ["不喜欢该内容", "观点与我不一致", "引起我的不适"]}
         };
 
+        // 2. 內部狀態變量 (全局可訪問，方便調試)
         let selectedCategory = null;
         let selectedReason = null;
 
-        //  打開舉報彈窗 (支持顯示被舉報的評論內容)
-        window.openReportModal = function (reviewId, reportedUsername, targetType, reportedContent) {
-            selectedCategory = null;
-            selectedReason = null;
-            document.getElementById('reportAgreement').checked = false;
-            document.getElementById('submitReportBtn').disabled = true;
-
-            document.getElementById('reportReviewId').value = reviewId || '';
-            document.getElementById('reportReportedUsername').value = reportedUsername;
-            document.getElementById('reportTargetTypeVal').value = targetType || 'REVIEW';
-
-            document.getElementById('reportTargetUser').textContent = reportedUsername;
-            document.getElementById('reportTargetType').textContent = targetType === 'USER' ? '用戶' : '評論';
-
-            const contentSection = document.getElementById('reportedContentSection');
-            const contentText = document.getElementById('reportedContentText');
-            if (reportedContent && reportedContent.trim()) {
-                contentText.textContent = reportedContent.trim();
-                contentSection.style.display = 'block';
-            } else {
-                contentSection.style.display = 'none';
-            }
-
-            renderCategories();
-
-            document.getElementById('reasonSection').style.display = 'none';
-            document.getElementById('reasonSection').style.opacity = '0';
-            document.getElementById('agreementSection').style.display = 'none';
-
-            const modal = document.getElementById('reportModal');
-            modal.style.display = 'flex';
-            modal.classList.add('modal-show');
-            document.body.style.overflow = 'hidden';
-        };
-
-        window.closeReportModal = function () {
-            const modal = document.getElementById('reportModal');
-            modal.style.display = 'none';
-            modal.classList.remove('modal-show');
-            document.body.style.overflow = '';
-        };
-
         // ==========================================
-        //  新增：重複舉報美化彈窗控制
+        // 3. 核心渲染邏輯
         // ==========================================
-        function showDuplicateReportModal() {
-            const modal = document.getElementById('duplicateReportModal');
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden'; // 禁止背景滾動
-            }
-        }
-
-        function closeDuplicateReportModal() {
-            const modal = document.getElementById('duplicateReportModal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = ''; // 恢復背景滾動
-            }
-        }
-
-        // ==========================================
-        // 渲染與選擇邏輯 (保持不變)
-        // ==========================================
-        function renderCategories() {
+        function renderReportCategories() {
             const grid = document.getElementById('categoryGrid');
+            if (!grid) return;
+
             grid.innerHTML = '';
-            for (const [key, value] of Object.entries(reportConfig)) {
+            for (const [key, value] of Object.entries(REPORT_CONFIG)) {
                 const btn = document.createElement('div');
                 btn.className = 'report-option';
                 btn.textContent = value.label;
-                btn.onclick = () => selectCategory(key, btn);
+                btn.onclick = () => selectReportCategory(key, btn);
                 grid.appendChild(btn);
             }
         }
 
-        function selectCategory(key, btnElement) {
+        function selectReportCategory(key, btnElement) {
             document.querySelectorAll('#categoryGrid .report-option').forEach(b => b.classList.remove('selected'));
             btnElement.classList.add('selected');
+
             selectedCategory = key;
             selectedReason = null;
-            renderReasons(reportConfig[key].reasons);
+
+            renderReportReasons(REPORT_CONFIG[key].reasons);
 
             const reasonSection = document.getElementById('reasonSection');
-            reasonSection.style.display = 'block';
-            void reasonSection.offsetWidth;
-            reasonSection.style.opacity = '1';
+            if (reasonSection) {
+                reasonSection.style.display = 'block';
+                void reasonSection.offsetWidth; // 觸發 reflow 以啟用過渡動畫
+                reasonSection.style.opacity = '1';
+            }
 
-            document.getElementById('agreementSection').style.display = 'none';
-            document.getElementById('submitReportBtn').disabled = true;
-            reasonSection.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+            const agreementSection = document.getElementById('agreementSection');
+            if (agreementSection) agreementSection.style.display = 'none';
+
+            const submitBtn = document.getElementById('submitReportBtn');
+            if (submitBtn) submitBtn.disabled = true;
+
+            if (reasonSection) reasonSection.scrollIntoView({behavior: 'smooth', block: 'nearest'});
         }
 
-        function renderReasons(reasons) {
+        function renderReportReasons(reasons) {
             const grid = document.getElementById('reasonGrid');
+            if (!grid) return;
+
             grid.innerHTML = '';
             reasons.forEach(reason => {
                 const btn = document.createElement('div');
                 btn.className = 'report-option';
                 btn.textContent = reason;
-                btn.onclick = () => selectReason(reason, btn);
+                btn.onclick = () => selectReportReason(reason, btn);
                 grid.appendChild(btn);
             });
         }
 
-        function selectReason(reasonText, btnElement) {
+        function selectReportReason(reasonText, btnElement) {
             document.querySelectorAll('#reasonGrid .report-option').forEach(b => b.classList.remove('selected'));
             btnElement.classList.add('selected');
+
             selectedReason = reasonText;
-            document.getElementById('agreementSection').style.display = 'block';
-            document.getElementById('agreementSection').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+
+            const agreementSection = document.getElementById('agreementSection');
+            if (agreementSection) {
+                agreementSection.style.display = 'block';
+                agreementSection.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+            }
         }
 
-        document.getElementById('reportAgreement').addEventListener('change', function () {
-            const btn = document.getElementById('submitReportBtn');
-            btn.disabled = !(this.checked && selectedCategory && selectedReason);
-        });
+        // ==========================================
+        // 4. 公開 API (掛載到 window 供外部調用)
+        // ==========================================
 
-        // ==========================================
-        //  提交舉報 (核心修復：攔截重複舉報並彈出美化彈窗)
-        // ==========================================
-        async function submitReport(event) {
-            event.preventDefault();
+        /**
+         * 打開舉報彈窗
+         * @param {number|string} reviewId - 評論ID
+         * @param {string} reportedUsername - 被舉報用戶名
+         * @param {string} targetType - 目標類型 ('REVIEW' 或 'USER')
+         * @param {string} reportedContent - 被舉報內容快照
+         */
+        window.openReportModal = function (reviewId, reportedUsername, targetType, reportedContent) {
+            // 重置狀態
+            selectedCategory = null;
+            selectedReason = null;
+
+            // 重置表單 UI
+            const agreementCheckbox = document.getElementById('reportAgreement');
+            if (agreementCheckbox) agreementCheckbox.checked = false;
+
+            const submitBtn = document.getElementById('submitReportBtn');
+            if (submitBtn) submitBtn.disabled = true;
+
+            // 填充隱藏字段
+            const reviewIdInput = document.getElementById('reportReviewId');
+            if (reviewIdInput) reviewIdInput.value = reviewId || '';
+
+            const usernameInput = document.getElementById('reportReportedUsername');
+            if (usernameInput) usernameInput.value = reportedUsername;
+
+            const typeInput = document.getElementById('reportTargetTypeVal');
+            if (typeInput) typeInput.value = targetType || 'REVIEW';
+
+            // 更新顯示文本
+            const targetUserEl = document.getElementById('reportTargetUser');
+            if (targetUserEl) targetUserEl.textContent = reportedUsername;
+
+            const targetTypeEl = document.getElementById('reportTargetType');
+            if (targetTypeEl) targetTypeEl.textContent = targetType === 'USER' ? '用戶' : '評論';
+
+            // 處理被舉報內容快照
+            const contentSection = document.getElementById('reportedContentSection');
+            const contentText = document.getElementById('reportedContentText');
+            if (contentSection && contentText) {
+                if (reportedContent && reportedContent.trim()) {
+                    contentText.textContent = reportedContent.trim();
+                    contentSection.style.display = 'block';
+                } else {
+                    contentSection.style.display = 'none';
+                }
+            }
+
+            // 渲染分類並重置各區塊顯示狀態
+            renderReportCategories();
+
+            const reasonSection = document.getElementById('reasonSection');
+            if (reasonSection) {
+                reasonSection.style.display = 'none';
+                reasonSection.style.opacity = '0';
+            }
+
+            const agreementSection = document.getElementById('agreementSection');
+            if (agreementSection) agreementSection.style.display = 'none';
+
+            // 顯示彈窗
+            const modal = document.getElementById('reportModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                modal.classList.add('modal-show');
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        /**
+         * 關閉舉報彈窗
+         */
+        window.closeReportModal = function () {
+            const modal = document.getElementById('reportModal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('modal-show');
+                document.body.style.overflow = '';
+            }
+        };
+
+        /**
+         * 顯示重複舉報提示彈窗
+         */
+        window.showDuplicateReportModal = function () {
+            const modal = document.getElementById('duplicateReportModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        /**
+         * 關閉重複舉報提示彈窗
+         */
+        window.closeDuplicateReportModal = function () {
+            const modal = document.getElementById('duplicateReportModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        };
+
+        /**
+         * 提交舉報表單
+         */
+        window.submitReport = async function (event) {
+            if (event) event.preventDefault();
+
             if (!selectedCategory || !selectedReason) {
                 alert('請選擇舉報原因');
                 return;
             }
 
-            const reviewId = document.getElementById('reportReviewId').value;
-            const reportedUsername = document.getElementById('reportReportedUsername').value;
-            const targetType = document.getElementById('reportTargetTypeVal').value;
+            const reviewId = document.getElementById('reportReviewId')?.value;
+            const reportedUsername = document.getElementById('reportReportedUsername')?.value;
+            const targetType = document.getElementById('reportTargetTypeVal')?.value;
             const reportedContent = document.getElementById('reportedContentText')?.textContent?.trim() || null;
 
             const submitBtn = document.getElementById('submitReportBtn');
-            const originalText = submitBtn.innerHTML;
-
+            const originalText = submitBtn ? submitBtn.innerHTML : '';
 
             try {
                 const response = await fetch('/api/report/submit', {
@@ -4395,22 +4434,22 @@
                         targetType: targetType,
                         category: selectedCategory,
                         reason: selectedReason,
-                        reportContent: reportedContent // 將內容快照傳遞給後端
+                        reportContent: reportedContent
                     })
                 });
 
                 const result = await response.json();
 
                 if (response.ok && result.success) {
-                    // 1. 成功提示並關閉彈窗
+                    // 成功提示並關閉彈窗
                     if (typeof window.showNotification === 'function') {
                         window.showNotification('✅ ' + result.message);
                     } else {
                         alert('✅ ' + result.message);
                     }
-                    closeReportModal();
+                    window.closeReportModal();
 
-                    // 2. 更新系統通知紅點
+                    // 更新系統通知紅點
                     if (result.data && result.data.unreadCount !== undefined) {
                         const sysBadge = document.getElementById('systemNotificationBadge');
                         if (sysBadge) {
@@ -4424,49 +4463,57 @@
                         }
                     }
                 } else {
-                    //  【核心修改】：判斷是否為重複舉報，若是則彈出漂亮的自定義彈窗
+                    // 判斷是否為重複舉報
                     if (result.message && result.message.includes('已經舉報過')) {
-                        showDuplicateReportModal(); // 調用美化彈窗
+                        window.showDuplicateReportModal();
                     } else {
-                        // 普通錯誤提示
                         if (typeof window.showNotification === 'function') {
                             window.showNotification('❌ ' + (result.message || '提交失敗'), true);
                         } else {
                             alert('❌ ' + (result.message || '提交失敗'));
                         }
                     }
-
-                    submitBtn.innerHTML = originalText;
+                    if (submitBtn) submitBtn.innerHTML = originalText;
                 }
             } catch (error) {
                 console.error('舉報錯誤:', error);
                 alert('❌ 網絡錯誤');
-                submitBtn.innerHTML = originalText;
+                if (submitBtn) submitBtn.innerHTML = originalText;
             }
-        }
+        };
 
         // ==========================================
-        //  全局事件監聽 (點擊遮罩層 + ESC 鍵關閉)
+        // 5. 初始化與事件綁定
         // ==========================================
-        document.addEventListener('click', function (e) {
-            // 1. 關閉舉報主彈窗
-            const reportModal = document.getElementById('reportModal');
-            if (reportModal && e.target === reportModal.querySelector('.modal-overlay')) {
-                closeReportModal();
+        document.addEventListener('DOMContentLoaded', function () {
+            // 綁定協議勾選框變更事件
+            const agreementCheckbox = document.getElementById('reportAgreement');
+            if (agreementCheckbox) {
+                agreementCheckbox.addEventListener('change', function () {
+                    const btn = document.getElementById('submitReportBtn');
+                    if (btn) btn.disabled = !(this.checked && selectedCategory && selectedReason);
+                });
             }
-            // 2. 關閉重複舉報彈窗
-            const dupModal = document.getElementById('duplicateReportModal');
-            if (dupModal && e.target === dupModal.querySelector('.modal-backdrop')) {
-                closeDuplicateReportModal();
-            }
-        });
 
-        // 3. 按 ESC 鍵關閉所有舉報相關彈窗
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                closeReportModal();
-                closeDuplicateReportModal();
-            }
+            // 點擊遮罩層關閉彈窗
+            document.addEventListener('click', function (e) {
+                const reportModal = document.getElementById('reportModal');
+                if (reportModal && e.target === reportModal.querySelector('.modal-overlay')) {
+                    window.closeReportModal();
+                }
+                const dupModal = document.getElementById('duplicateReportModal');
+                if (dupModal && e.target === dupModal.querySelector('.modal-backdrop')) {
+                    window.closeDuplicateReportModal();
+                }
+            });
+
+            // ESC 鍵關閉彈窗
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    window.closeReportModal();
+                    window.closeDuplicateReportModal();
+                }
+            });
         });
     </script>
 
@@ -4474,429 +4521,482 @@
     <!-- 2. 純 JS 邏輯區 (直接復用上面的全局變量) -->
     <!-- ========================================== -->
     <script>
-        // 直接映射變量，避免命名混亂
-        const productId = currentProductId;
-        const productStock = currentStock;
+        /**
+         * 📦 ChronoTeamProduct 全局命名空間
+         * 封裝商品詳情頁專屬邏輯：到貨通知、購物車攔截、管理員編輯、成色選擇器、評價回調
+         */
+        window.ChronoTeamProduct = window.ChronoTeamProduct || {};
 
-        let isSubscribed = false;
-        let subscriberCount = 0;
+        (function (CTP) {
+            'use strict';
 
-        //  頁面加載時：獲取訂閱狀態與人數
-        async function loadNotificationStatus() {
-            const btn = document.getElementById('notifyBtn');
-            if (!btn) return; // 安全護欄
+            // ==========================================
+            // 0. 安全讀取 Thymeleaf 注入的全局變量
+            // ==========================================
+            CTP.productId = typeof currentProductId !== 'undefined' ? currentProductId : null;
+            CTP.productStock = typeof currentStock !== 'undefined' ? currentStock : 0;
+            CTP.isLoggedIn = typeof isLoggedIn !== 'undefined' ? isLoggedIn : false;
+            CTP.isAdmin = typeof isAdmin !== 'undefined' ? isAdmin : false;
 
-            // 如果未登入，直接顯示基礎 UI
-            if (!isLoggedIn) {
-                updateButtonUI();
-                return;
-            }
+            // 內部狀態
+            let isSubscribed = false;
+            let subscriberCount = 0;
 
-            try {
-                const res = await fetch(`/api/stock-notification/status/${productId}`);
-                const data = await res.json();
-                if (data.success) {
-                    isSubscribed = data.data.isSubscribed;
-                    subscriberCount = data.data.totalSubscribers;
-                }
-            } catch (e) {
-                console.error('獲取訂閱狀態失敗:', e);
-            }
+            // ==========================================
+            // 1. 到貨通知功能
+            // ==========================================
 
-            // 渲染最終 UI
-            updateButtonUI();
-        }
-
-        //  核心：根據「庫存」與「訂閱狀態」動態渲染按鈕 UI
-        function updateButtonUI() {
-            const btn = document.getElementById('notifyBtn');
-            if (!btn) return;
-
-            if (productStock > 0) {
-                // 【情況 A】：庫存 > 0 (現貨充足)
-                btn.innerHTML = '<i class="fas fa-bell"></i> 到貨通知';
-                btn.className = 'btn btn-gold';
-                btn.title = '點擊查看提示';
-            } else {
-                // 【情況 B】：庫存 = 0 (缺貨狀態)
-                if (isSubscribed) {
-                    btn.innerHTML = `<i class="fas fa-check-circle"></i> 已訂閱 (${subscriberCount}人等待中)`;
-                    btn.className = 'btn btn-outline';
-                    btn.title = '點擊取消訂閱';
-                } else {
-                    btn.innerHTML = `<i class="fas fa-bell"></i> 到貨通知 (已有${subscriberCount}人訂閱)`;
-                    btn.className = 'btn btn-gold';
-                    btn.title = '點擊訂閱到貨通知';
-                }
-            }
-        }
-
-        //  核心重構：點擊事件處理 (區分管理員與顧客)
-        async function handleNotifyClick() {
-            if (!isLoggedIn) {
-                showNotification('❌ 請先登入後再使用到貨通知功能！', true);
-                setTimeout(() => openLoginModal(), 500);
-                return;
-            }
-
-            // ==============================
-            //  管理員視角邏輯
-            // ==============================
-            if (isAdmin) {
-                if (productStock <= 0) {
-                    // 情況 A：庫存 = 0，攔截並提示
-                    showNotification(' 當前庫存為 0，無法發送通知！請先修改庫存後再操作。', true);
-                    return;
-                } else {
-                    // 情況 B：庫存 > 0，彈出等待名單模態框
-                    openWaitlistModal();
-                    return;
-                }
-            }
-
-            // ==============================
-            //  顧客視角邏輯 (庫存 > 0 時)
-            // ==============================
-            if (productStock > 0) {
-                showNotification('🛒 該商品現貨充足，請直接加入購物車購買，無需訂閱到貨通知哦！');
+            /**
+             * 頁面加載時：獲取訂閱狀態與人數
+             */
+            async function loadNotificationStatus() {
                 const btn = document.getElementById('notifyBtn');
-                btn.style.animation = 'shake 0.5s ease';
-                setTimeout(() => btn.style.animation = '', 500);
-                return;
-            }
+                if (!btn) return;
 
-            // ==============================
-            //  顧客視角邏輯 (庫存 = 0 時：訂閱/取消訂閱)
-            // ==============================
-            try {
-                let url, method, successMsg;
-
-                if (isSubscribed) {
-                    url = `/api/stock-notification/unsubscribe/${productId}`;
-                    method = 'DELETE';
-                    successMsg = '💔 已取消訂閱';
-                } else {
-                    url = `/api/stock-notification/subscribe/${productId}`;
-                    method = 'POST';
-                    successMsg = '✅ 訂閱成功！到貨後將第一時間通知您！';
-                }
-
-                const res = await fetch(url, {method: method});
-                const data = await res.json();
-
-                if (data.success) {
-                    isSubscribed = !isSubscribed;
-                    subscriberCount += isSubscribed ? 1 : -1;
+                if (!CTP.isLoggedIn) {
                     updateButtonUI();
-                    showNotification(successMsg);
-                } else {
-                    showNotification('❌ ' + data.message, true);
+                    return;
                 }
-            } catch (e) {
-                console.error('訂閱操作失敗:', e);
-                showNotification('❌ 網絡錯誤，請稍後重試', true);
-            }
-        }
 
-        //  點擊事件處理：加入購物車 (包含缺貨攔截與滾動提示)
-        function handleAddToCartClick() {
-            // 1. 檢查庫存
-            if (currentStock <= 0) {
-                // 2. 彈出確認窗口
-                const isConfirmed = confirm("⚠️ 該產品已售罄！\n\n如果您非常想要這款手錶，請點擊「確定」，我們將為您定位到「到貨通知」按鈕。");
-
-                // 3. 自動滾動並高亮提示
-                if (isConfirmed) {
-                    const notifyBtn = document.getElementById('notifyBtn'); // 修復：直接用 ID 獲取
-                    if (notifyBtn) {
-                        notifyBtn.scrollIntoView({behavior: 'smooth', block: 'center'});
-                        notifyBtn.style.boxShadow = "0 0 15px var(--accent)";
-                        notifyBtn.style.transition = "box-shadow 0.5s ease";
-                        setTimeout(() => {
-                            notifyBtn.style.boxShadow = "";
-                        }, 2000);
+                try {
+                    const res = await fetch(`/api/stock-notification/status/${CTP.productId}`);
+                    const data = await res.json();
+                    if (data.success) {
+                        isSubscribed = data.data.isSubscribed;
+                        subscriberCount = data.data.totalSubscribers;
                     }
+                } catch (e) {
+                    console.error('獲取訂閱狀態失敗:', e);
                 }
-                return; // 停止執行，不加入購物車
+
+                updateButtonUI();
             }
 
-            // 4. 庫存充足，調用原本的加入購物車函數 (來自 common.js)
-            addToCart(currentProductId);
-        }
+            /**
+             * 根據「庫存」與「訂閱狀態」動態渲染按鈕 UI
+             */
+            function updateButtonUI() {
+                const btn = document.getElementById('notifyBtn');
+                if (!btn) return;
 
-        // ==========================================
-        //  管理員專屬 JS 函數
-        // ==========================================
-
-        // 1. 打開等待名單模態框
-        async function openWaitlistModal() {
-            const modal = document.getElementById('waitlistModal');
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden'; // 禁止背景滾動
-
-            const body = document.getElementById('waitlistBody');
-            body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);"><i class="fas fa-spinner fa-spin"></i> 加載中...</div>';
-
-            try {
-                const res = await fetch(`/api/stock-notification/waitlist/${productId}`);
-                const data = await res.json();
-
-                if (data.success) {
-                    const list = data.data;
-                    document.getElementById('waitlistCount').textContent = list.length;
-
-                    if (list.length === 0) {
-                        body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);">暫無用戶訂閱此商品</div>';
-                        document.getElementById('sendNotifyBtn').disabled = true;
+                if (CTP.productStock > 0) {
+                    btn.innerHTML = '<i class="fas fa-bell"></i> 到貨通知';
+                    btn.className = 'btn btn-gold';
+                    btn.title = '點擊查看提示';
+                } else {
+                    if (isSubscribed) {
+                        btn.innerHTML = `<i class="fas fa-check-circle"></i> 已訂閱 (${subscriberCount}人等待中)`;
+                        btn.className = 'btn btn-outline';
+                        btn.title = '點擊取消訂閱';
                     } else {
-                        let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
-                        list.forEach(item => {
-                            html += `<li style="padding: 0.8rem 1rem; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center;">
-                          <span><i class="fas fa-user" style="color: var(--gold); margin-right: 0.5rem;"></i> ${item.username}</span>
-                          <span style="font-size: 0.8rem; color: var(--gray);">${item.createdAt}</span>
-                       </li>`;
-                        });
-                        html += '</ul>';
-                        body.innerHTML = html;
-                        document.getElementById('sendNotifyBtn').disabled = false;
+                        btn.innerHTML = `<i class="fas fa-bell"></i> 到貨通知 (已有${subscriberCount}人訂閱)`;
+                        btn.className = 'btn btn-gold';
+                        btn.title = '點擊訂閱到貨通知';
                     }
-                } else {
-                    body.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--accent);">${data.message}</div>`;
                 }
-            } catch (e) {
-                body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--accent);">網絡錯誤，請刷新重試</div>';
             }
-        }
 
-        // 2. 關閉模態框
-        function closeWaitlistModal() {
-            document.getElementById('waitlistModal').style.display = 'none';
-            document.body.style.overflow = '';
-        }
-
-        // 3. 一鍵發送通知
-        async function sendStockNotification() {
-            const btn = document.getElementById('sendNotifyBtn');
-            const originalText = btn.innerHTML;
-
-
-            try {
-                const res = await fetch(`/api/stock-notification/notify/${productId}`, {method: 'POST'});
-                const data = await res.json();
-
-                if (data.success) {
-                    showNotification(`✅ ${data.message}`);
-                    closeWaitlistModal();
-                    // 刷新按鈕狀態 (因為已通知，人數會變為 0)
-                    loadNotificationStatus();
-                } else {
-                    showNotification('❌ ' + data.message, true);
-                    btn.innerHTML = originalText;
-                }
-            } catch (e) {
-                showNotification('❌ 網絡錯誤', true);
-                btn.innerHTML = originalText;
-            }
-        }
-
-        // ==========================================
-        // 编辑商品功能
-        // ==========================================
-
-        // 打开编辑模态框
-        function openEditModal() {
-            const modal = document.getElementById('editProductModal');
-            modal.style.display = 'flex';
-            document.body.style.overflow = 'hidden'; // 禁止背景滚动
-
-            // 因為 HTML 中的 th:value 和 th:text 已經在頁面渲染時自動填入了初始值，不需要 JS 再次賦值。
-        }
-
-        // 关闭编辑模态框
-        function closeEditModal() {
-            document.getElementById('editProductModal').style.display = 'none';
-            document.body.style.overflow = '';
-        }
-
-        // 保存商品修改 (這部分代碼沒問題，保持不變)
-        async function saveProduct(event) {
-            event.preventDefault();
-
-            const submitBtn = event.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-
-            // 收集表单数据
-            const formData = {
-                price: parseFloat(document.getElementById('editPrice').value),
-                stock: parseInt(document.getElementById('editStock').value),
-                category: document.getElementById('editCategory').value,
-                brand: document.getElementById('editBrand').value,
-                description: document.getElementById('editDescription').value,
-                details: document.getElementById('editDetails').value,
-                image: document.getElementById('editImage').value
-            };
-
-            try {
-                const response = await fetch(`/api/admin/product/${productId}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
-                });
-
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    showNotification('✅ 商品信息修改成功！');
-                    closeEditModal();
-                    // 刷新页面以显示最新数据
+            /**
+             * 到貨通知按鈕點擊事件 (區分管理員與顧客)
+             */
+            async function handleNotifyClick() {
+                if (!CTP.isLoggedIn) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ 請先登入後再使用到貨通知功能！', true);
+                    }
                     setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                } else {
-                    showNotification('❌ ' + (result.message || '修改失败'), true);
-                    submitBtn.innerHTML = originalText;
+                        if (typeof openLoginModal === 'function') openLoginModal();
+                    }, 500);
+                    return;
                 }
-            } catch (error) {
-                console.error('保存失败:', error);
-                showNotification('❌ 网络错误，请稍后重试', true);
-                submitBtn.innerHTML = originalText;
-            }
-        }
 
-        // 点击模态框背景关闭
-        document.getElementById('editProductModal')?.addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeEditModal();
-            }
-        });
+                // 管理員視角
+                if (CTP.isAdmin) {
+                    if (CTP.productStock <= 0) {
+                        if (typeof showNotification === 'function') {
+                            showNotification('⚠️ 當前庫存為 0，無法發送通知！請先修改庫存後再操作。', true);
+                        }
+                        return;
+                    } else {
+                        openWaitlistModal();
+                        return;
+                    }
+                }
 
-        // 获取并渲染成色按钮
-        async function fetchConditionButtons(groupCode, currentId) {
-            const container = document.getElementById('conditionButtons');
-
-            try {
-                const response = await fetch(`/variants/${groupCode}`);
-                if (!response.ok) throw new Error('Network response was not ok');
-
-                const variants = await response.json();
-
-                //  核心修改：如果没有符合条件的产品，隐藏整个选择区域
-                if (!variants || variants.length === 0) {
-                    const selector = document.querySelector('.condition-selector');
-                    if (selector) {
-                        selector.style.display = 'none';
+                // 顧客視角：庫存 > 0
+                if (CTP.productStock > 0) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('🛒 該商品現貨充足，請直接加入購物車購買，無需訂閱到貨通知哦！');
+                    }
+                    const btn = document.getElementById('notifyBtn');
+                    if (btn) {
+                        btn.style.animation = 'shake 0.5s ease';
+                        setTimeout(() => {btn.style.animation = '';}, 500);
                     }
                     return;
                 }
 
-                // 清空加载提示
-                container.innerHTML = '';
+                // 顧客視角：庫存 = 0 (訂閱/取消訂閱)
+                try {
+                    let url, method, successMsg;
 
-                // 定义成色映射 (Enum -> 中文显示)
-                const conditionMap = {
-                    'near_mint': '近全新 (98-100%)',
-                    'excellent': '極佳 (95-97%)',
-                    'good': '良好 (90-94%)',
-                    'fair': '正常使用痕跡 (85-89%)',
-                    'heavily_used': '重度使用痕跡/需保養'
+                    if (isSubscribed) {
+                        url = `/api/stock-notification/unsubscribe/${CTP.productId}`;
+                        method = 'DELETE';
+                        successMsg = '💔 已取消訂閱';
+                    } else {
+                        url = `/api/stock-notification/subscribe/${CTP.productId}`;
+                        method = 'POST';
+                        successMsg = '✅ 訂閱成功！到貨後將第一時間通知您！';
+                    }
+
+                    const res = await fetch(url, {method: method});
+                    const data = await res.json();
+
+                    if (data.success) {
+                        isSubscribed = !isSubscribed;
+                        subscriberCount += isSubscribed ? 1 : -1;
+                        updateButtonUI();
+                        if (typeof showNotification === 'function') {
+                            showNotification(successMsg);
+                        }
+                    } else {
+                        if (typeof showNotification === 'function') {
+                            showNotification('❌ ' + data.message, true);
+                        }
+                    }
+                } catch (e) {
+                    console.error('訂閱操作失敗:', e);
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ 網絡錯誤，請稍後重試', true);
+                    }
+                }
+            }
+
+            // ==========================================
+            // 2. 加入購物車 (含缺貨攔截)
+            // ==========================================
+
+            function handleAddToCartClick() {
+                if (CTP.productStock <= 0) {
+                    const isConfirmed = confirm(
+                        "⚠️ 該產品已售罄！\n\n如果您非常想要這款手錶，請點擊「確定」，我們將為您定位到「到貨通知」按鈕。"
+                    );
+                    if (isConfirmed) {
+                        const notifyBtn = document.getElementById('notifyBtn');
+                        if (notifyBtn) {
+                            notifyBtn.scrollIntoView({behavior: 'smooth', block: 'center'});
+                            notifyBtn.style.boxShadow = "0 0 15px var(--accent)";
+                            notifyBtn.style.transition = "box-shadow 0.5s ease";
+                            setTimeout(() => {notifyBtn.style.boxShadow = "";}, 2000);
+                        }
+                    }
+                    return;
+                }
+
+                if (typeof addToCart === 'function') {
+                    addToCart(CTP.productId);
+                }
+            }
+
+            // ==========================================
+            // 3. 管理員專屬：等待名單模態框
+            // ==========================================
+
+            async function openWaitlistModal() {
+                const modal = document.getElementById('waitlistModal');
+                if (!modal) return;
+
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+
+                const body = document.getElementById('waitlistBody');
+                if (body) {
+                    body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);"><i class="fas fa-spinner fa-spin"></i> 加載中...</div>';
+                }
+
+                try {
+                    const res = await fetch(`/api/stock-notification/waitlist/${CTP.productId}`);
+                    const data = await res.json();
+
+                    if (data.success && body) {
+                        const list = data.data;
+                        const countEl = document.getElementById('waitlistCount');
+                        if (countEl) countEl.textContent = list.length;
+
+                        if (list.length === 0) {
+                            body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);">暫無用戶訂閱此商品</div>';
+                            const sendBtn = document.getElementById('sendNotifyBtn');
+                            if (sendBtn) sendBtn.disabled = true;
+                        } else {
+                            let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                            list.forEach(item => {
+                                html += `<li style="padding: 0.8rem 1rem; border-bottom: 1px solid #f1f3f5; display: flex; justify-content: space-between; align-items: center;">
+                            <span><i class="fas fa-user" style="color: var(--gold); margin-right: 0.5rem;"></i> ${item.username}</span>
+                            <span style="font-size: 0.8rem; color: var(--gray);">${item.createdAt}</span>
+                        </li>`;
+                            });
+                            html += '</ul>';
+                            body.innerHTML = html;
+                            const sendBtn = document.getElementById('sendNotifyBtn');
+                            if (sendBtn) sendBtn.disabled = false;
+                        }
+                    } else if (body) {
+                        body.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--accent);">${data.message || '加載失敗'}</div>`;
+                    }
+                } catch (e) {
+                    if (body) {
+                        body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--accent);">網絡錯誤，請刷新重試</div>';
+                    }
+                }
+            }
+
+            function closeWaitlistModal() {
+                const modal = document.getElementById('waitlistModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+            }
+
+            async function sendStockNotification() {
+                const btn = document.getElementById('sendNotifyBtn');
+                if (!btn) return;
+
+                try {
+                    const res = await fetch(`/api/stock-notification/notify/${CTP.productId}`, {method: 'POST'});
+                    const data = await res.json();
+
+                    if (data.success) {
+                        if (typeof showNotification === 'function') {
+                            showNotification(`✅ ${data.message}`);
+                        }
+                        closeWaitlistModal();
+                        loadNotificationStatus();
+                    } else {
+                        if (typeof showNotification === 'function') {
+                            showNotification('❌ ' + data.message, true);
+                        }
+                    }
+                } catch (e) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ 網絡錯誤', true);
+                    }
+                }
+            }
+
+            // ==========================================
+            // 4. 管理員專屬：編輯商品
+            // ==========================================
+
+            function openEditModal() {
+                const modal = document.getElementById('editProductModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+
+            function closeEditModal() {
+                const modal = document.getElementById('editProductModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+            }
+
+            async function saveProduct(event) {
+                event.preventDefault();
+
+                const formData = {
+                    price: parseFloat(document.getElementById('editPrice').value),
+                    stock: parseInt(document.getElementById('editStock').value),
+                    category: document.getElementById('editCategory').value,
+                    brand: document.getElementById('editBrand').value,
+                    description: document.getElementById('editDescription').value,
+                    details: document.getElementById('editDetails').value,
+                    image: document.getElementById('editImage').value
                 };
 
-                // 遍历生成按钮
-                variants.forEach(item => {
-                    const btn = document.createElement('button');
-                    btn.className = 'condition-btn';
+                try {
+                    const response = await fetch(`/api/admin/product/${CTP.productId}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(formData)
+                    });
 
-                    // 设置显示文字
-                    const conditionText = conditionMap[item.condition] || item.condition;
-                    btn.textContent = conditionText;
+                    const result = await response.json();
 
-                    // 如果是当前页面正在看的商品，添加 active 类
-                    if (item.productId == currentId) {
-                        btn.classList.add('active');
+                    if (response.ok && result.success) {
+                        if (typeof showNotification === 'function') {
+                            showNotification('✅ 商品信息修改成功！');
+                        }
+                        closeEditModal();
+                        setTimeout(() => {window.location.reload();}, 1000);
+                    } else {
+                        if (typeof showNotification === 'function') {
+                            showNotification('❌ ' + (result.message || '修改失败'), true);
+                        }
+                    }
+                } catch (error) {
+                    console.error('保存失败:', error);
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ 网络错误，请稍后重试', true);
+                    }
+                }
+            }
+
+            // ==========================================
+            // 5. 成色選擇器渲染
+            // ==========================================
+
+            async function fetchConditionButtons(groupCode, currentId) {
+                const container = document.getElementById('conditionButtons');
+                if (!container) return;
+
+                try {
+                    const response = await fetch(`/variants/${groupCode}`);
+                    if (!response.ok) throw new Error('Network response was not ok');
+
+                    const variants = await response.json();
+
+                    if (!variants || variants.length === 0) {
+                        const selector = document.querySelector('.condition-selector');
+                        if (selector) selector.style.display = 'none';
+                        return;
                     }
 
-                    // 点击事件：跳转到对应商品的详情页
-                    btn.onclick = () => {
-                        if (item.productId != currentId) {
-                            window.location.href = `/product/${item.productId}`;
-                        }
+                    container.innerHTML = '';
+
+                    const conditionMap = {
+                        'near_mint': '近全新 (98-100%)',
+                        'excellent': '極佳 (95-97%)',
+                        'good': '良好 (90-94%)',
+                        'fair': '正常使用痕跡 (85-89%)',
+                        'heavily_used': '重度使用痕跡/需保養'
                     };
 
-                    container.appendChild(btn);
-                });
+                    variants.forEach(item => {
+                        const btn = document.createElement('button');
+                        btn.className = 'condition-btn';
 
-            } catch (error) {
-                console.error('获取成色列表失败:', error);
-                container.innerHTML = '<span style="color:red">加载失败</span>';
-            }
-        }
+                        const conditionText = conditionMap[item.condition] || item.condition;
+                        btn.textContent = conditionText;
 
-        // ==========================================
-        //  評價提交成功後的回調函數 (供 React 評論區調用)
-        // ==========================================
-        window.handleReviewSubmitSuccess = function () {
-            // 1. 隱藏"未購買提示"和"未登入提示"
-            const noPurchasePrompt = document.querySelector('.no-purchase-prompt');
-            const loginRequiredPrompt = document.querySelector('.login-required-prompt');
-            const noReviewsPlaceholder = document.querySelector('.no-reviews');
+                        if (String(item.productId) === String(currentId)) {
+                            btn.classList.add('active');
+                        }
 
-            if (noPurchasePrompt) noPurchasePrompt.style.display = 'none';
-            if (loginRequiredPrompt) loginRequiredPrompt.style.display = 'none';
-            if (noReviewsPlaceholder) noReviewsPlaceholder.style.display = 'none';
+                        btn.onclick = () => {
+                            if (String(item.productId) !== String(currentId)) {
+                                window.location.href = `/product/${item.productId}`;
+                            }
+                        };
 
-            // 2. 顯示"已評價"提示（如果不存在則創建）
-            let alreadyReviewed = document.querySelector('.already-reviewed');
-            if (!alreadyReviewed) {
-                alreadyReviewed = document.createElement('div');
-                alreadyReviewed.className = 'already-reviewed';
-                alreadyReviewed.innerHTML = `
-            <p style="margin: 0; color: #155724; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
-                <i class="fas fa-check-circle"></i><strong>您已評價過該商品，感謝您的反饋！</strong>
-            </p>
-        `;
-                // 插入到評論區上方
-                const reviewsSection = document.querySelector('.reviews-section') || document.querySelector('#reviews-react-root');
-                if (reviewsSection) {
-                    reviewsSection.parentNode.insertBefore(alreadyReviewed, reviewsSection);
+                        container.appendChild(btn);
+                    });
+
+                } catch (error) {
+                    console.error('获取成色列表失败:', error);
+                    container.innerHTML = '<span style="color:red">加载失败</span>';
                 }
-            } else {
-                alreadyReviewed.style.display = 'block';
             }
 
-            // 3. 顯示成功通知
-            if (typeof showNotification === 'function') {
-                showNotification('✅ 評價提交成功！');
-            }
+            // ==========================================
+            // 6. 評價提交成功回調 (供 React 評論區調用)
+            // ==========================================
 
-            // 4. 可選：延遲後刷新頁面以同步服務端狀態
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-        };
+            window.handleReviewSubmitSuccess = function () {
+                const noPurchasePrompt = document.querySelector('.no-purchase-prompt');
+                const loginRequiredPrompt = document.querySelector('.login-required-prompt');
+                const noReviewsPlaceholder = document.querySelector('.no-reviews');
 
-        // 頁面加載完成後執行
-        document.addEventListener('DOMContentLoaded', function () {
-            // 1. 原有的到貨通知功能
-            loadNotificationStatus();
+                if (noPurchasePrompt) noPurchasePrompt.style.display = 'none';
+                if (loginRequiredPrompt) loginRequiredPrompt.style.display = 'none';
+                if (noReviewsPlaceholder) noReviewsPlaceholder.style.display = 'none';
 
-            // 2. 新增：获取当前商品的 groupCode 和 productId
-            const currentGroupCode = '[[${product.groupCode}]]';
-            const currentProductId = '[[${product.productId}]]';
+                let alreadyReviewed = document.querySelector('.already-reviewed');
+                if (!alreadyReviewed) {
+                    alreadyReviewed = document.createElement('div');
+                    alreadyReviewed.className = 'already-reviewed';
+                    alreadyReviewed.innerHTML = `
+                <p style="margin: 0; color: #155724; display: flex; align-items: center; gap: 0.5rem; font-size: 1.05rem;">
+                    <i class="fas fa-check-circle"></i><strong>您已評價過該商品，感謝您的反饋！</strong>
+                </p>
+            `;
+                    const reviewsSection = document.querySelector('.reviews-section') || document.querySelector('#reviews-react-root');
+                    if (reviewsSection) {
+                        reviewsSection.parentNode.insertBefore(alreadyReviewed, reviewsSection);
+                    }
+                } else {
+                    alreadyReviewed.style.display = 'block';
+                }
 
-            // 3. 只有当有 groupCode 时才执行（如果是独立商品没有分组，则不显示）
-            if (currentGroupCode && currentGroupCode !== 'null') {
-                fetchConditionButtons(currentGroupCode, currentProductId);
-            } else {
-                // 如果没有 groupCode，隐藏选择区域
-                const selector = document.querySelector('.condition-selector');
-                if (selector) selector.style.display = 'none';
-            }
-        });
+                if (typeof showNotification === 'function') {
+                    showNotification('✅ 評價提交成功！');
+                }
 
+                setTimeout(() => {window.location.reload();}, 2000);
+            };
+
+            // ==========================================
+            // 7. 暴露全局 API (供 HTML onclick 調用)
+            // ==========================================
+            CTP.loadNotificationStatus = loadNotificationStatus;
+            CTP.handleNotifyClick = handleNotifyClick;
+            CTP.handleAddToCartClick = handleAddToCartClick;
+            CTP.openWaitlistModal = openWaitlistModal;
+            CTP.closeWaitlistModal = closeWaitlistModal;
+            CTP.sendStockNotification = sendStockNotification;
+            CTP.openEditModal = openEditModal;
+            CTP.closeEditModal = closeEditModal;
+            CTP.saveProduct = saveProduct;
+            CTP.fetchConditionButtons = fetchConditionButtons;
+
+            // 同時掛載到 window 以兼容現有 HTML 中的 onclick="handleNotifyClick()" 等寫法
+            window.handleNotifyClick = handleNotifyClick;
+            window.handleAddToCartClick = handleAddToCartClick;
+            window.openWaitlistModal = openWaitlistModal;
+            window.closeWaitlistModal = closeWaitlistModal;
+            window.sendStockNotification = sendStockNotification;
+            window.openEditModal = openEditModal;
+            window.closeEditModal = closeEditModal;
+            window.saveProduct = saveProduct;
+
+            // ==========================================
+            // 8. 頁面初始化
+            // ==========================================
+            document.addEventListener('DOMContentLoaded', function () {
+                // 到貨通知初始化
+                loadNotificationStatus();
+
+                // 成色選擇器初始化
+                const currentGroupCode = typeof CTP_GROUP_CODE !== 'undefined' ? CTP_GROUP_CODE : null;
+                const currentProdId = CTP.productId;
+
+                if (currentGroupCode && currentGroupCode !== 'null' && currentGroupCode !== '') {
+                    fetchConditionButtons(currentGroupCode, currentProdId);
+                } else {
+                    const selector = document.querySelector('.condition-selector');
+                    if (selector) selector.style.display = 'none';
+                }
+
+                // 編輯模態框背景點擊關閉
+                const editModal = document.getElementById('editProductModal');
+                if (editModal) {
+                    editModal.addEventListener('click', function (e) {
+                        if (e.target === this) closeEditModal();
+                    });
+                }
+            });
+
+        })(window.ChronoTeamProduct);
     </script>
 
+    <!-- Thymeleaf 變量注入橋接 (放在 script 之前或之內均可) -->
+    <script th:inline="javascript">
+        var CTP_GROUP_CODE = [[${product.groupCode}]];
+    </script>
 
 </body>
 

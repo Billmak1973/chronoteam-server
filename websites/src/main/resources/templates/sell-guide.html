@@ -267,6 +267,7 @@
                 gap: 1rem;
             }
         }
+
         /* ========================================== */
         /* ========== 晚上模式 (Night Mode) ========== */
         /* ========================================== */
@@ -288,12 +289,15 @@
         body.night-mode .page-hero::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background-image:
-                    radial-gradient(2px 2px at 50px 30px, #ffd700, transparent),
-                    radial-gradient(1px 1px at 100px 80px, #00d4ff, transparent),
-                    radial-gradient(2px 2px at 200px 50px, #ffd700, transparent),
-                    radial-gradient(1px 1px at 300px 100px, #00d4ff, transparent);
+                radial-gradient(2px 2px at 50px 30px, #ffd700, transparent),
+                radial-gradient(1px 1px at 100px 80px, #00d4ff, transparent),
+                radial-gradient(2px 2px at 200px 50px, #ffd700, transparent),
+                radial-gradient(1px 1px at 300px 100px, #00d4ff, transparent);
             background-repeat: repeat;
             background-size: 500px 200px;
             opacity: 0.4;
@@ -375,13 +379,21 @@
 
         /* 星星閃爍動畫 */
         @keyframes starsTwinkle {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.6; }
+
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
         }
     </style>
 </head>
 
 <!--<body>-->
+
 <body th:classappend="${cardTheme == 'night'} ? 'night-mode' : ''">
 
     <!--  3. 引入公共導航欄 (自動處理登入狀態、購物車下拉等) -->
@@ -539,13 +551,10 @@
         <div class="cta-section">
             <h2><i class="fas fa-rocket"></i> 準備好讓您的愛錶變現了嗎？</h2>
             <p>立即填寫線上表單，獲取您的專屬初步估價，開啟安全便捷的出售之旅。</p>
-            <a href="javascript:void(0)" onclick="requireLogin('/sell', '❌ 請先登入後再發佈出售！')" class="btn btn-gold"
+            <a href="javascript:void(0)" onclick="Auth.requireLogin('/sell', '❌ 請先登入後再發佈出售！')" class="btn btn-gold"
                 style="font-size: 1.1rem; padding: 0.8rem 2.5rem;">
                 <i class="fas fa-plus-circle"></i> 立即發佈出售
             </a>
-            <!--        <a href="/sell" class="btn btn-gold" style="font-size: 1.1rem; padding: 0.8rem 2.5rem;">-->
-            <!--            <i class="fas fa-plus-circle"></i> 立即發佈出售-->
-            <!--        </a>-->
         </div>
     </div>
 
@@ -560,7 +569,7 @@
 
     <!--  5. 注入後端登入狀態變量 (必須在 common.js 之前) -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
 
     <!--  6. 引入公共 JS (包含購物車、彈窗控制、登出等所有通用邏輯) -->

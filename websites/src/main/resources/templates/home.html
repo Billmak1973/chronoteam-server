@@ -1224,7 +1224,7 @@
             <a href="/browse" class="btn btn-primary" style="cursor: pointer; z-index: 100; position: relative;">
                 <i class="fas fa-search"></i> 立即選購
             </a>
-            <a href="javascript:void(0)" onclick="requireLogin('/sell', '❌ 請先登入後再賣出手錶！')" class="btn btn-outline"
+            <a href="javascript:void(0)" onclick="Auth.requireLogin('/sell', '❌ 請先登入後再賣出手錶！')" class="btn btn-outline"
                 style="cursor: pointer; z-index: 100; position: relative;">
                 <i class="fas fa-tag"></i> 賣出手錶
             </a>
@@ -1419,7 +1419,7 @@
 
     <!-- 5. 注入登录状态变量 -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
 
     <!-- 6. 引入公共 JS -->

@@ -1451,20 +1451,36 @@
             document.body.style.overflow = '';
             pendingDeleteOrderNo = null; pendingDeleteButton = null;
         }
+
         async function confirmDeleteOrder() {
+            // 1. 先檢查全局變量是否有值
             if (!pendingDeleteOrderNo) return;
+
+            // 2. 【關鍵修復】在關閉彈窗前，先把訂單號複製到局部變量中保存
+            const orderNoToDelete = pendingDeleteOrderNo;
             const btn = pendingDeleteButton;
+
+            // 3. 關閉彈窗 (這會將全局變量 pendingDeleteOrderNo 設為 null，但不影響局部變量)
             closeDeleteOrderModal();
+
             try {
-                const res = await fetch(`/api/order/${pendingDeleteOrderNo}`, {method: 'DELETE', headers: {'Content-Type': 'application/json'}});
+                // 4. 使用局部變量 orderNoToDelete 發送請求
+                const res = await fetch(`/api/order/${orderNoToDelete}`, {
+                    method: 'DELETE',
+                    headers: {'Content-Type': 'application/json'}
+                });
+
                 const result = await res.json();
+
                 if (res.ok && result.success) {
                     showNotification('✅ 訂單已成功刪除');
-                    loadOrders(currentTab, currentPage); // 重新加載當前頁
+                    // 重新加載當前頁數據
+                    loadOrders(currentTab, currentPage);
                 } else {
                     showNotification('❌ ' + (result.message || '刪除訂單失敗'), true);
                 }
             } catch (e) {
+                console.error(e);
                 showNotification('❌ 網絡錯誤，請稍後重試', true);
             }
         }

@@ -746,14 +746,24 @@
 
     // ==========================================
     // 核心：渲染智能分頁 (1-based, 依賴後端 smartPages, 居中)
+    //Fragment 是服務端渲染的，它需要服務端傳入 currentPage、smartPages 等變量。
+    // 在純 AJAX 場景下，這些變量只在 JS 中存在，Thymeleaf 無法參與渲染。因此 JS 版的 renderPagination 是唯一正確方案，
+    // 只需確保其輸出 HTML 與 Fragment 結構一致即可實現視覺統一。
     // ==========================================
     function renderPagination(container, currentPage, totalPages, smartPages, type) {
       if (!container) return;
 
-      // 如果沒有分頁數據，清空容器
-      if (!smartPages || smartPages.length === 0 || totalPages <= 1) {
+      // 【修復】：移除 totalPages <= 1 的攔截，允許只有 1 頁時也顯示分頁欄
+      // 如果完全沒有數據 (totalPages === 0)，則不顯示
+      if (totalPages === 0) {
         container.innerHTML = '';
         return;
+      }
+
+      // 如果 smartPages 為空但總頁數大於 0 (兜底邏輯，防止後端未返回 smartPages 時白屏)
+      if (!smartPages || smartPages.length === 0) {
+        // 簡單生成一個當前頁的按鈕
+        smartPages = [{pageNumber: currentPage, ellipsis: false}];
       }
 
       // 使用 pagination-wrapper 類來實現居中 (CSS 在 sidebar.css 中定義)
@@ -766,20 +776,18 @@
         html += `<button class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
       }
 
-      // 2. 智能頁碼 (直接使用後端返回的 smartPages)
-      // 刪除了原有的 else 兜底邏輯，完全信任後端數據
-      if (smartPages && smartPages.length > 0) {
-        smartPages.forEach(item => {
-          if (item.ellipsis) {
-            html += `<span class="page-ellipsis">...</span>`;
-          } else {
-            // item.pageNumber 是 1-based，currentPage 也是 1-based，直接比較
-            const isActive = item.pageNumber === currentPage ? 'active' : '';
-            const funcName = type === 'stock' ? 'loadStockNotifications' : 'loadAdminNotifications';
-            html += `<button class="page-btn ${isActive}" onclick="${funcName}(${item.pageNumber})">${item.pageNumber}</button>`;
-          }
-        });
-      }
+      // 2. 智能頁碼
+      smartPages.forEach(item => {
+        // 注意：Java 的 isEllipsis() 序列化為 JSON 後通常 key 為 'ellipsis'
+        if (item.ellipsis) {
+          html += `<span class="page-ellipsis">...</span>`;
+        } else {
+          // item.pageNumber 是 1-based，currentPage 也是 1-based，直接比較
+          const isActive = item.pageNumber === currentPage ? 'active' : '';
+          const funcName = type === 'stock' ? 'loadStockNotifications' : 'loadAdminNotifications';
+          html += `<button class="page-btn ${isActive}" onclick="${funcName}(${item.pageNumber})">${item.pageNumber}</button>`;
+        }
+      });
 
       // 3. 下一頁按鈕
       if (currentPage < totalPages) {

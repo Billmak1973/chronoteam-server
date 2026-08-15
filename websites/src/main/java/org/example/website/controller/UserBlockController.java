@@ -2,6 +2,7 @@ package org.example.website.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.website.dto.ApiResponse;
+import org.example.website.entity.AdminPenalty;
 import org.example.website.repository.UserBlockRepository;
 import org.example.website.service.AdminPenaltyService;
 import org.example.website.service.UserBlockService;
@@ -109,5 +110,44 @@ public class UserBlockController {
         String username = authentication.getName();
         List<String> blockedList = userBlockRepository.findBlockedUsernamesByBlockerUsername(username);
         return ResponseEntity.ok(blockedList);
+    }
+
+    /**
+     * 檢查能否回復某用戶（前端調用）
+     */
+    @GetMapping("/check-reply-permission/{targetUsername}")
+    public ResponseEntity<Map<String, Object>> checkReplyPermission(
+            @PathVariable String targetUsername,
+            Authentication authentication) {
+
+        Map<String, Object> response = new HashMap<>();
+        String currentUsername = authentication.getName();
+
+        // 1. 檢查普通用戶雙向禁言 (A->B 或 B->A)
+        boolean isMutuallyBlocked = userBlockService.isBlocked(currentUsername, targetUsername);
+
+        // 2. 檢查管理員全局禁言 (有期限)
+        boolean isGloballyBanned = adminPenaltyService.isGloballyBanned(currentUsername);
+        AdminPenalty activeBan = null;
+        if (isGloballyBanned) {
+            activeBan = adminPenaltyService.getActiveGlobalBan(currentUsername).orElse(null);
+        }
+
+        // 3. 檢查管理員永久拉黑
+        boolean isBlacklisted = adminPenaltyService.isBlacklisted(currentUsername);
+
+        response.put("success", true);
+        // 只要滿足任一條件，就不能回復
+        response.put("hasPermission", !isMutuallyBlocked && !isGloballyBanned && !isBlacklisted);
+        response.put("isMutuallyBlocked", isMutuallyBlocked);
+        response.put("isGloballyBanned", isGloballyBanned);
+        response.put("isBlacklisted", isBlacklisted);
+
+        // 傳遞禁言結束時間給前端格式化
+        if (activeBan != null && activeBan.getEndTime() != null) {
+            response.put("banEndTime", activeBan.getEndTime().toString());
+        }
+
+        return ResponseEntity.ok(response);
     }
 }

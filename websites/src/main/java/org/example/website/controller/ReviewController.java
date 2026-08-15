@@ -3,10 +3,8 @@ package org.example.website.controller;
 import org.example.website.dto.ApiResponse;
 import org.example.website.entity.*;
 import org.example.website.repository.*;
-import org.example.website.service.AdminPenaltyService;
-import org.example.website.service.ReviewReactionService;
+import org.example.website.service.*;
 import org.example.website.repository.*;
-import org.example.website.service.UserBlockService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -42,7 +40,8 @@ public class ReviewController {
     private final UserBlockRepository userBlockRepository;
     private final ReviewArchiveRepository reviewArchiveRepository;
     private final AdminPenaltyService adminPenaltyService;
-
+    private final NotificationService notificationService;
+    private final NotificationPushService pushService;
     //  構造函數注入所有依賴
     public ReviewController(ReviewRepository reviewRepository,
                             OrderRepository orderRepository,
@@ -54,7 +53,7 @@ public class ReviewController {
                             UserBlockService userBlockService,
                             UserBlockRepository userBlockRepository,
                             ReviewArchiveRepository reviewArchiveRepository,
-                            AdminPenaltyService adminPenaltyService
+                            AdminPenaltyService adminPenaltyService, NotificationService notificationService, NotificationPushService pushService
     ) {
         this.reviewRepository = reviewRepository;
         this.orderRepository = orderRepository;
@@ -67,8 +66,9 @@ public class ReviewController {
         this.userBlockRepository = userBlockRepository;
         this.reviewArchiveRepository=reviewArchiveRepository;
         this.adminPenaltyService = adminPenaltyService;
+        this.notificationService = notificationService;
+        this.pushService = pushService;
     }
-
 
 
     @PostMapping("/submit")
@@ -85,18 +85,14 @@ public class ReviewController {
             // ================= 新增：檢查管理員全局禁言 =================
             var activeBan = adminPenaltyService.getActiveGlobalBan(username);
             if (activeBan.isPresent()) {
-                // 構造包含過期時間的錯誤數據
                 Map<String, Object> errorData = new HashMap<>();
                 errorData.put("banned", true);
-                errorData.put("expiresAt", activeBan.get().getEndTime()); // 發送 ISO 格式時間給前端
-
-                // 返回特定錯誤 "GLOBAL_BAN"，前端 React 會捕獲這個 message 並彈窗
+                errorData.put("expiresAt", activeBan.get().getEndTime());
                 return ResponseEntity.badRequest()
                         .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
             }
-            // ================= 檢查結束 =================
 
-            //檢查是否被管理員永久拉黑
+            // 檢查是否被管理員永久拉黑
             if (adminPenaltyService.isBlacklisted(username)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(new ApiResponse(false, "BLACKLISTED", "您已被管理員永久拉黑，無法發表評論或回復"));
@@ -104,7 +100,6 @@ public class ReviewController {
 
             String replyToUser = (String) request.get("replyToUser");
             if (replyToUser != null && !replyToUser.trim().isEmpty()) {
-                // 調用 UserBlockService 檢查 A→B 或 B→A 是否存在 (普通用戶互相禁言)
                 if (userBlockService.isBlocked(username, replyToUser)) {
                     return ResponseEntity.badRequest()
                             .body(ApiResponse.error("您已禁言對方，因此無法回復"));
@@ -117,68 +112,53 @@ public class ReviewController {
             }
             Integer productId = Integer.valueOf(request.get("productId").toString());
 
-            // 3. 驗證並處理 content（核心修改：區分純文本與富文本）
+            // 3. 驗證並處理 content
             String rawContent = request.get("content") != null ? (String) request.get("content") : null;
             if (rawContent == null || rawContent.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
             }
 
-            // 【核心修復 1】：使用 Jsoup 清理 HTML，防止 XSS 攻擊
-            // 升級白名單：允許常見的富文本標籤以及 style 屬性（用於字體顏色、背景色等）
+            // 【核心修復 1】：使用 Jsoup 清理 HTML
             Safelist safelist = Safelist.relaxed()
                     .addTags("span", "div", "ul", "ol", "li", "u", "s", "font", "b", "i", "strong", "em", "mark")
-                    .addAttributes(":all", "style", "class", "id") // 關鍵：允許所有標籤攜帶 style 屬性
+                    .addAttributes(":all", "style", "class", "id")
                     .addAttributes("span", "style", "class")
                     .addAttributes("div", "style", "class")
-                    .addAttributes("font", "color", "size", "face") // 兼容舊版字體標籤
+                    .addAttributes("font", "color", "size", "face")
                     .addProtocols("img", "src", "https", "http")
                     .preserveRelativeLinks(true);
 
             String safeHtml = Jsoup.clean(rawContent, safelist);
-
-            // 【核心修復 2】：提取純文本，用於 content 字段 (方便後台搜索、發送系統通知時不帶 HTML 標籤)
             String plainText = Jsoup.parse(safeHtml).text();
 
             if (plainText.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
             }
 
-            // ================= 新增：智能判斷是否為富文本 =================
-            // 只有當內容包含特定的格式標籤時，才視為富文本
-            boolean hasRichTextTags = safeHtml.contains("<ul") ||
-                    safeHtml.contains("<li") ||
+            // 智能判斷是否為富文本
+            boolean hasRichTextTags = safeHtml.contains("<ul") || safeHtml.contains("<li") ||
                     safeHtml.contains("<b>") || safeHtml.contains("<strong") ||
-                    safeHtml.contains("<u>") ||
-                    safeHtml.contains("<i>") || safeHtml.contains("<em") ||
-                    safeHtml.contains("<font") ||
-                    safeHtml.contains("<span") || safeHtml.contains("<div") ||
+                    safeHtml.contains("<u>") || safeHtml.contains("<i>") || safeHtml.contains("<em") ||
+                    safeHtml.contains("<font") || safeHtml.contains("<span") || safeHtml.contains("<div") ||
                     safeHtml.contains("<s>") || safeHtml.contains("<mark");
-            // ============================================================
 
-            // 解析樓中樓參數 (parentId)
-            // 注意：replyToUser 已在上方解析，此處直接使用即可
             Long parentId = request.get("parentId") != null ? Long.valueOf(request.get("parentId").toString()) : null;
 
             Product product = productRepository.findById(productId)
                     .orElseThrow(() -> new RuntimeException("商品不存在"));
 
-            // 修改：使用 UserRepository 獲取 User 實體
             User user = userRepository.findByUsername(username)
                     .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
             Review review = new Review();
-            review.setUser(user); // 修改：設置 User 關聯
+            review.setUser(user);
             review.setProduct(product);
-
-            // 【核心修復 3】：根據判斷結果分別設置字段
-            review.setContent(plainText); // 始終保存純文本（用於搜索和通知）
+            review.setContent(plainText);
 
             if (hasRichTextTags) {
-                // 情況 A：是富文本 -> 保存 HTML 並標記為 1
                 review.setFormattedContent(safeHtml);
                 review.setIsFormatted(true);
             } else {
-                // 情況 B：是純文本 -> formatted_content 留空，標記為 0
                 review.setFormattedContent(null);
                 review.setIsFormatted(false);
             }
@@ -191,25 +171,19 @@ public class ReviewController {
                 review.setRating(null);
             } else {
                 // ================= 根評論邏輯 =================
-                // 核心修復：精準判斷是否為管理員 (同時校驗 username 和 Role 枚舉)
                 boolean isAdmin = "admin".equals(username) ||
                         (user.getRole() != null && user.getRole() == User.Role.ADMIN);
 
                 if (isAdmin) {
-                    // 【管理員邏輯】：無需訂單、無需評分、絕對不更新統計數據
-                    review.setOrderNo("ADMIN_COMMENT"); // 特殊標識
-                    review.setRating(null);             // 評分為 null
+                    review.setOrderNo("ADMIN_COMMENT");
+                    review.setRating(null);
                 } else {
-                    // 【普通用戶邏輯】：必須有評分、必須有訂單、必須更新統計
                     String orderNo = (String) request.get("orderNo");
-
-                    // 普通用戶必須有評分
                     if (request.get("rating") == null) {
                         return ResponseEntity.badRequest().body(ApiResponse.error("評分不能為空"));
                     }
                     Double rating = Double.valueOf(request.get("rating").toString());
 
-                    // 校驗訂單
                     Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                             .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
 
@@ -220,20 +194,62 @@ public class ReviewController {
                     review.setOrderNo(orderNo);
                     review.setRating(rating);
 
-                    // 更新商品統計數據 (僅普通用戶觸發)
                     Integer currentCount = product.getTotalReviewCount();
                     product.setTotalReviewCount(currentCount == null ? 1 : currentCount + 1);
                     BigDecimal currentScore = product.getTotalScore();
                     product.setTotalScore(currentScore == null ? BigDecimal.valueOf(rating) : currentScore.add(BigDecimal.valueOf(rating)));
                     productRepository.save(product);
                 }
-
                 review.setParentId(null);
                 review.setReplyToUser(null);
             }
 
             // 保存評論到數據庫
             reviewRepository.save(review);
+
+            // ==========================================
+            // 【核心新增】：實時推送通知邏輯
+            // ==========================================
+
+            // 情況 A：這是樓中樓回覆 -> 通知原評論作者 (TYPE_REVIEW_REPLY)
+            if (parentId != null) {
+                Review parentReview = reviewRepository.findById(parentId).orElse(null);
+                if (parentReview != null && parentReview.getUser() != null) {
+                    String targetUser = parentReview.getUser().getUsername();
+                    // 不通知自己
+                    if (!targetUser.equals(username)) {
+                        try {
+                            // 獲取最新的未讀數量 (基於剛剛保存的數據)
+                            long newCount = notificationService.getUnreadCount(targetUser, NotificationService.TYPE_REVIEW_REPLY);
+                            // 推送 WebSocket/SSE 消息
+                            pushService.pushNotificationUpdate(targetUser, "REPLY", newCount);
+                        } catch (Exception e) {
+                            System.err.println("推送回覆通知失敗: " + e.getMessage());
+                        }
+                    }
+                }
+            }
+            // 情況 B：這是根評論 -> 檢查是否有 @某人 (TYPE_REVIEW_MENTION)
+            else {
+                // 簡單的正則匹配 @username (支持中文、英文、數字、下劃線)
+                // 注意：這裡假設用戶名不包含特殊字符，根據實際需求調整正則
+                java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("@([\\w\\u4e00-\\u9fa5]+)");
+                java.util.regex.Matcher matcher = pattern.matcher(plainText);
+
+                while (matcher.find()) {
+                    String mentionedUser = matcher.group(1);
+                    // 不通知自己，且確保用戶存在
+                    if (!mentionedUser.equals(username) && userRepository.existsByUsername(mentionedUser)) {
+                        try {
+                            long newCount = notificationService.getUnreadCount(mentionedUser, NotificationService.TYPE_REVIEW_MENTION);
+                            pushService.pushNotificationUpdate(mentionedUser, "MENTION", newCount);
+                        } catch (Exception e) {
+                            System.err.println("推送提及通知失敗: " + e.getMessage());
+                        }
+                    }
+                }
+            }
+            // ==========================================
 
             return ResponseEntity.ok(ApiResponse.ok("提交成功"));
 

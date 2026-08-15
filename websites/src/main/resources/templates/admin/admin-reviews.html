@@ -2273,9 +2273,30 @@
 
     <script>
         // ==========================================
-        // 0. 全局變量與配置
+        // 0. 建立命名空間與狀態管理
         // ==========================================
-        // 定義三個 Tab 的配置對象
+        window.AdminReviews = window.AdminReviews || {
+            // 狀態變量收斂
+            currentActiveTab: 'reviews',
+
+            // 彈窗與業務狀態
+            currentDeleteId: null,
+            currentBanTarget: '',
+            currentBanReviewId: null,
+            currentBanReviewContent: '',
+            blacklistTargetUser: '',
+            blacklistReviewId: null,
+            blacklistReviewContent: null,
+            currentRestoreArchiveId: null,
+            currentReportId: null
+        };
+
+        // 簡寫引用，方便後續代碼使用
+        const AR = window.AdminReviews;
+
+        // ==========================================
+        // 1. 定義三個 Tab 的配置對象
+        // ==========================================
         const tableConfigs = {
             reviews: {
                 apiUrl: '/admin/api/reviews/list',
@@ -2283,7 +2304,7 @@
                 tbodySelector: '#reviews-tbody',
                 paginationId: 'reviews-pagination',
                 emptyText: '暫無評論數據',
-                renderRow: renderReviewRow // 指向下方的渲染函數
+                renderRow: renderReviewRow
             },
             archives: {
                 apiUrl: '/admin/api/reviews/archives',
@@ -2303,21 +2324,8 @@
             }
         };
 
-        let currentActiveTab = 'reviews';
-
-        // 彈窗與業務全局變量 (保留原有邏輯)
-        let currentDeleteId = null;
-        let currentBanTarget = '';
-        let currentBanReviewId = null;
-        let currentBanReviewContent = '';
-        let blacklistTargetUser = '';
-        let blacklistReviewId = null;
-        let blacklistReviewContent = null;
-        let currentRestoreArchiveId = null;
-        let currentReportId = null;
-
         // ==========================================
-        // 1. 輔助函數 (日期格式化等)
+        // 2. 輔助函數
         // ==========================================
         function formatDate(dateStr) {
             if (!dateStr) return '';
@@ -2326,53 +2334,72 @@
         }
 
         // ==========================================
-        // 2. 行渲染函數 (將 Thymeleaf 邏輯轉為 JS)
+        // 3. 行渲染函數 (HTML 生成)
         // ==========================================
-
-        // 渲染評論行
         function renderReviewRow(review) {
             const user = review.user || {};
             const product = review.product || {};
             const ratingHtml = review.rating != null
                 ? `<span style="color: var(--gold); font-weight: 600;"><i class="fas fa-star"></i> ${review.rating}</span>`
                 : '<span style="color: var(--gray);">-</span>';
-
             const pinnedHtml = review.pinned
                 ? '<span style="color: #17a2b8; font-weight: 600;"><i class="fas fa-thumbtack"></i> 是</span>'
                 : '<span style="color: var(--gray);">否</span>';
 
+            // 注意：這裡的 onclick 依然調用全局函數名 (如 openDeleteModal)，
+            // 因為我們在底部會將 AdminReviews.openDeleteModal 映射到 window.openDeleteModal
             return `
-                <tr data-username="${user.username || ''}" data-userid="${user.id || ''}" data-parentid="${review.parentId ? 'reply' : 'root'}">
-                    <td style="color: var(--gray); font-family: monospace;">${review.reviewId}</td>
-                    <td>${user.username || '未知'}</td>
-                    <td><span class="text-truncate" title="${product.description || ''}">${product.description || '未知商品'}</span></td>
-                    <td>${ratingHtml}</td>
-                    <td><span class="text-truncate" title="${review.content}">${review.content}</span></td>
-                    <td>
-                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 0.5rem;">
-                            <div style="display: flex; align-items: center; gap: 0.4rem; color: #4facfe; font-weight: 600; background: rgba(79, 172, 254, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px;">
-                                <i class="fas fa-thumbs-up" style="font-size: 0.85rem;"></i> ${review.likeCount || 0}
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 0.4rem; color: #6c757d; font-weight: 600; background: rgba(108, 117, 125, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px;">
-                                <i class="fas fa-thumbs-down" style="font-size: 0.85rem;"></i> ${review.dislikeCount || 0}
-                            </div>
+            <tr data-username="${user.username || ''}" data-userid="${user.id || ''}" data-parentid="${review.parentId ? 'reply' : 'root'}">
+                <td style="color: var(--gray); font-family: monospace;">${review.reviewId}</td>
+                <td>${user.username || '未知'}</td>
+                <td><span class="text-truncate" title="${product.description || ''}">${product.description || '未知商品'}</span></td>
+                <td>${ratingHtml}</td>
+                <td><span class="text-truncate" title="${review.content}">${review.content}</span></td>
+                <td>
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem; color: #4facfe; font-weight: 600; background: rgba(79, 172, 254, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px;">
+                            <i class="fas fa-thumbs-up" style="font-size: 0.85rem;"></i> ${review.likeCount || 0}
                         </div>
-                    </td>
-                    <td>${pinnedHtml}</td>
-                    <td>${formatDate(review.createdAt)}</td>
-                    <td style="text-align: center;">
-                        <div class="action-buttons-grid">
-                            <a href="/product/${product.productId}?reviewId=${review.reviewId}" class="btn-sm btn-view" target="_blank"><i class="fas fa-external-link-alt"></i></a>
-                            <button class="btn-sm btn-delete" data-review-id="${review.reviewId}" data-username="${user.username || '未知'}"><i class="fas fa-trash-alt"></i></button>
-                            <button class="btn-sm btn-ban" data-username="${user.username || '未知'}" data-review-id="${review.reviewId}" data-review-content="${review.content}"><i class="fas fa-ban"></i></button>
-                            <button class="btn-sm btn-blacklist" data-username="${user.username || '未知'}" data-review-id="${review.reviewId}" data-review-content="${review.content}" onclick="openBlacklistConfirmModalFromBtn(this)"><i class="fas fa-user-slash"></i></button>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; color: #6c757d; font-weight: 600; background: rgba(108, 117, 125, 0.1); padding: 0.2rem 0.6rem; border-radius: 6px;">
+                            <i class="fas fa-thumbs-down" style="font-size: 0.85rem;"></i> ${review.dislikeCount || 0}
                         </div>
-                    </td>
-                </tr>
-            `;
+                    </div>
+                </td>
+                <td>${pinnedHtml}</td>
+                <td>${formatDate(review.createdAt)}</td>
+                <td style="text-align: center;">
+                    <div class="action-buttons-grid">
+                       <a href="/product/${product.productId}?reviewId=${review.reviewId}" class="btn-sm btn-view" target="_blank"><i class="fas fa-external-link-alt"></i></a>
+
+                       <button class="btn-sm btn-delete"
+                               data-review-id="${review.reviewId}"
+                               data-username="${user.username || '未知'}"
+                               title="刪除評論">
+                           <i class="fas fa-trash-alt"></i>
+                       </button>
+
+                       <button class="btn-sm btn-ban"
+                               data-username="${user.username || '未知'}"
+                               data-review-id="${review.reviewId}"
+                               data-review-content="${(review.content || '').replace(/'/g, "\\'")}"
+                               title="禁言用戶">
+                           <i class="fas fa-ban"></i>
+                       </button>
+
+                       <button class="btn-sm btn-blacklist"
+                               data-username="${user.username || '未知'}"
+                               data-review-id="${review.reviewId}"
+                               data-review-content="${(review.content || '').replace(/'/g, "\\'")}"
+                               onclick="openBlacklistConfirmModalFromBtn(this)"
+                               title="永久拉黑">
+                           <i class="fas fa-user-slash"></i>
+                       </button>
+                    </div>
+                </td>
+            </tr>
+        `;
         }
 
-        // 渲染歸檔行
         function renderArchiveRow(item) {
             const author = item.author || {};
             const product = item.product || {};
@@ -2382,22 +2409,25 @@
                 : '<i class="fas fa-robot" style="margin-right: 4px;"></i>系統';
 
             return `
-                <tr>
-                    <td style="color: var(--gray); font-family: monospace;">${item.archiveId}</td>
-                    <td><span class="text-truncate" title="${item.content}">${item.content}</span></td>
-                    <td>${author.username || '未知'}</td>
-                    <td><span class="text-truncate" title="${product.description || ''}">${product.description || '未知商品'}</span></td>
-                    <td><span class="text-truncate" title="${item.deleteReason || ''}">${item.deleteReason || ' '}</span></td>
-                    <td style="font-family: monospace; font-size: 0.9rem; color: var(--primary);">${deletedByHtml}</td>
-                    <td>${formatDate(item.deletedAt)}</td>
-                    <td style="text-align: center;">
-                        <button class="btn-sm btn-restore" data-archive-id="${item.archiveId}" data-username="${author.username || '未知'}"><i class="fas fa-undo"></i> 恢復</button>
-                    </td>
-                </tr>
-            `;
+            <tr>
+                <td style="color: var(--gray); font-family: monospace;">${item.archiveId}</td>
+                <td><span class="text-truncate" title="${item.content}">${item.content}</span></td>
+                <td>${author.username || '未知'}</td>
+                <td><span class="text-truncate" title="${product.description || ''}">${product.description || '未知商品'}</span></td>
+                <td><span class="text-truncate" title="${item.deleteReason || ''}">${item.deleteReason || ' '}</span></td>
+                <td style="font-family: monospace; font-size: 0.9rem; color: var(--primary);">${deletedByHtml}</td>
+                <td>${formatDate(item.deletedAt)}</td>
+                <td style="text-align: center;">
+                    <button class="btn-sm btn-restore"
+                            data-archive-id="${item.archiveId}"
+                            data-username="${author.username || '未知'}">
+                        <i class="fas fa-undo"></i> 恢復
+                    </button>
+                </td>
+            </tr>
+        `;
         }
 
-        // 渲染舉報行
         function renderReportRow(item) {
             const categoryMap = {
                 "ILLEGAL": "違法信息", "PORNOGRAPHY": "色情低俗", "HARMFUL": "有害信息",
@@ -2420,35 +2450,42 @@
                 ? `<button class="btn-sm btn-approve" onclick="openReportDetailModal('${item.reportId}')"><i class="fas fa-gavel"></i> 處理</button>`
                 : `<span class="btn-sm ${item.status === 'RESOLVED' ? 'status-resolved' : 'status-dismissed'}" style="cursor: default; border: 1px solid transparent; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">${item.status === 'RESOLVED' ? '已處理' : '已駁回'}</span>`;
 
+            // 【核心修復】：將 onclick="openDeleteReportedReviewModal(...)" 改為 "openDeleteModal(...)"
+            // 注意：這裡傳遞的是 reviewId 和 username，與 AdminReviews.openDeleteModal 的參數簽名一致
             const actionBtn2 = !isDel
-                ? `<button class="btn-sm btn-delete" data-report-id="${item.reportId}" data-review-id="${item.reviewId || ''}" data-username="${reportedUser}" onclick="openDeleteReportedReviewModal(this.dataset.reviewId, this.dataset.username)"><i class="fas fa-trash-alt"></i> 刪除</button>`
+                ? `<button class="btn-sm btn-delete"
+                   data-review-id="${item.reviewId || ''}"
+                   data-username="${reportedUser}"
+                   onclick="openDeleteModal(this.dataset.reviewId, this.dataset.username)">
+             <i class="fas fa-trash-alt"></i> 刪除
+           </button>`
                 : `<span class="btn-sm" style="background: #e9ecef; color: #6c757d; cursor: not-allowed; border: 1px solid #dee2e6; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;" title="該評論已被刪除"><i class="fas fa-trash-alt"></i> 已刪除</span>`;
 
             const actionBtn3 = isBanned
                 ? `<button class="btn-sm btn-ban btn-disabled" disabled style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-ban"></i> 已封禁</button>`
-                : `<button class="btn-sm btn-ban" data-username="${reportedUser}" data-review-id="${item.reviewId || ''}" data-review-content="${item.content}" onclick="openAdminBanModal(this.dataset.username, this.dataset.reviewId, this.dataset.reviewContent)"><i class="fas fa-ban"></i> 封禁</button>`;
+                : `<button class="btn-sm btn-ban" data-username="${reportedUser}" data-review-id="${item.reviewId || ''}" data-review-content="${(item.content || '').replace(/'/g, "\\'")}" onclick="openAdminBanModal(this.dataset.username, this.dataset.reviewId, this.dataset.reviewContent)"><i class="fas fa-ban"></i> 封禁</button>`;
 
-            const actionBtn4 = `<button class="btn-sm btn-blacklist" data-username="${reportedUser}" data-review-id="${item.reviewId || ''}" data-review-content="${item.content}" onclick="openBlacklistConfirmModalFromBtn(this)"><i class="fas fa-user-slash"></i> 拉黑</button>`;
+            const actionBtn4 = `<button class="btn-sm btn-blacklist" data-username="${reportedUser}" data-review-id="${item.reviewId || ''}" data-review-content="${(item.content || '').replace(/'/g, "\\'")}" onclick="openBlacklistConfirmModalFromBtn(this)"><i class="fas fa-user-slash"></i> 拉黑</button>`;
 
             return `
-                <tr>
-                    <td style="color: var(--gray); font-family: monospace;">${item.reportId}</td>
-                    <td>${reporter}</td>
-                    <td>${reportedUser}</td>
-                    <td style="font-size: 0.9rem; color: #555;">${item.content}</td>
-                    <td>${category}</td>
-                    <td style="font-size: 0.85rem; color: var(--gray);">${item.reason || '無'}</td>
-                    <td>${statusBadge}</td>
-                    <td>${formatDate(item.createdAt)}</td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <div class="action-buttons-grid">${actionBtn1}${actionBtn2}${actionBtn3}${actionBtn4}</div>
-                    </td>
-                </tr>
-            `;
+    <tr>
+        <td style="color: var(--gray); font-family: monospace;">${item.reportId}</td>
+        <td>${reporter}</td>
+        <td>${reportedUser}</td>
+        <td style="font-size: 0.9rem; color: #555;">${item.content}</td>
+        <td>${category}</td>
+        <td style="font-size: 0.85rem; color: var(--gray);">${item.reason || '無'}</td>
+        <td>${statusBadge}</td>
+        <td>${formatDate(item.createdAt)}</td>
+        <td style="text-align: center; vertical-align: middle;">
+            <div class="action-buttons-grid">${actionBtn1}${actionBtn2}${actionBtn3}${actionBtn4}</div>
+        </td>
+    </tr>
+`;
         }
 
         // ==========================================
-        // 3. 篩選與 Tab 切換邏輯
+        // 4. 篩選與 Tab 切換邏輯
         // ==========================================
         function toggleUserSearch() {
             const mode = document.getElementById('userFilterMode').value;
@@ -2481,20 +2518,19 @@
             else {input.style.display = 'none'; input.value = '';}
         }
 
-        function switchTab(tabName, btnElement) {
-            currentActiveTab = tabName;
+        // 掛載到 AdminReviews 對象
+        AdminReviews.switchTab = function (tabName, btnElement) {
+            AR.currentActiveTab = tabName;
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             btnElement.classList.add('active');
             document.getElementById('tab-' + tabName).classList.add('active');
-
-            // 切換 Tab 時重置頁碼並加載數據
             tableConfigs[tabName].params.page = 1;
             AdminTable.loadData(tableConfigs[tabName]);
-        }
+        };
+        window.switchTab = AdminReviews.switchTab; // 兼容 HTML
 
-        // 篩選觸發函數
-        function filterReviews() {
+        AdminReviews.filterReviews = function () {
             const config = tableConfigs.reviews;
             const userMode = document.getElementById('userFilterMode').value;
             config.params.username = userMode === 'specific' ? document.getElementById('userSearchInput').value.trim() : '';
@@ -2502,222 +2538,292 @@
             config.params.keywordMode = document.getElementById('keywordFilterMode').value;
             config.params.page = 1;
             AdminTable.loadData(config);
-        }
+        };
+        window.filterReviews = AdminReviews.filterReviews;
 
-        function resetReviewsFilter() {
+        AdminReviews.resetReviewsFilter = function () {
             document.getElementById('userFilterMode').value = 'all';
             document.getElementById('userSearchInput').value = '';
             document.getElementById('userSearchInput').style.display = 'none';
             document.getElementById('reviewTypeFilter').value = 'all';
             document.getElementById('keywordFilterMode').value = 'no';
-
             const config = tableConfigs.reviews;
             config.params = {page: 1, size: 25, username: '', reviewType: 'all', keywordMode: 'no'};
             AdminTable.loadData(config);
-        }
+        };
+        window.resetReviewsFilter = AdminReviews.resetReviewsFilter;
 
-        function filterArchives() {
+        AdminReviews.filterArchives = function () {
             const config = tableConfigs.archives;
             const authorMode = document.getElementById('archiveAuthorFilterMode').value;
             const deletedByMode = document.getElementById('archiveDeletedByFilterMode').value;
-
             config.params.authorUsername = authorMode === 'specific' ? document.getElementById('archiveAuthorSearchInput').value.trim() : '';
             config.params.deletedByUsername = deletedByMode === 'specific' ? document.getElementById('archiveDeletedBySearchInput').value.trim() : (deletedByMode === 'admin' ? 'admin' : '');
             config.params.page = 1;
             AdminTable.loadData(config);
-        }
+        };
+        window.filterArchives = AdminReviews.filterArchives;
 
-        function resetArchivesFilter() {
+        AdminReviews.resetArchivesFilter = function () {
             document.getElementById('archiveAuthorFilterMode').value = 'all';
             document.getElementById('archiveAuthorSearchInput').value = '';
             document.getElementById('archiveAuthorSearchInput').style.display = 'none';
             document.getElementById('archiveDeletedByFilterMode').value = 'all';
             document.getElementById('archiveDeletedBySearchInput').value = '';
             document.getElementById('archiveDeletedBySearchInput').style.display = 'none';
-
             const config = tableConfigs.archives;
             config.params = {page: 1, size: 25, authorUsername: '', deletedByUsername: ''};
             AdminTable.loadData(config);
-        }
+        };
+        window.resetArchivesFilter = AdminReviews.resetArchivesFilter;
 
-        function filterReports() {
+        AdminReviews.filterReports = function () {
             const config = tableConfigs.reports;
             const reporterMode = document.getElementById('reporterFilterMode').value;
             const reportedMode = document.getElementById('reportedUserFilterMode').value;
-
             config.params.reporterUsername = reporterMode === 'specific' ? document.getElementById('reporterSearchInput').value.trim() : '';
             config.params.reportedUsername = reportedMode === 'specific' ? document.getElementById('reportedUserSearchInput').value.trim() : '';
             config.params.page = 1;
             AdminTable.loadData(config);
-        }
+        };
+        window.filterReports = AdminReviews.filterReports;
 
-        function resetReportsFilter() {
+        AdminReviews.resetReportsFilter = function () {
             document.getElementById('reporterFilterMode').value = 'all';
             document.getElementById('reporterSearchInput').value = '';
             document.getElementById('reporterSearchInput').style.display = 'none';
             document.getElementById('reportedUserFilterMode').value = 'all';
             document.getElementById('reportedUserSearchInput').value = '';
             document.getElementById('reportedUserSearchInput').style.display = 'none';
-
             const config = tableConfigs.reports;
             config.params = {page: 1, size: 25, reporterUsername: '', reportedUsername: ''};
             AdminTable.loadData(config);
-        }
+        };
+        window.resetReportsFilter = AdminReviews.resetReportsFilter;
 
         // ==========================================
-        // 4. 事件委託 (綁定動態生成的按鈕事件)
+        // 5. 事件委託 (綁定動態生成的按鈕)
         // ==========================================
         function bindDynamicEvents() {
-            // 使用事件委託，這樣即使表格內容被 AdminTable 替換，事件依然有效
             document.body.addEventListener('click', function (e) {
-                // 刪除評論
+                // 刪除評論 (Reviews Tab)
                 const deleteBtn = e.target.closest('.btn-delete');
                 if (deleteBtn && deleteBtn.closest('#reviews-tbody')) {
-                    openDeleteModal(deleteBtn.dataset.reviewId, deleteBtn.dataset.username);
+                    AdminReviews.openDeleteModal(deleteBtn.dataset.reviewId, deleteBtn.dataset.username);
                 }
 
-                // 禁言
+                // 禁言 (Reviews Tab)
                 const banBtn = e.target.closest('.btn-ban');
                 if (banBtn && !banBtn.disabled && banBtn.closest('#reviews-tbody')) {
-                    openAdminBanModal(banBtn.dataset.username, banBtn.dataset.reviewId, banBtn.dataset.reviewContent);
+                    AdminReviews.openAdminBanModal(banBtn.dataset.username, banBtn.dataset.reviewId, banBtn.dataset.reviewContent);
                 }
 
-                // 恢復評論
+                // 恢復評論 (Archives Tab)
                 const restoreBtn = e.target.closest('.btn-restore');
                 if (restoreBtn) {
-                    openRestoreModal(restoreBtn.dataset.archiveId, restoreBtn.dataset.username);
+                    AdminReviews.openRestoreModal(restoreBtn.dataset.archiveId, restoreBtn.dataset.username);
                 }
             });
         }
 
         // ==========================================
-        // 5. 頁面初始化
+        // 6. 頁面初始化
         // ==========================================
         document.addEventListener('DOMContentLoaded', function () {
-            // 檢查 URL 參數 (例如從用戶頁跳轉過來帶了 username)
             const urlParams = new URLSearchParams(window.location.search);
             const targetUsername = urlParams.get('username');
-
             if (targetUsername) {
                 const config = tableConfigs.reviews;
                 document.getElementById('userFilterMode').value = 'specific';
                 toggleUserSearch();
                 document.getElementById('userSearchInput').value = targetUsername;
-
                 config.params.username = targetUsername;
                 config.params.reviewType = 'all';
                 config.params.keywordMode = 'no';
                 config.params.page = 1;
             }
-
-            // 初始加載當前 Tab 數據
-            AdminTable.loadData(tableConfigs[currentActiveTab]);
-
-            // 綁定全局事件
+            AdminTable.loadData(tableConfigs[AR.currentActiveTab]);
             bindDynamicEvents();
         });
 
         // ==========================================
-        // 6. 保留原有的彈窗業務邏輯 (精簡版)
+        // 7. 彈窗業務邏輯 (掛載到 AdminReviews)
         // ==========================================
-        // 注意：這裡只保留了函數簽名和核心調用，具體彈窗 HTML 請保留你原有的
 
-        function openDeleteModal(reviewId, username) {
-            currentDeleteId = reviewId;
-            document.getElementById('targetUsername').textContent = username;
-            document.querySelector('input[value="該內容不符合社區規範，因此被移除。"]').checked = true;
-            handleReasonChange('default');
-            document.getElementById('deleteReviewModal').style.display = 'flex';
-        }
-        function closeDeleteModal() {document.getElementById('deleteReviewModal').style.display = 'none'; currentDeleteId = null;}
-        function handleReasonChange(type) {
+        // --- 刪除評論 ---
+        AdminReviews.openDeleteModal = function (reviewId, username) {
+            AR.currentDeleteId = reviewId;
+            const targetEl = document.getElementById('targetUsername');
+            if (targetEl) targetEl.textContent = username;
+
+            const defaultReason = document.querySelector('input[value="該內容不符合社區規範，因此被移除。"]');
+            if (defaultReason) defaultReason.checked = true;
+
+            AdminReviews.handleReasonChange('default');
+            const modal = document.getElementById('deleteReviewModal');
+            if (modal) modal.style.display = 'flex';
+        };
+        window.openDeleteModal = AdminReviews.openDeleteModal;
+
+        AdminReviews.closeDeleteModal = function () {
+            const modal = document.getElementById('deleteReviewModal');
+            if (modal) modal.style.display = 'none';
+            AR.currentDeleteId = null;
+        };
+        window.closeDeleteModal = AdminReviews.closeDeleteModal;
+
+        AdminReviews.handleReasonChange = function (type) {
             const wrapper = document.getElementById('customInputWrapper');
-            wrapper.style.display = type === 'custom' ? 'block' : 'none';
-        }
-        async function confirmDeleteReview() {
-            if (!currentDeleteId) return;
-            const btn = document.querySelector('#deleteReviewModal .btn-confirm-delete');
-            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+            if (wrapper) wrapper.style.display = type === 'custom' ? 'block' : 'none';
+        };
+        window.handleReasonChange = AdminReviews.handleReasonChange;
 
-            let reason = document.querySelector('input[name="deleteReason"]:checked').value;
-            if (reason === 'custom') reason = document.getElementById('customReasonText').value.trim();
+        AdminReviews.confirmDeleteReview = async function () {
+            if (!AR.currentDeleteId) return;
+            const btn = document.querySelector('#deleteReviewModal .btn-confirm-delete');
+            if (!btn) return;
+
+            let reason = '';
+            const checkedReason = document.querySelector('input[name="deleteReason"]:checked');
+            if (checkedReason) reason = checkedReason.value;
+
+            if (reason === 'custom') {
+                const customText = document.getElementById('customReasonText');
+                reason = customText ? customText.value.trim() : '';
+            }
 
             try {
-                const res = await fetch(`/api/review/${currentDeleteId}`, {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({deleteReason: reason})});
+                const res = await fetch(`/api/review/${AR.currentDeleteId}`, {
+                    method: 'DELETE',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({deleteReason: reason})
+                });
                 const result = await res.json();
                 if (result.success) {
-                    closeDeleteModal();
+                    AdminReviews.closeDeleteModal();
                     showNotification('✅ 刪除成功');
-                    AdminTable.loadData(tableConfigs[currentActiveTab]); // 刷新當前表格
+                    AdminTable.loadData(tableConfigs[AR.currentActiveTab]);
                 } else {
                     showNotification('❌ ' + result.message, true);
                 }
             } catch (e) {showNotification('❌ 網絡錯誤', true);}
             finally {btn.disabled = false; btn.innerHTML = '確認刪除';}
-        }
+        };
+        window.confirmDeleteReview = AdminReviews.confirmDeleteReview;
 
-        function openAdminBanModal(username, reviewId, content) {
-            currentBanTarget = username; currentBanReviewId = reviewId; currentBanReviewContent = content;
-            document.getElementById('banTargetUsername').textContent = username;
-            document.getElementById('adminBanModal').style.display = 'flex';
-        }
-        function closeAdminBanModal() {document.getElementById('adminBanModal').style.display = 'none';}
+        // --- 禁言 ---
+        AdminReviews.openAdminBanModal = function (username, reviewId, content) {
+            AR.currentBanTarget = username;
+            AR.currentBanReviewId = reviewId;
+            AR.currentBanReviewContent = content;
+            const targetEl = document.getElementById('banTargetUsername');
+            if (targetEl) targetEl.textContent = username;
+            const modal = document.getElementById('adminBanModal');
+            if (modal) modal.style.display = 'flex';
+        };
+        window.openAdminBanModal = AdminReviews.openAdminBanModal;
 
-        async function confirmAdminBan() {
-            const duration = parseInt(document.getElementById('banDuration').value);
-            const unit = document.getElementById('banUnit').value;
-            const reason = document.getElementById('banReason').value;
-            let minutes = unit === 'day' ? duration * 1440 : (unit === 'week' ? duration * 10080 : duration * 43200);
+        AdminReviews.closeAdminBanModal = function () {
+            const modal = document.getElementById('adminBanModal');
+            if (modal) modal.style.display = 'none';
+        };
+        window.closeAdminBanModal = AdminReviews.closeAdminBanModal;
 
-            const params = new URLSearchParams({durationMinutes: minutes, reason: reason, reviewId: currentBanReviewId, reviewContent: currentBanReviewContent});
+        AdminReviews.confirmAdminBan = async function () {
+            const durationInput = document.getElementById('banDuration');
+            const unitInput = document.getElementById('banUnit');
+            const reasonInput = document.getElementById('banReason');
+
+            if (!durationInput || !unitInput || !reasonInput) return;
+
+            const duration = parseInt(durationInput.value);
+            const unit = unitInput.value;
+            const reason = reasonInput.value;
+
+            let minutes = 0;
+            if (unit === 'day') minutes = duration * 1440;
+            else if (unit === 'week') minutes = duration * 10080;
+            else if (unit === 'month') minutes = duration * 43200;
+
+            const params = new URLSearchParams({
+                durationMinutes: minutes,
+                reason: reason,
+                reviewId: AR.currentBanReviewId,
+                reviewContent: AR.currentBanReviewContent
+            });
+
             try {
-                const res = await fetch(`/api/user/${encodeURIComponent(currentBanTarget)}/toggle-block?${params}`, {method: 'POST'});
+                const res = await fetch(`/api/user/${encodeURIComponent(AR.currentBanTarget)}/toggle-block?${params}`, {method: 'POST'});
                 const result = await res.json();
                 if (result.success) {
                     showNotification('✅ ' + result.message);
-                    closeAdminBanModal();
-                    AdminTable.loadData(tableConfigs[currentActiveTab]);
+                    AdminReviews.closeAdminBanModal();
+                    AdminTable.loadData(tableConfigs[AR.currentActiveTab]);
                 } else if (result.alreadyBanned) {
-                    closeAdminBanModal();
-                    document.getElementById('adminPermissionModal').style.display = 'flex';
+                    AdminReviews.closeAdminBanModal();
+                    const permModal = document.getElementById('adminPermissionModal');
+                    if (permModal) permModal.style.display = 'flex';
                 } else {
                     showNotification('❌ ' + result.message, true);
                 }
             } catch (e) {showNotification('❌ 網絡錯誤', true);}
-        }
+        };
+        window.confirmAdminBan = AdminReviews.confirmAdminBan;
 
-        function closeAdminPermissionModal() {document.getElementById('adminPermissionModal').style.display = 'none';}
+        AdminReviews.closeAdminPermissionModal = function () {
+            const modal = document.getElementById('adminPermissionModal');
+            if (modal) modal.style.display = 'none';
+        };
+        window.closeAdminPermissionModal = AdminReviews.closeAdminPermissionModal;
 
+        // --- 拉黑 ---
+        AdminReviews.openBlacklistConfirmModal = function (user, id, content) {
+            AR.blacklistTargetUser = user;
+            AR.blacklistReviewId = id;
+            AR.blacklistReviewContent = content;
+            const targetEl = document.getElementById('blacklistTargetUsername');
+            if (targetEl) targetEl.textContent = user;
+            const modal = document.getElementById('blacklistConfirmModal');
+            if (modal) modal.style.display = 'flex';
+        };
+        window.openBlacklistConfirmModal = AdminReviews.openBlacklistConfirmModal;
+
+        // 兼容 HTML 中的 onclick="openBlacklistConfirmModalFromBtn(this)"
         window.openBlacklistConfirmModalFromBtn = function (btn) {
-            window.openBlacklistConfirmModal(btn.dataset.username, btn.dataset.reviewId, btn.dataset.reviewContent);
+            AdminReviews.openBlacklistConfirmModal(btn.dataset.username, btn.dataset.reviewId, btn.dataset.reviewContent);
         };
-        window.openBlacklistConfirmModal = function (user, id, content) {
-            blacklistTargetUser = user; blacklistReviewId = id; blacklistReviewContent = content;
-            document.getElementById('blacklistTargetUsername').textContent = user;
-            document.getElementById('blacklistConfirmModal').style.display = 'flex';
-        };
-        window.closeBlacklistConfirmModal = function () {document.getElementById('blacklistConfirmModal').style.display = 'none';};
 
-        window.confirmBlacklistAction = async function () {
-            const reason = document.getElementById('blacklistReason').value;
-            let url = `/api/admin/penalty/blacklist/${encodeURIComponent(blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`;
-            if (blacklistReviewId) url += `&reviewId=${blacklistReviewId}&reviewContent=${encodeURIComponent(blacklistReviewContent)}`;
+        AdminReviews.closeBlacklistConfirmModal = function () {
+            const modal = document.getElementById('blacklistConfirmModal');
+            if (modal) modal.style.display = 'none';
+        };
+        window.closeBlacklistConfirmModal = AdminReviews.closeBlacklistConfirmModal;
+
+        AdminReviews.confirmBlacklistAction = async function () {
+            const reasonInput = document.getElementById('blacklistReason');
+            if (!reasonInput) return;
+            const reason = reasonInput.value;
+
+            let url = `/api/admin/penalty/blacklist/${encodeURIComponent(AR.blacklistTargetUser)}?reason=${encodeURIComponent(reason)}`;
+            if (AR.blacklistReviewId) url += `&reviewId=${AR.blacklistReviewId}&reviewContent=${encodeURIComponent(AR.blacklistReviewContent)}`;
 
             try {
                 const res = await fetch(url, {method: 'POST'});
                 const result = await res.json();
                 if (result.success) {
                     showNotification('✅ ' + result.message);
-                    window.closeBlacklistConfirmModal();
-                    AdminTable.loadData(tableConfigs[currentActiveTab]);
+                    AdminReviews.closeBlacklistConfirmModal();
+                    AdminTable.loadData(tableConfigs[AR.currentActiveTab]);
                 } else {
                     showNotification('❌ ' + result.message, true);
                 }
             } catch (e) {showNotification('❌ 網絡錯誤', true);}
         };
+        window.confirmBlacklistAction = AdminReviews.confirmBlacklistAction;
 
-        async function openRestoreModal(id, user) {
-            currentRestoreArchiveId = id;
+        // --- 恢復評論 ---
+        AdminReviews.openRestoreModal = async function (id, user) {
+            AR.currentRestoreArchiveId = id;
             try {
                 const res = await fetch(`/api/review/restore/${id}/check`);
                 const result = await res.json();
@@ -2727,51 +2833,71 @@
                         return;
                     }
                     if (result.data.isDeletedByAdmin) {
-                        document.getElementById('restoreTargetUsername').textContent = user;
-                        document.getElementById('restoreReviewModal').style.display = 'flex';
+                        const targetEl = document.getElementById('restoreTargetUsername');
+                        if (targetEl) targetEl.textContent = user;
+                        const modal = document.getElementById('restoreReviewModal');
+                        if (modal) modal.style.display = 'flex';
                     } else {
-                        document.getElementById('restoreDeletedByUsername').textContent = result.data.deletedByUsername;
-                        document.getElementById('restoreAuthorUsername').textContent = user;
-                        document.getElementById('restoreUserDeletedModal').style.display = 'flex';
+                        const delByEl = document.getElementById('restoreDeletedByUsername');
+                        if (delByEl) delByEl.textContent = result.data.deletedByUsername;
+                        const authEl = document.getElementById('restoreAuthorUsername');
+                        if (authEl) authEl.textContent = user;
+                        const modal = document.getElementById('restoreUserDeletedModal');
+                        if (modal) modal.style.display = 'flex';
                     }
                 } else {
                     showNotification('❌ ' + result.message, true);
                 }
             } catch (e) {showNotification('❌ 網絡錯誤', true);}
-        }
+        };
+        window.openRestoreModal = AdminReviews.openRestoreModal;
 
-        function closeRestoreModal() {document.getElementById('restoreReviewModal').style.display = 'none';}
-        function closeRestoreUserDeletedModal() {document.getElementById('restoreUserDeletedModal').style.display = 'none';}
+        AdminReviews.closeRestoreModal = function () {
+            const modal = document.getElementById('restoreReviewModal');
+            if (modal) modal.style.display = 'none';
+        };
+        window.closeRestoreModal = AdminReviews.closeRestoreModal;
 
-        async function executeRestoreReview() {
-            if (!currentRestoreArchiveId) return;
+        AdminReviews.closeRestoreUserDeletedModal = function () {
+            const modal = document.getElementById('restoreUserDeletedModal');
+            if (modal) modal.style.display = 'none';
+        };
+        window.closeRestoreUserDeletedModal = AdminReviews.closeRestoreUserDeletedModal;
+
+        AdminReviews.executeRestoreReview = async function () {
+            if (!AR.currentRestoreArchiveId) return;
             const btn = document.getElementById('confirmRestoreBtn') || document.getElementById('confirmForceRestoreBtn');
+            if (!btn) return;
+
             btn.disabled = true;
             try {
-                const res = await fetch(`/api/review/restore/${currentRestoreArchiveId}`, {method: 'POST'});
+                const res = await fetch(`/api/review/restore/${AR.currentRestoreArchiveId}`, {method: 'POST'});
                 const result = await res.json();
                 if (result.success) {
                     showNotification('✅ 恢復成功');
-                    closeRestoreModal(); closeRestoreUserDeletedModal();
+                    AdminReviews.closeRestoreModal();
+                    AdminReviews.closeRestoreUserDeletedModal();
                     AdminTable.loadData(tableConfigs.archives);
                 } else {
                     showNotification('❌ ' + result.message, true);
                 }
             } catch (e) {showNotification('❌ 網絡錯誤', true);}
             finally {btn.disabled = false;}
-        }
+        };
+        window.executeRestoreReview = AdminReviews.executeRestoreReview;
 
-        function openReportDetailModal(reportId) {
-            currentReportId = reportId;
-            // 這裡簡單模擬從 DOM 獲取數據，實際可以從緩存或再次請求獲取
-            // 為了簡化，假設彈窗 HTML 裡有對應的 ID 供填充
-            document.getElementById('reportDecisionModal').style.display = 'flex';
-        }
+        // --- 舉報處理 ---
+        AdminReviews.openReportDetailModal = function (reportId) {
+            AR.currentReportId = reportId;
+            const modal = document.getElementById('reportDecisionModal');
+            if (modal) modal.style.display = 'flex';
+        };
+        window.openReportDetailModal = AdminReviews.openReportDetailModal;
 
-        async function handleReportDecision(success) {
-            if (!currentReportId) return;
+        AdminReviews.handleReportDecision = async function (success) {
+            if (!AR.currentReportId) return;
             try {
-                const res = await fetch(`/api/report/${currentReportId}/decision`, {
+                const res = await fetch(`/api/report/${AR.currentReportId}/decision`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({successful: success})
@@ -2779,31 +2905,50 @@
                 const result = await res.json();
                 if (result.success) {
                     showNotification('✅ 處理成功');
-                    document.getElementById('reportDecisionModal').style.display = 'none';
+                    const modal = document.getElementById('reportDecisionModal');
+                    if (modal) modal.style.display = 'none';
                     AdminTable.loadData(tableConfigs.reports);
                 } else {
                     showNotification('❌ ' + result.message, true);
                 }
             } catch (e) {showNotification('❌ 網絡錯誤', true);}
-        }
+        };
+        window.handleReportDecision = AdminReviews.handleReportDecision;
 
-        // 全局 ESC 關閉
+        // ==========================================
+        // 8. 全局事件監聽
+        // ==========================================
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
-                closeDeleteModal(); closeAdminBanModal(); closeAdminPermissionModal();
-                window.closeBlacklistConfirmModal(); closeRestoreModal(); closeRestoreUserDeletedModal();
-                document.getElementById('reportDecisionModal').style.display = 'none';
+                AdminReviews.closeDeleteModal();
+                AdminReviews.closeAdminBanModal();
+                AdminReviews.closeAdminPermissionModal();
+                AdminReviews.closeBlacklistConfirmModal();
+                AdminReviews.closeRestoreModal();
+                AdminReviews.closeRestoreUserDeletedModal();
+                const reportModal = document.getElementById('reportDecisionModal');
+                if (reportModal) reportModal.style.display = 'none';
+
+                const kwModal = document.getElementById('keywordModal');
+                if (kwModal) kwModal.style.display = 'none';
+                const delKwModal = document.getElementById('deleteKeywordModal');
+                if (delKwModal) delKwModal.style.display = 'none';
             }
         });
 
-        // 點擊遮罩關閉
         document.addEventListener('click', function (e) {
-            if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('delete-modal-overlay') || e.target.classList.contains('custom-modal-overlay')) {
-                // 簡單粗暴關閉所有顯示中的彈窗
-                document.querySelectorAll('.modal-overlay, .delete-modal-overlay, .custom-modal-overlay, .admin-permission-overlay, .report-decision-modal-overlay').forEach(el => el.style.display = 'none');
+            // 點擊遮罩層關閉彈窗
+            const target = e.target;
+            if (target.classList.contains('modal-overlay') ||
+                target.classList.contains('delete-modal-overlay') ||
+                target.classList.contains('custom-modal-overlay') ||
+                target.classList.contains('admin-permission-overlay') ||
+                target.classList.contains('report-decision-modal-overlay') ||
+                target.classList.contains('keyword-modal-overlay') ||
+                target.classList.contains('custom-confirm-overlay')) {
+                target.style.display = 'none';
             }
         });
-
     </script>
 </body>
 

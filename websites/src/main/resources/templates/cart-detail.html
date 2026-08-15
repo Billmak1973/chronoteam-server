@@ -497,58 +497,6 @@
             margin-bottom: 1.5rem;
         }
 
-        /* === 智能分頁組件樣式 === */
-        .pagination-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #f1f3f5;
-        }
-
-        .page-btn {
-            padding: 0.6rem 1rem;
-            border: 1px solid #e9ecef;
-            background: white;
-            color: var(--primary);
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-        }
-
-        .page-btn:hover:not(.disabled) {
-            border-color: var(--gold);
-            color: var(--gold);
-            background: rgba(212, 175, 55, 0.05);
-            transform: translateY(-1px);
-        }
-
-        .page-btn.active {
-            background: var(--gold);
-            color: white;
-            border-color: var(--gold);
-            font-weight: 600;
-            cursor: default;
-            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
-        }
-
-
-        .page-ellipsis {
-            padding: 0.6rem 0.5rem;
-            color: var(--gray);
-            font-weight: bold;
-            letter-spacing: 2px;
-            user-select: none;
-        }
-
         .footer {
             background: var(--primary);
             color: rgba(255, 255, 255, 0.7);
@@ -637,7 +585,7 @@
                                     th:text="${#numbers.formatDecimal(item.price * item.quantity, 1, 'COMMA', 0, 'POINT')}">0</span>
                             </div>
                             <button class="btn-remove"
-                                th:onclick="'openCartRemoveModal(' + ${item.product.productId} + ')'">
+                                th:onclick="'Cart.openRemoveModal(' + ${item.product.productId} + ')'">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
@@ -654,7 +602,7 @@
                     <a href="/browse" class="btn-continue">
                         <i class="fas fa-arrow-left"></i> 繼續購物
                     </a>
-                    <button class="btn-checkout" onclick="checkout()">
+                    <button class="btn-checkout" onclick="Cart.checkout()">
                         <i class="fas fa-credit-card"></i> 結賬
                     </button>
                 </div>
@@ -670,40 +618,23 @@
                 </a>
             </div>
 
-            <!-- ==================== 智能分頁導航 ==================== -->
-            <div th:if="${totalElements > 0}" class="pagination-wrapper">
+            <!-- ==================== 智能分頁導航 (修復版) ==================== -->
+            <!--
+                注意：因為購物車頁面不需要額外參數，
+                我們直接使用 smartPagination (JS模式) 並配合頁面已有的 changePage 函數，
+                或者使用 pagination 但傳入一個安全的佔位符。
 
-                <!-- 上一頁按鈕 -->
-                <a th:href="@{/cart/view(page=${currentPage - 1})}"
-                    th:class="${currentPage == 1} ? 'page-btn disabled' : 'page-btn'" th:if="${currentPage > 1}">
-                    <i class="fas fa-chevron-left"></i> 上一頁
-                </a>
-                <span th:if="${currentPage == 1}" class="page-btn disabled">
-                    <i class="fas fa-chevron-left"></i> 上一頁
-                </span>
-
-                <!-- 智能頁碼遍歷 (核心邏輯：渲染 1 ... 3, 4, 5 ... 10) -->
-                <th:block th:each="item : ${smartPages}">
-                    <!-- 如果是省略號 "..." -->
-                    <span th:if="${item.isEllipsis}" class="page-ellipsis">...</span>
-
-                    <!-- 如果是數字頁碼 -->
-                    <a th:unless="${item.isEllipsis}" th:href="@{/cart/view(page=${item.pageNumber})}"
-                        th:class="${item.pageNumber == currentPage} ? 'page-btn active' : 'page-btn'"
-                        th:text="${item.pageNumber}">1</a>
-                </th:block>
-
-                <!-- 下一頁按鈕 -->
-                <a th:href="@{/cart/view(page=${currentPage + 1})}"
-                    th:class="${currentPage == totalPages} ? 'page-btn disabled' : 'page-btn'"
-                    th:if="${currentPage < totalPages}">
-                    下一頁 <i class="fas fa-chevron-right"></i>
-                </a>
-                <span th:if="${currentPage == totalPages}" class="page-btn disabled">
-                    下一頁 <i class="fas fa-chevron-right"></i>
-                </span>
+                這裡推薦使用 JS 模式 (smartPagination)，因為它完全不依賴 extraParams，
+                且你的 cart-detail.html 已經有完整的後端分頁數據。
+            -->
+            <div th:if="${totalElements > 0}" th:replace="~{fragments/pagination :: smartPagination(
+         currentPage=${currentPage},
+         totalPages=${totalPages},
+         smartPages=${smartPages},
+         changePageFunction='changePage'
+     )}">
             </div>
-            <!-- ==================== 智能分頁導航結束 ==================== -->
+            <!-- ================================================================ -->
         </main>
     </div>
 
@@ -716,7 +647,7 @@
             <h3 class="remove-modal-title">確認移除商品？</h3>
             <p class="remove-modal-message">確定要將此商品從購物車中移除嗎？</p>
             <div class="remove-modal-actions">
-                <button class="btn-cancel-remove" onclick="closeCartRemoveModal()">
+                <button class="btn-cancel-remove" onclick="Cart.closeRemoveModal()">
                     <i class="fas fa-times"></i> 取消
                 </button>
                 <button class="btn-confirm-remove" onclick="confirmCartRemove()">
@@ -740,65 +671,74 @@
     </script>
     <script src="/js/common.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // 初始化全局選中集合
-            window.selectedCartItems = new Set();
 
-            // 從當前 DOM 重建狀態
+        // 分頁跳轉函數 (供 smartPagination Fragment 調用)
+        function changePage(page) {
+            // cart-detail.html 的分頁是純 URL 跳轉，所以這裡直接用 location.href
+            window.location.href = '/cart/view?page=' + page;
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // 初始化 Cart.selectedItems（替代 window.selectedCartItems）
+            Cart.selectedItems = new Set();
+
+            // 從當前 DOM 重建選中狀態
             const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
             checkboxes.forEach(cb => {
-                if (cb.checked) window.selectedCartItems.add(cb.dataset.cartId);
-                else cb.closest('.cart-item').classList.add('not-selected');
+                if (cb.checked) {
+                    Cart.selectedItems.add(cb.dataset.cartId);
+                } else {
+                    const item = cb.closest('.cart-item');
+                    if (item) item.classList.add('not-selected');
+                }
             });
 
             // 初始計算
-            updateCartTotal();
-            updateSelectedCount();
-            syncSelectAllCheckbox();
+            Cart.updateDetailTotal();
+            Cart.updateSelectedCount();
+            Cart.syncSelectAllCheckbox();
         });
 
         /**
-         * 【AJAX】切換單選框：只調 API + 更新 DOM，不刷新頁面
+         * 【AJAX】切換單選框：樂觀更新 + API 同步 + 失敗回滾
          */
         async function toggleItemSelection(checkbox) {
             const cartId = checkbox.dataset.cartId;
             const isChecked = checkbox.checked;
             const cartItem = checkbox.closest('.cart-item');
 
-            // 1. 立即更新 UI 視覺狀態 (樂觀更新)
+            // 1. 樂觀更新 UI
             if (isChecked) {
-                window.selectedCartItems.add(cartId);
+                Cart.selectedItems.add(cartId);
                 cartItem.classList.remove('not-selected');
             } else {
-                window.selectedCartItems.delete(cartId);
+                Cart.selectedItems.delete(cartId);
                 cartItem.classList.add('not-selected');
             }
 
-            // 2. 異步同步後端 (✅ 路徑已更新為 /cart/api/)
+            // 2. 異步同步後端
             try {
                 await fetch(`/cart/api/toggle-selection/${cartId}?isSelected=${isChecked}`, {method: 'PUT'});
-
-                // 3. 同步導航欄下拉菜單 (如果有)
-                if (typeof loadCartItems === 'function') loadCartItems();
-
+                // 3. 成功後刷新導航欄下拉菜單
+                Cart.loadItems();
             } catch (err) {
                 console.error('同步失敗:', err);
                 showNotification('❌ 網絡錯誤', true);
                 // 回滾 UI
                 checkbox.checked = !isChecked;
                 if (isChecked) {
-                    window.selectedCartItems.delete(cartId);
+                    Cart.selectedItems.delete(cartId);
                     cartItem.classList.add('not-selected');
                 } else {
-                    window.selectedCartItems.add(cartId);
+                    Cart.selectedItems.add(cartId);
                     cartItem.classList.remove('not-selected');
                 }
             }
 
-            // 4. 即時重新計算總價與數量
-            updateCartTotal();
-            updateSelectedCount();
-            syncSelectAllCheckbox();
+            // 4. 即時重新計算詳情頁總價與數量
+            Cart.updateDetailTotal();
+            Cart.updateSelectedCount();
+            Cart.syncSelectAllCheckbox();
         }
 
         /**
@@ -809,7 +749,7 @@
             const isChecked = selectAllCheckbox.checked;
             const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
 
-            // 批量發送請求 (✅ 路徑已更新為 /cart/api/)
+            // 批量發送請求
             const promises = [];
             checkboxes.forEach(cb => {
                 if (cb.checked !== isChecked) {
@@ -825,29 +765,27 @@
                     cb.checked = isChecked;
                     const item = cb.closest('.cart-item');
                     if (isChecked) {
-                        window.selectedCartItems.add(cb.dataset.cartId);
+                        Cart.selectedItems.add(cb.dataset.cartId);
                         item.classList.remove('not-selected');
                     } else {
-                        window.selectedCartItems.delete(cb.dataset.cartId);
+                        Cart.selectedItems.delete(cb.dataset.cartId);
                         item.classList.add('not-selected');
                     }
                 });
 
-                if (typeof loadCartItems === 'function') loadCartItems();
-                updateCartTotal();
-                updateSelectedCount();
-                syncSelectAllCheckbox();
-
+                Cart.loadItems();
+                Cart.updateDetailTotal();
+                Cart.updateSelectedCount();
+                Cart.syncSelectAllCheckbox();
             } catch (err) {
                 showNotification('❌ 批量操作失敗', true);
             }
         }
 
         /**
-         * 【終極安全版 AJAX】更新數量：樂觀更新 + 失敗回滾 + 絕不刷新頁面
+         * 【終極安全版 AJAX】更新數量：樂觀更新 + 失敗回滾
          */
         async function updateQuantity(cartId, change) {
-            // 1. 嚴格限定在 .cart-items-list 內查找，避免誤傷導航欄
             const qtyElement = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"] .qty-value`);
             if (!qtyElement) {
                 console.error('❌ 找不到數量元素，cartId:', cartId);
@@ -860,7 +798,7 @@
             // 如果減到 0，打開確認刪除彈窗
             if (newQty < 1) {
                 const productId = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"]`).dataset.productId;
-                openCartRemoveModal(productId);
+                Cart.openRemoveModal(productId);
                 return;
             }
 
@@ -868,50 +806,51 @@
             const price = parseFloat(cartItem.dataset.price);
             const subtotalSpan = cartItem.querySelector('.item-subtotal span');
 
-            try {
-                // 2. 【樂觀更新】立刻更新 UI，讓用戶看到即時反應，不等待網絡
-                qtyElement.textContent = newQty;
-                if (subtotalSpan) {
-                    subtotalSpan.textContent = (price * newQty).toLocaleString('zh-HK');
-                }
-                updateCartTotal();
-                updateSelectedCount();
+            // 樂觀更新 UI
+            qtyElement.textContent = newQty;
+            if (subtotalSpan) {
+                subtotalSpan.textContent = (price * newQty).toLocaleString('zh-HK');
+            }
+            Cart.updateDetailTotal();
+            Cart.updateSelectedCount();
 
-                // 3. 發送 API 請求更新後端 (✅ 路徑已更新為 /cart/api/)
+            try {
                 const response = await fetch(`/cart/api/update/${cartId}?quantity=${newQty}`, {method: 'PUT'});
 
                 if (response.ok) {
                     showNotification('✅ 數量更新成功');
-                    // 4. 僅在成功後，靜默更新導航欄下拉菜單
-                    if (typeof loadCartItems === 'function') {
-                        loadCartItems();
-                    }
+                    Cart.loadItems();
                 } else {
-                    // 5. 【失敗回滾】如果後端拒絕，立刻恢復原狀
+                    // 失敗回滾
                     const data = await response.json();
                     qtyElement.textContent = currentQty;
                     if (subtotalSpan) {
                         subtotalSpan.textContent = (price * currentQty).toLocaleString('zh-HK');
                     }
-                    updateCartTotal();
-                    updateSelectedCount();
+                    Cart.updateDetailTotal();
+                    Cart.updateSelectedCount();
                     showNotification('❌ ' + (data.message || '更新失敗'), true);
                 }
             } catch (error) {
                 console.error('更新數量失敗:', error);
-                // 6. 【網絡錯誤回滾】
+                // 網絡錯誤回滾
                 qtyElement.textContent = currentQty;
                 if (subtotalSpan) {
                     subtotalSpan.textContent = (price * currentQty).toLocaleString('zh-HK');
                 }
-                updateCartTotal();
-                updateSelectedCount();
+                Cart.updateDetailTotal();
+                Cart.updateSelectedCount();
                 showNotification('❌ 網絡錯誤', true);
             }
         }
 
-        // === 輔助計算函數 ===
-        function updateCartTotal() {
+        // ==========================================
+        // 將詳情頁專屬的輔助函數掛載到 Cart 命名空間
+        // （這些函數僅在 cart-detail.html 中使用，不属于 common.js）
+        // ==========================================
+
+        /** 詳情頁總價計算（區別於導航欄的 calculateSelectedTotal） */
+        Cart.updateDetailTotal = function () {
             let total = 0;
             document.querySelectorAll('.cart-items-list .cart-item').forEach(item => {
                 const checkbox = item.querySelector('.cart-item-checkbox');
@@ -922,25 +861,29 @@
             });
             const totalEl = document.querySelector('#cartTotalDisplay');
             if (totalEl) totalEl.textContent = total.toLocaleString('zh-HK');
-        }
+        };
 
-        function updateSelectedCount() {
+        /** 更新已選數量顯示 */
+        Cart.updateSelectedCount = function () {
             const count = document.querySelectorAll('.cart-items-list .cart-item-checkbox:checked').length;
             const el = document.getElementById('selectedCount');
             if (el) el.textContent = count;
-        }
+        };
 
-        function syncSelectAllCheckbox() {
+        /** 同步全選複選框狀態 */
+        Cart.syncSelectAllCheckbox = function () {
             const selectAll = document.getElementById('selectAll');
             if (!selectAll) return;
             const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
             const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
             selectAll.checked = (checkboxes.length > 0 && checkedCount === checkboxes.length);
-        }
+        };
 
-        // 結賬邏輯 (✅ /checkout/api/create 路徑不變，屬於 CheckoutController)
+        // ==========================================
+        // 結賬邏輯（直接使用 Cart.selectedItems）
+        // ==========================================
         async function checkout() {
-            if (window.selectedCartItems.size === 0) {
+            if (Cart.selectedItems.size === 0) {
                 showNotification('❌ 請至少選擇一件商品！', true);
                 return;
             }
@@ -948,7 +891,7 @@
                 const response = await fetch('/checkout/api/create', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({selectedCartIds: Array.from(window.selectedCartItems)})
+                    body: JSON.stringify({selectedCartIds: Array.from(Cart.selectedItems)})
                 });
                 const result = await response.json();
                 if (response.ok && result.success) {
@@ -963,51 +906,42 @@
         }
 
         // ==========================================
-        //  購物車刪除確認彈窗邏輯 (整合版)
+        // 購物車刪除確認彈窗邏輯（狀態收斂到 Cart 命名空間）
         // ==========================================
-        let pendingRemoveProductId = null; // 全局變量：暫存待刪除的商品 ID
 
-        // 1. 打開刪除確認彈窗
-        function openCartRemoveModal(productId) {
-            pendingRemoveProductId = productId;
+        /** 打開刪除確認彈窗 */
+        Cart.openRemoveModal = function (productId) {
+            Cart.pendingRemoveProductId = productId;
             const modal = document.getElementById('cartRemoveConfirmModal');
             if (modal) {
                 modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+                document.body.style.overflow = 'hidden';
             }
-        }
+        };
 
-        // 2. 關閉刪除確認彈窗
-        function closeCartRemoveModal() {
+        /** 關閉刪除確認彈窗 */
+        Cart.closeRemoveModal = function () {
             const modal = document.getElementById('cartRemoveConfirmModal');
             if (modal) {
                 modal.style.display = 'none';
-                document.body.style.overflow = ''; // 恢復背景滾動
+                document.body.style.overflow = '';
             }
-            pendingRemoveProductId = null; // 清空暫存
-        }
+            Cart.pendingRemoveProductId = null;
+        };
 
-        // 3. 確認移除操作 (點擊彈窗中的「確認移除」按鈕時調用)
+        /** 確認移除操作 */
         async function confirmCartRemove() {
-            if (!pendingRemoveProductId) return;
+            if (!Cart.pendingRemoveProductId) return;
 
-            const productId = pendingRemoveProductId;
-            const btn = document.querySelector('.btn-confirm-remove');
-            const originalText = btn.innerHTML;
-
+            const productId = Cart.pendingRemoveProductId;
 
             try {
-                //  路徑已更新為 /cart/api/
                 const response = await fetch(`/cart/api/remove/${productId}`, {method: 'DELETE'});
 
                 if (response.ok) {
-                    //  核心修復 1：無論購物車是否為空，先顯示成功提示
-                    showNotification(' 商品已移除');
+                    showNotification('✅ 商品已移除');
+                    Cart.closeRemoveModal();
 
-                    // 先關閉彈窗
-                    closeCartRemoveModal();
-
-                    // 找到對應 DOM 並執行移除動畫
                     const cartItem = document.querySelector(`.cart-items-list [data-product-id="${productId}"]`);
                     if (cartItem) {
                         cartItem.style.transition = 'all 0.3s ease';
@@ -1016,26 +950,17 @@
 
                         setTimeout(() => {
                             cartItem.remove();
-
-                            // 檢查是否空了
                             const remainingItems = document.querySelectorAll('.cart-items-list .cart-item');
                             if (remainingItems.length === 0) {
-                                //  核心修復 2：延遲一點點刷新，確保用戶能看到上方的成功提示框
-                                setTimeout(() => {
-                                    location.reload();
-                                }, 800);
+                                setTimeout(() => location.reload(), 800);
                             } else {
-                                // 只更新當前頁面的統計數據，不調用 loadCartItems()
-                                updateCartTotal();
-                                updateSelectedCount();
-                                syncSelectAllCheckbox();
+                                Cart.updateDetailTotal();
+                                Cart.updateSelectedCount();
+                                Cart.syncSelectAllCheckbox();
                             }
                         }, 300);
                     } else {
-                        //  核心修復 3：萬一找不到 DOM 元素（邊緣情況），也延遲刷新頁面以同步狀態
-                        setTimeout(() => {
-                            location.reload();
-                        }, 800);
+                        setTimeout(() => location.reload(), 800);
                     }
                 } else {
                     showNotification('❌ 移除失敗', true);
@@ -1046,20 +971,16 @@
             }
         }
 
-        // 4. 點擊遮罩層關閉彈窗 (提升用戶體驗)
+        // 點擊遮罩層關閉彈窗
         document.getElementById('cartRemoveConfirmModal')?.addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeCartRemoveModal();
-            }
+            if (e.target === this) Cart.closeRemoveModal();
         });
 
-        // 5. 按 ESC 鍵關閉彈窗
+        // ESC 鍵關閉彈窗
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 const modal = document.getElementById('cartRemoveConfirmModal');
-                if (modal && modal.style.display === 'flex') {
-                    closeCartRemoveModal();
-                }
+                if (modal && modal.style.display === 'flex') Cart.closeRemoveModal();
             }
         });
     </script>

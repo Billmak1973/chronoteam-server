@@ -419,8 +419,277 @@
         }
 
         /* ========================================== */
-        /*   分頁組件的 CSS 統統刪除！(由 sidebar.css 提供) */
+        /* 4. 點贊按鈕與動畫特效 */
         /* ========================================== */
+
+        /* 點贊按鈕基礎樣式 */
+        .btn-like-action {
+            background: #e9ecef;
+            border: 1px solid #dee2e6;
+            color: #495057;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            /* 彈性動畫 */
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-like-action:hover:not(.disabled-view) {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        /* 激活狀態 (已點贊) - 藍色漸變 */
+        .btn-like-action.active {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+            color: white !important;
+            border-color: transparent !important;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-like-action.active:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6) !important;
+        }
+
+        .btn-like-action.active i {
+            color: white !important;
+            animation: iconBounce 0.6s ease;
+        }
+
+        /* 禁用視圖狀態 (用於 LIKED_ME / LIKED_BY_ME Tab，只看不點) */
+        .btn-like-action.disabled-view {
+            cursor: default;
+            opacity: 0.8;
+            background: transparent;
+            border: none;
+            color: var(--gold);
+            font-weight: 600;
+            padding: 0;
+            box-shadow: none;
+            transform: none !important;
+        }
+
+        .btn-like-action.disabled-view:hover {
+            transform: none;
+            background: transparent;
+        }
+
+        /* 點贊數字變化動畫 */
+        .like-count.changing {
+            animation: countChange 0.4s ease;
+        }
+
+        @keyframes iconBounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @keyframes countChange {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.3);
+                opacity: 0.7;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* 卡片消失動畫 (用於取消點贊後從 "我的點贊" 列表移除，雖然這裡是 MY Tab，但保留以備不時之需) */
+        .review-card.fade-out-remove {
+            opacity: 0;
+            transform: scale(0.9) translateX(20px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: -100px;
+            /* 讓下方的卡片平滑上移 */
+            height: 0;
+            padding: 0;
+            overflow: hidden;
+            border: none;
+        }
+
+        /* ========================================== */
+        /* 5. 快速回復彈窗樣式 */
+        /* ========================================== */
+        .reply-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: none;
+            /* 默認隱藏 */
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .reply-modal-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid var(--gold);
+            position: relative;
+        }
+
+        .reply-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1rem;
+        }
+
+        .reply-modal-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .reply-modal-title i {
+            color: var(--gold);
+        }
+
+        .reply-target-info {
+            background: #f8f9fa;
+            padding: 0.8rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: var(--gray);
+            border-left: 3px solid #ddd;
+        }
+
+        .reply-textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.3s;
+        }
+
+        .reply-textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+        }
+
+        .reply-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .btn-reply-submit {
+            background: var(--gold);
+            color: var(--primary);
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-reply-submit:hover {
+            background: #b8972b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-reply-cancel {
+            background: #e9ecef;
+            color: var(--primary);
+            border: none;
+            padding: 0.6rem 1.5rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-reply-cancel:hover {
+            background: #dee2e6;
+        }
+
+        /* 回復按鈕樣式 (在卡片底部) */
+        .btn-quick-reply {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-decoration: none;
+        }
+
+        .btn-quick-reply:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        @keyframes pulse {
+            0% {
+                border-color: var(--gold);
+                box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7);
+            }
+
+            70% {
+                border-color: var(--accent);
+                box-shadow: 0 0 0 10px rgba(233, 69, 96, 0);
+            }
+
+            100% {
+                border-color: var(--gold);
+                box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+            }
+        }
     </style>
 </head>
 
@@ -441,14 +710,34 @@
                     <i class="fas fa-filter"></i> 筛选：
                 </label>
                 <select id="tabSelect" class="tab-dropdown-select" onchange="switchTab(this.value)">
+                    <!-- MY Tab 不需要未讀數 -->
                     <option value="MY" th:selected="${currentType == 'MY'}">✏️ 我的評論</option>
-                    <option value="REPLY" th:selected="${currentType == 'REPLY'}">↩️ 回復我的</option>
-                    <option value="MENTION" th:selected="${currentType == 'MENTION'}">@ 提到我的</option>
+
+                    <!-- REPLY Tab -->
+                    <option value="REPLY" th:selected="${currentType == 'REPLY'}">
+                        ↩️ 回復我的
+                        <span th:if="${unreadReplyCount > 0}" th:text="'(' + ${unreadReplyCount} + ')'"
+                            style="color: var(--accent); font-weight: bold;"></span>
+                    </option>
+
+                    <!-- MENTION Tab -->
+                    <option value="MENTION" th:selected="${currentType == 'MENTION'}">
+                        @ 提到我的
+                        <span th:if="${unreadMentionCount > 0}" th:text="'(' + ${unreadMentionCount} + ')'"
+                            style="color: var(--accent); font-weight: bold;"></span>
+                    </option>
+
+                    <!-- LIKED_BY_ME Tab (通常不需要未讀數，因為是自己點的) -->
                     <option value="LIKED_BY_ME" th:selected="${currentType == 'LIKED_BY_ME'}">👍 我的點贊</option>
-                    <option value="LIKED_ME" th:selected="${currentType == 'LIKED_ME'}">❤️ 點贊我的</option>
+
+                    <!-- LIKED_ME Tab -->
+                    <option value="LIKED_ME" th:selected="${currentType == 'LIKED_ME'}">
+                        ❤️ 點贊我的
+                        <span th:if="${unreadLikeCount > 0}" th:text="'(' + ${unreadLikeCount} + ')'"
+                            style="color: var(--accent); font-weight: bold;"></span>
+                    </option>
                 </select>
             </div>
-
             <!-- 内容区域 -->
             <!-- 【核心修改】：移除 style="display: contents;"，改為由 CSS 控制 flex: 1 -->
             <div id="content-area">
@@ -463,7 +752,8 @@
                 <!-- 列表區域 -->
                 <div th:unless="${#lists.isEmpty(reviews)}" class="review-list">
                     <div th:each="item : ${reviews}" class="review-card">
-                        <!-- 點贊我的特殊樣式 -->
+
+                        <!-- 1. 點贊我的特殊樣式 (LIKED_ME) -->
                         <div th:if="${currentType == 'LIKED_ME'}">
                             <div
                                 style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(233, 69, 96, 0.1) 100%); padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.8rem; border-left: 4px solid var(--gold);">
@@ -490,7 +780,7 @@
                             </div>
                         </div>
 
-                        <!-- 其他類型通用樣式 -->
+                        <!-- 2. 其他類型通用樣式 (MY, REPLY, MENTION, LIKED_BY_ME) -->
                         <div th:unless="${currentType == 'LIKED_ME'}">
                             <div class="card-header">
                                 <div>
@@ -509,23 +799,66 @@
                             <div class="card-content" th:text="${item.content}">Content</div>
                         </div>
 
-                        <!-- 底部操作欄 -->
+                        <!-- 3. 底部操作欄 (根據 Tab 類型動態顯示) -->
                         <div class="card-footer"
                             style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px dashed #ddd;">
+                            <!-- 左側商品連結 (保持不變) -->
                             <a th:href="@{/product/{id}(id=${item.product.id})}" class="card-product" target="_blank"
                                 th:if="${currentType == 'LIKED_ME'}">
                                 <i class="fas fa-link"></i> 商品：<span th:text="${item.product.desc}">Product</span>
                             </a>
+
                             <div style="display: flex; align-items: center; gap: 1rem; margin-left: auto;">
-                                <span
-                                    style="color: var(--gold); font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem;">
-                                    <i class="fas fa-thumbs-up"></i>
-                                    <span th:text="${item.likeCount}">0</span>
-                                </span>
-                                <button class="btn-delete-review" th:onclick="'confirmDelete(' + ${item.id} + ')'">
-                                    <i class="fas fa-trash-alt"></i> 刪除
-                                </button>
-                                <a th:href="@{/product/{id}(id=${item.product.id})}" class="btn-view-detail">
+
+                                <!-- 【核心修改】：點贊按鈕邏輯重構 -->
+                                <th:block
+                                    th:if="${currentType == 'MY' || currentType == 'LIKED_ME' || currentType == 'LIKED_BY_ME'}">
+
+                                    <!-- 情況 A: LIKED_BY_ME (我的點贊) -> 顯示為激活狀態，點擊觸發取消並消失 -->
+                                    <button th:if="${currentType == 'LIKED_BY_ME'}" type="button"
+                                        class="btn-like-action active" th:data-review-id="${item.id}"
+                                        onclick="toggleLikedByMeAction(this)" title="點擊取消點贊">
+                                        <i class="fas fa-thumbs-up"></i>
+                                        <span class="like-count" th:text="${item.likeCount}">0</span>
+                                    </button>
+
+                                    <!-- 情況 B: MY (我的評論) -> 可切換狀態 -->
+                                    <button th:if="${currentType == 'MY'}" type="button" class="btn-like-action"
+                                        th:classappend="${item.isLikedByMe} ? 'active' : ''"
+                                        th:data-review-id="${item.id}" th:data-liked="${item.isLikedByMe}"
+                                        onclick="toggleMyReviewLike(this)" title="點擊點贊/取消">
+                                        <i class="fas fa-thumbs-up"></i>
+                                        <span class="like-count" th:text="${item.likeCount}">0</span>
+                                    </button>
+
+                                    <!-- 情況 C: LIKED_ME (別人讚我) -> 僅展示，不可點 -->
+                                    <button th:if="${currentType == 'LIKED_ME'}" type="button"
+                                        class="btn-like-action disabled-view" title="查看點贊數">
+                                        <i class="fas fa-thumbs-up"></i>
+                                        <span class="like-count" th:text="${item.likeCount}">0</span>
+                                    </button>
+                                </th:block>
+
+                                <!-- 刪除按鈕 (保持不變) -->
+                                <th:block th:if="${currentType == 'MY' || currentType == 'LIKED_ME'}">
+                                    <button class="btn-delete-review" th:onclick="'confirmDelete(' + ${item.id} + ')'">
+                                        <i class="fas fa-trash-alt"></i> 刪除
+                                    </button>
+                                </th:block>
+
+                                <th:block th:if="${currentType == 'REPLY' || currentType == 'MENTION'}">
+                                    <button type="button" class="btn-quick-reply"
+                                        th:data-product-id="${item.product.id}" th:data-review-id="${item.id}"
+                                        th:data-parent-id="${item.parentId}"
+                                        th:data-username="${item.customer.username}" th:data-content="${item.content}"
+                                        onclick="handleQuickReplyClick(this)">
+                                        <i class="fas fa-reply"></i> 回復
+                                    </button>
+                                </th:block>
+
+                                <!-- 前往查看 (保持不變) -->
+                                <a th:href="@{/product/{id}(id=${item.product.id}, reviewId=${item.id})}"
+                                    class="btn-view-detail" target="_blank">
                                     前往查看 <i class="fas fa-arrow-right"></i>
                                 </a>
                             </div>
@@ -566,6 +899,45 @@
         </div>
     </div>
 
+    <!-- 快速回復彈窗 -->
+    <div id="replyModal" class="reply-modal-overlay">
+        <div class="reply-modal-box">
+            <div class="reply-modal-header">
+                <div class="reply-modal-title">
+                    <i class="fas fa-comment-dots"></i> 快速回復
+                </div>
+                <button onclick="closeReplyModal()"
+                    style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer;">&times;</button>
+            </div>
+
+            <!-- 顯示被回復的內容預覽 -->
+            <div class="reply-target-info">
+                <div style="margin-bottom: 0.3rem; font-weight: 600; color: var(--primary);">
+                    回復 @<span id="replyTargetUser">User</span>:
+                </div>
+                <div id="replyTargetContent" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    Content preview...
+                </div>
+            </div>
+
+            <form id="replyForm" onsubmit="submitQuickReply(event)">
+                <!-- 隱藏字段，用於存儲關聯數據 -->
+                <input type="hidden" id="replyProductId">
+                <input type="hidden" id="replyParentId"> <!-- 這裡存的是根評論的 ID -->
+
+                <textarea id="replyContent" class="reply-textarea" placeholder="輸入您的回復內容..." required
+                    maxlength="500"></textarea>
+
+                <div class="reply-modal-actions">
+                    <button type="button" class="btn-reply-cancel" onclick="closeReplyModal()">取消</button>
+                    <button type="submit" class="btn-reply-submit" id="btnSubmitReply">
+                        <i class="fas fa-paper-plane"></i> 發送回復
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <footer class="footer">
         <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
             Rights Reserved.</p>
@@ -573,14 +945,12 @@
 
     <div th:replace="~{fragments/common :: modals}"></div>
 
+    <script src="/js/common.js"></script>
     <script th:inline="javascript">
         const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
         const currentType = [[${currentType}]];
         let deleteReviewId = null;
 
-        // ==========================================
-        // 1. Tab 切換邏輯 (URL 跳轉)
-        // ==========================================
         function switchTab(type) {
             window.location.href = `/account/reviews?page=1&type=${type}`;
         }
@@ -641,6 +1011,428 @@
                 if (modal && modal.style.display === 'flex') closeDeleteModal();
             }
         });
+
+        // ==========================================
+        // 4. 我的評論點贊/取消點贊邏輯 (含動畫 + 拉黑攔截)
+        // ==========================================
+        async function toggleMyReviewLike(btn) {
+            if (currentType !== 'MY') return;
+
+            const reviewId = btn.getAttribute('data-review-id');
+            const countSpan = btn.querySelector('.like-count');
+
+            // 【新增】1. 先檢查是否被管理員拉黑或禁言
+            try {
+                // 獲取當前登錄用戶名 (從 Thymeleaf 注入或 DOM 中獲取)
+                // 假設你的頁面頂部或 common.js 中有 isLoggedIn 和 username 變量
+                // 如果沒有，可以通過 fetch('/api/user/me') 獲取，或者依賴後端返回的 isBlacklisted 字段
+                // 這裡為了通用性，我們調用現有的權限檢查接口
+                const res = await fetch(`/api/user/check-reply-permission/${encodeURIComponent(currentUsername || '')}`, {
+                    credentials: 'same-origin'
+                });
+                const permData = await res.json();
+
+                // 如果被永久拉黑
+                if (permData.isBlacklisted) {
+                    showNotification('🚫 你已被管理員永久拉黑，無法點贊或取消點贊！', true);
+                    return; // 終止後續操作
+                }
+
+            } catch (error) {
+                console.error('權限檢查失敗:', error);
+                // 如果檢查接口報錯，為了安全起見，可以選擇放行讓後端去判斷，或者提示網絡錯誤
+            }
+
+            // 2. 樂觀更新 UI
+            const isCurrentlyActive = btn.classList.contains('active');
+            let currentCount = parseInt(countSpan.textContent);
+
+            if (isCurrentlyActive) {
+                btn.classList.remove('active');
+                countSpan.textContent = currentCount - 1;
+            } else {
+                btn.classList.add('active');
+                countSpan.textContent = currentCount + 1;
+            }
+
+            countSpan.classList.add('changing');
+            setTimeout(() => countSpan.classList.remove('changing'), 400);
+
+            // 3. 調用後端 API
+            try {
+                const response = await fetch(`/api/review/${reviewId}/like`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'same-origin'
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (result.liked) {
+                        btn.classList.add('active');
+                        if (typeof showNotification === 'function') showNotification('👍 點贊成功');
+                    } else {
+                        btn.classList.remove('active');
+                        if (typeof showNotification === 'function') showNotification('💔 已取消點贊');
+                    }
+                    countSpan.textContent = result.likeCount;
+                    btn.setAttribute('data-liked', result.liked);
+                } else {
+                    // 【新增】如果後端返回了拉黑標識，再次確認提示
+                    if (result.message === "BLACKLISTED" || result.blacklisted) {
+                        showNotification('🚫 你已被管理員永久拉黑，無法點贊或取消點贊！', true);
+                        // 回滾 UI
+                        if (isCurrentlyActive) {
+                            btn.classList.add('active');
+                            countSpan.textContent = currentCount;
+                        } else {
+                            btn.classList.remove('active');
+                            countSpan.textContent = currentCount;
+                        }
+                        return;
+                    }
+                    throw new Error(result.message || '操作失敗');
+                }
+            } catch (error) {
+                console.error('點贊操作錯誤:', error);
+                // 回滾 UI
+                if (isCurrentlyActive) {
+                    btn.classList.add('active');
+                    countSpan.textContent = currentCount;
+                } else {
+                    btn.classList.remove('active');
+                    countSpan.textContent = currentCount;
+                }
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ ' + (error.message || '網絡錯誤'), true);
+                } else {
+                    alert(' ' + (error.message || '網絡錯誤'));
+                }
+            }
+        }
+        // ==========================================
+        // 5. "我的點贊" (LIKED_BY_ME) 取消點贊邏輯 (含消失動畫 + 拉黑攔截)
+        // ==========================================
+        // ==========================================
+        // 5. "我的點贊" (LIKED_BY_ME) 取消點贊邏輯 (含消失動畫 + 拉黑攔截 + UI回滾)
+        // ==========================================
+        async function toggleLikedByMeAction(btn) {
+            if (currentType !== 'LIKED_BY_ME') return;
+
+            const reviewId = btn.getAttribute('data-review-id');
+            const card = btn.closest('.review-card');
+
+            // 【核心修復】：保存原始的 HTML 內容和數字，以便失敗時恢復
+            const originalInnerHtml = btn.innerHTML;
+            const originalCountText = btn.querySelector('.like-count').textContent;
+
+            // 1. 先檢查是否被管理員拉黑 (預檢查，防止無意義的請求)
+            try {
+                const res = await fetch(`/api/user/check-reply-permission/${encodeURIComponent(currentUsername || '')}`, {
+                    credentials: 'same-origin'
+                });
+                const permData = await res.json();
+
+                if (permData.isBlacklisted) {
+                    showNotification('🚫 你已被管理員永久拉黑，無法取消點贊！', true);
+                    return; // 直接終止，不改變任何 UI
+                }
+            } catch (error) {
+                console.error('權限檢查失敗:', error);
+                // 如果檢查接口報錯，為了安全起見，可以選擇放行讓後端去判斷
+            }
+
+            // 2. 進入加載狀態 (樂觀更新 UI)
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                // 3. 調用後端 API
+                const response = await fetch(`/api/review/${reviewId}/like`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'same-origin'
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // === 成功情況 ===
+                    if (typeof showNotification === 'function') {
+                        showNotification('💔 已取消點贊');
+                    }
+                    // 執行卡片消失動畫
+                    card.classList.add('fade-out-remove');
+                    setTimeout(() => {
+                        card.remove();
+                        const listContainer = document.querySelector('.review-list');
+                        if (listContainer && listContainer.children.length === 0) {
+                            location.reload();
+                        }
+                    }, 500);
+                } else {
+                    // === 失敗情況 (包含拉黑) ===
+
+                    // 1. 彈出提示
+                    if (result.message === "BLACKLISTED" || result.blacklisted) {
+                        showNotification('🚫 你已被管理員永久拉黑，無法取消點贊！', true);
+                    } else {
+                        showNotification('❌ ' + (result.message || '操作失敗'), true);
+                    }
+
+                    // 2. 【關鍵步驟】UI 回滾：恢復原本的按鈕樣式和數字
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.innerHTML = originalInnerHtml;
+                }
+            } catch (error) {
+                console.error('取消點贊錯誤:', error);
+
+                // === 網絡錯誤或其他異常 ===
+                showNotification('❌ 網絡錯誤，請稍後重試', true);
+
+                // 【關鍵步驟】UI 回滾：恢復原本的按鈕樣式和數字
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerHTML = originalInnerHtml;
+            }
+        }
+
+        // ==========================================
+        // 6. 快速回復邏輯 (樓中樓)
+        // ==========================================
+        let currentReplyToUser = '';
+
+        // 【新增】處理按鈕點擊，提取數據並打開彈窗
+        // 【核心修改】處理按鈕點擊，先檢查權限再打開彈窗
+        async function handleQuickReplyClick(btn) {
+            const productId = btn.getAttribute('data-product-id');
+            const reviewId = btn.getAttribute('data-review-id');
+            const targetUsername = btn.getAttribute('data-username');
+            const content = btn.getAttribute('data-content');
+            const parentIdFromData = btn.getAttribute('data-parent-id');
+
+            const finalParentId = (parentIdFromData && parentIdFromData !== 'null' && parentIdFromData !== '')
+                ? parentIdFromData
+                : reviewId;
+
+            // ==========================================
+            // 1. 調用後端 API 檢查回復權限
+            // ==========================================
+            try {
+                const res = await fetch(`/api/user/check-reply-permission/${encodeURIComponent(targetUsername)}`, {
+                    credentials: 'same-origin'
+                });
+                const data = await res.json();
+
+                if (!data.canReply) {
+                    // 情況 1: 被對方禁言或自己禁言對方
+                    if (data.isMutuallyBlocked) {
+                        showNotification(`❌ 你已被對方 ${targetUsername} 禁言，或你已禁言對方，無法回復！`, true);
+                        return;
+                    }
+
+                    // 情況 3: 被管理員永久拉黑
+                    if (data.isBlacklisted) {
+                        showNotification(' 你已被管理員永久拉黑，永久禁言！', true);
+                        return;
+                    }
+
+                    // 情況 2: 被管理員有期禁言
+                    if (data.isGloballyBanned && data.banEndTime) {
+                        const endTime = new Date(data.banEndTime);
+                        const formattedTime = endTime.toLocaleString('zh-TW', {
+                            year: 'numeric', month: '2-digit', day: '2-digit',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                        showNotification(`❌ 你已被管理員禁言至 ${formattedTime}，無法回復他人！`, true);
+                        return;
+                    }
+                }
+
+                // 情況 4: 正常，打開文字框
+                openReplyModal(productId, finalParentId, targetUsername, content);
+
+            } catch (error) {
+                console.error('檢查回復權限失敗:', error);
+                showNotification('❌ 網絡錯誤，請稍後重試', true);
+            }
+        }
+
+        function openReplyModal(productId, parentId, username, contentPreview) {
+            document.getElementById('replyProductId').value = productId;
+            document.getElementById('replyParentId').value = parentId; // 設置正確的根評論 ID
+            document.getElementById('replyTargetUser').textContent = username;
+            document.getElementById('replyTargetContent').textContent = contentPreview;
+            document.getElementById('replyContent').value = '';
+
+            currentReplyToUser = username;
+
+            const modal = document.getElementById('replyModal');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            setTimeout(() => document.getElementById('replyContent').focus(), 100);
+        }
+
+        function closeReplyModal() {
+            document.getElementById('replyModal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        async function submitQuickReply(event) {
+            event.preventDefault();
+
+            const productId = document.getElementById('replyProductId').value;
+            const parentId = document.getElementById('replyParentId').value;
+            const content = document.getElementById('replyContent').value.trim();
+
+            if (!content) {
+                if (typeof showNotification === 'function') showNotification(' 請輸入回復內容', true);
+                else alert('請輸入回復內容');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/review/submit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        productId: parseInt(productId),
+                        content: content,
+                        parentId: parseInt(parentId),
+                        replyToUser: currentReplyToUser
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // 【核心修改】：僅顯示成功通知，移除所有跳轉邏輯
+                    if (typeof showNotification === 'function') {
+                        showNotification('✅ 已成功回復！');
+                    } else {
+                        alert('已成功回復！');
+                    }
+
+                    closeReplyModal();
+
+                    // 可選：如果需要刷新當前頁面以顯示新回復，可以取消下面這行的註釋
+                    // setTimeout(() => location.reload(), 800);
+                } else {
+                    // 【失敗】：僅顯示失敗通知
+                    if (result.message === "BLACKLISTED") {
+                        if (window.showBlacklistedModal) window.showBlacklistedModal();
+                    } else {
+                        if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '回復失敗'), true);
+                        else alert(result.message || '回復失敗');
+                    }
+                }
+            } catch (error) {
+                console.error('回復錯誤:', error);
+                // 【異常】：僅顯示錯誤通知
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤', true);
+                else alert('網絡錯誤');
+            }
+        }
+
+        document.getElementById('replyModal')?.addEventListener('click', function (e) {
+            if (e.target === this) closeReplyModal();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('replyModal');
+                if (modal && modal.style.display === 'flex') closeReplyModal();
+            }
+        });
+
+        // ==========================================
+        // 7. 實時通知推送 (SSE)
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function () {
+            // 僅在登入狀態下建立連接
+            if (typeof isLoggedIn !== 'undefined' && isLoggedIn) {
+                initNotificationStream();
+            }
+        });
+
+        function initNotificationStream() {
+            // 建立 SSE 連接
+            const eventSource = new EventSource('/api/notifications/stream');
+
+            // 連接成功
+            eventSource.addEventListener('connect', function (e) {
+                console.log('🔔 實時通知連接已建立');
+            });
+
+            // 監聽通知更新事件
+            eventSource.addEventListener('notification-update', function (e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    console.log('📩 收到實時通知:', data);
+
+                    // 根據類型更新對應 Tab 的數字
+                    updateTabBadge(data.type, data.count);
+
+                    // 可選：如果當前不在該 Tab，可以顯示一個瀏覽器通知或頁面內 Toast
+                    // showNotification(`您有新的 ${data.type} 消息！`);
+                } catch (err) {
+                    console.error('解析通知數據失敗:', err);
+                }
+            });
+
+            // 連接錯誤處理 (自動重連是 SSE 的默認行為，但我們可以記錄日誌)
+            eventSource.onerror = function (e) {
+                console.warn('⚠️ 實時通知連接斷開，瀏覽器將嘗試自動重連...', e);
+            };
+        }
+
+        /**
+         * 更新 Tab 下拉菜單中的數字徽章
+         * @param type 'REPLY', 'MENTION', 'LIKED_ME'
+         * @param count 最新數量
+         */
+        function updateTabBadge(type, count) {
+            const select = document.getElementById('tabSelect');
+            if (!select) return;
+
+            // 找到對應的 option
+            // 注意：option 的 value 必須與後端推送的 type 一致
+            // 後端推送: REPLY, MENTION, LIKED_ME
+            // HTML option value: REPLY, MENTION, LIKED_ME
+
+            let targetValue = type;
+            // 如果後端推的是 LIKED_ME，對應 HTML 裡的 value="LIKED_ME"
+
+            const options = select.options;
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === targetValue) {
+                    // 獲取原始文本 (例如 "↩️ 回復我的")
+                    // 我們需要去除舊的數字 "(5)"，然後加上新的
+                    let text = options[i].text;
+
+                    // 使用正則去除舊的括號數字，例如 " (5)"
+                    text = text.replace(/\s*\(\d+\)\s*$/, '').trim();
+
+                    // 如果數量大於 0，加上新的數字
+                    if (count > 0) {
+                        text += ` (${count})`;
+                    }
+
+                    options[i].text = text;
+
+                    // 可選：如果當前不在這個 Tab，給 select 加個動畫提示
+                    if (select.value !== targetValue && count > 0) {
+                        select.style.animation = 'none';
+                        select.offsetHeight; /* trigger reflow */
+                        select.style.animation = 'pulse 1s ease 3'; // 閃爍 3 次
+                    }
+                    break;
+                }
+            }
+        }
     </script>
 </body>
 

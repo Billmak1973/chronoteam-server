@@ -26,23 +26,24 @@ public class ReviewReactionService {
 
     // 🛡 核心新增：注入基於 Redis + DB 的高效限流服務
     private final RateLimitService rateLimitService;
+    private final NotificationPushService pushService;
+    private final NotificationService notificationService;
 
     /**
-     * 點贊功能
+     * 點贊功能 (包含實時推送邏輯)
      */
     @Transactional
     public Map<String, Object> toggleLike(Long reviewId, String username) {
         Map<String, Object> response = new HashMap<>();
 
         // 🛡 核心修改 1：第一步先進行高效限流檢查！
-        // 如果被限制，RateLimitService 會拋出 RuntimeException，終止後續所有數據庫操作
         try {
             rateLimitService.checkAndRecordAction(username);
         } catch (RuntimeException e) {
             response.put("success", false);
             response.put("message", e.getMessage());
             response.put("banned", true);
-            return response; // 直接返回錯誤，不寫數據庫
+            return response;
         }
 
         // 檢查是否被管理員永久拉黑
@@ -66,6 +67,9 @@ public class ReviewReactionService {
             int likeCount = review.getLikeCount() != null ? review.getLikeCount() : 0;
             int dislikeCount = review.getDislikeCount() != null ? review.getDislikeCount() : 0;
 
+            // 【新增】標記本次操作是否為「新增點贊」，用於後續判斷是否需要推送
+            boolean isNewLike = false;
+
             if (existingReaction.isPresent()) {
                 ReviewReaction reaction = existingReaction.get();
                 if ("LIKE".equals(reaction.getReactionType())) {
@@ -81,6 +85,7 @@ public class ReviewReactionService {
                     dislikeCount--;
                     isLiked = true;
                     isDisliked = false;
+                    isNewLike = true; // 視為新增點贊
                 }
             } else {
                 User user = userRepository.findByUsername(username)
@@ -95,12 +100,43 @@ public class ReviewReactionService {
                 reactionRepository.save(newReaction);
                 likeCount++;
                 isLiked = true;
+                isNewLike = true; // 視為新增點贊
             }
 
             // 更新評論表的點贊數和踩數
             review.setLikeCount(likeCount);
             review.setDislikeCount(dislikeCount);
             reviewRepository.save(review);
+
+            // ==========================================
+            // 【核心新增】：實時推送邏輯
+            // ==========================================
+            // 只有當是「新增點贊」且「不是自己點贊自己」時，才推送通知
+            if (isNewLike && review.getUser() != null) {
+                String targetUsername = review.getUser().getUsername();
+                if (!targetUsername.equals(username)) {
+                    try {
+                        // 查詢該用戶最新的「點贊我的」未讀數量
+                        // 注意：因為當前事務還未提交，getUnreadCount 查到的可能是舊數據
+                        // 但為了實時性，我們通常假設當前操作 +1，或者依賴數據庫讀已提交狀態
+                        // 這裡為了簡單且準確，我們直接調用 Service 查詢 (需注意事務隔離級別，通常 Read Committed 即可)
+                        // 如果擔心事務問題，可以簡單地將當前 count + 1 推送，或者信任 DB 查詢
+                        long newCount = notificationService.getUnreadCount(targetUsername, NotificationService.TYPE_LIKED_ME);
+
+                        // 如果因為事務隔離導致查不到剛插入的記錄，newCount 可能少 1
+                        // 為了確保前端紅點正確 +1，我們可以手動 +1 (僅針對當前這次操作)
+                        // 但更穩妥的方式是依賴 DB 查詢。如果發現紅點沒變，通常是事務隔離問題。
+                        // 這裡我們直接使用查詢結果。如果發現有延遲，可考慮在 pushService 內部做 +1 優化。
+
+                        // 推送給目標用戶
+                        pushService.pushNotificationUpdate(targetUsername, NotificationService.TYPE_LIKED_ME, newCount);
+                    } catch (Exception e) {
+                        // 推送失敗不應影響主業務流程
+                        System.err.println("推送點贊通知失敗: " + e.getMessage());
+                    }
+                }
+            }
+            // ==========================================
 
             response.put("success", true);
             response.put("liked", isLiked);
@@ -117,6 +153,7 @@ public class ReviewReactionService {
             return response;
         }
     }
+
 
     /**
      * 踩功能

@@ -832,29 +832,31 @@
 
   <script>
     // ==========================================
-    // 全局變量
+    // 0. 命名空間與狀態管理 (消滅全局變量)
     // ==========================================
-    let pendingDeleteStoreId = null;
-    let pendingDeleteStoreName = null;
+    window.AdminStores = window.AdminStores || {
+      pendingDeleteStoreId: null,
+      pendingDeleteStoreName: null,
+      currentStoresMap: {} // 用於緩存當前頁數據，方便編輯時查找
+    };
 
-    // 緩存當前頁數據，用於編輯時查找
-    let currentStoresData = [];
+    // 簡寫引用
+    const AS = window.AdminStores;
 
     // ==========================================
-    // 核心：使用 AdminTable 加載數據
+    // 1. 核心：使用 AdminTable 加載數據
     // ==========================================
     const storeTableConfig = {
       apiUrl: '/admin/stores/api/list',
       params: {page: 1, size: 12}, // 店鋪每頁顯示 12 個
-      tbodySelector: '#storeGrid', // 核心：指向 Grid 容器
+      tbodySelector: '#storeGrid',   // 核心：指向 Grid 容器
       paginationId: 'stores-pagination',
       emptyText: '暫無線下店鋪，點擊右上角新增',
 
       // 核心：渲染單個卡片 (返回 HTML 字符串)
       renderRow: function (store) {
-        // 緩存數據以便編輯
-        if (!window.currentStoresMap) window.currentStoresMap = {};
-        window.currentStoresMap[store.storeId] = store;
+        // 緩存數據以便編輯 (存入命名空間)
+        AS.currentStoresMap[store.storeId] = store;
 
         const statusClass = store.isActive ? 'status-active' : 'status-inactive';
         const statusText = store.isActive ? '顯示中' : '已隱藏';
@@ -864,33 +866,34 @@
         const toggleText = store.isActive ? '隱藏' : '顯示';
 
         return `
-        <div class="${cardClass}">
-          <span class="status-badge-store ${statusClass}">
-            <i class="fas fa-${statusIcon}"></i> ${statusText}
-          </span>
-          <div class="store-name"><i class="fas fa-store"></i> ${store.name}</div>
-          <div class="store-code">${store.storeCode}</div>
-          <div class="store-info">
-            <div><i class="fas fa-map-marker-alt"></i> <span>${store.address || '未填寫'}</span></div>
-            <div><i class="fas fa-phone"></i> <span>${store.phone || '未填寫'}</span></div>
-            <div><i class="fas fa-clock"></i> <span>${store.hours || '未填寫'}</span></div>
-          </div>
-          <div class="store-actions">
-            <button class="btn-store btn-edit" onclick="openEditStoreModal(${store.storeId})"><i class="fas fa-edit"></i> 編輯</button>
-            <button class="btn-store btn-toggle ${!store.isActive ? 'is-hidden' : ''}" onclick="toggleStore(${store.storeId})">
-              <i class="fas fa-${toggleIcon}"></i> ${toggleText}
-            </button>
-            <button class="btn-store btn-delete" onclick="deleteStore(${store.storeId})"><i class="fas fa-trash-alt"></i></button>
-          </div>
-        </div>
-      `;
+            <div class="${cardClass}">
+              <span class="status-badge-store ${statusClass}">
+                <i class="fas fa-${statusIcon}"></i> ${statusText}
+              </span>
+              <div class="store-name"><i class="fas fa-store"></i> ${store.name}</div>
+              <div class="store-code">${store.storeCode}</div>
+              <div class="store-info">
+                <div><i class="fas fa-map-marker-alt"></i> <span>${store.address || '未填寫'}</span></div>
+                <div><i class="fas fa-phone"></i> <span>${store.phone || '未填寫'}</span></div>
+                <div><i class="fas fa-clock"></i> <span>${store.hours || '未填寫'}</span></div>
+              </div>
+              <div class="store-actions">
+                <button class="btn-store btn-edit" onclick="openEditStoreModal(${store.storeId})"><i class="fas fa-edit"></i> 編輯</button>
+                <button class="btn-store btn-toggle ${!store.isActive ? 'is-hidden' : ''}" onclick="toggleStore(${store.storeId})">
+                  <i class="fas fa-${toggleIcon}"></i> ${toggleText}
+                </button>
+                <button class="btn-store btn-delete" onclick="deleteStore(${store.storeId})"><i class="fas fa-trash-alt"></i></button>
+              </div>
+            </div>
+          `;
       },
 
-      // 成功回調：更新緩存
+      // 成功回調：更新緩存 (可選，renderRow 已經在做緩存了，這裡可以做全量同步)
       onSuccess: function (data) {
-        currentStoresData = data.content;
-        window.currentStoresMap = {};
-        data.content.forEach(s => window.currentStoresMap[s.storeId] = s);
+        AS.currentStoresMap = {};
+        if (data.content) {
+          data.content.forEach(s => AS.currentStoresMap[s.storeId] = s);
+        }
       }
     };
 
@@ -900,20 +903,20 @@
     });
 
     // ==========================================
-    // 業務邏輯函數
+    // 2. 業務邏輯函數 (掛載到 AdminStores)
     // ==========================================
 
-    function openAddStoreModal() {
+    AdminStores.openAddStoreModal = function () {
       document.getElementById('modalTitle').textContent = '新增店鋪';
       document.getElementById('storeForm').reset();
       document.getElementById('storeId').value = '';
       document.getElementById('storeModal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
-    }
+    };
 
-    function openEditStoreModal(id) {
-      // 從緩存中獲取數據
-      const store = window.currentStoresMap ? window.currentStoresMap[id] : null;
+    AdminStores.openEditStoreModal = function (id) {
+      // 從命名空間緩存中獲取數據
+      const store = AS.currentStoresMap[id];
       if (!store) {
         showNotification('❌ 找不到店鋪數據', true);
         return;
@@ -963,14 +966,14 @@
 
       document.getElementById('storeModal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
-    }
+    };
 
-    function closeStoreModal() {
+    AdminStores.closeStoreModal = function () {
       document.getElementById('storeModal').style.display = 'none';
       document.body.style.overflow = '';
-    }
+    };
 
-    async function saveStore(e) {
+    AdminStores.saveStore = async function (e) {
       e.preventDefault();
       const checkedBoxes = Array.from(document.querySelectorAll('.closed-day-checkbox:checked'));
       const closedDaysString = checkedBoxes.length > 0 ? checkedBoxes.map(cb => cb.value).join(',') : null;
@@ -1016,10 +1019,7 @@
         returnClosedDaysOfWeek: closedDaysString
       };
 
-      const btn = document.getElementById('saveStoreBtn');
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 儲存中...';
+      // 【已移除】btn.disabled 和 innerHTML 修改邏輯
 
       try {
         const url = id ? `/admin/stores/api/update/${id}` : '/admin/stores/api/add';
@@ -1032,7 +1032,7 @@
 
         if (res.ok) {
           showNotification('✅ ' + result.message);
-          closeStoreModal();
+          AdminStores.closeStoreModal();
           // 核心：使用 AdminTable 刷新數據
           AdminTable.loadData(storeTableConfig);
         } else {
@@ -1040,44 +1040,50 @@
         }
       } catch (err) {
         showNotification('❌ 網絡錯誤', true);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
       }
-    }
+    };
 
-    async function toggleStore(id) {
-      const res = await fetch(`/admin/stores/api/toggle/${id}`, {method: 'PUT'});
-      const result = await res.json();
-      if (res.ok) {
-        showNotification('✅ ' + result.message);
-        AdminTable.loadData(storeTableConfig); // 刷新
-      } else {
-        showNotification('❌ ' + (result.message || '操作失敗'), true);
+    AdminStores.toggleStore = async function (id) {
+      try {
+        const res = await fetch(`/admin/stores/api/toggle/${id}`, {method: 'PUT'});
+        const result = await res.json();
+        if (res.ok) {
+          showNotification('✅ ' + result.message);
+          AdminTable.loadData(storeTableConfig); // 刷新
+        } else {
+          showNotification('❌ ' + (result.message || '操作失敗'), true);
+        }
+      } catch (err) {
+        showNotification('❌ 網絡錯誤', true);
       }
-    }
+    };
 
-    function deleteStore(id) {
-      const store = window.currentStoresMap ? window.currentStoresMap[id] : null;
+    AdminStores.deleteStore = function (id) {
+      const store = AS.currentStoresMap[id];
       if (!store) return;
-      pendingDeleteStoreId = id;
-      pendingDeleteStoreName = store.name;
-      document.getElementById('deleteStoreNameDisplay').textContent = pendingDeleteStoreName;
+
+      // 使用命名空間存儲狀態
+      AS.pendingDeleteStoreId = id;
+      AS.pendingDeleteStoreName = store.name;
+
+      document.getElementById('deleteStoreNameDisplay').textContent = AS.pendingDeleteStoreName;
       document.getElementById('deleteStoreModal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
-    }
+    };
 
-    function closeDeleteStoreModal() {
+    AdminStores.closeDeleteStoreModal = function () {
       document.getElementById('deleteStoreModal').style.display = 'none';
       document.body.style.overflow = '';
-      pendingDeleteStoreId = null;
-      pendingDeleteStoreName = null;
-    }
+      AS.pendingDeleteStoreId = null;
+      AS.pendingDeleteStoreName = null;
+    };
 
-    async function confirmDeleteStore() {
-      if (!pendingDeleteStoreId) return;
-      const id = pendingDeleteStoreId;
-      closeDeleteStoreModal();
+    AdminStores.confirmDeleteStore = async function () {
+      if (!AS.pendingDeleteStoreId) return;
+      const id = AS.pendingDeleteStoreId;
+
+      AdminStores.closeDeleteStoreModal();
+
       try {
         const res = await fetch(`/admin/stores/api/delete/${id}`, {method: 'DELETE'});
         const result = await res.json();
@@ -1090,23 +1096,35 @@
       } catch (err) {
         showNotification('❌ 網絡錯誤', true);
       }
-    }
+    };
 
     // ==========================================
-    // 全局事件監聽
+    // 3. 全局橋接層 (為了兼容 HTML 中的 onclick)
+    // ==========================================
+    window.openAddStoreModal = AdminStores.openAddStoreModal;
+    window.openEditStoreModal = AdminStores.openEditStoreModal;
+    window.closeStoreModal = AdminStores.closeStoreModal;
+    window.saveStore = AdminStores.saveStore;
+    window.toggleStore = AdminStores.toggleStore;
+    window.deleteStore = AdminStores.deleteStore;
+    window.closeDeleteStoreModal = AdminStores.closeDeleteStoreModal;
+    window.confirmDeleteStore = AdminStores.confirmDeleteStore;
+
+    // ==========================================
+    // 4. 全局事件監聽
     // ==========================================
     document.getElementById('storeModal')?.addEventListener('click', function (e) {
-      if (e.target === this) closeStoreModal();
+      if (e.target === this) AdminStores.closeStoreModal();
     });
 
     document.getElementById('deleteStoreModal')?.addEventListener('click', function (e) {
-      if (e.target === this) closeDeleteStoreModal();
+      if (e.target === this) AdminStores.closeDeleteStoreModal();
     });
 
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
-        if (document.getElementById('storeModal').style.display === 'flex') closeStoreModal();
-        if (document.getElementById('deleteStoreModal').style.display === 'flex') closeDeleteStoreModal();
+        if (document.getElementById('storeModal').style.display === 'flex') AdminStores.closeStoreModal();
+        if (document.getElementById('deleteStoreModal').style.display === 'flex') AdminStores.closeDeleteStoreModal();
       }
     });
   </script>

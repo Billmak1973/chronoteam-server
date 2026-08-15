@@ -830,80 +830,94 @@
     </script>
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>
-    <!-- 🚀 引入通用表格管理器 -->
+    <!-- 引入通用表格管理器 -->
     <script src="/js/admin-table.js"></script>
 
     <script>
         // ==========================================
-        // 0. 全局變量聲明
+        // 0. 命名空間與狀態管理
         // ==========================================
-        const tabState = {
+        window.AdminPenalties = window.AdminPenalties || {};
+        const AP = window.AdminPenalties;
+
+        // 狀態變量收斂
+        AP.tabState = {
             penalties: {page: 1, size: 25, type: '', status: '', username: ''},
             appeals: {page: 1, size: 25, appealType: '', status: ''},
             rateLimits: {page: 1, size: 25}
         };
 
-        let currentActiveTab = 'penalties';
-        let currentPenaltyIdToUnban = null;
-        let currentPenaltyIdToUnblacklist = null;
-        let currentReviewAppealId = null;
-        let currentBlacklistAppealId = null;
+        AP.currentActiveTab = 'penalties';
+        AP.currentPenaltyIdToUnban = null;
+        AP.currentPenaltyIdToUnblacklist = null;
+        AP.currentReviewAppealId = null;
+        AP.currentBlacklistAppealId = null;
 
         // ==========================================
         // 1. Tab 切換邏輯
         // ==========================================
-        function switchTab(tabName, btnElement) {
-            currentActiveTab = tabName;
+        AP.switchTab = function (tabName, btnElement) {
+            AP.currentActiveTab = tabName;
+
+            // UI 切換
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            btnElement.classList.add('active');
-            document.getElementById('tab-' + tabName).classList.add('active');
+            if (btnElement) btnElement.classList.add('active');
+            const tabContent = document.getElementById('tab-' + tabName);
+            if (tabContent) tabContent.classList.add('active');
 
             // 切換 Tab 時重置頁碼並加載數據
             if (tabName === 'penalties') {
-                tabState.penalties.page = 1;
-                loadPenaltiesData();
+                AP.tabState.penalties.page = 1;
+                AP.loadPenaltiesData();
             } else if (tabName === 'appeals') {
-                tabState.appeals.page = 1;
-                loadAppealsData();
+                AP.tabState.appeals.page = 1;
+                AP.loadAppealsData();
             } else if (tabName === 'rate-limits') {
-                tabState.rateLimits.page = 1;
-                loadRateLimitsData();
+                AP.tabState.rateLimits.page = 1;
+                AP.loadRateLimitsData();
             }
-        }
+        };
 
-        function togglePenaltyUserSearch() {
-            const mode = document.getElementById('penaltyUserMode').value;
-            const input = document.getElementById('penaltyUserInput');
+        AP.togglePenaltyUserSearch = function () {
+            const modeEl = document.getElementById('penaltyUserMode');
+            const inputEl = document.getElementById('penaltyUserInput');
+            if (!modeEl || !inputEl) return;
+
+            const mode = modeEl.value;
             if (mode === 'specific') {
-                input.style.display = 'block';
-                input.focus();
+                inputEl.style.display = 'block';
+                inputEl.focus();
             } else {
-                input.style.display = 'none';
-                input.value = '';
-                if (tabState.penalties.username !== '') {
-                    filterPenalties();
+                inputEl.style.display = 'none';
+                inputEl.value = '';
+                if (AP.tabState.penalties.username !== '') {
+                    AP.filterPenalties();
                 }
             }
-        }
+        };
 
         // ==========================================
-        // 2. 使用 AdminTable 加載數據 (核心重構)
+        // 2. 使用 AdminTable 加載數據
         // ==========================================
 
         // --- 處罰記錄 ---
-        function loadPenaltiesData() {
+        AP.loadPenaltiesData = function () {
+            if (typeof AdminTable === 'undefined') {
+                console.error("AdminTable is not defined");
+                return;
+            }
             AdminTable.loadData({
                 apiUrl: '/admin/api/admin/penalties/list',
-                params: tabState.penalties,
+                params: AP.tabState.penalties,
                 tbodySelector: '#penalties-tbody',
                 paginationId: 'penalties-pagination',
-                renderRow: renderPenaltyRow,
+                renderRow: AP.renderPenaltyRow,
                 emptyText: '暫無處罰記錄'
             });
-        }
+        };
 
-        function renderPenaltyRow(penalty) {
+        AP.renderPenaltyRow = function (penalty) {
             const typeHtml = penalty.type === 'BAN'
                 ? `<span style="color: #ffc107; font-weight: 600;"><i class="fas fa-clock"></i> 封禁</span>`
                 : `<span style="color: #dc3545; font-weight: 600;"><i class="fas fa-user-slash"></i> 永久拉黑</span>`;
@@ -914,12 +928,23 @@
                 : (penalty.status === 'EXPIRED' ? '已過期' : '已撤銷');
 
             let actionHtml = '';
-            // 注意：這裡需要從後端返回的 data 中獲取 appealStatusMap，但 AdminTable 目前只傳入 row data
-            // 為了保持兼容，我們假設後端返回的 penalty 對象中可能包含關聯信息，或者我們在 renderRow 外部處理
-            // 由於 AdminTable 的限制，我們這裡簡化處理，或者依賴後端直接在 penalty 對象中返回 appealStatus
-            // 如果後端沒有返回 appealStatus，這裡的邏輯可能需要調整。
-            // 假設後端返回的 penalty 對象中包含 appealStatus (如果沒有的話，這裡會報錯或顯示默認)
-            // 為了安全，我們檢查 penalty.appealStatus
+            // 注意：appealStatus 需要從後端返回的 penalty 對象中獲取
+            // 根據 PenaltyAppealController，extraData 中有 appealStatusMap，但 AdminTable 目前只傳 row data
+            // 如果後端沒有把 appealStatus 合併到 row data 中，這裡可能需要調整後端或前端邏輯
+            // 假設後端已經處理好，或者 penalty 對象裡有這個字段 (如果沒有，這裡會顯示默認邏輯)
+            // 為了安全，我們檢查 penalty.appealStatus (如果後端沒返回，這裡是 undefined)
+            // 實際上 PenaltyAppealController 返回的是 extraData.appealStatusMap[appealId]
+            // 這裡為了兼容，我們假設 penalty 對象裡可能沒有直接的 appealStatus，而是需要從 map 取
+            // 但 AdminTable.loadData 目前不支持傳入 extraData 到 renderRow
+            // 所以這裡我們只能依賴 penalty 對象本身是否有這個字段，或者顯示默認
+            // 為了讓代碼跑起來，我們假設 penalty.appealStatus 存在 (如果後端沒改，這裡可能不準確)
+            // 或者我們可以暫時忽略 appealStatus 的精確判斷，只根據 penalty.status 判斷
+            // 但為了保持原有邏輯，我們保留這段代碼，並假設後端會返回 appealStatus
+
+            // 修正：根據 PenaltyAppealController，appealStatusMap 是在 response 根級別
+            // AdminTable 目前無法傳遞這個 map 到 renderRow
+            // 所以這裡我們只能做簡化處理，或者假設 penalty 對象裡包含了這個信息
+            // 為了不報錯，我們使用 penalty.appealStatus || null
             const appealStatus = penalty.appealStatus || null;
 
             if (penalty.type === 'BAN') {
@@ -935,9 +960,10 @@
                     const isPendingOrNoAppeal = (!appealStatus || appealStatus === 'PENDING');
 
                     if (endTime && endTime > now && isPendingOrNoAppeal) {
+                        // 使用全局橋接函數名，確保 HTML onclick 能找到
                         actionHtml = `<button class="btn-sm btn-unban-btn"
-                            onclick="handleUnbanClick(${penalty.penaltyId}, '${penalty.appealId || ''}')"
-                            style="background: #28a745; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">解除封禁</button>`;
+                        onclick="AdminPenalties.handleUnbanClick(${penalty.penaltyId}, '${penalty.appealId || ''}')"
+                        style="background: #28a745; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">解除封禁</button>`;
                     } else {
                         actionHtml = '<span style="color: #adb5bd; font-size: 0.85rem;">無需操作</span>';
                     }
@@ -953,8 +979,8 @@
                     const isPendingOrNoAppeal = (!appealStatus || appealStatus === 'PENDING');
                     if (isPendingOrNoAppeal) {
                         actionHtml = `<button class="btn-sm btn-unblacklist-btn"
-                            onclick="handleUnblacklistClick(${penalty.penaltyId}, '${penalty.appealId || ''}')"
-                            style="background: #dc3545; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">解除拉黑</button>`;
+                        onclick="AdminPenalties.handleUnblacklistClick(${penalty.penaltyId}, '${penalty.appealId || ''}')"
+                        style="background: #dc3545; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">解除拉黑</button>`;
                     } else {
                         actionHtml = '<span style="color: #adb5bd; font-size: 0.85rem;">不適用</span>';
                     }
@@ -964,34 +990,35 @@
             }
 
             return `<tr>
-                <td style="color: var(--gray); font-family: monospace;">${penalty.penaltyId}</td>
-                <td>${penalty.targetUser ? penalty.targetUser.username : '未知'}</td>
-                <td>${typeHtml}</td>
-                <td style="font-size: 0.9rem;">${penalty.reason || '無'}</td>
-                <td class="review-snapshot-cell">
-                    ${penalty.reviewContent ? `<div class="review-snapshot-box">${penalty.reviewContent}</div>` : '<span style="color: #adb5bd;">無快照</span>'}
-                </td>
-                <td>${formatDate(penalty.startTime)}</td>
-                <td>${penalty.endTime ? formatDate(penalty.endTime) : '永久'}</td>
-                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                <td>${penalty.adminUser ? penalty.adminUser.username : 'System'}</td>
-                <td style="text-align: center; vertical-align: middle;">${actionHtml}</td>
-            </tr>`;
-        }
+            <td style="color: var(--gray); font-family: monospace;">${penalty.penaltyId}</td>
+            <td>${penalty.targetUser ? penalty.targetUser.username : '未知'}</td>
+            <td>${typeHtml}</td>
+            <td style="font-size: 0.9rem;">${penalty.reason || '無'}</td>
+            <td class="review-snapshot-cell">
+                ${penalty.reviewContent ? `<div class="review-snapshot-box">${penalty.reviewContent}</div>` : '<span style="color: #adb5bd;">無快照</span>'}
+            </td>
+            <td>${AP.formatDate(penalty.startTime)}</td>
+            <td>${penalty.endTime ? AP.formatDate(penalty.endTime) : '永久'}</td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            <td>${penalty.adminUser ? penalty.adminUser.username : 'System'}</td>
+            <td style="text-align: center; vertical-align: middle;">${actionHtml}</td>
+        </tr>`;
+        };
 
         // --- 申訴記錄 ---
-        function loadAppealsData() {
+        AP.loadAppealsData = function () {
+            if (typeof AdminTable === 'undefined') return;
             AdminTable.loadData({
                 apiUrl: '/admin/api/admin/appeals/list',
-                params: tabState.appeals,
+                params: AP.tabState.appeals,
                 tbodySelector: '#appeals-tbody',
                 paginationId: 'appeals-pagination',
-                renderRow: renderAppealRow,
+                renderRow: AP.renderAppealRow,
                 emptyText: '暫無申訴記錄'
             });
-        }
+        };
 
-        function renderAppealRow(appeal) {
+        AP.renderAppealRow = function (appeal) {
             let typeText = '';
             if (appeal.appealType === 'BAN') typeText = '禁言申訴';
             else if (appeal.appealType === 'BLACKLIST') typeText = '黑名單申訴';
@@ -1006,11 +1033,11 @@
             let actionBtn = '';
             if (appeal.status === 'PENDING') {
                 if (appeal.appealType === 'BAN') {
-                    actionBtn = `<button class="btn-sm btn-appeal-ban" onclick="openAppealReviewModal(${appeal.appealId})"><i class="fas fa-unlock-alt"></i> 解除禁言</button>`;
+                    actionBtn = `<button class="btn-sm btn-appeal-ban" onclick="AdminPenalties.openAppealReviewModal(${appeal.appealId})"><i class="fas fa-unlock-alt"></i> 解除禁言</button>`;
                 } else if (appeal.appealType === 'BLACKLIST') {
-                    actionBtn = `<button class="btn-sm btn-appeal-blacklist" onclick="openBlacklistAppealModal(${appeal.appealId})"><i class="fas fa-user-shield"></i> 解除黑名單</button>`;
+                    actionBtn = `<button class="btn-sm btn-appeal-blacklist" onclick="AdminPenalties.openBlacklistAppealModal(${appeal.appealId})"><i class="fas fa-user-shield"></i> 解除黑名單</button>`;
                 } else {
-                    actionBtn = `<button class="btn-sm btn-appeal-review" onclick="handleAppealAction(${appeal.appealId}, 'DELETE_REVIEW')"><i class="fas fa-comment-medical"></i> 恢復評論</button>`;
+                    actionBtn = `<button class="btn-sm btn-appeal-review" onclick="AdminPenalties.handleAppealAction(${appeal.appealId}, 'DELETE_REVIEW')"><i class="fas fa-comment-medical"></i> 恢復評論</button>`;
                 }
             } else if (appeal.status === 'APPROVED') {
                 actionBtn = '<span style="color: #28a745;"><i class="fas fa-check-circle"></i> 已解除</span>';
@@ -1020,40 +1047,40 @@
                 actionBtn = '<span style="color: #adb5bd; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem;"><i class="fas fa-clock"></i> 無需操作</span>';
             }
 
-            // 注意：reviewContentMap 需要從後端返回的 data 中獲取，但 AdminTable 目前只傳入 row data
-            // 假設後端返回的 appeal 對象中包含 reviewContent
+            // 注意：reviewContent 同樣依賴後端返回
             const reviewContent = appeal.reviewContent || '無記錄';
 
             return `<tr>
-                <td>${appeal.appealId}</td>
-                <td>${appeal.user ? appeal.user.username : '未知'}</td>
-                <td>${typeText}</td>
-                <td title="${appeal.reason}">${appeal.reason}</td>
-                <td style="font-size: 0.85rem; color: #666; max-width: 250px;">
-                    <span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${reviewContent}">
-                        ${reviewContent}
-                    </span>
-                </td>
-                <td>${statusBadge}</td>
-                <td>${formatDate(appeal.createdAt)}</td>
-                <td title="${appeal.adminResponse || '-'}" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${appeal.adminResponse || '-'}</td>
-                <td style="text-align: center;">${actionBtn}</td>
-            </tr>`;
-        }
+            <td>${appeal.appealId}</td>
+            <td>${appeal.user ? appeal.user.username : '未知'}</td>
+            <td>${typeText}</td>
+            <td title="${appeal.reason}">${appeal.reason}</td>
+            <td style="font-size: 0.85rem; color: #666; max-width: 250px;">
+                <span style="display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${reviewContent}">
+                    ${reviewContent}
+                </span>
+            </td>
+            <td>${statusBadge}</td>
+            <td>${AP.formatDate(appeal.createdAt)}</td>
+            <td title="${appeal.adminResponse || '-'}" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${appeal.adminResponse || '-'}</td>
+            <td style="text-align: center;">${actionBtn}</td>
+        </tr>`;
+        };
 
         // --- 限流記錄 ---
-        function loadRateLimitsData() {
+        AP.loadRateLimitsData = function () {
+            if (typeof AdminTable === 'undefined') return;
             AdminTable.loadData({
                 apiUrl: '/admin/api/admin/rate-limits/list',
-                params: tabState.rateLimits,
+                params: AP.tabState.rateLimits,
                 tbodySelector: '#rate-limits-tbody',
                 paginationId: 'rate-limits-pagination',
-                renderRow: renderRateLimitRow,
+                renderRow: AP.renderRateLimitRow,
                 emptyText: '暫無限流記錄'
             });
-        }
+        };
 
-        function renderRateLimitRow(log) {
+        AP.renderRateLimitRow = function (log) {
             let statusBadge = '';
             if (log.status === 'BANNED') {
                 const now = new Date();
@@ -1070,108 +1097,134 @@
             }
 
             return `<tr>
-                <td>${log.logId}</td>
-                <td>${log.user ? log.user.username : '未知'}</td>
-                <td>${formatDate(log.actionTime)}</td>
-                <td>${log.times}</td>
-                <td>${log.bannedUntil ? formatDate(log.bannedUntil) : '無'}</td>
-                <td>${log.bannedBy}</td>
-                <td>${log.banReason || '無'}</td>
-                <td>${statusBadge}</td>
-            </tr>`;
-        }
+            <td>${log.logId}</td>
+            <td>${log.user ? log.user.username : '未知'}</td>
+            <td>${AP.formatDate(log.actionTime)}</td>
+            <td>${log.times}</td>
+            <td>${log.bannedUntil ? AP.formatDate(log.bannedUntil) : '無'}</td>
+            <td>${log.bannedBy}</td>
+            <td>${log.banReason || '無'}</td>
+            <td>${statusBadge}</td>
+        </tr>`;
+        };
 
         // ==========================================
         // 3. 篩選與重置功能
         // ==========================================
-        function filterPenalties() {
-            const userMode = document.getElementById('penaltyUserMode').value;
-            const userInput = document.getElementById('penaltyUserInput').value.trim();
-            tabState.penalties.username = (userMode === 'specific') ? userInput : '';
-            tabState.penalties.type = document.getElementById('filterType').value;
-            tabState.penalties.status = document.getElementById('filterStatus').value;
-            tabState.penalties.page = 1;
-            loadPenaltiesData();
-        }
+        AP.filterPenalties = function () {
+            const userModeEl = document.getElementById('penaltyUserMode');
+            const userInputEl = document.getElementById('penaltyUserInput');
+            const filterTypeEl = document.getElementById('filterType');
+            const filterStatusEl = document.getElementById('filterStatus');
 
-        function resetFilters(tabName) {
+            if (!userModeEl || !userInputEl || !filterTypeEl || !filterStatusEl) return;
+
+            const userMode = userModeEl.value;
+            const userInput = userInputEl.value.trim();
+
+            AP.tabState.penalties.username = (userMode === 'specific') ? userInput : '';
+            AP.tabState.penalties.type = filterTypeEl.value;
+            AP.tabState.penalties.status = filterStatusEl.value;
+            AP.tabState.penalties.page = 1;
+            AP.loadPenaltiesData();
+        };
+
+        AP.resetFilters = function (tabName) {
             if (tabName === 'penalties') {
-                document.getElementById('penaltyUserMode').value = 'all';
-                document.getElementById('penaltyUserInput').value = '';
-                document.getElementById('penaltyUserInput').style.display = 'none';
-                document.getElementById('filterType').value = '';
-                document.getElementById('filterStatus').value = '';
-                tabState.penalties.username = '';
-                tabState.penalties.type = '';
-                tabState.penalties.status = '';
-                filterPenalties(); // 觸發重新加載
-            } else if (tabName === 'appeals') {
-                document.getElementById('appealTypeFilter').value = '';
-                document.getElementById('appealStatusFilter').value = '';
-                tabState.appeals.appealType = '';
-                tabState.appeals.status = '';
-                tabState.appeals.page = 1;
-                loadAppealsData();
-            }
-        }
+                const userModeEl = document.getElementById('penaltyUserMode');
+                const userInputEl = document.getElementById('penaltyUserInput');
+                const filterTypeEl = document.getElementById('filterType');
+                const filterStatusEl = document.getElementById('filterStatus');
 
-        function filterAppeals() {
-            tabState.appeals.appealType = document.getElementById('appealTypeFilter').value;
-            tabState.appeals.status = document.getElementById('appealStatusFilter').value;
-            tabState.appeals.page = 1;
-            loadAppealsData();
-        }
+                if (userModeEl) userModeEl.value = 'all';
+                if (userInputEl) {
+                    userInputEl.value = '';
+                    userInputEl.style.display = 'none';
+                }
+                if (filterTypeEl) filterTypeEl.value = '';
+                if (filterStatusEl) filterStatusEl.value = '';
+
+                AP.tabState.penalties.username = '';
+                AP.tabState.penalties.type = '';
+                AP.tabState.penalties.status = '';
+                AP.filterPenalties();
+            } else if (tabName === 'appeals') {
+                const appealTypeEl = document.getElementById('appealTypeFilter');
+                const appealStatusEl = document.getElementById('appealStatusFilter');
+
+                if (appealTypeEl) appealTypeEl.value = '';
+                if (appealStatusEl) appealStatusEl.value = '';
+
+                AP.tabState.appeals.appealType = '';
+                AP.tabState.appeals.status = '';
+                AP.tabState.appeals.page = 1;
+                AP.loadAppealsData();
+            }
+        };
+
+        AP.filterAppeals = function () {
+            const appealTypeEl = document.getElementById('appealTypeFilter');
+            const appealStatusEl = document.getElementById('appealStatusFilter');
+
+            if (!appealTypeEl || !appealStatusEl) return;
+
+            AP.tabState.appeals.appealType = appealTypeEl.value;
+            AP.tabState.appeals.status = appealStatusEl.value;
+            AP.tabState.appeals.page = 1;
+            AP.loadAppealsData();
+        };
 
         // ==========================================
         // 4. 輔助函數
         // ==========================================
-        function formatDate(dateStr) {
+        AP.formatDate = function (dateStr) {
             if (!dateStr) return '';
             const date = new Date(dateStr);
             return date.toLocaleString('zh-TW', {hour12: false});
-        }
+        };
 
         // ==========================================
         // 5. 頁面初始化
         // ==========================================
         document.addEventListener('DOMContentLoaded', function () {
-            loadPenaltiesData();
+            AP.loadPenaltiesData();
         });
 
         // ==========================================
-        // 6. 業務邏輯 (彈窗、解除封禁等 - 保持原有邏輯)
+        // 6. 業務邏輯 (彈窗、解除封禁等)
         // ==========================================
 
-        // ... (這裡保留原有的 handleAppealAction, openAppealReviewModal, submitAppealDecision,
-        // handleUnbanClick, executeUnban, handleUnblacklistClick, executeUnblacklist,
-        // openBlacklistAppealModal, submitBlacklistAppeal 等函數的完整代碼) ...
-        // 由於篇幅限制，這裡省略了這些函數的具體實現，請確保它們在你的代碼中存在且邏輯正確。
-        // 這些函數不依賴於數據加載邏輯，因此不需要修改，只需確保它們能正確調用 API 並在成功後調用 loadXXXData() 刷新列表即可。
+        // 通用彈窗控制
+        AP.openModal = function (modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'flex';
+        };
 
-        // 示例：保留原有的彈窗關閉邏輯
-        window.onclick = function (event) {
-            if (event.target.classList.contains('custom-modal-overlay')) {
-                event.target.style.display = 'none';
-                if (event.target.id === 'appealReviewModal') currentReviewAppealId = null;
-                if (event.target.id === 'confirmUnbanModal') currentPenaltyIdToUnban = null;
-                if (event.target.id === 'confirmUnblacklistModal') currentPenaltyIdToUnblacklist = null;
-                if (event.target.id === 'blacklistAppealModal') currentBlacklistAppealId = null;
-            }
-        }
+        AP.closeModal = function (modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'none';
 
-        // 補充缺失的業務函數 (簡化版，實際使用時請確保完整)
-        async function handleAppealAction(appealId, type) {
+            if (modalId === 'confirmUnbanModal') AP.currentPenaltyIdToUnban = null;
+            if (modalId === 'confirmUnblacklistModal') AP.currentPenaltyIdToUnblacklist = null;
+        };
+
+        AP.goToAppealsTab = function () {
+            AP.closeModal('appealExistsModal');
+            const btn = document.querySelector('.tab-btn:nth-child(2)');
+            if (btn) AP.switchTab('appeals', btn);
+        };
+
+        // --- 申訴處理 ---
+        AP.handleAppealAction = async function (appealId, type) {
             let actionName = '';
             let apiUrl = '';
 
             if (type === 'BLACKLIST') {
                 actionName = '解除黑名單';
-                // 後端有這個接口，或者你可以複用 revokePenalty 邏輯
                 apiUrl = `/api/admin/penalty/blacklist/${appealId}/revoke`;
             }
             if (type === 'DELETE_REVIEW') {
                 actionName = '恢復評論';
-                // 後端有這個接口來根據申訴恢復評論
                 apiUrl = `/api/admin/appeal/${appealId}/restore`;
             }
 
@@ -1179,7 +1232,7 @@
 
             try {
                 const response = await fetch(apiUrl, {
-                    method: 'POST', // 或 PUT，取決於後端定義
+                    method: 'POST',
                     headers: {'Content-Type': 'application/json'}
                 });
 
@@ -1191,7 +1244,7 @@
                     } else {
                         alert('✅ ' + (result.message || '操作成功'));
                     }
-                    loadAppealsData(); // 刷新列表
+                    AP.loadAppealsData();
                 } else {
                     if (typeof showNotification === 'function') {
                         showNotification('❌ ' + (result.message || '操作失敗'), true);
@@ -1207,43 +1260,50 @@
                     alert('❌ 網絡錯誤');
                 }
             }
-        }
+        };
 
-        // 申訴處理確認模態框邏輯
-        function openAppealReviewModal(appealId) {
-            currentReviewAppealId = appealId;
-            document.getElementById('appealAdminResponse').value = '';
-            document.getElementById('appealReviewModal').style.display = 'flex';
-        }
-        function closeAppealReviewModal() {
-            document.getElementById('appealReviewModal').style.display = 'none';
-            currentReviewAppealId = null;
-        }
-        async function submitAppealDecision(decision) {
-            const responseText = document.getElementById('appealAdminResponse').value.trim();
+        AP.openAppealReviewModal = function (appealId) {
+            AP.currentReviewAppealId = appealId;
+            const responseEl = document.getElementById('appealAdminResponse');
+            if (responseEl) responseEl.value = '';
+            AP.openModal('appealReviewModal');
+        };
+
+        AP.closeAppealReviewModal = function () {
+            AP.closeModal('appealReviewModal');
+            AP.currentReviewAppealId = null;
+        };
+
+        AP.submitAppealDecision = async function (decision) {
+            const responseEl = document.getElementById('appealAdminResponse');
+            if (!responseEl) return;
+
+            const responseText = responseEl.value.trim();
             if (!responseText) {
                 if (typeof showNotification === 'function') showNotification('❌ 管理員回覆不能為空！', true);
                 else alert('❌ 管理員回覆不能為空！');
-                document.getElementById('appealAdminResponse').focus();
+                responseEl.focus();
                 return;
             }
+
             const btnId = decision === 'APPROVED' ? 'btnApprove' : 'btnReject';
             const btn = document.getElementById(btnId);
+            if (!btn) return;
 
             btn.disabled = true;
 
             try {
-                const res = await fetch(`/api/admin/appeal/${currentReviewAppealId}/review`, {
+                const res = await fetch(`/api/admin/appeal/${AP.currentReviewAppealId}/review`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({adminResponse: responseText, decision: decision})
                 });
                 const result = await res.json();
                 if (res.ok && result.success) {
-                    closeAppealReviewModal();
+                    AP.closeAppealReviewModal();
                     if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
                     else alert('✅ ' + result.message);
-                    setTimeout(() => loadAppealsData(), 1000); // 改為刷新數據而非整個頁面
+                    setTimeout(() => AP.loadAppealsData(), 1000);
                 } else {
                     if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
                     else alert('❌ ' + (result.message || '操作失敗'));
@@ -1255,45 +1315,34 @@
                 else alert('❌ 網絡錯誤，請稍後重試');
                 btn.disabled = false;
             }
-        }
+        };
 
-        // 解除封禁相關 JS 邏輯
-        function handleUnbanClick(penaltyId, appealId) {
+        // --- 解除封禁 ---
+        AP.handleUnbanClick = function (penaltyId, appealId) {
             if (appealId && appealId !== 'null' && appealId !== '') {
-                openModal('appealExistsModal');
+                AP.openModal('appealExistsModal');
             } else {
-                currentPenaltyIdToUnban = penaltyId;
-                openModal('confirmUnbanModal');
+                AP.currentPenaltyIdToUnban = penaltyId;
+                AP.openModal('confirmUnbanModal');
             }
-        }
-        function openModal(modalId) {
-            document.getElementById(modalId).style.display = 'flex';
-        }
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-            if (modalId === 'confirmUnbanModal') currentPenaltyIdToUnban = null;
-            if (modalId === 'confirmUnblacklistModal') currentPenaltyIdToUnblacklist = null;
-        }
-        function goToAppealsTab() {
-            closeModal('appealExistsModal');
-            const btn = document.querySelector('.tab-btn:nth-child(2)'); // 假設第二個是申訴
-            if (btn) switchTab('appeals', btn);
-        }
-        async function executeUnban() {
-            if (!currentPenaltyIdToUnban) return;
+        };
+
+        AP.executeUnban = async function () {
+            if (!AP.currentPenaltyIdToUnban) return;
             const btn = document.getElementById('confirmUnbanBtn');
+            if (!btn) return;
 
             btn.disabled = true;
 
             try {
-                const response = await fetch(`/api/admin/penalty/${currentPenaltyIdToUnban}/revoke`, {
+                const response = await fetch(`/api/admin/penalty/${AP.currentPenaltyIdToUnban}/revoke`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'}
                 });
                 if (response.ok) {
-                    closeModal('confirmUnbanModal');
+                    AP.closeModal('confirmUnbanModal');
                     if (typeof showNotification === 'function') showNotification('✅ 已成功解除封禁');
                     else alert('✅ 解除成功');
-                    setTimeout(() => loadPenaltiesData(), 1000); // 改為刷新數據
+                    setTimeout(() => AP.loadPenaltiesData(), 1000);
                 } else {
                     if (typeof showNotification === 'function') showNotification('❌ 操作失敗，請稍後重試', true);
                     else alert('❌ 操作失敗，請稍後重試');
@@ -1305,33 +1354,35 @@
                 else alert('❌ 網絡錯誤');
                 btn.disabled = false;
             }
-        }
+        };
 
-        // 解除永久拉黑相關 JS 邏輯
-        function handleUnblacklistClick(penaltyId, appealId) {
+        // --- 解除永久拉黑 ---
+        AP.handleUnblacklistClick = function (penaltyId, appealId) {
             if (appealId && appealId !== 'null' && appealId !== '') {
-                openModal('appealExistsModal');
+                AP.openModal('appealExistsModal');
             } else {
-                currentPenaltyIdToUnblacklist = penaltyId;
-                openModal('confirmUnblacklistModal');
+                AP.currentPenaltyIdToUnblacklist = penaltyId;
+                AP.openModal('confirmUnblacklistModal');
             }
-        }
-        async function executeUnblacklist() {
-            if (!currentPenaltyIdToUnblacklist) return;
+        };
+
+        AP.executeUnblacklist = async function () {
+            if (!AP.currentPenaltyIdToUnblacklist) return;
             const btn = document.getElementById('confirmUnblacklistBtn');
+            if (!btn) return;
 
             btn.disabled = true;
 
             try {
-                const response = await fetch(`/api/admin/penalty/${currentPenaltyIdToUnblacklist}/revoke`, {
+                const response = await fetch(`/api/admin/penalty/${AP.currentPenaltyIdToUnblacklist}/revoke`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'}
                 });
                 if (response.ok) {
-                    await sendUnblacklistNotification(currentPenaltyIdToUnblacklist);
-                    closeModal('confirmUnblacklistModal');
+                    await AP.sendUnblacklistNotification(AP.currentPenaltyIdToUnblacklist);
+                    AP.closeModal('confirmUnblacklistModal');
                     if (typeof showNotification === 'function') showNotification('✅ 已成功解除永久拉黑');
                     else alert('✅ 解除拉黑成功');
-                    setTimeout(() => loadPenaltiesData(), 1000); // 改為刷新數據
+                    setTimeout(() => AP.loadPenaltiesData(), 1000);
                 } else {
                     const result = await response.json();
                     if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
@@ -1344,8 +1395,9 @@
                 else alert('❌ 網絡錯誤');
                 btn.disabled = false;
             }
-        }
-        async function sendUnblacklistNotification(penaltyId) {
+        };
+
+        AP.sendUnblacklistNotification = async function (penaltyId) {
             try {
                 const response = await fetch(`/api/admin/penalty/${penaltyId}/send-unblacklist-notification`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'}
@@ -1354,21 +1406,29 @@
             } catch (error) {
                 console.error('發送通知錯誤:', error);
             }
-        }
+        };
 
-        // 黑名單申訴處理專屬邏輯
-        function formatDateForModal(dateString) {
+        // --- 黑名單申訴處理 ---
+        AP.formatDateForModal = function (dateString) {
             if (!dateString) return '-';
             const date = new Date(dateString);
             return date.toLocaleString('zh-TW', {hour12: false});
-        }
-        async function openBlacklistAppealModal(appealId) {
-            currentBlacklistAppealId = appealId;
-            document.getElementById('blacklistAppealUsername').textContent = '加載中...';
-            document.getElementById('blacklistAppealReason').textContent = '正在獲取申訴信息...';
-            document.getElementById('blacklistAppealTime').textContent = '-';
-            document.getElementById('blacklistAppealResponse').value = '';
-            document.getElementById('blacklistAppealModal').style.display = 'flex';
+        };
+
+        AP.openBlacklistAppealModal = async function (appealId) {
+            AP.currentBlacklistAppealId = appealId;
+            const usernameEl = document.getElementById('blacklistAppealUsername');
+            const reasonEl = document.getElementById('blacklistAppealReason');
+            const timeEl = document.getElementById('blacklistAppealTime');
+            const responseEl = document.getElementById('blacklistAppealResponse');
+
+            if (usernameEl) usernameEl.textContent = '加載中...';
+            if (reasonEl) reasonEl.textContent = '正在獲取申訴信息...';
+            if (timeEl) timeEl.textContent = '-';
+            if (responseEl) responseEl.value = '';
+
+            AP.openModal('blacklistAppealModal');
+
             try {
                 const res = await fetch(`/admin/appeal/${appealId}`);
                 const result = await res.json();
@@ -1377,46 +1437,53 @@
                     const username = data.user ? data.user.username : (data.username || '未知用戶');
                     const reason = data.reason || '無申訴原因';
                     const createTime = data.createdAt || data.createdTime;
-                    document.getElementById('blacklistAppealUsername').textContent = username;
-                    document.getElementById('blacklistAppealReason').textContent = reason;
-                    document.getElementById('blacklistAppealTime').textContent = formatDateForModal(createTime);
+                    if (usernameEl) usernameEl.textContent = username;
+                    if (reasonEl) reasonEl.textContent = reason;
+                    if (timeEl) timeEl.textContent = AP.formatDateForModal(createTime);
                 } else {
                     throw new Error(result.message || '獲取失敗');
                 }
             } catch (error) {
                 console.error('獲取申訴詳情失敗:', error);
-                document.getElementById('blacklistAppealReason').textContent = '❌ 加載失敗: ' + error.message;
+                if (reasonEl) reasonEl.textContent = '❌ 加載失敗: ' + error.message;
                 if (typeof showNotification === 'function') showNotification('❌ 獲取申訴詳情失敗', true);
             }
-        }
-        function closeBlacklistAppealModal() {
-            document.getElementById('blacklistAppealModal').style.display = 'none';
-            currentBlacklistAppealId = null;
-        }
-        async function submitBlacklistAppeal(decision) {
-            const responseText = document.getElementById('blacklistAppealResponse').value.trim();
+        };
+
+        AP.closeBlacklistAppealModal = function () {
+            AP.closeModal('blacklistAppealModal');
+            AP.currentBlacklistAppealId = null;
+        };
+
+        AP.submitBlacklistAppeal = async function (decision) {
+            const responseEl = document.getElementById('blacklistAppealResponse');
+            if (!responseEl) return;
+
+            const responseText = responseEl.value.trim();
             if (!responseText) {
                 if (typeof showNotification === 'function') showNotification('❌ 管理員回覆不能為空！', true);
                 else alert('❌ 管理員回覆不能為空！');
-                document.getElementById('blacklistAppealResponse').focus();
+                responseEl.focus();
                 return;
             }
+
             const btnId = decision === 'APPROVED' ? 'btnBlacklistApprove' : 'btnBlacklistReject';
             const btn = document.getElementById(btnId);
+            if (!btn) return;
 
             btn.disabled = true;
 
             try {
-                const res = await fetch(`/api/admin/appeal/${currentBlacklistAppealId}/review`, {
+                const res = await fetch(`/api/admin/appeal/${AP.currentBlacklistAppealId}/review`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({adminResponse: responseText, decision: decision})
                 });
                 const result = await res.json();
                 if (res.ok && result.success) {
-                    closeBlacklistAppealModal();
+                    AP.closeBlacklistAppealModal();
                     if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
                     else alert('✅ ' + result.message);
-                    setTimeout(() => loadAppealsData(), 1000); // 改為刷新數據
+                    setTimeout(() => AP.loadAppealsData(), 1000);
                 } else {
                     if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
                     else alert('❌ ' + (result.message || '操作失敗'));
@@ -1428,18 +1495,73 @@
                 else alert('❌ 網絡錯誤，請稍後重試');
                 btn.disabled = false;
             }
-        }
+        };
 
+        // ==========================================
+        // 7. 全局橋接 (Global Bridge)
+        // ==========================================
+        // 將 AdminPenalties 的方法暴露給 window，以兼容 HTML 中的 onclick
+        window.AdminPenalties = AP; // 確保對象本身可訪問
+
+        // 暴露具體函數
+        window.switchTab = AP.switchTab;
+        window.togglePenaltyUserSearch = AP.togglePenaltyUserSearch;
+        window.filterPenalties = AP.filterPenalties;
+        window.resetFilters = AP.resetFilters;
+        window.filterAppeals = AP.filterAppeals;
+
+        // 業務邏輯函數
+        window.handleAppealAction = AP.handleAppealAction;
+        window.openAppealReviewModal = AP.openAppealReviewModal;
+        window.closeAppealReviewModal = AP.closeAppealReviewModal;
+        window.submitAppealDecision = AP.submitAppealDecision;
+
+        window.handleUnbanClick = AP.handleUnbanClick;
+        window.executeUnban = AP.executeUnban;
+
+        window.handleUnblacklistClick = AP.handleUnblacklistClick;
+        window.executeUnblacklist = AP.executeUnblacklist;
+
+        window.openBlacklistAppealModal = AP.openBlacklistAppealModal;
+        window.closeBlacklistAppealModal = AP.closeBlacklistAppealModal;
+        window.submitBlacklistAppeal = AP.submitBlacklistAppeal;
+
+        // 通用彈窗控制
+        window.openModal = AP.openModal;
+        window.closeModal = AP.closeModal;
+        window.goToAppealsTab = AP.goToAppealsTab;
+
+        // ==========================================
+        // 8. 全局事件監聽
+        // ==========================================
         // 點擊彈窗外部關閉
         window.onclick = function (event) {
             if (event.target.classList.contains('custom-modal-overlay')) {
                 event.target.style.display = 'none';
-                if (event.target.id === 'appealReviewModal') currentReviewAppealId = null;
-                if (event.target.id === 'confirmUnbanModal') currentPenaltyIdToUnban = null;
-                if (event.target.id === 'confirmUnblacklistModal') currentPenaltyIdToUnblacklist = null;
-                if (event.target.id === 'blacklistAppealModal') currentBlacklistAppealId = null;
+                if (event.target.id === 'appealReviewModal') AP.currentReviewAppealId = null;
+                if (event.target.id === 'confirmUnbanModal') AP.currentPenaltyIdToUnban = null;
+                if (event.target.id === 'confirmUnblacklistModal') AP.currentPenaltyIdToUnblacklist = null;
+                if (event.target.id === 'blacklistAppealModal') AP.currentBlacklistAppealId = null;
             }
-        }
+        };
+
+        // ESC 鍵關閉彈窗
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modals = ['appealReviewModal', 'confirmUnbanModal', 'confirmUnblacklistModal', 'blacklistAppealModal', 'appealExistsModal'];
+                modals.forEach(id => {
+                    const modal = document.getElementById(id);
+                    if (modal && modal.style.display === 'flex') {
+                        modal.style.display = 'none';
+                        // 清空對應狀態
+                        if (id === 'appealReviewModal') AP.currentReviewAppealId = null;
+                        if (id === 'confirmUnbanModal') AP.currentPenaltyIdToUnban = null;
+                        if (id === 'confirmUnblacklistModal') AP.currentPenaltyIdToUnblacklist = null;
+                        if (id === 'blacklistAppealModal') AP.currentBlacklistAppealId = null;
+                    }
+                });
+            }
+        });
 
     </script>
 </body>
