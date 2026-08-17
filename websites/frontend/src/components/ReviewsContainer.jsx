@@ -11,6 +11,7 @@ const ReviewsContainer = ({ productId, currentUsername, isAdmin, canReview, revi
     const [totalCount, setTotalCount] = useState(initialTotalCount);
     const [avgRating, setAvgRating] = useState(initialAvgRating);
     const [localCanReview, setLocalCanReview] = useState(canReview);
+    const [validMentionedUsers, setValidMentionedUsers] = useState([]);
 
     // 統一管理禁言用戶列表（在所有評論和回覆中共享）
     const [blockedUsers, setBlockedUsers] = useState([]);
@@ -33,6 +34,7 @@ const ReviewsContainer = ({ productId, currentUsername, isAdmin, canReview, revi
             const result = await res.json();
             if (result.success) {
                 setReviews(result.data.reviews);
+                setValidMentionedUsers(result.data.validMentionedUsers || []);
                 setTotalPages(result.data.totalPages);
                 setTotalCount(result.data.totalElements);
                 setPage(targetPage);
@@ -229,6 +231,7 @@ const ReviewsContainer = ({ productId, currentUsername, isAdmin, canReview, revi
                             blockedUsers={blockedUsers}
                             onBlockUser={handleBlockUser}
                             targetReviewId={targetReviewId} // 【核心修改】傳遞給所有子組件，讓它們自己判斷是否需要展開
+                            validMentionedUsers={validMentionedUsers}
                         />
                     ))}
                 </div>

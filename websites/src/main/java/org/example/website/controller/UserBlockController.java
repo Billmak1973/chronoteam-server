@@ -24,30 +24,50 @@ public class UserBlockController {
     private final UserBlockRepository userBlockRepository;
     private final AdminPenaltyService adminPenaltyService;
 
+
     /**
-     *  禁言/解除禁言按钮（一个接口，两种用法）
+     * 禁言/解除禁言按鈕（一個接口，兩種用法）
+     * 【核心修復】：嚴格區分「管理員系統封禁」與「普通用戶個人禁言」
      */
     @PostMapping("/{targetUsername}/toggle-block")
     public ResponseEntity<ApiResponse> toggleBlock(
             @PathVariable String targetUsername,
-            @RequestParam(required = false) Integer durationMinutes,  // 管理员专用：禁言时长
-            @RequestParam(required = false) String reason,             // 管理员专用：禁言原因
-            @RequestParam(required = false) Long reviewId,             // 【新增】管理員專用：關聯的評論 ID
-            @RequestParam(required = false) String reviewContent,      // 【新增】管理員專用：關聯的評論內容快照
+            @RequestParam(required = false) Integer durationMinutes,
+            @RequestParam(required = false) String reason,
+            @RequestParam(required = false) Long reviewId,
+            @RequestParam(required = false) String reviewContent,
             Authentication authentication) {
 
         String currentUsername = authentication.getName();
-        boolean isAdmin = "admin".equals(currentUsername);
+
+        // 【核心修復點】：不再依賴 durationMinutes 是否為 null 來判斷
+        // 而是直接檢查當前操作者的角色是否為 ADMIN
+        boolean isAdmin = "admin".equalsIgnoreCase(currentUsername) ||
+                (authentication.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")));
 
         Map<String, Object> result;
 
-        if (isAdmin && durationMinutes != null) {
-            // 管理员禁言（全局禁言）
+        if (isAdmin) {
+            // ================= 管理員路徑 (絕對不涉及 user_block) =================
+            if (durationMinutes == null || durationMinutes <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("管理員封禁必須指定有效的封禁時長"));
+            }
+
+            // 調用 AdminPenaltyService，只寫入 admin_penalty 表
             result = adminPenaltyService.adminBanUser(
-                    targetUsername, currentUsername, durationMinutes, reason,reviewId,reviewContent
+                    targetUsername,
+                    currentUsername,
+                    durationMinutes,
+                    reason,
+                    reviewId,
+                    reviewContent
             );
+
         } else {
-            // 普通用户禁言（双向禁言）
+            // ================= 普通用戶路徑 (只涉及 user_block) =================
+            // 普通用戶不允許使用 reviewId/reviewContent/durationMinutes 等管理員參數
             result = userBlockService.blockUser(currentUsername, targetUsername);
         }
 

@@ -20,10 +20,8 @@ import org.jsoup.safety.Safelist;
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/review")
@@ -333,11 +331,14 @@ public class ReviewController {
                 resultList.add(map);
             }
 
+            Set<String> validMentions = extractAndValidateMentions(resultList);
+
             Map<String, Object> data = new HashMap<>();
             data.put("replies", resultList);  // 使用手動構建的列表
             data.put("currentPage", page);
             data.put("totalPages", replies.getTotalPages());
             data.put("totalReplies", reviewRepository.countByParentId(parentId));
+            data.put("validMentionedUsers", validMentions);
 
             return ResponseEntity.ok(ApiResponse.okWithData("成功", data));
         } catch (Exception e) {
@@ -933,12 +934,15 @@ public class ReviewController {
             list.add(map);
         }
 
+        Set<String> validMentions = extractAndValidateMentions(list);
+
         // 7. 構建返回數據並計算平均分
         Map<String, Object> data = new HashMap<>();
         data.put("reviews", list);
         data.put("currentPage", page);
         data.put("totalPages", rootReviewsPage.getTotalPages());
         data.put("totalElements", rootReviewsPage.getTotalElements());
+        data.put("validMentionedUsers", validMentions);
 
         // 核心修復：計算並返回平均分
         Product product = productRepository.findById(productId).orElse(null);
@@ -1145,5 +1149,32 @@ public class ReviewController {
             return ResponseEntity.internalServerError()
                     .body(ApiResponse.error("預檢失敗: " + e.getMessage()));
         }
+    }
+
+    /**
+     * 從評論內容中提取 @用戶名，並批量驗證哪些是用戶表中真實存在的
+     */
+    private Set<String> extractAndValidateMentions(List<Map<String, Object>> comments) {
+        Set<String> mentionedNames = new HashSet<>();
+        // 正則匹配 @後面跟隨的單詞（支持中文、英文、數字、下劃線）
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("@([\\w\\u4e00-\\u9fa5]+)");
+
+        for (Map<String, Object> comment : comments) {
+            String content = (String) comment.get("content");
+            if (content != null) {
+                java.util.regex.Matcher matcher = pattern.matcher(content);
+                while (matcher.find()) {
+                    mentionedNames.add(matcher.group(1));
+                }
+            }
+        }
+
+        if (mentionedNames.isEmpty()) return Collections.emptySet();
+
+        // 批量查詢數據庫，只返回真實存在的用戶名
+        List<User> validUsers = userRepository.findByUsernameIn(new ArrayList<>(mentionedNames));
+        return validUsers.stream()
+                .map(User::getUsername)
+                .collect(Collectors.toSet());
     }
 }

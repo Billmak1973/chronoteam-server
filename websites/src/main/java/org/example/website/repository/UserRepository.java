@@ -30,4 +30,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // 關鍵字 + 角色組合篩選
     @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role = :role")
     Page<User> findByKeywordAndRole(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
+
+    List<User> findByUsernameIn(List<String> usernames);
 }

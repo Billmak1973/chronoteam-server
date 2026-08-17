@@ -6,47 +6,224 @@
     <title>個人中心 - ChronoTeam</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/sidebar.css"> <!-- 引入側邊欄樣式 -->
+    <link rel="stylesheet" href="/css/sidebar.css">
     <style>
-        /* 頁面專屬樣式 */
-        .dashboard-container {
-            display: flex;
-            min-height: calc(100vh - 150px);
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            gap: 2rem;
-        }
-
-        .main-content {
-            flex: 1;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            padding: 2rem;
-        }
+        .dashboard-container { display: flex; min-height: calc(100vh - 150px); max-width: 1400px; margin: 2rem auto; padding: 0 1rem; gap: 2rem; }
+        .main-content { flex: 1; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); padding: 2rem; transition: all 0.3s ease; }
+        .main-content.full-width { flex: 1; max-width: 100%; }
+        .dashboard-container.guest-mode { justify-content: center; }
+        .post-composer { background: white; border: 1px solid #e9ecef; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .composer-textarea { width: 100%; min-height: 120px; border: none; resize: vertical; font-size: 1rem; color: var(--primary); outline: none; margin-bottom: 0.5rem; font-family: inherit; }
+        .composer-textarea::placeholder { color: #adb5bd; }
+        .composer-actions { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f3f5; padding-top: 1rem; }
+        .composer-tools { display: flex; gap: 0.5rem; }
+        .tool-btn { background: transparent; border: 1px solid transparent; color: var(--gray); padding: 0.5rem 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem; }
+        .tool-btn:hover { background: #f8f9fa; color: var(--gold); }
+        .publish-btn { background: var(--gold); color: var(--primary); border: none; padding: 0.6rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .publish-btn:hover { background: #b8972b; transform: translateY(-1px); }
+        .privacy-selector-wrapper { position: relative; display: inline-block; margin-right: 0.5rem; }
+        .privacy-btn { background: #f8f9fa; border: 1px solid #e9ecef; color: var(--primary); padding: 0.6rem 1rem; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
+        .privacy-btn:hover { background: #e9ecef; border-color: #dee2e6; }
+        .privacy-dropdown { display: none; position: absolute; top: 100%; left: 0; padding-top: 10px; background: transparent; min-width: 160px; z-index: 100; }
+        .privacy-dropdown-content { background: white; border-radius: 8px; border: 1px solid #e9ecef; box-shadow: 0 4px 12px rgba(0,0,0,0.15); overflow: hidden; animation: fadeInDown 0.2s ease; }
+        .privacy-selector-wrapper:hover .privacy-dropdown { display: block; }
+        .privacy-option { padding: 0.8rem 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.8rem; transition: background 0.2s; font-size: 0.9rem; color: var(--primary); }
+        .privacy-option:hover { background: #f8f9fa; }
+        .privacy-option.active { background: rgba(212, 175, 55, 0.1); color: var(--gold); font-weight: 600; }
+        .privacy-option i { width: 20px; text-align: center; font-size: 1rem; }
+        .icon-public { color: #28a745; }
+        .icon-friends { color: #007bff; }
+        .icon-private { color: #6c757d; }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .char-counter { text-align: right; font-size: 0.85rem; color: #adb5bd; margin-top: 0.2rem; margin-bottom: 0.5rem; font-family: monospace; transition: color 0.3s; }
+        .char-counter.warning { color: #fd7e14; font-weight: bold; }
+        .char-counter.danger { color: #dc3545; font-weight: bold; }
     </style>
 </head>
 
 <body>
-    <div th:replace="~{fragments/common :: navbar}"></div>
+<div th:replace="~{fragments/common :: navbar}"></div>
 
-    <div class="dashboard-container">
-        <!--  引入側邊欄 Fragment，傳入當前頁面標識 -->
-        <div th:replace="~{fragments/sidebar :: sidebar(activePage='dashboard')}"></div>
+<div class="dashboard-container" th:classappend="${viewMode == 'guest' and !isSelf} ? 'guest-mode' : ''">
+    <div th:if="${viewMode != 'guest' or isSelf}" th:replace="~{fragments/sidebar :: sidebar(activePage='dashboard')}"></div>
 
-        <!-- 右側主內容 -->
-        <main class="main-content">
-            <h1>歡迎來到個人中心</h1>
-            <!-- 你的內容 -->
-        </main>
-    </div>
+    <main class="main-content" th:classappend="${viewMode == 'guest' and !isSelf} ? 'full-width' : ''">
+        <h1 th:if="${isSelf}"><i class="fas fa-home" style="color: var(--gold); margin-right: 0.5rem;"></i> 歡迎來到個人中心</h1>
+        <h1 th:unless="${isSelf}"><i class="fas fa-user-circle" style="color: var(--gold); margin-right: 0.5rem;"></i> <span th:text="${user.username}">User</span> 的主頁</h1>
 
-    <div th:replace="~{fragments/common :: modals}"></div>
-    <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-    </script>
-    <script src="/js/common.js"></script>
+        <div th:if="${isSelf}">
+            <div class="post-composer">
+                <textarea
+                        id="postContent"
+                        class="composer-textarea"
+                        placeholder="分享您的收藏心得... (中文限250字，英文/其他限600字)"
+                        oninput="handleInput(this)"
+                ></textarea>
+
+                <!-- 計數器初始顯示中文限制 -->
+                <div class="char-counter" id="charCounter">0 / 250</div>
+
+                <div class="composer-actions">
+                    <div class="composer-tools">
+                        <button type="button" class="tool-btn" onclick="alert('功能開發中')"><i class="fas fa-shopping-bag"></i> 選擇已購買物品</button>
+                        <button type="button" class="tool-btn" onclick="alert('功能開發中')"><i class="fas fa-image"></i> 圖片</button>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <div class="privacy-selector-wrapper" id="privacyWrapper">
+                            <button type="button" class="privacy-btn">
+                                <i id="currentPrivacyIcon" class="fas fa-globe icon-public"></i>
+                                <span id="currentPrivacyText">公開</span>
+                                <i class="fas fa-caret-down" style="font-size: 0.8rem; margin-left: 0.2rem;"></i>
+                            </button>
+                            <div class="privacy-dropdown" id="privacyDropdown">
+                                <div class="privacy-dropdown-content">
+                                    <div class="privacy-option active" onclick="selectPrivacy('public', 'fa-globe', 'icon-public', '公開')"><i class="fas fa-globe icon-public"></i> 公開</div>
+                                    <div class="privacy-option" onclick="selectPrivacy('friends', 'fa-user-friends', 'icon-friends', '朋友圈')"><i class="fas fa-user-friends icon-friends"></i> 朋友圈</div>
+                                    <div class="privacy-option" onclick="selectPrivacy('private', 'fa-lock', 'icon-private', '僅自己可見')"><i class="fas fa-lock icon-private"></i> 僅自己可見</div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="publish-btn" onclick="handlePublish()">發佈</button>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center; padding: 3rem; color: #adb5bd;">
+                <i class="fas fa-stream" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                <p>暫無動態，快來發佈第一條吧！</p>
+            </div>
+        </div>
+
+        <div th:unless="${isSelf}">
+            <div style="text-align: center; padding: 4rem 2rem; color: var(--gray); background: #f8f9fa; border-radius: 12px;">
+                <i class="fas fa-lock" style="font-size: 4rem; margin-bottom: 1.5rem; color: #dee2e6;"></i>
+                <h3 style="color: var(--primary); margin-bottom: 0.5rem;">隱私保護</h3>
+                <p style="margin-bottom: 2rem;">該用戶的詳細資料僅對其本人可見。</p>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <a href="/browse" class="btn btn-primary"><i class="fas fa-search"></i> 瀏覽商品</a>
+                    <button onclick="history.back()" class="btn btn-outline"><i class="fas fa-arrow-left"></i> 返回上一頁</button>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div th:replace="~{fragments/common :: modals}"></div>
+<script src="/js/common.js"></script>
+
+<script th:inline="javascript">
+    const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+
+    // ==========================================
+    // 1. 動態字數統計邏輯 (中文 250 / 其他 600)
+    // ==========================================
+    const MAX_LENGTH_CN = 250; // 中文限制
+    const MAX_LENGTH_OTHER = 600; // 英文/其他限制
+
+    // 正則表達式：匹配中文字符 (包含基本漢字區)
+    const chineseRegex = /[\u4e00-\u9fa5]/;
+
+    let currentPrivacySetting = 'public';
+
+    /**
+     * 【核心邏輯】處理輸入事件
+     */
+    function handleInput(textarea) {
+        const content = textarea.value;
+        // 使用 Array.from 正確處理 Emoji 長度
+        const contentArray = Array.from(content);
+        const currentLength = contentArray.length;
+
+        // 1. 動態判斷上限：只要包含一個中文字，就視為中文模式 (250)，否則為其他模式 (600)
+        const hasChinese = chineseRegex.test(content);
+        const currentMax = hasChinese ? MAX_LENGTH_CN : MAX_LENGTH_OTHER;
+
+        const counterEl = document.getElementById('charCounter');
+
+        // 2. 如果超過當前模式的限制，強制截斷
+        if (currentLength > currentMax) {
+            // 截取前 currentMax 個字符
+            textarea.value = contentArray.slice(0, currentMax).join('');
+            updateCounterUI(currentMax, currentMax, counterEl);
+        } else {
+            updateCounterUI(currentLength, currentMax, counterEl);
+        }
+    }
+
+    /**
+     * 更新計數器 UI
+     * @param {number} length - 當前長度
+     * @param {number} max - 當前允許的最大長度 (250 或 600)
+     * @param {HTMLElement} element - 計數器 DOM
+     */
+    function updateCounterUI(length, max, element) {
+        if (!element) return;
+
+        // 更新文字顯示，例如 "10 / 250" 或 "100 / 600"
+        element.textContent = `${length} / ${max}`;
+
+        // 移除舊狀態
+        element.classList.remove('warning', 'danger');
+
+        // 根據比例添加顏色狀態
+        if (length >= max) {
+            element.classList.add('danger'); // 滿了變紅
+        } else if (length >= max - 20) {
+            element.classList.add('warning'); // 快滿了變橙 (剩 20 字時警告)
+        }
+    }
+
+    // ==========================================
+    // 2. 隱私選擇與發佈邏輯
+    // ==========================================
+    function selectPrivacy(type, iconClass, colorClass, text) {
+        currentPrivacySetting = type;
+        const iconEl = document.getElementById('currentPrivacyIcon');
+        const textEl = document.getElementById('currentPrivacyText');
+
+        if (iconEl) iconEl.className = `fas ${iconClass} ${colorClass}`;
+        if (textEl) textEl.textContent = text;
+
+        const options = document.querySelectorAll('.privacy-option');
+        options.forEach(opt => opt.classList.remove('active'));
+        options.forEach(opt => {
+            if(opt.textContent.trim().includes(text)) opt.classList.add('active');
+        });
+    }
+
+    function handlePublish() {
+        const textarea = document.getElementById('postContent');
+        if (!textarea) return;
+
+        const content = textarea.value.trim();
+        if (Array.from(content).length === 0) {
+            alert('請輸入內容後再發佈！');
+            return;
+        }
+
+        // 最終校驗 (防止繞過前端限制)
+        const hasChinese = chineseRegex.test(content);
+        const limit = hasChinese ? MAX_LENGTH_CN : MAX_LENGTH_OTHER;
+        if (Array.from(content).length > limit) {
+            alert(`內容超出限制！${hasChinese ? '中文' : '英文/其他'}最多 ${limit} 字。`);
+            return;
+        }
+
+        console.log("發佈內容:", content);
+        console.log("模式:", hasChinese ? "中文(250)" : "其他(600)");
+        console.log("隱私:", currentPrivacySetting);
+
+        alert(`功能開發中：即將發佈動態...\n字數: ${Array.from(content).length}\n模式: ${hasChinese ? '中文' : '英文/其他'}\n隱私: ${currentPrivacySetting}`);
+    }
+
+    // 頁面加載完成後初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        const textarea = document.getElementById('postContent');
+        if(textarea) {
+            // 初始狀態默認顯示中文限制 (因為 placeholder 是中文，且通常用戶先打中文)
+            updateCounterUI(0, MAX_LENGTH_CN, document.getElementById('charCounter'));
+        }
+    });
+</script>
+
 </body>
-
 </html>

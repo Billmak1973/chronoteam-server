@@ -1,699 +1,733 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>互動中心 - ChronoTeam</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/sidebar.css">
-    <style>
-        /* ========================================== */
-        /* 1. 頁面佈局 (完全參考禁言名單成功案例) */
-        /* ========================================== */
-        .dashboard-container {
-            display: flex;
-            min-height: calc(100vh - 150px);
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            gap: 2rem;
-            /* 【關鍵】確保子元素拉伸，讓 main-content 撐滿高度 */
-            align-items: stretch;
-        }
-
-        .main-content {
-            flex: 1;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            padding: 2.5rem;
-
-            /* 【核心修改 1】：啟用 Flex 佈局，垂直排列 */
-            display: flex;
-            flex-direction: column;
-        }
-
-        .page-title {
-            font-size: 1.8rem;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.8rem;
-            border-bottom: 2px solid var(--light);
-            padding-bottom: 1rem;
-        }
-
-        .page-title i {
-            color: var(--gold);
-        }
-
-        .page-subtitle {
-            color: var(--gray);
-            margin-bottom: 2rem;
-            font-size: 0.95rem;
-        }
-
-        /* ========================================== */
-        /* 2. 內容區域修復 (解決包裹層阻擋問題) */
-        /* ========================================== */
-
-        /* 【核心修改 2】：讓 content-area 這個包裹層參與 Flex 佈局並佔滿空間 */
-        /* 注意：這裡絕對不能用 display: contents，否則無法撐開高度 */
-        #content-area {
-            flex: 1;
-            /* 佔滿 main-content 剩餘空間 */
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* 卡片列表容器 */
-        .review-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            /* 【核心修改 3】：讓列表區域佔滿中間空間，把分頁擠下去 */
-            flex: 1;
-        }
-
-        /* 空狀態容器 */
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--gray);
-            /* 【核心修改 4】：讓空狀態也佔滿空間並居中 */
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            color: #ddd;
-            margin-bottom: 1rem;
-        }
-
-        /* ========================================== */
-        /* 3. 卡片與其他樣式 (保持不變) */
-        /* ========================================== */
-        .review-card {
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 1.5rem;
-            transition: all 0.3s;
-            position: relative;
-        }
-
-        .review-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            transform: translateY(-2px);
-            border-color: var(--gold);
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.8rem;
-            font-size: 0.9rem;
-            color: var(--gray);
-        }
-
-        .card-user {
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .card-product {
-            color: var(--gold);
-            font-weight: 500;
-            text-decoration: none;
-        }
-
-        .card-product:hover {
-            text-decoration: underline;
-        }
-
-        .card-content {
-            font-size: 1rem;
-            color: #333;
-            line-height: 1.6;
-            margin-bottom: 1rem;
-            white-space: pre-wrap;
-        }
-
-        .card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 1px dashed #ddd;
-            padding-top: 0.8rem;
-        }
-
-        .btn-view-detail {
-            background: var(--primary);
-            color: white;
-            padding: 0.4rem 1rem;
-            border-radius: 6px;
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: 0.3s;
-        }
-
-        .btn-view-detail:hover {
-            background: var(--gold);
-            color: var(--primary);
-        }
-
-        .btn-delete-review {
-            background: transparent;
-            color: var(--accent);
-            border: 1px solid var(--accent);
-            padding: 0.4rem 0.8rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.3rem;
-            margin-left: 0.5rem;
-        }
-
-        .btn-delete-review:hover {
-            background: var(--accent);
-            color: white;
-        }
-
-        /* Tab 下拉菜單 */
-        .tab-dropdown-container {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            padding: 1rem 1.5rem;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 12px;
-            border: 2px solid var(--light);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .tab-dropdown-label {
-            font-weight: 600;
-            color: var(--primary);
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .tab-dropdown-label i {
-            color: var(--gold);
-        }
-
-        .tab-dropdown-select {
-            flex: 1;
-            max-width: 400px;
-            padding: 0.8rem 1.2rem;
-            font-size: 1rem;
-            font-weight: 500;
-            color: var(--primary);
-            background: white;
-            border: 2px solid var(--gold);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s;
-            outline: none;
-            box-shadow: 0 2px 5px rgba(212, 175, 55, 0.1);
-        }
-
-        .tab-dropdown-select:hover {
-            border-color: #b8972b;
-            box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
-        }
-
-        .tab-dropdown-select:focus {
-            border-color: var(--gold);
-            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
-        }
-
-        .tab-dropdown-select option {
-            padding: 0.8rem;
-            font-size: 1rem;
-        }
-
-        /* 刪除彈窗 */
-        .delete-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 10000;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .delete-modal-overlay[style*="flex"] {
-            display: flex;
-        }
-
-        .delete-modal-box {
-            background: white;
-            padding: 2.5rem 2rem;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 420px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border-top: 5px solid var(--accent);
-        }
-
-        .delete-modal-icon {
-            width: 70px;
-            height: 70px;
-            background: linear-gradient(135deg, #ff6b6b 0%, #dc3545 100%);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0 auto 1.5rem;
-            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
-            animation: iconPulse 2s infinite;
-        }
-
-        .delete-modal-icon i {
-            font-size: 2rem;
-            color: white;
-        }
-
-        .delete-modal-title {
-            font-size: 1.5rem;
-            color: var(--primary);
-            margin-bottom: 1rem;
-            font-weight: 700;
-        }
-
-        .delete-modal-message {
-            color: var(--gray);
-            font-size: 1rem;
-            line-height: 1.6;
-            margin-bottom: 2rem;
-        }
-
-        .delete-modal-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-        }
-
-        .btn-cancel-delete {
-            padding: 0.7rem 1.5rem;
-            background: #e9ecef;
-            color: var(--primary);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-
-        .btn-cancel-delete:hover {
-            background: #dee2e6;
-            transform: translateY(-2px);
-        }
-
-        .btn-confirm-delete {
-            padding: 0.7rem 1.5rem;
-            background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
-        }
-
-        .btn-confirm-delete:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(50px) scale(0.9);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        @keyframes iconPulse {
-
-            0%,
-            100% {
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-            }
-
-            70% {
-                box-shadow: 0 0 0 15px rgba(220, 53, 69, 0);
-            }
-
-            100% {
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-            }
-        }
-
-        .footer {
-            background: var(--primary);
-            color: rgba(255, 255, 255, 0.7);
-            padding: 2rem;
-            text-align: center;
-            margin-top: 3rem;
-        }
-
-        @media (max-width: 768px) {
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>互動中心 - ChronoTeam</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="/css/common.css">
+        <link rel="stylesheet" href="/css/sidebar.css">
+        <style>
+            /* ========================================== */
+            /* 1. 頁面佈局 (完全參考禁言名單成功案例) */
+            /* ========================================== */
             .dashboard-container {
-                flex-direction: column;
-            }
-
-            .tab-dropdown-container {
-                flex-direction: column;
+                display: flex;
+                min-height: calc(100vh - 150px);
+                max-width: 1400px;
+                margin: 2rem auto;
+                padding: 0 1rem;
+                gap: 2rem;
+                /* 【關鍵】確保子元素拉伸，讓 main-content 撐滿高度 */
                 align-items: stretch;
             }
 
-            .tab-dropdown-label {
-                justify-content: center;
+            .main-content {
+                flex: 1;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+                padding: 2.5rem;
+
+                /* 【核心修改 1】：啟用 Flex 佈局，垂直排列 */
+                display: flex;
+                flex-direction: column;
+            }
+
+            .page-title {
+                font-size: 1.8rem;
+                color: var(--primary);
                 margin-bottom: 0.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.8rem;
+                border-bottom: 2px solid var(--light);
+                padding-bottom: 1rem;
+            }
+
+            .page-title i {
+                color: var(--gold);
+            }
+
+            .page-subtitle {
+                color: var(--gray);
+                margin-bottom: 2rem;
+                font-size: 0.95rem;
+            }
+
+            /* ========================================== */
+            /* 2. 內容區域修復 (解決包裹層阻擋問題) */
+            /* ========================================== */
+
+            /* 【核心修改 2】：讓 content-area 這個包裹層參與 Flex 佈局並佔滿空間 */
+            /* 注意：這裡絕對不能用 display: contents，否則無法撐開高度 */
+            #content-area {
+                flex: 1;
+                /* 佔滿 main-content 剩餘空間 */
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* 卡片列表容器 */
+            .review-list {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                /* 【核心修改 3】：讓列表區域佔滿中間空間，把分頁擠下去 */
+                flex: 1;
+            }
+
+            /* 空狀態容器 */
+            .empty-state {
+                text-align: center;
+                padding: 4rem 2rem;
+                color: var(--gray);
+                /* 【核心修改 4】：讓空狀態也佔滿空間並居中 */
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+            }
+
+            .empty-state i {
+                font-size: 4rem;
+                color: #ddd;
+                margin-bottom: 1rem;
+            }
+
+            /* ========================================== */
+            /* 3. 卡片與其他樣式 (保持不變) */
+            /* ========================================== */
+            .review-card {
+                background: #f8f9fa;
+                border: 1px solid #e9ecef;
+                border-radius: 8px;
+                padding: 1.5rem;
+                transition: all 0.3s;
+                position: relative;
+            }
+
+            .review-card:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                transform: translateY(-2px);
+                border-color: var(--gold);
+            }
+
+            .card-header {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 0.8rem;
+                font-size: 0.9rem;
+                color: var(--gray);
+            }
+
+            .card-user {
+                font-weight: 600;
+                color: var(--primary);
+            }
+
+            .card-product {
+                color: var(--gold);
+                font-weight: 500;
+                text-decoration: none;
+            }
+
+            .card-product:hover {
+                text-decoration: underline;
+            }
+
+            .card-content {
+                font-size: 1rem;
+                color: #333;
+                line-height: 1.6;
+                margin-bottom: 1rem;
+                white-space: pre-wrap;
+            }
+
+            .card-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-top: 1px dashed #ddd;
+                padding-top: 0.8rem;
+            }
+
+            .btn-view-detail {
+                background: var(--primary);
+                color: white;
+                padding: 0.4rem 1rem;
+                border-radius: 6px;
+                text-decoration: none;
+                font-size: 0.85rem;
+                transition: 0.3s;
+            }
+
+            .btn-view-detail:hover {
+                background: var(--gold);
+                color: var(--primary);
+            }
+
+            .btn-delete-review {
+                background: transparent;
+                color: var(--accent);
+                border: 1px solid var(--accent);
+                padding: 0.4rem 0.8rem;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.85rem;
+                transition: all 0.3s;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.3rem;
+                margin-left: 0.5rem;
+            }
+
+            .btn-delete-review:hover {
+                background: var(--accent);
+                color: white;
+            }
+
+            /* Tab 下拉菜單 */
+            .tab-dropdown-container {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                margin-bottom: 2rem;
+                padding: 1rem 1.5rem;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border-radius: 12px;
+                border: 2px solid var(--light);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            }
+
+            .tab-dropdown-label {
+                font-weight: 600;
+                color: var(--primary);
+                font-size: 1rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .tab-dropdown-label i {
+                color: var(--gold);
             }
 
             .tab-dropdown-select {
-                max-width: 100%;
-            }
-        }
-
-        /* ========================================== */
-        /* 4. 點贊按鈕與動畫特效 */
-        /* ========================================== */
-
-        /* 點贊按鈕基礎樣式 */
-        .btn-like-action {
-            background: #e9ecef;
-            border: 1px solid #dee2e6;
-            color: #495057;
-            padding: 0.4rem 0.8rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: 500;
-            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            /* 彈性動畫 */
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn-like-action:hover:not(.disabled-view) {
-            background: #dee2e6;
-            transform: translateY(-2px);
-        }
-
-        /* 激活狀態 (已點贊) - 藍色漸變 */
-        .btn-like-action.active {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
-            color: white !important;
-            border-color: transparent !important;
-            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
-        }
-
-        .btn-like-action.active:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6) !important;
-        }
-
-        .btn-like-action.active i {
-            color: white !important;
-            animation: iconBounce 0.6s ease;
-        }
-
-        /* 禁用視圖狀態 (用於 LIKED_ME / LIKED_BY_ME Tab，只看不點) */
-        .btn-like-action.disabled-view {
-            cursor: default;
-            opacity: 0.8;
-            background: transparent;
-            border: none;
-            color: var(--gold);
-            font-weight: 600;
-            padding: 0;
-            box-shadow: none;
-            transform: none !important;
-        }
-
-        .btn-like-action.disabled-view:hover {
-            transform: none;
-            background: transparent;
-        }
-
-        /* 點贊數字變化動畫 */
-        .like-count.changing {
-            animation: countChange 0.4s ease;
-        }
-
-        @keyframes iconBounce {
-
-            0%,
-            100% {
-                transform: translateY(0);
+                flex: 1;
+                max-width: 400px;
+                padding: 0.8rem 1.2rem;
+                font-size: 1rem;
+                font-weight: 500;
+                color: var(--primary);
+                background: white;
+                border: 2px solid var(--gold);
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s;
+                outline: none;
+                box-shadow: 0 2px 5px rgba(212, 175, 55, 0.1);
             }
 
-            50% {
-                transform: translateY(-5px);
-            }
-        }
-
-        @keyframes countChange {
-            0% {
-                transform: scale(1);
-                opacity: 1;
+            .tab-dropdown-select:hover {
+                border-color: #b8972b;
+                box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
             }
 
-            50% {
-                transform: scale(1.3);
-                opacity: 0.7;
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        /* 卡片消失動畫 (用於取消點贊後從 "我的點贊" 列表移除，雖然這裡是 MY Tab，但保留以備不時之需) */
-        .review-card.fade-out-remove {
-            opacity: 0;
-            transform: scale(0.9) translateX(20px);
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            margin-bottom: -100px;
-            /* 讓下方的卡片平滑上移 */
-            height: 0;
-            padding: 0;
-            overflow: hidden;
-            border: none;
-        }
-
-        /* ========================================== */
-        /* 5. 快速回復彈窗樣式 */
-        /* ========================================== */
-        .reply-modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 10000;
-            display: none;
-            /* 默認隱藏 */
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .reply-modal-box {
-            background: white;
-            padding: 2rem;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border-top: 5px solid var(--gold);
-            position: relative;
-        }
-
-        .reply-modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 1rem;
-        }
-
-        .reply-modal-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .reply-modal-title i {
-            color: var(--gold);
-        }
-
-        .reply-target-info {
-            background: #f8f9fa;
-            padding: 0.8rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-            color: var(--gray);
-            border-left: 3px solid #ddd;
-        }
-
-        .reply-textarea {
-            width: 100%;
-            min-height: 120px;
-            padding: 1rem;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 1rem;
-            resize: vertical;
-            margin-bottom: 1.5rem;
-            transition: border-color 0.3s;
-        }
-
-        .reply-textarea:focus {
-            outline: none;
-            border-color: var(--gold);
-            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
-        }
-
-        .reply-modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-        }
-
-        .btn-reply-submit {
-            background: var(--gold);
-            color: var(--primary);
-            border: none;
-            padding: 0.6rem 1.5rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-reply-submit:hover {
-            background: #b8972b;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
-        }
-
-        .btn-reply-cancel {
-            background: #e9ecef;
-            color: var(--primary);
-            border: none;
-            padding: 0.6rem 1.5rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn-reply-cancel:hover {
-            background: #dee2e6;
-        }
-
-        /* 回復按鈕樣式 (在卡片底部) */
-        .btn-quick-reply {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 0.4rem 1rem;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            text-decoration: none;
-        }
-
-        .btn-quick-reply:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        @keyframes pulse {
-            0% {
+            .tab-dropdown-select:focus {
                 border-color: var(--gold);
-                box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7);
+                box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
             }
 
-            70% {
-                border-color: var(--accent);
-                box-shadow: 0 0 0 10px rgba(233, 69, 96, 0);
+            .tab-dropdown-select option {
+                padding: 0.8rem;
+                font-size: 1rem;
             }
 
-            100% {
+            /* 刪除彈窗 */
+            .delete-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(4px);
+                z-index: 10000;
+                display: none;
+                justify-content: center;
+                align-items: center;
+                animation: fadeIn 0.3s ease;
+            }
+
+            .delete-modal-overlay[style*="flex"] {
+                display: flex;
+            }
+
+            .delete-modal-box {
+                background: white;
+                padding: 2.5rem 2rem;
+                border-radius: 16px;
+                width: 90%;
+                max-width: 420px;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                border-top: 5px solid var(--accent);
+            }
+
+            .delete-modal-icon {
+                width: 70px;
+                height: 70px;
+                background: linear-gradient(135deg, #ff6b6b 0%, #dc3545 100%);
+                border-radius: 50%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 0 auto 1.5rem;
+                box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
+                animation: iconPulse 2s infinite;
+            }
+
+            .delete-modal-icon i {
+                font-size: 2rem;
+                color: white;
+            }
+
+            .delete-modal-title {
+                font-size: 1.5rem;
+                color: var(--primary);
+                margin-bottom: 1rem;
+                font-weight: 700;
+            }
+
+            .delete-modal-message {
+                color: var(--gray);
+                font-size: 1rem;
+                line-height: 1.6;
+                margin-bottom: 2rem;
+            }
+
+            .delete-modal-actions {
+                display: flex;
+                gap: 1rem;
+                justify-content: center;
+            }
+
+            .btn-cancel-delete {
+                padding: 0.7rem 1.5rem;
+                background: #e9ecef;
+                color: var(--primary);
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                transition: all 0.3s;
+            }
+
+            .btn-cancel-delete:hover {
+                background: #dee2e6;
+                transform: translateY(-2px);
+            }
+
+            .btn-confirm-delete {
+                padding: 0.7rem 1.5rem;
+                background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                transition: all 0.3s;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+            }
+
+            .btn-confirm-delete:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                }
+
+                to {
+                    opacity: 1;
+                }
+            }
+
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(50px) scale(0.9);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                }
+            }
+
+            @keyframes iconPulse {
+
+                0%,
+                100% {
+                    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+                }
+
+                70% {
+                    box-shadow: 0 0 0 15px rgba(220, 53, 69, 0);
+                }
+
+                100% {
+                    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+                }
+            }
+
+            .footer {
+                background: var(--primary);
+                color: rgba(255, 255, 255, 0.7);
+                padding: 2rem;
+                text-align: center;
+                margin-top: 3rem;
+            }
+
+            @media (max-width: 768px) {
+                .dashboard-container {
+                    flex-direction: column;
+                }
+
+                .tab-dropdown-container {
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+
+                .tab-dropdown-label {
+                    justify-content: center;
+                    margin-bottom: 0.5rem;
+                }
+
+                .tab-dropdown-select {
+                    max-width: 100%;
+                }
+            }
+
+            /* ========================================== */
+            /* 4. 點贊按鈕與動畫特效 */
+            /* ========================================== */
+
+            /* 點贊按鈕基礎樣式 */
+            .btn-like-action {
+                background: #e9ecef;
+                border: 1px solid #dee2e6;
+                color: #495057;
+                padding: 0.4rem 0.8rem;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.85rem;
+                font-weight: 500;
+                transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                /* 彈性動畫 */
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .btn-like-action:hover:not(.disabled-view) {
+                background: #dee2e6;
+                transform: translateY(-2px);
+            }
+
+            /* 激活狀態 (已點贊) - 藍色漸變 */
+            .btn-like-action.active {
+                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important;
+                color: white !important;
+                border-color: transparent !important;
+                box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+            }
+
+            .btn-like-action.active:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6) !important;
+            }
+
+            .btn-like-action.active i {
+                color: white !important;
+                animation: iconBounce 0.6s ease;
+            }
+
+            /* 禁用視圖狀態 (用於 LIKED_ME / LIKED_BY_ME Tab，只看不點) */
+            .btn-like-action.disabled-view {
+                cursor: default;
+                opacity: 0.8;
+                background: transparent;
+                border: none;
+                color: var(--gold);
+                font-weight: 600;
+                padding: 0;
+                box-shadow: none;
+                transform: none !important;
+            }
+
+            .btn-like-action.disabled-view:hover {
+                transform: none;
+                background: transparent;
+            }
+
+            /* 點贊數字變化動畫 */
+            .like-count.changing {
+                animation: countChange 0.4s ease;
+            }
+
+            @keyframes iconBounce {
+
+                0%,
+                100% {
+                    transform: translateY(0);
+                }
+
+                50% {
+                    transform: translateY(-5px);
+                }
+            }
+
+            @keyframes countChange {
+                0% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+
+                50% {
+                    transform: scale(1.3);
+                    opacity: 0.7;
+                }
+
+                100% {
+                    transform: scale(1);
+                    opacity: 1;
+                }
+            }
+
+            /* 卡片消失動畫 (用於取消點贊後從 "我的點贊" 列表移除，雖然這裡是 MY Tab，但保留以備不時之需) */
+            .review-card.fade-out-remove {
+                opacity: 0;
+                transform: scale(0.9) translateX(20px);
+                transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                margin-bottom: -100px;
+                /* 讓下方的卡片平滑上移 */
+                height: 0;
+                padding: 0;
+                overflow: hidden;
+                border: none;
+            }
+
+            /* ========================================== */
+            /* 5. 快速回復彈窗樣式 */
+            /* ========================================== */
+            .reply-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(4px);
+                z-index: 10000;
+                display: none;
+                /* 默認隱藏 */
+                justify-content: center;
+                align-items: center;
+                animation: fadeIn 0.3s ease;
+            }
+
+            .reply-modal-box {
+                background: white;
+                padding: 2rem;
+                border-radius: 16px;
+                width: 90%;
+                max-width: 500px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                border-top: 5px solid var(--gold);
+                position: relative;
+            }
+
+            .reply-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1.5rem;
+                border-bottom: 1px solid #eee;
+                padding-bottom: 1rem;
+            }
+
+            .reply-modal-title {
+                font-size: 1.2rem;
+                font-weight: 700;
+                color: var(--primary);
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .reply-modal-title i {
+                color: var(--gold);
+            }
+
+            .reply-target-info {
+                background: #f8f9fa;
+                padding: 0.8rem;
+                border-radius: 8px;
+                margin-bottom: 1rem;
+                font-size: 0.9rem;
+                color: var(--gray);
+                border-left: 3px solid #ddd;
+            }
+
+            .reply-textarea {
+                width: 100%;
+                min-height: 120px;
+                padding: 1rem;
+                border: 2px solid #e9ecef;
+                border-radius: 8px;
+                font-family: inherit;
+                font-size: 1rem;
+                resize: vertical;
+                margin-bottom: 1.5rem;
+                transition: border-color 0.3s;
+            }
+
+            .reply-textarea:focus {
+                outline: none;
                 border-color: var(--gold);
-                box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+                box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
             }
-        }
-    </style>
-</head>
 
-<body>
+            .reply-modal-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 1rem;
+            }
+
+            .btn-reply-submit {
+                background: var(--gold);
+                color: var(--primary);
+                border: none;
+                padding: 0.6rem 1.5rem;
+                border-radius: 6px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .btn-reply-submit:hover {
+                background: #b8972b;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+            }
+
+            .btn-reply-cancel {
+                background: #e9ecef;
+                color: var(--primary);
+                border: none;
+                padding: 0.6rem 1.5rem;
+                border-radius: 6px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+
+            .btn-reply-cancel:hover {
+                background: #dee2e6;
+            }
+
+            /* 回復按鈕樣式 (在卡片底部) */
+            .btn-quick-reply {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                padding: 0.4rem 1rem;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.4rem;
+                text-decoration: none;
+            }
+
+            .btn-quick-reply:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+
+            @keyframes pulse {
+                0% {
+                    border-color: var(--gold);
+                    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7);
+                }
+
+                70% {
+                    border-color: var(--accent);
+                    box-shadow: 0 0 0 10px rgba(233, 69, 96, 0);
+                }
+
+                100% {
+                    border-color: var(--gold);
+                    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+                }
+            }
+
+            /* 新消息提示橫幅 */
+            .new-content-banner {
+                display: none; /* 默認隱藏 */
+                align-items: center;
+                justify-content: center;
+                gap: 0.8rem;
+                padding: 0.8rem 1.5rem;
+                margin-bottom: 1.5rem;
+                background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(233, 69, 96, 0.08) 100%);
+                border: 1px solid var(--gold);
+                border-radius: 8px;
+                color: var(--primary);
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                animation: slideDownBanner 0.4s ease-out;
+            }
+
+            .new-content-banner:hover {
+                background: linear-gradient(135deg, rgba(212, 175, 55, 0.2) 0%, rgba(233, 69, 96, 0.15) 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+            }
+
+            .new-content-banner i {
+                color: var(--gold);
+                font-size: 1.1rem;
+            }
+
+            @keyframes slideDownBanner {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        </style>
+    </head>
+
+    <body>
     <div th:replace="~{fragments/common :: navbar}"></div>
 
     <div class="dashboard-container">
@@ -717,14 +751,14 @@
                     <option value="REPLY" th:selected="${currentType == 'REPLY'}">
                         ↩️ 回復我的
                         <span th:if="${unreadReplyCount > 0}" th:text="'(' + ${unreadReplyCount} + ')'"
-                            style="color: var(--accent); font-weight: bold;"></span>
+                              style="color: var(--accent); font-weight: bold;"></span>
                     </option>
 
                     <!-- MENTION Tab -->
                     <option value="MENTION" th:selected="${currentType == 'MENTION'}">
                         @ 提到我的
                         <span th:if="${unreadMentionCount > 0}" th:text="'(' + ${unreadMentionCount} + ')'"
-                            style="color: var(--accent); font-weight: bold;"></span>
+                              style="color: var(--accent); font-weight: bold;"></span>
                     </option>
 
                     <!-- LIKED_BY_ME Tab (通常不需要未讀數，因為是自己點的) -->
@@ -734,13 +768,19 @@
                     <option value="LIKED_ME" th:selected="${currentType == 'LIKED_ME'}">
                         ❤️ 點贊我的
                         <span th:if="${unreadLikeCount > 0}" th:text="'(' + ${unreadLikeCount} + ')'"
-                            style="color: var(--accent); font-weight: bold;"></span>
+                              style="color: var(--accent); font-weight: bold;"></span>
                     </option>
                 </select>
             </div>
             <!-- 内容区域 -->
             <!-- 【核心修改】：移除 style="display: contents;"，改為由 CSS 控制 flex: 1 -->
             <div id="content-area">
+
+                <div id="newContentBanner" class="new-content-banner" onclick="refreshCurrentTab()">
+                    <i class="fas fa-sparkles"></i>
+                    <span id="bannerText">收到新的互動通知</span>
+                    <i class="fas fa-sync-alt" style="font-size: 0.8rem; margin-left: 0.3rem;"></i>
+                </div>
 
                 <!-- 空狀態 -->
                 <div th:if="${#lists.isEmpty(reviews)}" class="empty-state">
@@ -756,9 +796,9 @@
                         <!-- 1. 點贊我的特殊樣式 (LIKED_ME) -->
                         <div th:if="${currentType == 'LIKED_ME'}">
                             <div
-                                style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(233, 69, 96, 0.1) 100%); padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.8rem; border-left: 4px solid var(--gold);">
+                                    style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(233, 69, 96, 0.1) 100%); padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.8rem; border-left: 4px solid var(--gold);">
                                 <div
-                                    style="display: flex; align-items: center; gap: 0.5rem; color: var(--primary); font-weight: 600;">
+                                        style="display: flex; align-items: center; gap: 0.5rem; color: var(--primary); font-weight: 600;">
                                     <i class="fas fa-heart" style="color: var(--accent);"></i>
                                     <span style="color: var(--gold);" th:text="${item.customer.username}">User</span>
                                     <span style="color: var(--gray); font-weight: 400;">点赞了您的评论</span>
@@ -769,14 +809,14 @@
                                 </div>
                             </div>
                             <div
-                                style="background: white; padding: 1rem; border-radius: 8px; border: 1px dashed #e9ecef;">
+                                    style="background: white; padding: 1rem; border-radius: 8px; border: 1px dashed #e9ecef;">
                                 <div style="font-size: 0.85rem; color: var(--gray); margin-bottom: 0.5rem;">
                                     <i class="fas fa-quote-left" style="color: var(--gold); margin-right: 0.3rem;"></i>
                                     您的评论（发表于 <span
                                         th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}"></span>）：
                                 </div>
                                 <div style="color: var(--primary); line-height: 1.6; font-size: 0.95rem;"
-                                    th:text="${item.content}">Content</div>
+                                     th:text="${item.content}">Content</div>
                             </div>
                         </div>
 
@@ -786,12 +826,12 @@
                                 <div>
                                     <span class="card-user" th:text="${item.customer.username}">User</span>
                                     <span th:if="${item.parentId != null}"
-                                        style="background:#e9ecef; padding:2px 6px; border-radius:4px; font-size:0.75rem; margin-left:5px;">樓中樓</span>
+                                          style="background:#e9ecef; padding:2px 6px; border-radius:4px; font-size:0.75rem; margin-left:5px;">樓中樓</span>
                                     <span style="margin-left:10px; color:#999;"
-                                        th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}">2026-01-01</span>
+                                          th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}">2026-01-01</span>
                                 </div>
                                 <a th:href="@{/product/{id}(id=${item.product.id})}" class="card-product"
-                                    target="_blank">
+                                   target="_blank">
                                     <i class="fas fa-link"></i> 查看商品: <span
                                         th:text="${item.product.desc}">Product</span>
                                 </a>
@@ -801,10 +841,10 @@
 
                         <!-- 3. 底部操作欄 (根據 Tab 類型動態顯示) -->
                         <div class="card-footer"
-                            style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px dashed #ddd;">
+                             style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px dashed #ddd;">
                             <!-- 左側商品連結 (保持不變) -->
                             <a th:href="@{/product/{id}(id=${item.product.id})}" class="card-product" target="_blank"
-                                th:if="${currentType == 'LIKED_ME'}">
+                               th:if="${currentType == 'LIKED_ME'}">
                                 <i class="fas fa-link"></i> 商品：<span th:text="${item.product.desc}">Product</span>
                             </a>
 
@@ -812,28 +852,28 @@
 
                                 <!-- 【核心修改】：點贊按鈕邏輯重構 -->
                                 <th:block
-                                    th:if="${currentType == 'MY' || currentType == 'LIKED_ME' || currentType == 'LIKED_BY_ME'}">
+                                        th:if="${currentType == 'MY' || currentType == 'LIKED_ME' || currentType == 'LIKED_BY_ME'}">
 
                                     <!-- 情況 A: LIKED_BY_ME (我的點贊) -> 顯示為激活狀態，點擊觸發取消並消失 -->
                                     <button th:if="${currentType == 'LIKED_BY_ME'}" type="button"
-                                        class="btn-like-action active" th:data-review-id="${item.id}"
-                                        onclick="toggleLikedByMeAction(this)" title="點擊取消點贊">
+                                            class="btn-like-action active" th:data-review-id="${item.id}"
+                                            onclick="toggleLikedByMeAction(this)" title="點擊取消點贊">
                                         <i class="fas fa-thumbs-up"></i>
                                         <span class="like-count" th:text="${item.likeCount}">0</span>
                                     </button>
 
                                     <!-- 情況 B: MY (我的評論) -> 可切換狀態 -->
                                     <button th:if="${currentType == 'MY'}" type="button" class="btn-like-action"
-                                        th:classappend="${item.isLikedByMe} ? 'active' : ''"
-                                        th:data-review-id="${item.id}" th:data-liked="${item.isLikedByMe}"
-                                        onclick="toggleMyReviewLike(this)" title="點擊點贊/取消">
+                                            th:classappend="${item.isLikedByMe} ? 'active' : ''"
+                                            th:data-review-id="${item.id}" th:data-liked="${item.isLikedByMe}"
+                                            onclick="toggleMyReviewLike(this)" title="點擊點贊/取消">
                                         <i class="fas fa-thumbs-up"></i>
                                         <span class="like-count" th:text="${item.likeCount}">0</span>
                                     </button>
 
                                     <!-- 情況 C: LIKED_ME (別人讚我) -> 僅展示，不可點 -->
                                     <button th:if="${currentType == 'LIKED_ME'}" type="button"
-                                        class="btn-like-action disabled-view" title="查看點贊數">
+                                            class="btn-like-action disabled-view" title="查看點贊數">
                                         <i class="fas fa-thumbs-up"></i>
                                         <span class="like-count" th:text="${item.likeCount}">0</span>
                                     </button>
@@ -848,17 +888,17 @@
 
                                 <th:block th:if="${currentType == 'REPLY' || currentType == 'MENTION'}">
                                     <button type="button" class="btn-quick-reply"
-                                        th:data-product-id="${item.product.id}" th:data-review-id="${item.id}"
-                                        th:data-parent-id="${item.parentId}"
-                                        th:data-username="${item.customer.username}" th:data-content="${item.content}"
-                                        onclick="handleQuickReplyClick(this)">
+                                            th:data-product-id="${item.product.id}" th:data-review-id="${item.id}"
+                                            th:data-parent-id="${item.parentId}"
+                                            th:data-username="${item.customer.username}" th:data-content="${item.content}"
+                                            onclick="handleQuickReplyClick(this)">
                                         <i class="fas fa-reply"></i> 回復
                                     </button>
                                 </th:block>
 
                                 <!-- 前往查看 (保持不變) -->
                                 <a th:href="@{/product/{id}(id=${item.product.id}, reviewId=${item.id})}"
-                                    class="btn-view-detail" target="_blank">
+                                   class="btn-view-detail" target="_blank">
                                     前往查看 <i class="fas fa-arrow-right"></i>
                                 </a>
                             </div>
@@ -872,7 +912,7 @@
             <!-- 這個分頁器會自動被推到最底部 -->
             <!-- ========================================== -->
             <div
-                th:replace="~{fragments/pagination :: smartPagination(${currentPage}, ${totalPages}, ${smartPages}, 'goToPage')}">
+                    th:replace="~{fragments/pagination :: smartPagination(${currentPage}, ${totalPages}, ${smartPages}, 'goToPage')}">
             </div>
             <!-- ====================================================================== -->
 
@@ -907,7 +947,7 @@
                     <i class="fas fa-comment-dots"></i> 快速回復
                 </div>
                 <button onclick="closeReplyModal()"
-                    style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer;">&times;</button>
+                        style="background:none; border:none; font-size:1.5rem; color:#999; cursor:pointer;">&times;</button>
             </div>
 
             <!-- 顯示被回復的內容預覽 -->
@@ -926,7 +966,7 @@
                 <input type="hidden" id="replyParentId"> <!-- 這裡存的是根評論的 ID -->
 
                 <textarea id="replyContent" class="reply-textarea" placeholder="輸入您的回復內容..." required
-                    maxlength="500"></textarea>
+                          maxlength="500"></textarea>
 
                 <div class="reply-modal-actions">
                     <button type="button" class="btn-reply-cancel" onclick="closeReplyModal()">取消</button>
@@ -951,8 +991,30 @@
         const currentType = [[${currentType}]];
         let deleteReviewId = null;
 
+
         function switchTab(type) {
-            window.location.href = `/account/reviews?page=1&type=${type}`;
+            // 1. 獲取下拉選單元素
+            const selectElement = document.getElementById('tabSelect');
+
+            if (selectElement) {
+                // 2. 獲取當前選中的 option (也就是用戶剛剛點擊的那個)
+                const selectedOption = selectElement.options[selectElement.selectedIndex];
+
+                if (selectedOption) {
+                    // 3. 【核心修復】：使用正則表達式去除文字末尾的 "(數字)"
+                    // 例如將 "↩️ 回復我的 (1)" 變成 "↩️ 回復我的"
+                    let cleanText = selectedOption.text.replace(/\s*\(\d+\)\s*$/, '');
+
+                    // 4. 立即更新 DOM，讓用戶在頁面跳轉前的幾十毫秒內看到數字消失
+                    selectedOption.text = cleanText;
+                }
+            }
+
+            // 5. 執行頁面跳轉 (後端會再次確認已讀狀態)
+            // 加一個極短的延遲(50ms)，確保上面的 DOM 更新能被瀏覽器渲染出來，體驗更絲滑
+            setTimeout(() => {
+                window.location.href = `/account/reviews?page=1&type=${type}`;
+            }, 50);
         }
 
         // ==========================================
@@ -1110,9 +1172,6 @@
                 }
             }
         }
-        // ==========================================
-        // 5. "我的點贊" (LIKED_BY_ME) 取消點贊邏輯 (含消失動畫 + 拉黑攔截)
-        // ==========================================
         // ==========================================
         // 5. "我的點贊" (LIKED_BY_ME) 取消點贊邏輯 (含消失動畫 + 拉黑攔截 + UI回滾)
         // ==========================================
@@ -1378,6 +1437,12 @@
 
                     // 可選：如果當前不在該 Tab，可以顯示一個瀏覽器通知或頁面內 Toast
                     // showNotification(`您有新的 ${data.type} 消息！`);
+
+                    // 2. 【新增】如果當前正在查看該 Tab，顯示橫幅提示
+                    // currentType 是 Thymeleaf 注入的全局變量，代表當前選中的 Tab
+                    if (currentType === data.type) {
+                        showNewContentBanner(data.type, data.count);
+                    }
                 } catch (err) {
                     console.error('解析通知數據失敗:', err);
                 }
@@ -1433,7 +1498,126 @@
                 }
             }
         }
-    </script>
-</body>
 
-</html>
+        /**
+         * 顯示新內容橫幅
+         */
+        function showNewContentBanner(type, count) {
+            const banner = document.getElementById('newContentBanner');
+            const textEl = document.getElementById('bannerText');
+
+            if (!banner || !textEl) return;
+
+            // 根據類型設置不同的提示文案
+            const typeLabels = {
+                'REPLY': '回復',
+                'MENTION': '@提及',
+                'LIKED_ME': '點贊'
+            };
+            const label = typeLabels[type] || '互動';
+            const unit = count > 1 ? `${count} 條新${label}` : `新${label}`;
+
+            textEl.textContent = `✨ 收到 ${unit}，點擊刷新查看`;
+            banner.style.display = 'flex';
+        }
+
+        /**
+         * 點擊橫幅後執行局部刷新 + 標記已讀
+         */
+        async function refreshCurrentTab() {
+            const banner = document.getElementById('newContentBanner');
+            const contentArea = document.getElementById('content-area');
+            const selectElement = document.getElementById('tabSelect');
+
+            // 1. 隱藏橫幅
+            if (banner) banner.style.display = 'none';
+
+            // 2. 【核心新增】立即清除下拉選單中的未讀數字 (UI 樂觀更新)
+            if (selectElement) {
+                const selectedOption = selectElement.options[selectElement.selectedIndex];
+                if (selectedOption) {
+                    // 使用正則去除文字末尾的 "(數字)"，例如 "❤️ 點贊我的 (2)" -> "❤️ 點贊我的"
+                    let cleanText = selectedOption.text.replace(/\s*\(\d+\)\s*$/, '');
+                    selectedOption.text = cleanText;
+                }
+            }
+
+            // 3. 【核心新增】調用後端 API 標記為已讀 (更新 user_interaction_stats)
+            // 注意：這裡使用 currentType (MY, REPLY, MENTION, LIKED_ME, LIKED_BY_ME)
+            // 只有 REPLY, MENTION, LIKED_ME 需要標記已讀
+            if (['REPLY', 'MENTION', 'LIKED_ME'].includes(currentType)) {
+                try {
+                    await fetch('/account/reviews/api/mark-read', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ type: currentType })
+                    });
+                    // 不需要等待結果，只要發出去就行，後端會異步處理或快速返回
+                } catch (error) {
+                    console.error('標記已讀失敗:', error);
+                    // 即使標記失敗，也繼續刷新頁面，不阻塞用戶操作
+                }
+            }
+
+            // 4. 顯示輕量級加載狀態
+            let loader = document.getElementById('inlineLoader');
+            if (!loader) {
+                loader = document.createElement('div');
+                loader.id = 'inlineLoader';
+                loader.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加載中...';
+                loader.style.cssText = 'text-align:center;padding:1rem;color:var(--gray);font-size:0.9rem;';
+                // 插入到 content-area 的最前面 (在 empty-state 或 review-list 之前)
+                if (contentArea.firstChild) {
+                    contentArea.insertBefore(loader, contentArea.firstChild);
+                } else {
+                    contentArea.appendChild(loader);
+                }
+            }
+
+            try {
+                // 5. 重新請求當前頁面的數據
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('_t', Date.now()); // 防緩存
+
+                const response = await fetch(currentUrl.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (response.ok) {
+                    const html = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newContent = doc.querySelector('#content-area');
+
+                    if (newContent && contentArea) {
+                        // 替換內容區域 (保留分頁器，因為分頁器在 content-area 外面)
+                        contentArea.innerHTML = newContent.innerHTML;
+                    }
+                } else {
+                    throw new Error('Network response was not ok');
+                }
+            } catch (error) {
+                console.error('刷新失敗:', error);
+                // 降級方案：直接整頁刷新
+                window.location.reload();
+            } finally {
+                if (loader) loader.remove();
+            }
+        }
+
+        /**
+         * 重新綁定動態元素的事件
+         * 因為 innerHTML 替換後，onclick 等內聯事件可能失效
+         * 如果你的按鈕使用的是 onclick="xxx()" 內聯寫法，這步可以省略
+         * 但如果使用了 addEventListener，需要在這裡重新綁定
+         */
+        function rebindDynamicEvents() {
+            // 示例：如果你有需要重新綁定的事件，在這裡處理
+            // 對於你現有的代碼，大部分使用 onclick 內聯屬性，所以通常不需要額外處理
+            console.log('動態事件已重新綁定');
+        }
+    </script>
+    </body>
+
+    </html>

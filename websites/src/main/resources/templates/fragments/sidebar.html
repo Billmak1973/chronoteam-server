@@ -18,6 +18,12 @@
             <!-- 帳戶管理 -->
             <div class="menu-category">
                 <div class="menu-category-title">帳戶管理</div>
+
+                <a href="/account/dashboard" class="menu-item"
+                   th:classappend="${activePage == 'dashboard'} ? 'active' : ''">
+                    <i class="fas fa-home"></i> 個人中心首頁
+                </a>
+
                 <a href="/account/profile" class="menu-item"
                     th:classappend="${activePage == 'profile'} ? 'active' : ''">
                     <i class="fas fa-id-card"></i> 帳戶信息

@@ -699,16 +699,31 @@
 <!--  清除歷史的 JS 函數 -->
 <script>
     // ==========================================
-    //  0. 分頁跳轉函數 (必須添加，否則 Fragment 中的按鈕點擊無效)
+    // 1. 命名空間初始化 (避免全域污染)
     // ==========================================
+    window.ChronoTeamHistory = window.ChronoTeamHistory || {
+        // 狀態變量 (原 let currentPage, deleteReviewId 等)
+        // 注意：由於 history.html 是分頁跳轉模式(SSR)，這些狀態主要用於當前頁面的交互
+        confirmCallback: null,
+
+        // 配置常量
+        pageSize: 30
+    };
+
+    // 簡寫引用 (內部使用更方便)
+    const CTH = window.ChronoTeamHistory;
+
+    // ==========================================
+    // 2. 核心業務函數定義
+    // ==========================================
+
+    /**
+     * 分頁跳轉函數 (供 Fragment 中的 onclick="changePage(x)" 調用)
+     * 必須掛載到 window 或通過下方 Bridge 暴露
+     */
     function changePage(page) {
         window.location.href = `/account/history?page=${page}`;
     }
-
-    // ==========================================
-    //  1. 自定義確認彈窗功能 (取代原生 confirm)
-    // ==========================================
-    let confirmCallback = null;
 
     /**
      * 顯示自定義確認彈窗
@@ -722,6 +737,8 @@
         const icon = document.getElementById('confirmIcon');
         const confirmOkBtn = document.getElementById('confirmOkBtn');
         const warning = document.getElementById('confirmWarning');
+
+        if (!overlay) return; // 防護：確保 DOM 存在
 
         document.getElementById('confirmTitle').textContent = title;
         document.getElementById('confirmMessage').textContent = message;
@@ -741,8 +758,8 @@
             warning.style.display = 'none';
         }
 
-        // 保存回調函數
-        confirmCallback = callback;
+        // 保存回調函數到命名空間
+        CTH.confirmCallback = callback;
 
         // 顯示彈窗
         overlay.classList.add('show');
@@ -754,66 +771,49 @@
      */
     function closeCustomConfirm() {
         const overlay = document.getElementById('customConfirmOverlay');
-        overlay.classList.remove('show');
-        document.body.style.overflow = ''; // 恢復背景滾動
-        confirmCallback = null;
+        if (overlay) {
+            overlay.classList.remove('show');
+            document.body.style.overflow = ''; // 恢復背景滾動
+        }
+        CTH.confirmCallback = null;
     }
 
     /**
      * 執行確認操作
      */
     function executeConfirmAction() {
-        if (confirmCallback) {
-            confirmCallback();
+        if (CTH.confirmCallback) {
+            CTH.confirmCallback();
         }
         closeCustomConfirm();
     }
 
-    // 點擊遮罩層關閉
-    document.getElementById('customConfirmOverlay')?.addEventListener('click', function (e) {
-        if (e.target === this) {
-            closeCustomConfirm();
-        }
-    });
-
-    // ESC 鍵關閉
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-            const overlay = document.getElementById('customConfirmOverlay');
-            if (overlay && overlay.classList.contains('show')) {
-                closeCustomConfirm();
-            }
-        }
-    });
-
     // ==========================================
-    //  2. 批量選擇功能
+    // 3. 批量選擇功能
     // ==========================================
 
     // 切換單個項目的選擇狀態
     function toggleSelect(checkbox, event) {
-        if (event) {
-            event.stopPropagation();
-        }
+        if (event) event.stopPropagation();
         const card = checkbox.closest('.history-card');
-        card.classList.toggle('selected');
-        updateBatchActionBar();
+        if (card) {
+            card.classList.toggle('selected');
+            updateBatchActionBar();
+        }
     }
 
     // 點擊圖片區域也能切換選擇
     function toggleSelectByImage(imgContainer, event) {
-        if (event) {
-            event.stopPropagation();
-        }
+        if (event) event.stopPropagation();
         const card = imgContainer.closest('.history-card');
+        if (!card) return;
+
         const checkbox = card.querySelector('.select-checkbox');
         card.classList.toggle('selected');
 
-        // 更新復選框狀態
-        if (card.classList.contains('selected')) {
-            checkbox.style.color = 'white';
-        } else {
-            checkbox.style.color = 'transparent';
+        // 更新復選框視覺狀態
+        if (checkbox) {
+            checkbox.style.color = card.classList.contains('selected') ? 'white' : 'transparent';
         }
         updateBatchActionBar();
     }
@@ -828,13 +828,13 @@
         const mainContent = document.getElementById('mainContent');
 
         if (count > 0) {
-            batchBar.classList.add('show');
-            batchCount.textContent = count;
-            batchCountText.textContent = count;
-            mainContent.classList.add('has-batch-bar');
+            if (batchBar) batchBar.classList.add('show');
+            if (batchCount) batchCount.textContent = count;
+            if (batchCountText) batchCountText.textContent = count;
+            if (mainContent) mainContent.classList.add('has-batch-bar');
         } else {
-            batchBar.classList.remove('show');
-            mainContent.classList.remove('has-batch-bar');
+            if (batchBar) batchBar.classList.remove('show');
+            if (mainContent) mainContent.classList.remove('has-batch-bar');
         }
     }
 
@@ -844,13 +844,13 @@
         selectedCards.forEach(card => {
             card.classList.remove('selected');
             const checkbox = card.querySelector('.select-checkbox');
-            checkbox.style.color = 'transparent';
+            if (checkbox) checkbox.style.color = 'transparent';
         });
         updateBatchActionBar();
     }
 
     // ==========================================
-    //  3. 核心業務邏輯 (清除歷史 & 批量刪除)
+    // 4. 核心業務邏輯 (清除歷史 & 批量刪除)
     // ==========================================
 
     /**
@@ -864,59 +864,52 @@
             'all': '所有'
         };
 
-        // 使用自定義彈窗替換 confirm
         showCustomConfirm(
             '確認清除歷史',
             `確定要清除 ${periodText[period]} 的瀏覽歷史嗎？`,
             async () => {
-                // 確認後的執行邏輯
                 try {
                     const response = await fetch(`/api/history/clear?period=${period}`, {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'}
                     });
-
                     const result = await response.json();
 
                     if (response.ok && result.success) {
-                        showNotification('✅ ' + result.message);
+                        if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
                         setTimeout(() => location.reload(), 1000);
                     } else {
-                        showNotification('❌ ' + (result.message || '清除失敗'), true);
+                        if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '清除失敗'), true);
                     }
                 } catch (error) {
                     console.error('清除歷史錯誤:', error);
-                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                    if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 }
             },
-            true // isDanger = true (危險操作，顯示紅色主題)
+            true // isDanger = true
         );
     }
 
     /**
-     * 批量刪除選中的歷史記錄
+     * 批量刪除選中的歷史記錄 (含智能分頁跳轉修復)
      */
     async function batchDelete() {
         const selectedCards = document.querySelectorAll('.history-card.selected');
         const count = selectedCards.length;
 
         if (count === 0) {
-            showNotification('❌ 請先選擇要刪除的項目', true);
+            if (typeof showNotification === 'function') showNotification('❌ 請先選擇要刪除的項目', true);
             return;
         }
 
-        // 使用自定義彈窗替換 confirm
         showCustomConfirm(
             '確認刪除',
             `確定要刪除這 ${count} 項瀏覽歷史嗎？`,
             async () => {
-                // 確認後的執行邏輯
                 const historyIds = [];
                 selectedCards.forEach(card => {
                     const id = card.getAttribute('data-id');
-                    if (id) {
-                        historyIds.push(id);
-                    }
+                    if (id) historyIds.push(id);
                 });
 
                 try {
@@ -925,46 +918,116 @@
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(historyIds)
                     });
-
                     const result = await response.json();
 
                     if (response.ok && result.success) {
-                        showNotification('✅ 成功刪除 ' + count + ' 項歷史記錄');
+                        if (typeof showNotification === 'function') showNotification('✅ 成功刪除 ' + count + ' 項歷史記錄');
 
-                        // 從頁面移除選中的卡片 (帶淡出動畫)
+                        // 1. 動畫移除 DOM (視覺效果)
                         selectedCards.forEach(card => {
                             card.style.transition = 'all 0.3s ease';
                             card.style.opacity = '0';
                             card.style.transform = 'scale(0.9)';
-                            setTimeout(() => card.remove(), 300);
+                            // 注意：這裡不執行 remove()，因為馬上就要 reload/jump 了，避免閃爍
                         });
 
-                        // 隱藏操作欄
+                        // 2. 隱藏操作欄
                         setTimeout(() => {
                             cancelBatchSelect();
-                            // 檢查是否還有剩餘項目，若無則刷新頁面顯示空狀態
-                            const remainingCards = document.querySelectorAll('.history-card');
-                            if (remainingCards.length === 0) {
-                                setTimeout(() => location.reload(), 500);
+
+                            // ==========================================
+                            // 【核心修復】：無條件處理分頁跳轉邏輯
+                            // ==========================================
+                            const urlParams = new URLSearchParams(window.location.search);
+                            let currentPage = parseInt(urlParams.get('page')) || 1;
+
+                            // 獲取當前頁原本的卡片總數 (在 DOM 被物理移除前獲取)
+                            const totalCardsOnPage = document.querySelectorAll('.history-card').length;
+
+                            // 判斷邏輯：
+                            // 如果刪除的數量 >= 當前頁總數 (說明當前頁被刪空了)
+                            // 且 當前頁大於 1 (不是第一頁)
+                            // -> 則跳轉到上一頁
+                            if (count >= totalCardsOnPage && currentPage > 1) {
+                                window.location.href = `/account/history?page=${currentPage - 1}`;
+                            } else {
+                                // 否則 (當前頁還有剩餘，或者就在第 1 頁)
+                                // -> 刷新當前頁，讓後端重新查詢，第 2 頁的數據會自動補到第 1 頁
+                                location.reload();
                             }
-                        }, 300);
+                            // ==========================================
+
+                        }, 500); // 等待淡出動畫稍微執行一下再跳轉
+
                     } else {
-                        showNotification('❌ ' + (result.message || '刪除失敗'), true);
+                        if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '刪除失敗'), true);
                     }
                 } catch (error) {
                     console.error('批量刪除錯誤:', error);
-                    showNotification(' 網絡錯誤，請稍後重試', true);
+                    if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 }
             },
             true // isDanger = true (危險操作，顯示紅色主題)
         );
     }
 
-    // 點擊頁面其他地方取消選擇（可選功能，目前已註解）
-    document.addEventListener('click', function (event) {
-        if (!event.target.closest('.history-card') && !event.target.closest('.select-checkbox')) {
-            // cancelBatchSelect();
+
+    // ==========================================
+    // 5. 暴露全局 API (Bridge Layer)
+    // ==========================================
+    // 為了兼容 HTML 中的 onclick="funcName()" 以及 Fragment 調用
+    // 我們將函數同時掛載到命名空間和 window
+
+    CTH.changePage = changePage;
+    CTH.showCustomConfirm = showCustomConfirm;
+    CTH.closeCustomConfirm = closeCustomConfirm;
+    CTH.executeConfirmAction = executeConfirmAction;
+    CTH.toggleSelect = toggleSelect;
+    CTH.toggleSelectByImage = toggleSelectByImage;
+    CTH.cancelBatchSelect = cancelBatchSelect;
+    CTH.clearHistory = clearHistory;
+    CTH.batchDelete = batchDelete;
+
+    // ⚠️ 關鍵：因為 history.html 使用了 Thymeleaf Fragment 和 inline onclick
+    // 必須將這些函數掛載到 window 才能被直接調用
+    //Bridge Layer (雙重掛載)：
+    //雖然我們使用了命名空間，但考慮到 history.html 中有大量 Thymeleaf Fragment 生成的按鈕（如分頁組件）以及 inline onclick="clearHistory('1day')"，必須保留 window.xxx = xxx 的掛載。
+    window.changePage = changePage;
+    window.showCustomConfirm = showCustomConfirm;
+    window.closeCustomConfirm = closeCustomConfirm;
+    window.executeConfirmAction = executeConfirmAction;
+    window.toggleSelect = toggleSelect;
+    window.toggleSelectByImage = toggleSelectByImage;
+    window.cancelBatchSelect = cancelBatchSelect;
+    window.clearHistory = clearHistory;
+    window.batchDelete = batchDelete;
+
+    // ==========================================
+    // 6. 全局事件監聽
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', () => {
+        // 點擊遮罩層關閉彈窗
+        const overlay = document.getElementById('customConfirmOverlay');
+        if (overlay) {
+            overlay.addEventListener('click', function (e) {
+                if (e.target === this) closeCustomConfirm();
+            });
         }
+
+        // ESC 鍵關閉彈窗
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const o = document.getElementById('customConfirmOverlay');
+                if (o && o.classList.contains('show')) closeCustomConfirm();
+            }
+        });
+
+        // 點擊頁面其他地方取消選擇（可選功能）
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest('.history-card') && !event.target.closest('.select-checkbox') && !event.target.closest('.batch-action-bar')) {
+                // cancelBatchSelect(); // 如需點擊空白處取消選擇，取消此行註釋
+            }
+        });
     });
 </script>
 </body>
