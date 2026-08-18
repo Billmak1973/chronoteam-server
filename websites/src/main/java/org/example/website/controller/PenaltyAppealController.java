@@ -1,6 +1,14 @@
 package org.example.website.controller;
 
-import org.example.website.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.website.dto.Result;
 import org.example.website.entity.AdminPenalty;
 import org.example.website.entity.Appeal;
 import org.example.website.entity.RateLimitLog;
@@ -21,6 +29,7 @@ import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin")
+@Tag(name = "後台處罰與申訴管理", description = "管理員對違規用戶的處罰、申訴審核及系統限流記錄的管理接口")
 public class PenaltyAppealController {
 
     private final AdminPenaltyRepository adminPenaltyRepository;
@@ -44,6 +53,7 @@ public class PenaltyAppealController {
     /**
      * 1. 頁面骨架渲染
      */
+    @Hidden // 隱藏純頁面渲染接口，保持 Swagger UI 專注於 REST API
     @GetMapping("/penalties")
     public String managePenaltiesPage(Model model) {
         return "admin/admin-penalties";
@@ -52,13 +62,27 @@ public class PenaltyAppealController {
     // ==========================================
     // API 1: 獲取處罰記錄列表
     // ==========================================
+    @Operation(
+            summary = "獲取處罰記錄列表",
+            description = "分頁獲取系統的處罰記錄（封禁/永久拉黑），支持按用戶名、處罰類型和狀態進行動態篩選。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "401", description = "未登入或無權限"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
+    })
     @GetMapping("/api/admin/penalties/list")
     @ResponseBody
     public ResponseEntity<?> getPenaltiesList(
+            @Parameter(description = "當前頁碼 (1-based)", example = "1")
             @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每頁顯示數量", example = "25")
             @RequestParam(defaultValue = "25") int size,
+            @Parameter(description = "處罰類型 (BAN / BLACKLIST)", example = "BAN")
             @RequestParam(required = false) String type,
+            @Parameter(description = "處罰狀態 (ACTIVE / EXPIRED / REVOKED)", example = "ACTIVE")
             @RequestParam(required = false) String status,
+            @Parameter(description = "目標用戶名", example = "bad_user")
             @RequestParam(required = false) String username
     ) {
         // 【關鍵步驟】：在查詢前，先執行批量更新，確保數據庫狀態是最新的
@@ -68,7 +92,6 @@ public class PenaltyAppealController {
         int pageIndex = Math.max(0, page - 1);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "startTime"));
 
-    //    Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "startTime"));
         Page<AdminPenalty> penaltiesPage;
 
         // 【核心修改】：根據參數動態調用不同的 Repository 方法
@@ -158,17 +181,30 @@ public class PenaltyAppealController {
     // ==========================================
     // API 2: 獲取申訴記錄列表
     // ==========================================
+    @Operation(
+            summary = "獲取申訴記錄列表",
+            description = "分頁獲取用戶提交的申訴記錄，支持按申訴類型和狀態進行篩選。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "401", description = "未登入或無權限"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
+    })
     @GetMapping("/api/admin/appeals/list")
     @ResponseBody
     public ResponseEntity<?> getAppealsList(
+            @Parameter(description = "當前頁碼 (1-based)", example = "1")
             @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每頁顯示數量", example = "25")
             @RequestParam(defaultValue = "25") int size,
+            @Parameter(description = "申訴類型 (BAN / BLACKLIST / DELETE_REVIEW)", example = "BAN")
             @RequestParam(required = false) String appealType,
+            @Parameter(description = "申訴狀態 (PENDING / APPROVED / REJECTED / EXPIRED)", example = "PENDING")
             @RequestParam(required = false) String status
     ) {
         int pageIndex = Math.max(0, page - 1);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        //Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
         Page<Appeal> appealsPage;
 
         if ((appealType == null || appealType.isEmpty()) && (status == null || status.isEmpty())) {
@@ -244,10 +280,21 @@ public class PenaltyAppealController {
     // ==========================================
     // API 3: 獲取限流與封禁記錄列表
     // ==========================================
+    @Operation(
+            summary = "獲取限流與封禁記錄列表",
+            description = "分頁獲取系統自動觸發的限流與封禁日誌記錄。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "401", description = "未登入或無權限"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
+    })
     @GetMapping("/api/admin/rate-limits/list")
     @ResponseBody
     public ResponseEntity<?> getRateLimitsList(
+            @Parameter(description = "當前頁碼 (1-based)", example = "1")
             @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每頁顯示數量", example = "25")
             @RequestParam(defaultValue = "25") int size) {
 
         rateLimitService.updateExpiredBans();
@@ -255,7 +302,7 @@ public class PenaltyAppealController {
         int pageIndex = Math.max(0, page - 1);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "actionTime"));
 
-         Page<RateLimitLog> rateLimitsPage = rateLimitLogRepository.findAll(pageable);
+        Page<RateLimitLog> rateLimitsPage = rateLimitLogRepository.findAll(pageable);
 
         // 數據清洗
         List<Map<String, Object>> cleanRateLimits = rateLimitsPage.getContent().stream().map(log -> {
@@ -285,9 +332,24 @@ public class PenaltyAppealController {
         return ResponseEntity.ok(response);
     }
 
+    // ==========================================
+    // API 4: 獲取申訴詳情
+    // ==========================================
+    @Operation(
+            summary = "獲取申訴詳情",
+            description = "根據申訴 ID 獲取單條申訴的詳細信息，包含用戶信息及申訴內容。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "400", description = "申訴記錄不存在"),
+            @ApiResponse(responseCode = "401", description = "未登入或無權限"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
+    })
     @GetMapping("/appeal/{appealId}")
     @ResponseBody
-    public ResponseEntity<ApiResponse> getAppealDetail(@PathVariable Long appealId) {
+    public ResponseEntity<Result> getAppealDetail(
+            @Parameter(description = "申訴記錄的唯一 ID", example = "1001", required = true)
+            @PathVariable Long appealId) {
         try {
             Appeal appeal = appealRepository.findById(appealId)
                     .orElseThrow(() -> new RuntimeException("申訴記錄不存在"));
@@ -307,11 +369,11 @@ public class PenaltyAppealController {
                 data.put("user", userInfo);
             }
 
-            return ResponseEntity.ok(ApiResponse.okWithData("獲取成功", data));
+            return ResponseEntity.ok(Result.okWithData("獲取成功", data));
 
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("獲取失敗: " + e.getMessage()));
+                    .body(Result.error("獲取失敗: " + e.getMessage()));
         }
     }
 }

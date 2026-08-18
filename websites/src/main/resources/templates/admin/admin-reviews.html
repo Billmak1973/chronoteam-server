@@ -2949,6 +2949,214 @@
                 target.style.display = 'none';
             }
         });
+        // ==========================================
+        // 關鍵詞管理功能
+        // ==========================================
+
+        // 打開關鍵詞管理彈窗
+        function openKeywordModal() {
+            const modal = document.getElementById('keywordModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden'; // 防止背景滾動
+                loadKeywords(); // 加載關鍵詞列表
+            }
+        }
+
+        // 關閉關鍵詞管理彈窗
+        function closeKeywordModal() {
+            const modal = document.getElementById('keywordModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+
+        // 加載關鍵詞列表
+        async function loadKeywords() {
+            const keywordList = document.getElementById('keywordList');
+            if (!keywordList) return;
+
+            keywordList.innerHTML = '<li class="keyword-loading"><i class="fas fa-spinner fa-spin"></i> 加載中...</li>';
+
+            try {
+                const response = await fetch('/api/admin/keywords');
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    const keywords = result.data;
+                    if (keywords.length === 0) {
+                        keywordList.innerHTML = '<li class="keyword-empty">暫無關鍵詞</li>';
+                    } else {
+                        let html = '';
+                        keywords.forEach(kw => {
+                            html += `
+                        <li class="keyword-item" data-id="${kw.keywordId}">
+                            <span class="keyword-text">${kw.keyword}</span>
+                            <div class="keyword-actions">
+                                <button class="keyword-action-btn btn-edit" onclick="editKeyword(${kw.keywordId}, '${kw.keyword}')" title="編輯">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="keyword-action-btn btn-delete" onclick="confirmDeleteKeyword(${kw.keywordId})" title="刪除">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </li>
+                    `;
+                        });
+                        keywordList.innerHTML = html;
+                    }
+                } else {
+                    keywordList.innerHTML = '<li class="keyword-empty">加載失敗</li>';
+                }
+            } catch (error) {
+                console.error('加載關鍵詞失敗:', error);
+                keywordList.innerHTML = '<li class="keyword-empty">加載失敗</li>';
+            }
+        }
+
+        // 添加關鍵詞
+        async function addKeyword() {
+            const input = document.getElementById('newKeywordInput');
+            const keyword = input.value.trim();
+
+            if (!keyword) {
+                showNotification(' 請輸入關鍵詞', true);
+                input.focus();
+                return;
+            }
+
+            if (keyword.length > 50) {
+                showNotification('❌ 關鍵詞不能超過50個字符', true);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/keywords', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({keyword: keyword})
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('✅ 關鍵詞添加成功');
+                    input.value = '';
+                    loadKeywords(); // 重新加載列表
+                } else {
+                    showNotification('❌ ' + (result.message || '添加失敗'), true);
+                }
+            } catch (error) {
+                console.error('添加關鍵詞失敗:', error);
+                showNotification('❌ 網絡錯誤', true);
+            }
+        }
+
+        // 編輯關鍵詞（進入編輯模式）
+        function editKeyword(id, currentKeyword) {
+            const item = document.querySelector(`.keyword-item[data-id="${id}"]`);
+            if (!item) return;
+
+            const textSpan = item.querySelector('.keyword-text');
+            const actionsDiv = item.querySelector('.keyword-actions');
+
+            // 替換為輸入框
+            textSpan.outerHTML = `
+        <input type="text" class="keyword-edit-input" value="${currentKeyword}" maxlength="50">
+    `;
+
+            // 替換按鈕為保存和取消
+            actionsDiv.innerHTML = `
+        <button class="keyword-action-btn btn-save" onclick="saveKeyword(${id})" title="保存">
+            <i class="fas fa-check"></i>
+        </button>
+        <button class="keyword-action-btn btn-cancel" onclick="loadKeywords()" title="取消">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+
+            // 聚焦到輸入框
+            const input = item.querySelector('.keyword-edit-input');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }
+
+        // 保存關鍵詞修改
+        async function saveKeyword(id) {
+            const item = document.querySelector(`.keyword-item[data-id="${id}"]`);
+            if (!item) return;
+
+            const input = item.querySelector('.keyword-edit-input');
+            const newKeyword = input.value.trim();
+
+            if (!newKeyword) {
+                showNotification('❌ 關鍵詞不能為空', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/keywords/${id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({keyword: newKeyword})
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('✅ 關鍵詞修改成功');
+                    loadKeywords(); // 重新加載列表
+                } else {
+                    showNotification('❌ ' + (result.message || '修改失敗'), true);
+                }
+            } catch (error) {
+                console.error('修改關鍵詞失敗:', error);
+                showNotification('❌ 網絡錯誤', true);
+            }
+        }
+
+        // 確認刪除關鍵詞
+        let keywordToDelete = null;
+
+        function confirmDeleteKeyword(id) {
+            keywordToDelete = id;
+            const modal = document.getElementById('deleteKeywordModal');
+            if (modal) {
+                modal.style.display = 'flex';
+            }
+        }
+
+        function closeDeleteKeywordModal() {
+            const modal = document.getElementById('deleteKeywordModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            keywordToDelete = null;
+        }
+
+        // 執行刪除關鍵詞
+        async function executeDeleteKeyword() {
+            if (!keywordToDelete) return;
+
+            try {
+                const response = await fetch(`/api/admin/keywords/${keywordToDelete}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('✅ 關鍵詞刪除成功');
+                    closeDeleteKeywordModal();
+                    loadKeywords(); // 重新加載列表
+                } else {
+                    showNotification('❌ ' + (result.message || '刪除失敗'), true);
+                }
+            } catch (error) {
+                console.error('刪除關鍵詞失敗:', error);
+                showNotification('❌ 網絡錯誤', true);
+            }
+        }
     </script>
 </body>
 

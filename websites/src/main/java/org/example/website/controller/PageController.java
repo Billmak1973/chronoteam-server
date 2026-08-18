@@ -1,7 +1,6 @@
 package org.example.website.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
-import org.example.website.dto.ApiResponse;
+import org.example.website.dto.Result;
 import org.example.website.entity.*;
 import org.example.website.repository.*;
 import org.example.website.service.*;
@@ -24,9 +23,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -798,7 +794,7 @@ public class PageController {
     @DeleteMapping("/api/stock-notification/unsubscribe-by-id/{id}")
     public ResponseEntity<?> unsubscribeById(@PathVariable Long id, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+            return ResponseEntity.status(401).body(Result.error("請先登入"));
         }
 
         String username = authentication.getName();
@@ -806,10 +802,10 @@ public class PageController {
 
         if (notification.isPresent() && notification.get().getUser().getUsername().equals(username)) {
             stockNotificationRepository.deleteById(id);
-            return ResponseEntity.ok(ApiResponse.ok("已取消訂閱"));
+            return ResponseEntity.ok(Result.ok("已取消訂閱"));
         }
 
-        return ResponseEntity.badRequest().body(ApiResponse.error("找不到該訂閱記錄"));
+        return ResponseEntity.badRequest().body(Result.error("找不到該訂閱記錄"));
     }
 
 

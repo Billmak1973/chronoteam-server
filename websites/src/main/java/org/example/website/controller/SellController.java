@@ -1,7 +1,15 @@
 package org.example.website.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.example.website.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.website.dto.Result;
 import org.example.website.dto.SellApplicationDTO;
 import org.example.website.entity.SellApplication;
 import org.example.website.entity.User;
@@ -25,6 +33,7 @@ import java.util.Map;
 
 @Controller
 @RequestMapping("/sell")
+@Tag(name = "出售申請管理", description = "用戶發佈出售申請、查看申請記錄及取消/刪除申請相關接口")
 public class SellController {
 
     private final SellApplicationRepository sellApplicationRepository;
@@ -44,7 +53,9 @@ public class SellController {
 
     /**
      * GET: 顯示發佈出售表單頁面
+     * 使用 @Hidden 隱藏此接口，因為 Swagger 專注於 REST API，不需要展示頁面渲染路由
      */
+    @Hidden
     @GetMapping
     public String showSellForm(Model model, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -56,9 +67,23 @@ public class SellController {
     /**
      * POST: 提交出售申請（處理圖片上傳）
      */
+    @Operation(
+            summary = "提交出售申請",
+            description = "用戶填寫手錶基礎資訊、成色狀況並上傳多張圖片，提交出售申請。系統將自動處理圖片上傳並將路徑轉為 JSON 存儲。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "申請提交成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "400", description = "表單驗證失敗或文件上傳失敗"),
+            @ApiResponse(responseCode = "401", description = "未登入"),
+            @ApiResponse(responseCode = "500", description = "系統內部錯誤")
+    })
     @PostMapping("/submit")
     @ResponseBody
-    public ResponseEntity<ApiResponse> submitSellApplication(
+    public ResponseEntity<Result> submitSellApplication(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "出售申請表單數據及圖片文件 (multipart/form-data)",
+                    required = true
+            )
             @ModelAttribute @Valid SellApplicationDTO dto,
             Authentication authentication) {
 
@@ -115,20 +140,23 @@ public class SellController {
             data.put("sellId", saved.getApplicationId());
             data.put("message", "申請提交成功！我們的鑑定團隊將在 24 小時內聯繫您。");
 
-            return ResponseEntity.ok(ApiResponse.okWithData("申請提交成功", data));
+            return ResponseEntity.ok(Result.okWithData("申請提交成功", data));
 
         } catch (IOException e) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("文件上傳失敗：" + e.getMessage()));
+                    .body(Result.error("文件上傳失敗：" + e.getMessage()));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("系統錯誤，請稍後重試"));
+                    .body(Result.error("系統錯誤，請稍後重試"));
         }
     }
+
     /**
      * GET: 我的出售申請列表（只顯示 BUYOUT 平台直接買斷）
+     * 使用 @Hidden 隱藏此接口，保持 Swagger 文檔純淨
      */
+    @Hidden
     @GetMapping("/my-applications")
     public String myApplications(
             @RequestParam(defaultValue = "1") int page,
@@ -161,9 +189,19 @@ public class SellController {
     /**
      * API: 獲取出售申請詳情（AJAX 調用）
      */
+    @Operation(
+            summary = "獲取出售申請詳情",
+            description = "根據申請 ID 獲取出售申請的詳細資訊，包含圖片路徑與狀態。僅限申請人本人查看。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "403", description = "無權訪問該申請"),
+            @ApiResponse(responseCode = "404", description = "申請不存在")
+    })
     @GetMapping("/api/{id}")
     @ResponseBody
     public ResponseEntity<?> getApplicationDetail(
+            @Parameter(description = "出售申請的唯一 ID", example = "1", required = true)
             @PathVariable Long id,
             Authentication authentication) {
 
@@ -173,19 +211,33 @@ public class SellController {
 
             // 權限檢查：只能查看自己的申請
             if (!application.getUser().getUsername().equals(authentication.getName())) {
-                return ResponseEntity.status(403).body(ApiResponse.error("無權訪問"));
+                return ResponseEntity.status(403).body(Result.error("無權訪問"));
             }
 
-            return ResponseEntity.ok(ApiResponse.okWithData("成功", application));
+            return ResponseEntity.ok(Result.okWithData("成功", application));
 
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         }
     }
 
+    /**
+     * POST: 取消出售申請
+     */
+    @Operation(
+            summary = "取消出售申請",
+            description = "將狀態為 PENDING (待處理) 的出售申請更改為 CANCELLED (已取消)。僅限申請人本人操作，不物理刪除數據。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "申請已取消", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "400", description = "申請已在處理中，無法取消"),
+            @ApiResponse(responseCode = "403", description = "無權操作"),
+            @ApiResponse(responseCode = "404", description = "申請不存在")
+    })
     @PostMapping("/cancel/{id}")
     @ResponseBody
-    public ResponseEntity<ApiResponse> cancelApplication(
+    public ResponseEntity<Result> cancelApplication(
+            @Parameter(description = "要取消的出售申請 ID", example = "1", required = true)
             @PathVariable Long id,
             Authentication authentication) {
         try {
@@ -194,30 +246,40 @@ public class SellController {
 
             // 權限檢查：只能取消自己的申請
             if (!application.getUser().getUsername().equals(authentication.getName())) {
-                return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
+                return ResponseEntity.status(403).body(Result.error("無權操作"));
             }
 
             // 只有 PENDING 狀態可以取消
             if (application.getStatus() != SellApplication.ApplicationStatus.PENDING) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("該申請已在處理中，無法取消"));
+                return ResponseEntity.badRequest().body(Result.error("該申請已在處理中，無法取消"));
             }
 
             // 將狀態改為 CANCELLED (不直接刪除數據，保留記錄)
             application.setStatus(SellApplication.ApplicationStatus.CANCELLED);
             sellApplicationRepository.save(application);
 
-            return ResponseEntity.ok(ApiResponse.ok("申請已取消"));
+            return ResponseEntity.ok(Result.ok("申請已取消"));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(ApiResponse.error("系統錯誤：" + e.getMessage()));
+            return ResponseEntity.internalServerError().body(Result.error("系統錯誤：" + e.getMessage()));
         }
     }
 
     /**
      * POST: 徹底刪除出售申請記錄（物理刪除，非取消）
      */
+    @Operation(
+            summary = "徹底刪除出售申請記錄",
+            description = "物理刪除出售申請的數據庫記錄。僅限申請人本人操作，此操作不可逆，請謹慎使用。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "申請記錄已徹底刪除", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "403", description = "無權操作"),
+            @ApiResponse(responseCode = "404", description = "申請不存在")
+    })
     @PostMapping("/delete/{id}")
     @ResponseBody
-    public ResponseEntity<ApiResponse> deleteApplication(
+    public ResponseEntity<Result> deleteApplication(
+            @Parameter(description = "要刪除的出售申請 ID", example = "1", required = true)
             @PathVariable Long id,
             Authentication authentication) {
         try {
@@ -226,15 +288,15 @@ public class SellController {
 
             // 權限檢查：只能刪除自己的申請
             if (!application.getUser().getUsername().equals(authentication.getName())) {
-                return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
+                return ResponseEntity.status(403).body(Result.error("無權操作"));
             }
 
-            //  徹底刪除數據庫記錄
+            // 徹底刪除數據庫記錄
             sellApplicationRepository.deleteById(id);
 
-            return ResponseEntity.ok(ApiResponse.ok("申請記錄已徹底刪除"));
+            return ResponseEntity.ok(Result.ok("申請記錄已徹底刪除"));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(ApiResponse.error("系統錯誤：" + e.getMessage()));
+            return ResponseEntity.internalServerError().body(Result.error("系統錯誤：" + e.getMessage()));
         }
     }
 }

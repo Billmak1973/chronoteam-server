@@ -1,6 +1,12 @@
 package org.example.website.controller;
 
-import org.example.website.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.website.dto.Result;
 import org.example.website.entity.Cart;
 import org.example.website.entity.User;
 import org.example.website.service.CartService;
@@ -24,6 +30,7 @@ import java.util.stream.Collectors;
  */
 @Controller
 @RequestMapping("/cart")
+@Tag(name = "購物車管理", description = "用戶購物車相關操作接口 (包含頁面渲染與 AJAX API)")
 public class CartController {
 
     private final CartService cartService;
@@ -42,6 +49,7 @@ public class CartController {
      * 購物車頁面 (支援分頁 + 日期分組)
      * 利用 PaginationUtils 統一生成智能分頁列表
      */
+    @Hidden // 隱藏純頁面渲染接口，保持 Swagger UI 專注於 REST API
     @GetMapping("/view")
     public String viewCartPage(
             @RequestParam(defaultValue = "1") int page,
@@ -86,8 +94,6 @@ public class CartController {
                 : new ArrayList<>();
 
         // 6. 僅對【當前頁數據】進行日期分組
-        // 6. 僅對【當前頁數據】進行日期分組
-        // 【修復】：將 Lambda 提取為獨立變量，解決 Java 泛型推斷失敗問題
         Function<Cart, String> dateClassifier = item -> {
             LocalDate date = item.getCreatedAt().toLocalDate();
             LocalDate today = LocalDate.now();
@@ -133,7 +139,7 @@ public class CartController {
     }
 
     // ==========================================
-    // AJAX API (保持不變)
+    // AJAX API (已加上完整 Swagger 註解)
     // ==========================================
 
     private boolean isAuthenticated(Authentication authentication) {
@@ -142,54 +148,95 @@ public class CartController {
                 && !"anonymousUser".equals(authentication.getPrincipal());
     }
 
+    @Operation(
+            summary = "添加商品到購物車",
+            description = "將指定商品加入當前登入用戶的購物車。若該商品已存在，則數量自動 +1。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "添加成功"),
+            @ApiResponse(responseCode = "400", description = "庫存不足或商品不存在"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
     @PostMapping("/api/add/{productId}")
     @ResponseBody
-    public ResponseEntity<ApiResponse> addToCart(@PathVariable Integer productId,
-                                                 Authentication authentication) {
+    public ResponseEntity<Result> addToCart(
+            @Parameter(description = "商品ID", example = "1", required = true)
+            @PathVariable Integer productId,
+            Authentication authentication) {
         if (!isAuthenticated(authentication)) {
-            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+            return ResponseEntity.status(401).body(Result.error("請先登入"));
         }
         try {
             Cart cart = cartService.addToCart(authentication.getName(), productId);
-            return ResponseEntity.ok(ApiResponse.ok("已加入購物車"));
+            return ResponseEntity.ok(Result.ok("已加入購物車"));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         }
     }
 
+    @Operation(
+            summary = "更新購物車商品數量",
+            description = "修改指定購物車項目的數量。若數量 <= 0，系統會自動移除該項目。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "更新或移除成功"),
+            @ApiResponse(responseCode = "400", description = "庫存不足或數量無效"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
     @PutMapping("/api/update/{cartId}")
     @ResponseBody
-    public ResponseEntity<ApiResponse> updateQuantity(@PathVariable Long cartId,
-                                                      @RequestParam Integer quantity,
-                                                      Authentication authentication) {
+    public ResponseEntity<Result> updateQuantity(
+            @Parameter(description = "購物車項目ID", example = "10", required = true)
+            @PathVariable Long cartId,
+            @Parameter(description = "新數量 (必須 > 0)", example = "2", required = true)
+            @RequestParam Integer quantity,
+            Authentication authentication) {
         if (!isAuthenticated(authentication)) {
-            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+            return ResponseEntity.status(401).body(Result.error("請先登入"));
         }
         try {
             Cart cart = cartService.updateQuantity(authentication.getName(), cartId, quantity);
             return ResponseEntity.ok(cart == null
-                    ? ApiResponse.ok("已移除")
-                    : ApiResponse.ok("已更新"));
+                    ? Result.ok("已移除")
+                    : Result.ok("已更新"));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         }
     }
 
+    @Operation(
+            summary = "從購物車移除商品",
+            description = "根據商品ID，將該商品從當前用戶的購物車中徹底移除。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "移除成功"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
     @DeleteMapping("/api/remove/{productId}")
     @ResponseBody
-    public ResponseEntity<ApiResponse> removeFromCart(@PathVariable Integer productId,
-                                                      Authentication authentication) {
+    public ResponseEntity<Result> removeFromCart(
+            @Parameter(description = "商品ID", example = "1", required = true)
+            @PathVariable Integer productId,
+            Authentication authentication) {
         if (!isAuthenticated(authentication)) {
-            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+            return ResponseEntity.status(401).body(Result.error("請先登入"));
         }
         try {
             cartService.removeFromCart(authentication.getName(), productId);
-            return ResponseEntity.ok(ApiResponse.ok("已移除"));
+            return ResponseEntity.ok(Result.ok("已移除"));
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         }
     }
 
+    @Operation(
+            summary = "獲取購物車列表",
+            description = "獲取當前登入用戶的購物車所有項目、總件數及總價 (主要供導航欄下拉菜單或購物車頁面初始化使用)。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功，返回包含 cartItems, cartCount, totalAmount 的 JSON"),
+            @ApiResponse(responseCode = "401", description = "未登入 (返回空列表與 0)")
+    })
     @GetMapping("/api/list")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getCartList(Authentication authentication) {
@@ -214,6 +261,14 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "獲取購物車商品總數",
+            description = "獲取當前登入用戶購物車內的商品總件數 (主要供導航欄右上角角標使用)。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功，返回包含 count 的 JSON"),
+            @ApiResponse(responseCode = "401", description = "未登入 (返回 0)")
+    })
     @GetMapping("/api/count")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getCartCount(Authentication authentication) {
@@ -228,15 +283,26 @@ public class CartController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "切換購物車商品選中狀態",
+            description = "用於購物車頁面勾選/取消勾選單個商品，以便動態計算結算總價。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "切換成功"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
     @PutMapping("/api/toggle-selection/{cartId}")
     @ResponseBody
-    public ResponseEntity<ApiResponse> toggleSelection(@PathVariable Long cartId,
-                                                       @RequestParam Boolean isSelected,
-                                                       Authentication authentication) {
+    public ResponseEntity<Result> toggleSelection(
+            @Parameter(description = "購物車項目ID", example = "10", required = true)
+            @PathVariable Long cartId,
+            @Parameter(description = "是否選中 (true/false)", example = "true", required = true)
+            @RequestParam Boolean isSelected,
+            Authentication authentication) {
         if (!isAuthenticated(authentication)) {
-            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+            return ResponseEntity.status(401).body(Result.error("請先登入"));
         }
         cartService.toggleSelection(authentication.getName(), cartId, isSelected);
-        return ResponseEntity.ok(ApiResponse.ok("更新成功"));
+        return ResponseEntity.ok(Result.ok("更新成功"));
     }
 }

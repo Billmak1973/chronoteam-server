@@ -1,11 +1,19 @@
 package org.example.website.controller;
 
-import org.example.website.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.website.dto.Result;
 import org.example.website.entity.Product;
 import org.example.website.entity.WatchCondition;
 import org.example.website.repository.ProductRepository;
 import org.example.website.service.ProductService;
-import org.example.website.util.PaginationUtils; // 引入工具類
+import org.example.website.util.PaginationUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -14,11 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -30,6 +34,7 @@ import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin")
+@Tag(name = "後台商品管理", description = "管理員專屬的商品查詢、篩選、排序與新建接口")
 public class AdminProductController {
 
     private final ProductService productService;
@@ -43,6 +48,7 @@ public class AdminProductController {
     /**
      * 1. 頁面骨架渲染 (僅返回 HTML，數據由前端 AJAX 獲取)
      */
+    @Hidden // 隱藏純頁面渲染接口，保持 Swagger UI 專注於 REST API
     @GetMapping("/products")
     public String manageProductsPage(Model model) {
         // 這裡可以預加載一些不需要分頁的靜態數據，比如所有品牌列表供篩選下拉框使用
@@ -60,18 +66,46 @@ public class AdminProductController {
      * 2. AJAX API: 獲取商品列表 (支持篩選、排序、分頁)
      * 【核心修改】：接收 1-based 頁碼，內部轉 0-based 計算，返回 1-based 頁碼
      */
+    @Operation(
+            summary = "獲取後台商品分頁列表",
+            description = "支持多條件篩選（品牌、分類、狀態、首頁推薦等）、多字段排序及分頁。返回的 currentPage 為 1-based。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "401", description = "未登入"),
+            @ApiResponse(responseCode = "403", description = "無權訪問")
+    })
     @GetMapping("/api/products/list")
     @ResponseBody
     public ResponseEntity<?> getProductsList(
+            @Parameter(description = "當前頁碼 (1-based)", example = "1")
             @RequestParam(defaultValue = "1") int page,
+
+            @Parameter(description = "每頁顯示數量", example = "30")
             @RequestParam(defaultValue = "30") int size,
+
+            @Parameter(description = "篩選品牌 (例如: rolex)", example = "rolex")
             @RequestParam(required = false) String currentBrand,
+
+            @Parameter(description = "篩選分類 (例如: dive)", example = "dive")
             @RequestParam(required = false) String currentCategory,
+
+            @Parameter(description = "篩選成色 (例如: EXCELLENT)", example = "EXCELLENT")
             @RequestParam(required = false) String condition,
+
+            @Parameter(description = "顯示狀態 (visible / hidden)", example = "visible")
             @RequestParam(required = false) String status,
+
+            @Parameter(description = "是否為首頁推薦 (true / false)", example = "true")
             @RequestParam(required = false) String currentFeatured,
+
+            @Parameter(description = "排序字段 (id / price / stock / rating / favoritecount / stocknotificationcount / homedisplayorder)", example = "price")
             @RequestParam(required = false) String sortField,
+
+            @Parameter(description = "排序方向 (asc / desc)", example = "desc")
             @RequestParam(required = false) String sortDirection,
+
+            @Parameter(description = "成色選項顯示狀態 (visible / hidden)", example = "visible")
             @RequestParam(required = false) String conditionVisible) {
 
         // 1. 獲取所有商品數據 (保持原有的內存過濾邏輯)
@@ -151,13 +185,9 @@ public class AdminProductController {
         Page<Product> productPage = new PageImpl<>(pagedContent, pageable, totalElements);
 
         // 5. 使用 PaginationUtils 構建標準響應 (包含 smartPages)
-        // 注意：PaginationUtils 內部生成的 smartPages 是基於 0-based 的 currentPage 計算的，這沒問題
-        // 但是 PaginationUtils 返回的 map 中 "currentPage" 是 0-based 的，我們需要覆蓋它
         Map<String, Object> response = PaginationUtils.buildPageResponse(productPage, null);
 
         // 【修改 3】覆蓋 currentPage 為 1-based，以便前端直接使用
-        // 因為前端傳入的是 1，我們計算用的 0，現在返回給前端應該還是 1 (或者實際計算後的 1-based 頁碼)
-        // 實際當前頁碼 (1-based) = pageIndex + 1
         response.put("currentPage", pageIndex + 1);
 
         // 同時確保 totalPages 至少為 1 (防止前端報錯)
@@ -172,19 +202,52 @@ public class AdminProductController {
      * 新建商品 API
      * 【核心修復】：權限校驗從 "用戶名等於admin" 改為 "用戶角色等於ADMIN"
      */
+    @Operation(
+            summary = "新建商品",
+            description = "管理員上傳圖片並填寫商品資訊以新建商品。需要 ADMIN 權限。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "新建成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "400", description = "請求參數錯誤或缺少圖片"),
+            @ApiResponse(responseCode = "401", description = "未登入"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員 (Role: ADMIN)")
+    })
     @PostMapping("/add")
-    public ResponseEntity<ApiResponse> createProduct(
+    @ResponseBody
+    public ResponseEntity<Result> createProduct(
+            @Parameter(description = "品牌名稱", example = "Rolex")
             @RequestParam String brand,
+
+            @Parameter(description = "商品分類", example = "dive")
             @RequestParam String category,
+
+            @Parameter(description = "商品簡短描述", example = "Rolex Submariner 黑水鬼 41mm")
             @RequestParam String description,
+
+            @Parameter(description = "商品詳細介紹", example = "陶瓷錶圈，自動上鏈機芯...")
             @RequestParam(required = false) String details,
+
+            @Parameter(description = "售價 (HKD)", example = "85000.00")
             @RequestParam BigDecimal price,
+
+            @Parameter(description = "庫存數量", example = "1")
             @RequestParam Integer stock,
+
+            @Parameter(description = "手錶成色枚舉", example = "EXCELLENT")
             @RequestParam WatchCondition condition,
+
+            @Parameter(description = "是否在前台顯示", example = "true")
             @RequestParam Boolean visible,
+
+            @Parameter(description = "是否顯示成色選項", example = "true")
             @RequestParam Boolean conditionVisible,
+
+            @Parameter(description = "同款分組碼", example = "ROLEX_SUB_001")
             @RequestParam String groupCode,
+
+            @Parameter(description = "商品圖片文件", schema = @Schema(type = "string", format = "binary"))
             @RequestParam("imageFile") MultipartFile imageFile,
+
             Authentication authentication) {
 
         // ==========================================
@@ -192,23 +255,23 @@ public class AdminProductController {
         // ==========================================
         if (authentication == null || !authentication.isAuthenticated() ||
                 "anonymousUser".equals(authentication.getPrincipal())) {
-            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+            return ResponseEntity.status(401).body(Result.error("請先登入"));
         }
 
         // 使用 SecurityUtils.isAdmin() 檢查 user_type 是否為 ADMIN
         // 這會從 SecurityContext 中獲取 CustomUserDetails 並檢查 Role 枚舉
         if (!org.example.website.util.SecurityUtils.isAdmin()) {
-            return ResponseEntity.status(403).body(ApiResponse.error("無權操作，僅限管理員 (Role: ADMIN)"));
+            return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員 (Role: ADMIN)"));
         }
 
         try {
             if (imageFile == null || imageFile.isEmpty()) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("請上傳商品圖片"));
+                return ResponseEntity.badRequest().body(Result.error("請上傳商品圖片"));
             }
 
             String fileName = imageFile.getOriginalFilename();
             if (fileName == null || fileName.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("無效的圖片文件名"));
+                return ResponseEntity.badRequest().body(Result.error("無效的圖片文件名"));
             }
 
             Product product = new Product();
@@ -227,12 +290,12 @@ public class AdminProductController {
             product.setImage(fileName);
 
             productRepository.save(product);
-            return ResponseEntity.ok(ApiResponse.ok("商品新建成功"));
+            return ResponseEntity.ok(Result.ok("商品新建成功"));
 
         } catch (Exception e) {
             System.err.println("❌ 新建商品失敗: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.badRequest().body(ApiResponse.error("新建失敗: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(Result.error("新建失敗: " + e.getMessage()));
         }
     }
 }

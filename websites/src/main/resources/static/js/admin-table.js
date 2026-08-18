@@ -1,3 +1,4 @@
+// @ts-check
 /** admin-table.js
  *  通用後台表格管理器 (AdminTable)
  * 消滅所有重複的 loadXXXData 和 renderPagination 函數

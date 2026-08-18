@@ -95,6 +95,13 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
+        <!-- Swagger / OpenAPI 依賴 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.5.0</version> <!-- 這是目前兼容 Spring Boot 3 的穩定版本 -->
+        </dependency>
+
         <!-- 用於清理富文本 HTML，防止 XSS 攻擊 -->
         <dependency>
             <groupId>org.jsoup</groupId>

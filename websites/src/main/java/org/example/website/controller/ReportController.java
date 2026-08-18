@@ -1,39 +1,77 @@
 package org.example.website.controller;
 
-import org.example.website.dto.ApiResponse;
-import org.example.website.entity.Report;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.website.dto.Result;
 import org.example.website.entity.Notification;
+import org.example.website.entity.Report;
 import org.example.website.entity.User;
-import org.example.website.repository.ReportRepository;
 import org.example.website.repository.NotificationRepository;
+import org.example.website.repository.ReportRepository;
 import org.example.website.repository.UserRepository;
+import org.example.website.security.CustomUserDetails;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/report")
+@Tag(name = "舉報管理", description = "用戶舉報提交與管理員審核決策相關接口")
 public class ReportController {
 
     private final ReportRepository reportRepository;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
-    public ReportController(ReportRepository reportRepository, NotificationRepository notificationRepository, UserRepository userRepository) {
+    public ReportController(ReportRepository reportRepository,
+                            NotificationRepository notificationRepository,
+                            UserRepository userRepository) {
         this.reportRepository = reportRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
     }
 
+    /**
+     * 核心修復：權限校驗基於 user_type (Role == ADMIN)，而非用戶名是否等於 "admin"
+     * CustomUserDetails 在登入時已從數據庫載入 Role 枚舉，直接判斷，零查庫開銷
+     */
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null
+                && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())
+                && authentication.getPrincipal() instanceof CustomUserDetails userDetails
+                && userDetails.getRole() == User.Role.ADMIN;
+    }
+
+    @Operation(
+            summary = "提交舉報",
+            description = "用戶提交對其他用戶或評論的舉報，系統將自動發送受理通知並記錄舉報內容快照。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "舉報提交成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "400", description = "請求參數錯誤、信息不完整或重複舉報"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
     @PostMapping("/submit")
-    public ResponseEntity<ApiResponse> submitReport(@RequestBody Map<String, Object> request, Authentication authentication) {
+    public ResponseEntity<Result> submitReport(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "舉報請求參數，需包含: reportedUsername, targetType, category, reason, reportContent(可選), reviewId(可選)",
+                    required = true
+            )
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+
         if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
-            return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+            return ResponseEntity.status(401).body(Result.error("請先登入"));
         }
         String reporterUsername = authentication.getName();
 
@@ -50,12 +88,12 @@ public class ReportController {
         String reportContent = request.get("reportContent") != null ? (String) request.get("reportContent") : null;
 
         if (category == null || reason == null || reason.trim().isEmpty()) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("請填寫完整的舉報信息"));
+            return ResponseEntity.badRequest().body(Result.error("請填寫完整的舉報信息"));
         }
 
         if ("REVIEW".equals(targetType) && reviewId != null) {
             if (reportRepository.existsByReporter_UsernameAndReviewId(reporterUsername, reviewId)) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("您已經舉報過這條評論了，請勿重複提交！"));
+                return ResponseEntity.badRequest().body(Result.error("您已經舉報過這條評論了，請勿重複提交！"));
             }
         }
 
@@ -118,23 +156,36 @@ public class ReportController {
         responseData.put("message", "舉報已提交，感謝您的反饋，管理員將盡快審核！");
         responseData.put("unreadCount", unreadCount);
 
-        return ResponseEntity.ok(ApiResponse.okWithData("舉報已提交，感謝您的反饋，管理員將盡快審核！", responseData));
+        return ResponseEntity.ok(Result.okWithData("舉報已提交，感謝您的反饋，管理員將盡快審核！", responseData));
     }
 
-    // ==========================================
-    // 🌟 新增：管理員處理舉報決策 (復用現有 Controller)
-    // ==========================================
+    @Operation(
+            summary = "管理員處理舉報決策",
+            description = "管理員審核舉報記錄，決定舉報是否成立 (successful: true/false)，並發送相應通知給舉報人。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "決策處理成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "400", description = "請求參數錯誤或舉報已被處理"),
+            @ApiResponse(responseCode = "401", description = "未登入"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員"),
+            @ApiResponse(responseCode = "500", description = "服務器內部錯誤")
+    })
     @PostMapping("/{reportId}/decision")
     @Transactional
-    public ResponseEntity<ApiResponse> handleReportDecision(
+    public ResponseEntity<Result> handleReportDecision(
+            @Parameter(description = "舉報記錄的唯一 ID", example = "1")
             @PathVariable Long reportId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "決策參數，需包含: {\"successful\": true 或 false}",
+                    required = true
+            )
             @RequestBody Map<String, Boolean> request,
             Authentication authentication) {
 
         try {
-            // 1. 驗證管理員權限
-            if (!"admin".equals(authentication.getName())) {
-                return ResponseEntity.status(403).body(ApiResponse.error("無權操作，僅限管理員"));
+            // 1. 驗證管理員權限 (嚴格檢查 Role 枚舉)
+            if (!isAdmin(authentication)) {
+                return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員"));
             }
 
             // 2. 獲取舉報記錄
@@ -143,18 +194,18 @@ public class ReportController {
 
             // 3. 檢查狀態
             if (report.getStatus() != Report.ReportStatus.PENDING) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("該舉報已被處理，無法再次操作"));
+                return ResponseEntity.badRequest().body(Result.error("該舉報已被處理，無法再次操作"));
             }
 
             Boolean isSuccessful = request.get("successful");
             if (isSuccessful == null) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("缺少決策參數"));
+                return ResponseEntity.badRequest().body(Result.error("缺少決策參數"));
             }
 
             // 4. 獲取舉報人
             User reporter = report.getReporter();
             if (reporter == null) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("舉報人信息不存在"));
+                return ResponseEntity.badRequest().body(Result.error("舉報人信息不存在"));
             }
             String reporterUsername = reporter.getUsername();
 
@@ -167,7 +218,7 @@ public class ReportController {
                 // 發送成功通知
                 sendSuccessNotification(reporterUsername, report);
 
-                return ResponseEntity.ok(ApiResponse.ok("舉報處理成功！已對被舉報用戶進行處罰，並通知舉報人。"));
+                return ResponseEntity.ok(Result.ok("舉報處理成功！已對被舉報用戶進行處罰，並通知舉報人。"));
             } else {
                 // === 舉報不成立 (否) ===
                 report.setStatus(Report.ReportStatus.DISMISSED);
@@ -176,11 +227,11 @@ public class ReportController {
                 // 發送溫和的駁回通知
                 sendDismissNotification(reporterUsername, report);
 
-                return ResponseEntity.ok(ApiResponse.ok("舉報已處理。該用戶已被標記關注，感謝你的反饋與支持！"));
+                return ResponseEntity.ok(Result.ok("舉報已處理。該用戶已被標記關注，感謝你的反饋與支持！"));
             }
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body(ApiResponse.error("處理失敗: " + e.getMessage()));
+            return ResponseEntity.internalServerError().body(Result.error("處理失敗: " + e.getMessage()));
         }
     }
 
@@ -254,5 +305,4 @@ public class ReportController {
             System.err.println("發送舉報不成立通知失敗: " + e.getMessage());
         }
     }
-
 }

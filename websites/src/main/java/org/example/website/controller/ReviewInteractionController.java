@@ -1,5 +1,10 @@
 package org.example.website.controller;
 
+import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.entity.Review;
 import org.example.website.entity.User;
 import org.example.website.repository.ReviewReactionRepository;
@@ -7,7 +12,6 @@ import org.example.website.repository.ReviewRepository;
 import org.example.website.service.NotificationService;
 import org.example.website.service.UserService;
 import org.example.website.util.PaginationUtils;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +26,7 @@ import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/account/reviews")
+@Tag(name = "用戶互動管理", description = "用戶評論、回覆、點贊等互動記錄的查詢與狀態管理接口")
 public class ReviewInteractionController {
 
     private final UserService userService;
@@ -39,6 +44,11 @@ public class ReviewInteractionController {
         this.reviewReactionRepository = reviewReactionRepository;
     }
 
+    /**
+     * 渲染互動中心頁面 (Thymeleaf)
+     * 使用 @Hidden 隱藏此接口，因為 Swagger 專注於 REST API，不需要展示頁面渲染接口
+     */
+    @Hidden
     @GetMapping // 確保加上 @GetMapping
     public String myReviewsPage(Model model,
                                 Authentication authentication,
@@ -231,9 +241,27 @@ public class ReviewInteractionController {
         return list;
     }
 
+    /**
+     * 標記互動消息為已讀 (AJAX API)
+     */
+    @Operation(
+            summary = "標記互動消息為已讀",
+            description = "將指定類型（回覆、@提及、點贊我的）的互動消息標記為已讀狀態，用於前端切換 Tab 時清除紅點。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "標記成功"),
+            @ApiResponse(responseCode = "400", description = "無效的類型參數"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
     @PostMapping("/api/mark-read")
     @ResponseBody
-    public ResponseEntity<?> markReviewsTabAsRead(@RequestBody Map<String, String> payload, Authentication authentication) {
+    public ResponseEntity<?> markReviewsTabAsRead(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "請求體，需包含 'type' 字段，值為 'REPLY', 'MENTION' 或 'LIKED_ME'",
+                    required = true
+            )
+            @RequestBody Map<String, String> payload,
+            Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(401).body(Map.of("success", false, "message", "未登入"));
         }

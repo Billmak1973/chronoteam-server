@@ -1,6 +1,11 @@
 package org.example.website.controller;
 
-import org.example.website.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.website.dto.Result;
 import org.example.website.entity.AdminPenalty;
 import org.example.website.entity.Appeal;
 import org.example.website.entity.Notification;
@@ -21,6 +26,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/penalty")
+@Tag(name = "管理員處罰管理", description = "管理員對違規用戶進行拉黑、解除拉黑、撤銷處罰及發送通知的相關接口")
 public class AdminPenaltyController {
 
     private final AdminPenaltyService adminPenaltyService;
@@ -54,51 +60,86 @@ public class AdminPenaltyController {
     }
 
     // ==================== 拉黑用戶 ====================
+    @Operation(
+            summary = "永久拉黑用戶",
+            description = "管理員將指定用戶永久拉黑，並可選關聯違規評論快照以便後續審計。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "拉黑成功"),
+            @ApiResponse(responseCode = "400", description = "請求參數錯誤或用戶已被拉黑"),
+            @ApiResponse(responseCode = "403", description = "無權操作（非管理員）")
+    })
     @PostMapping("/blacklist/{targetUsername}")
-    public ResponseEntity<ApiResponse> blacklistUser(
+    public ResponseEntity<Result> blacklistUser(
+            @Parameter(description = "目標用戶名", example = "bad_user_123", required = true)
             @PathVariable String targetUsername,
+
+            @Parameter(description = "拉黑原因", example = "嚴重違反社區規範")
             @RequestParam(required = false, defaultValue = "嚴重違反社區規範") String reason,
+
+            @Parameter(description = "引發處罰的評論ID (可選)", example = "1001")
             @RequestParam(required = false) Long reviewId,
+
+            @Parameter(description = "評論內容快照 (可選)", example = "這條評論包含違規內容")
             @RequestParam(required = false) String reviewContent,
+
             Authentication authentication) {
 
-        // 【修改】使用角色校驗替換用戶名校驗
         if (!isAdmin(authentication)) {
-            return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
+            return ResponseEntity.status(403).body(Result.error("無權操作"));
         }
 
         try {
             adminPenaltyService.blacklistUser(targetUsername, authentication.getName(), reason, reviewId, reviewContent);
-            return ResponseEntity.ok(ApiResponse.ok("已成功永久拉黑該用戶"));
+            return ResponseEntity.ok(Result.ok("已成功永久拉黑該用戶"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         }
     }
 
     // ==================== 解除拉黑 ====================
+    @Operation(
+            summary = "解除用戶拉黑",
+            description = "管理員解除指定用戶的永久拉黑狀態，恢復其互動權限。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "解除拉黑成功"),
+            @ApiResponse(responseCode = "400", description = "用戶不存在或未被拉黑"),
+            @ApiResponse(responseCode = "403", description = "無權操作（非管理員）")
+    })
     @DeleteMapping("/blacklist/{targetUsername}")
-    public ResponseEntity<ApiResponse> unblacklistUser(
+    public ResponseEntity<Result> unblacklistUser(
+            @Parameter(description = "目標用戶名", example = "bad_user_123", required = true)
             @PathVariable String targetUsername,
             Authentication authentication) {
 
-        // 【修改】使用角色校驗替換用戶名校驗
         if (!isAdmin(authentication)) {
-            return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
+            return ResponseEntity.status(403).body(Result.error("無權操作"));
         }
 
         try {
             adminPenaltyService.unblacklistUser(targetUsername);
-            return ResponseEntity.ok(ApiResponse.ok("已解除拉黑"));
+            return ResponseEntity.ok(Result.ok("已解除拉黑"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         }
     }
 
     // ==================== 獲取申訴詳情 ====================
+    @Operation(
+            summary = "獲取申訴詳情",
+            description = "根據申訴 ID 獲取申訴的詳細信息，包含用戶信息和申訴內容。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功"),
+            @ApiResponse(responseCode = "404", description = "申訴記錄不存在"),
+            @ApiResponse(responseCode = "500", description = "服務器內部錯誤")
+    })
     @GetMapping("/appeal/{appealId}")
-    @ResponseBody
     @Transactional(readOnly = true) // 關鍵：防止懶加載異常
-    public ResponseEntity<ApiResponse> getAppealDetail(@PathVariable Long appealId) {
+    public ResponseEntity<Result> getAppealDetail(
+            @Parameter(description = "申訴記錄的唯一 ID", example = "1001", required = true)
+            @PathVariable Long appealId) {
         try {
             Appeal appeal = appealRepository.findById(appealId)
                     .orElseThrow(() -> new RuntimeException("申訴記錄不存在"));
@@ -122,43 +163,61 @@ public class AdminPenaltyController {
                 data.put("user", null);
             }
 
-            return ResponseEntity.ok(ApiResponse.okWithData("獲取成功", data));
+            return ResponseEntity.ok(Result.okWithData("獲取成功", data));
 
         } catch (Exception e) {
             e.printStackTrace();
             String errorMsg = e.getMessage() != null ? e.getMessage() : "未知錯誤 (請查看後端控制台日誌)";
-            return ResponseEntity.status(500).body(ApiResponse.error("獲取失敗: " + errorMsg));
+            return ResponseEntity.status(500).body(Result.error("獲取失敗: " + errorMsg));
         }
     }
 
     // ==================== 撤銷處罰 ====================
+    @Operation(
+            summary = "撤銷處罰",
+            description = "管理員手動撤銷指定的處罰記錄（例如：提前解除封禁）。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "撤銷成功"),
+            @ApiResponse(responseCode = "400", description = "處罰記錄不存在或已撤銷"),
+            @ApiResponse(responseCode = "403", description = "無權操作（非管理員）")
+    })
     @PostMapping("/{penaltyId}/revoke")
-    public ResponseEntity<ApiResponse> revokePenalty(
+    public ResponseEntity<Result> revokePenalty(
+            @Parameter(description = "處罰記錄的唯一 ID", example = "5001", required = true)
             @PathVariable Long penaltyId,
             Authentication authentication) {
 
-        // 【修改】使用角色校驗替換用戶名校驗
         if (!isAdmin(authentication)) {
-            return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
+            return ResponseEntity.status(403).body(Result.error("無權操作"));
         }
 
         try {
             adminPenaltyService.revokePenalty(penaltyId);
-            return ResponseEntity.ok(ApiResponse.ok("已成功解除處罰"));
+            return ResponseEntity.ok(Result.ok("已成功解除處罰"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         }
     }
 
     // ==================== 發送解除拉黑通知 ====================
+    @Operation(
+            summary = "發送解除拉黑通知",
+            description = "管理員手動觸發，向被解除拉黑的用戶發送系統通知。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "通知發送成功"),
+            @ApiResponse(responseCode = "400", description = "處罰記錄不存在"),
+            @ApiResponse(responseCode = "403", description = "無權操作（非管理員）")
+    })
     @PostMapping("/{penaltyId}/send-unblacklist-notification")
-    public ResponseEntity<ApiResponse> sendUnblacklistNotification(
+    public ResponseEntity<Result> sendUnblacklistNotification(
+            @Parameter(description = "處罰記錄的唯一 ID", example = "5001", required = true)
             @PathVariable Long penaltyId,
             Authentication authentication) {
 
-        // 【修改】使用角色校驗替換用戶名校驗
         if (!isAdmin(authentication)) {
-            return ResponseEntity.status(403).body(ApiResponse.error("無權操作"));
+            return ResponseEntity.status(403).body(Result.error("無權操作"));
         }
 
         try {
@@ -193,9 +252,9 @@ public class AdminPenaltyController {
             // 5. 保存通知
             notificationRepository.save(notification);
 
-            return ResponseEntity.ok(ApiResponse.ok("通知已發送"));
+            return ResponseEntity.ok(Result.ok("通知已發送"));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("發送通知失敗: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(Result.error("發送通知失敗: " + e.getMessage()));
         }
     }
 }

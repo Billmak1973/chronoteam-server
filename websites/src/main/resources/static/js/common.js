@@ -1,3 +1,4 @@
+// @ts-check
 /* ==========================================
    ChronoTeam 公共脚本 (common.js) - 完整修復版
    ========================================== */
@@ -22,7 +23,9 @@ const Cart = window.ChronoTeam.cart;
 // ===== 第三步：將函數掛載到命名空間下 =====
 
 /**
- * 切換購物車下拉菜單
+ * 切換購物車下拉菜單的顯示與隱藏
+ * @param {Event} [event] - 點擊事件對象 (用於阻止事件冒泡)
+ * @returns {void}
  */
 Cart.toggleDropdown = function (event) {
   if (event) event.stopPropagation();
@@ -40,7 +43,8 @@ Cart.toggleDropdown = function (event) {
 };
 
 /**
- * 計算選中商品的總價
+ * 遍歷 DOM 中勾選的商品，計算總價並更新底部金額顯示
+ * @returns {void}
  */
 Cart.calculateSelectedTotal = function () {
   const checkboxes = document.querySelectorAll(".cart-item-select:checked");
@@ -65,7 +69,8 @@ Cart.calculateSelectedTotal = function () {
 };
 
 /**
- * 加載購物車數據
+ * 異步請求後端 API 獲取購物車數據，並觸發渲染與角標更新
+ * @returns {Promise<void>}
  */
 Cart.loadItems = async function () {
   try {
@@ -94,7 +99,10 @@ Cart.loadItems = async function () {
 };
 
 /**
- * 渲染購物車列表
+ * 根據後端返回的數據生成購物車列表 DOM
+ * @param {Array<Object>} cartItems - 購物車商品數據數組
+ * @param {number} totalAmount - 選中商品的總金額
+ * @returns {void}
  */
 Cart.renderItems = function (cartItems, totalAmount) {
   const container = document.getElementById("cartItemsContainer");
@@ -151,7 +159,10 @@ Cart.renderItems = function (cartItems, totalAmount) {
 };
 
 /**
- * 切換購物車項選擇狀態
+ * 切換單個購物車項的選中狀態，並同步後端與詳情頁 UI
+ * @param {number} cartId - 購物車記錄 ID
+ * @param {boolean} isChecked - 當前是否被勾選
+ * @returns {Promise<void>}
  */
 Cart.toggleSelection = async function (cartId, isChecked) {
   // 替換內部引用
@@ -222,7 +233,10 @@ Cart.toggleSelection = async function (cartId, isChecked) {
 };
 
 /**
- * 更新購物車數量
+ * 更新購物車商品數量 (包含樂觀更新 UI 與失敗回滾機制)
+ * @param {number} cartId - 購物車記錄 ID
+ * @param {number} newQuantity - 目標數量
+ * @returns {Promise<void>}
  */
 Cart.updateQuantity = async function (cartId, newQuantity) {
   if (newQuantity <= 0) return;
@@ -309,7 +323,9 @@ Cart.updateQuantity = async function (cartId, newQuantity) {
 };
 
 /**
- * 打開刪除確認彈窗
+ * 攔截刪除操作，打開確認彈窗並暫存待刪除的商品 ID
+ * @param {number} productId - 準備移除的商品 ID
+ * @returns {void}
  */
 Cart.removeFromCart = function (productId) {
   Cart.pendingDeleteId = productId;
@@ -318,7 +334,8 @@ Cart.removeFromCart = function (productId) {
 };
 
 /**
- * 關閉刪除確認彈窗
+ * 關閉刪除確認彈窗，並清空暫存的 pendingDeleteId
+ * @returns {void}
  */
 Cart.closeDeleteModal = function () {
   document.getElementById("cartDeleteModal").style.display = "none";
@@ -327,7 +344,8 @@ Cart.closeDeleteModal = function () {
 };
 
 /**
- * 確認刪除商品
+ * 確認執行刪除操作，調用 API 並處理列表移除動畫與狀態重算
+ * @returns {Promise<void>}
  */
 Cart.confirmDelete = async function () {
   if (!Cart.pendingDeleteId) return;
@@ -381,7 +399,8 @@ Cart.confirmDelete = async function () {
 };
 
 /**
- * 結算
+ * 執行結帳流程：校驗登入與選中狀態，創建訂單並跳轉至結帳頁
+ * @returns {Promise<void>}
  */
 Cart.checkout = async function () {
   if (!isLoggedIn) {
@@ -462,6 +481,11 @@ document.addEventListener("keydown", function (e) {
   }
 });
 
+/**
+ * 格式化價格數字 (自動添加千分位逗號)
+ * @param {number} price - 原始價格數值
+ * @returns {string} 格式化後的價格字符串 (例如: "12,345")
+ */
 function formatPrice(price) {
   return new Intl.NumberFormat("zh-HK", {
     minimumFractionDigits: 0,
@@ -469,6 +493,11 @@ function formatPrice(price) {
   }).format(price);
 }
 
+/**
+ * 將指定商品加入購物車 (帶有登入狀態攔截)
+ * @param {number} productId - 商品 ID
+ * @returns {Promise<void>}
+ */
 async function addToCart(productId) {
   if (typeof isLoggedIn === "undefined" || !isLoggedIn) {
     showNotification("❌ 請先登入後再加入購物車！", true);
@@ -491,6 +520,12 @@ async function addToCart(productId) {
   }
 }
 
+/**
+ * 在頁面中央顯示 Toast 提示通知 (自動消失)
+ * @param {string} message - 提示文字內容
+ * @param {boolean} [isError=false] - 是否為錯誤提示 (true 為紅色背景，false 為金色背景)
+ * @returns {void}
+ */
 function showNotification(message, isError = false) {
   const notification = document.createElement("div");
   notification.style.cssText = `
@@ -517,7 +552,9 @@ function showNotification(message, isError = false) {
 }
 
 /**
- * 更新導航欄購物車角標數量
+ * 更新導航欄購物車圖標右上角的數量角標 (Badge)
+ * @param {number} count - 購物車內的商品總件數
+ * @returns {void}
  */
 function updateCartBadge(count) {
   const badge = document.getElementById("cartCountBadge");
@@ -537,12 +574,17 @@ function updateCartBadge(count) {
 
 // ===== 第一步：建立命名空間 =====
 window.ChronoTeam.auth = window.ChronoTeam.auth || {};
+/**
+ * @namespace Auth
+ * @description 處理用戶身份驗證相關的 UI 控制與 API 互動 (登入、註冊、登出、權限攔截)。
+ */
 const Auth = window.ChronoTeam.auth;
 
 // ===== 第二步：UI 控制函數 =====
 
 /**
- * 打開註冊彈窗
+ * 打開註冊彈窗，重置表單並清空提示訊息，同時鎖定背景滾動。
+ * @returns {void}
  */
 Auth.openRegisterModal = function () {
     const modal = document.getElementById("registerModal");
@@ -556,7 +598,8 @@ Auth.openRegisterModal = function () {
 };
 
 /**
- * 關閉註冊彈窗
+ * 關閉註冊彈窗並恢復背景滾動。
+ * @returns {void}
  */
 Auth.closeRegisterModal = function () {
     const modal = document.getElementById("registerModal");
@@ -566,7 +609,8 @@ Auth.closeRegisterModal = function () {
 };
 
 /**
- * 打開登入彈窗
+ * 打開登入彈窗，重置表單並清空提示訊息，同時鎖定背景滾動。
+ * @returns {void}
  */
 Auth.openLoginModal = function () {
     const modal = document.getElementById("loginModal");
@@ -580,7 +624,8 @@ Auth.openLoginModal = function () {
 };
 
 /**
- * 關閉登入彈窗
+ * 關閉登入彈窗並恢復背景滾動。
+ * @returns {void}
  */
 Auth.closeLoginModal = function () {
     const modal = document.getElementById("loginModal");
@@ -590,7 +635,8 @@ Auth.closeLoginModal = function () {
 };
 
 /**
- * 切換到註冊
+ * 從登入彈窗切換到註冊彈窗（帶有 200ms 的延遲過渡動畫）。
+ * @returns {void}
  */
 Auth.switchToRegister = function () {
     Auth.closeLoginModal();
@@ -598,7 +644,8 @@ Auth.switchToRegister = function () {
 };
 
 /**
- * 切換到登入
+ * 從註冊彈窗切換到登入彈窗（帶有 200ms 的延遲過渡動畫）。
+ * @returns {void}
  */
 Auth.switchToLogin = function () {
     Auth.closeRegisterModal();
@@ -606,7 +653,10 @@ Auth.switchToLogin = function () {
 };
 
 /**
- * 切換密碼可見性
+ * 切換密碼輸入框的可見性（明文/密文），並同步切換 FontAwesome 圖標。
+ * @param {string} inputId - 密碼輸入框的 DOM ID (例如: 'regPassword', 'loginPassword')。
+ * @param {HTMLElement} icon - 觸發切換的圖標元素 (需包含 fa-eye / fa-eye-slash 類名)。
+ * @returns {void}
  */
 Auth.togglePassword = function (inputId, icon) {
     const input = document.getElementById(inputId);
@@ -623,7 +673,11 @@ Auth.togglePassword = function (inputId, icon) {
 // ===== 第三步：業務邏輯函數 =====
 
 /**
- * 處理註冊提交
+ * 處理註冊表單的異步提交邏輯。
+ * 包含前端密碼一致性校驗、API 請求、成功後的自動跳轉登入以及錯誤處理。
+ * @async
+ * @param {SubmitEvent} e - 表單提交事件對象。
+ * @returns {Promise<void>}
  */
 Auth.handleRegister = async function (e) {
     e.preventDefault();
@@ -685,7 +739,11 @@ Auth.handleRegister = async function (e) {
 };
 
 /**
- * 處理登入提交
+ * 處理登入表單的異步提交邏輯。
+ * 包含 API 請求、成功後的頁面刷新、針對用戶名不存在或密碼錯誤的特定 UI 反饋 (shake 動畫)。
+ * @async
+ * @param {SubmitEvent} e - 表單提交事件對象。
+ * @returns {Promise<void>}
  */
 Auth.handleLogin = async function (e) {
     e.preventDefault();
@@ -755,7 +813,8 @@ Auth.handleLogin = async function (e) {
 // ===== 第四步：登出與權限攔截 =====
 
 /**
- * 顯示登出確認彈窗
+ * 顯示自定義的登出確認彈窗，並鎖定背景滾動。
+ * @returns {void}
  */
 Auth.showLogoutModal = function () {
     const modal = document.getElementById("logoutModal");
@@ -766,7 +825,8 @@ Auth.showLogoutModal = function () {
 };
 
 /**
- * 關閉登出確認彈窗
+ * 關閉登出確認彈窗，並恢復背景滾動。
+ * @returns {void}
  */
 Auth.closeLogoutModal = function () {
     const modal = document.getElementById("logoutModal");
@@ -777,7 +837,9 @@ Auth.closeLogoutModal = function () {
 };
 
 /**
- * 執行登出操作
+ * 執行實際的登出 API 請求，成功或失敗後均強制重定向至首頁 ("/")。
+ * @async
+ * @returns {Promise<void>}
  */
 Auth.performLogout = async function () {
     Auth.closeLogoutModal();
@@ -794,7 +856,15 @@ Auth.performLogout = async function () {
 };
 
 /**
- * 觸發登出 (供 HTML onclick 調用)
+ * 頁面跳轉前的登入狀態攔截器。
+ * 若用戶未登入，則彈出提示並喚起登入彈窗；若已登入，則直接跳轉至目標 URL。
+ *
+ * ⚠️ 依賴全局變量 `isLoggedIn` (由 Thymeleaf 後端注入)
+ * ⚠️ 依賴全局函數 `showNotification(message, isError)`
+ *
+ * @param {string} url - 嘗試跳轉的目標 URL。
+ * @param {string} [message="❌ 請先登入！"] - 未登入時顯示的提示消息。
+ * @returns {boolean} 若已登入並執行跳轉返回 `true`；若未登入被攔截返回 `false`。
  */
 Auth.handleLogout = function () {
     Auth.showLogoutModal();
@@ -874,10 +944,9 @@ window.ChronoTeam.notification = window.ChronoTeam.notification || {};
 const NotificationSys = window.ChronoTeam.notification;
 
 /**
- * 獲取未讀通知數量並更新 UI
- */
-/**
- * 獲取未讀通知數量並更新 UI
+ * 獲取未讀通知數量並更新導航欄 UI (紅點與智能跳轉連結)
+ * @async
+ * @returns {Promise<void>}
  */
 NotificationSys.fetchUnreadCounts = async function () {
   try {

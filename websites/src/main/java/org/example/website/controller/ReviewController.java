@@ -1,8 +1,14 @@
 package org.example.website.controller;
 
-import org.example.website.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.website.dto.Result;
 import org.example.website.entity.*;
 import org.example.website.repository.*;
+import org.example.website.security.CustomUserDetails;
 import org.example.website.service.*;
 import org.example.website.repository.*;
 import org.springframework.data.domain.Page;
@@ -25,6 +31,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/review")
+@Tag(name = "評論管理", description = "商品評論、回覆、點讚、置頂及審核相關接口")
 public class ReviewController {
 
     private final ReviewRepository reviewRepository;
@@ -40,6 +47,7 @@ public class ReviewController {
     private final AdminPenaltyService adminPenaltyService;
     private final NotificationService notificationService;
     private final NotificationPushService pushService;
+
     //  構造函數注入所有依賴
     public ReviewController(ReviewRepository reviewRepository,
                             OrderRepository orderRepository,
@@ -62,20 +70,48 @@ public class ReviewController {
         this.notificationRepository = notificationRepository;
         this.userBlockService = userBlockService;
         this.userBlockRepository = userBlockRepository;
-        this.reviewArchiveRepository=reviewArchiveRepository;
+        this.reviewArchiveRepository = reviewArchiveRepository;
         this.adminPenaltyService = adminPenaltyService;
         this.notificationService = notificationService;
         this.pushService = pushService;
     }
 
 
+    /**
+     * 核心修復：權限校驗基於 user_type (Role == ADMIN)，而非用戶名是否等於 "admin"
+     * CustomUserDetails 在登入時已從數據庫載入 Role 枚舉，直接判斷，零查庫開銷
+     */
+    private boolean isAdmin(Authentication authentication) {
+        return authentication != null
+                && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal())
+                && authentication.getPrincipal() instanceof CustomUserDetails userDetails
+                && userDetails.getRole() == User.Role.ADMIN;
+    }
+
+    @Operation(
+            summary = "提交評論或回覆",
+            description = "支援根評論與樓中樓回覆。若為富文本將自動進行 XSS 清理。管理員可繞過訂單校驗直接發表官方備註。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "提交成功"),
+            @ApiResponse(responseCode = "400", description = "參數錯誤、內容為空、已評價過或被禁言"),
+            @ApiResponse(responseCode = "401", description = "未登入"),
+            @ApiResponse(responseCode = "403", description = "被管理員永久拉黑")
+    })
     @PostMapping("/submit")
-    public ResponseEntity<ApiResponse> submitReview(@RequestBody Map<String, Object> request, Authentication authentication) {
+    public ResponseEntity<Result> submitReview(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "評論數據。根評論必填: productId, content, rating, orderNo。回覆選填: parentId, replyToUser",
+                    required = true
+            )
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
         try {
             // 1. 先驗證認證狀態
             if (authentication == null || !authentication.isAuthenticated()
                     || "anonymousUser".equals(authentication.getPrincipal())) {
-                return ResponseEntity.status(401).body(ApiResponse.error("請先登入"));
+                return ResponseEntity.status(401).body(Result.error("請先登入"));
             }
 
             String username = authentication.getName();
@@ -87,33 +123,33 @@ public class ReviewController {
                 errorData.put("banned", true);
                 errorData.put("expiresAt", activeBan.get().getEndTime());
                 return ResponseEntity.badRequest()
-                        .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
+                        .body(new Result(false, "GLOBAL_BAN", errorData));
             }
 
             // 檢查是否被管理員永久拉黑
             if (adminPenaltyService.isBlacklisted(username)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(new ApiResponse(false, "BLACKLISTED", "您已被管理員永久拉黑，無法發表評論或回復"));
+                        .body(new Result(false, "BLACKLISTED", "您已被管理員永久拉黑，無法發表評論或回復"));
             }
 
             String replyToUser = (String) request.get("replyToUser");
             if (replyToUser != null && !replyToUser.trim().isEmpty()) {
                 if (userBlockService.isBlocked(username, replyToUser)) {
                     return ResponseEntity.badRequest()
-                            .body(ApiResponse.error("您已禁言對方，因此無法回復"));
+                            .body(Result.error("您已禁言對方，因此無法回復"));
                 }
             }
 
             // 2. 驗證 productId
             if (request.get("productId") == null) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("商品ID不能為空"));
+                return ResponseEntity.badRequest().body(Result.error("商品ID不能為空"));
             }
             Integer productId = Integer.valueOf(request.get("productId").toString());
 
             // 3. 驗證並處理 content
             String rawContent = request.get("content") != null ? (String) request.get("content") : null;
             if (rawContent == null || rawContent.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
+                return ResponseEntity.badRequest().body(Result.error("回覆內容不能為空"));
             }
 
             // 【核心修復 1】：使用 Jsoup 清理 HTML
@@ -130,7 +166,7 @@ public class ReviewController {
             String plainText = Jsoup.parse(safeHtml).text();
 
             if (plainText.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
+                return ResponseEntity.badRequest().body(Result.error("回覆內容不能為空"));
             }
 
             // 智能判斷是否為富文本
@@ -178,7 +214,7 @@ public class ReviewController {
                 } else {
                     String orderNo = (String) request.get("orderNo");
                     if (request.get("rating") == null) {
-                        return ResponseEntity.badRequest().body(ApiResponse.error("評分不能為空"));
+                        return ResponseEntity.badRequest().body(Result.error("評分不能為空"));
                     }
                     Double rating = Double.valueOf(request.get("rating").toString());
 
@@ -186,7 +222,7 @@ public class ReviewController {
                             .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
 
                     if (reviewRepository.findByOrderNoAndProduct_ProductId(orderNo, productId) != null) {
-                        return ResponseEntity.badRequest().body(ApiResponse.error("您已經評價過該商品"));
+                        return ResponseEntity.badRequest().body(Result.error("您已經評價過該商品"));
                     }
 
                     review.setOrderNo(orderNo);
@@ -249,22 +285,35 @@ public class ReviewController {
             }
             // ==========================================
 
-            return ResponseEntity.ok(ApiResponse.ok("提交成功"));
+            return ResponseEntity.ok(Result.ok("提交成功"));
 
         } catch (Exception e) {
             System.err.println(" 提交評論/回覆失敗: " + e.getClass().getName() + " - " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("提交失敗: " + (e.getMessage() != null ? e.getMessage() : "未知錯誤")));
+                    .body(Result.error("提交失敗: " + (e.getMessage() != null ? e.getMessage() : "未知錯誤")));
         }
     }
 
+    @Operation(
+            summary = "獲取樓中樓回覆列表",
+            description = "分頁獲取指定根評論下的所有回覆，支援按熱門、最新、最早排序。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功"),
+            @ApiResponse(responseCode = "400", description = "參數錯誤或評論不存在")
+    })
     @GetMapping("/{parentId}/replies")
-    public ResponseEntity<?> getReplies(@PathVariable Long parentId,
-                                        @RequestParam(defaultValue = "0") int page,
-                                        @RequestParam(defaultValue = "20") int size,
-                                        @RequestParam(defaultValue = "popular") String sort,
-                                        Authentication authentication) {
+    public ResponseEntity<?> getReplies(
+            @Parameter(description = "根評論的 ID", required = true, example = "1")
+            @PathVariable Long parentId,
+            @Parameter(description = "當前頁碼 (0-based)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每頁數量", example = "20")
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "排序方式: popular, newest, oldest", example = "popular")
+            @RequestParam(defaultValue = "popular") String sort,
+            Authentication authentication) {
         try {
             // 根據排序參數構建排序規則
             Sort dynamicSort;
@@ -340,17 +389,28 @@ public class ReviewController {
             data.put("totalReplies", reviewRepository.countByParentId(parentId));
             data.put("validMentionedUsers", validMentions);
 
-            return ResponseEntity.ok(ApiResponse.okWithData("成功", data));
+            return ResponseEntity.ok(Result.okWithData("成功", data));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+            return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         }
     }
 
 
+    @Operation(
+            summary = "修改評論",
+            description = "用戶修改自己的評論內容，支援純文本與富文本切換。置頂評論不可修改。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "修改成功"),
+            @ApiResponse(responseCode = "400", description = "內容為空或評論為置頂狀態"),
+            @ApiResponse(responseCode = "403", description = "無權修改或已被禁言/拉黑")
+    })
     @PutMapping("/{id}/update")
-    public ResponseEntity<ApiResponse> updateReview(
+    public ResponseEntity<Result> updateReview(
+            @Parameter(description = "要修改的評論 ID", required = true, example = "1")
             @PathVariable Long id,
-            @RequestBody Map<String, Object> request, // 【核心修改 1】：改為 Object 以接收前端傳來的 isFormatted 布爾值
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "包含 content 和 isFormatted 布爾值的請求體", required = true)
+            @RequestBody Map<String, Object> request,
             Authentication authentication) {
         try {
             String username = authentication.getName();
@@ -359,7 +419,7 @@ public class ReviewController {
             String rawContent = request.get("content") != null ? request.get("content").toString() : null;
 
             if (rawContent == null || rawContent.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("評論內容不能為空"));
+                return ResponseEntity.badRequest().body(Result.error("評論內容不能為空"));
             }
 
             Review review = reviewRepository.findById(id)
@@ -368,12 +428,12 @@ public class ReviewController {
             // 检查是否置顶
             if (Boolean.TRUE.equals(review.getPinned())) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("置頂評論不能被修改，請先取消置頂"));
+                        .body(Result.error("置頂評論不能被修改，請先取消置頂"));
             }
 
             // 權限校驗：只能修改自己的評論
             if (!review.getUser().getUsername().equals(username)) {
-                return ResponseEntity.status(403).body(ApiResponse.error("無權修改此評論"));
+                return ResponseEntity.status(403).body(Result.error("無權修改此評論"));
             }
 
             // 檢查當前用戶是否被管理員全局禁言
@@ -384,13 +444,13 @@ public class ReviewController {
                 errorData.put("expiresAt", activeBan.get().getEndTime());
 
                 return ResponseEntity.badRequest()
-                        .body(new ApiResponse(false, "GLOBAL_BAN", errorData));
+                        .body(new Result(false, "GLOBAL_BAN", errorData));
             }
 
             // ================= 檢查是否被管理員永久拉黑 =================
             if (adminPenaltyService.isBlacklisted(username)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(new ApiResponse(false, "BLACKLISTED", "您已被管理員永久拉黑，無法修改評論"));
+                        .body(new Result(false, "BLACKLISTED", "您已被管理員永久拉黑，無法修改評論"));
             }
 
 
@@ -433,7 +493,7 @@ public class ReviewController {
 
             // 2. 校驗純文本是否為空
             if (plainText.isEmpty()) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("回覆內容不能為空"));
+                return ResponseEntity.badRequest().body(Result.error("回覆內容不能為空"));
             }
 
             // 3. 更新 Review 實體的字段
@@ -445,17 +505,28 @@ public class ReviewController {
 
             reviewRepository.save(review);
 
-            return ResponseEntity.ok(ApiResponse.ok("評論修改成功"));
+            return ResponseEntity.ok(Result.ok("評論修改成功"));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body(ApiResponse.error("修改評論失敗: " + e.getMessage()));
+            return ResponseEntity.internalServerError().body(Result.error("修改評論失敗: " + e.getMessage()));
         }
     }
 
 
+    @Operation(
+            summary = "刪除評論",
+            description = "用戶可刪除自己的評論；管理員可刪除任意違規評論並填寫原因，系統會自動歸檔並通知用戶。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "刪除成功"),
+            @ApiResponse(responseCode = "400", description = "評論為置頂狀態"),
+            @ApiResponse(responseCode = "403", description = "無權刪除此評論")
+    })
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse> deleteReview(
+    public ResponseEntity<Result> deleteReview(
+            @Parameter(description = "要刪除的評論 ID", required = true, example = "1")
             @PathVariable Long id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "管理員刪除時可選填 deleteReason")
             @RequestBody(required = false) Map<String, String> requestBody,
             Authentication authentication) {
         try {
@@ -465,12 +536,12 @@ public class ReviewController {
 
             if (Boolean.TRUE.equals(review.getPinned())) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("置頂評論不能被刪除，請先取消置頂"));
+                        .body(Result.error("置頂評論不能被刪除，請先取消置頂"));
             }
 
             // 權限校驗：管理員或評論作者
-            if (!review.getUser().getUsername().equals(username) && !"admin".equals(username)) {
-                return ResponseEntity.status(403).body(ApiResponse.error("無權刪除此評論"));
+            if (!review.getUser().getUsername().equals(username) && !isAdmin(authentication)) {
+                return ResponseEntity.status(403).body(Result.error("無權刪除此評論"));
             }
 
             // ==========================================
@@ -478,7 +549,7 @@ public class ReviewController {
             String deleteReason = null;
 
             // 只有管理員刪除時，才會嘗試從請求體中獲取原因
-            if ("admin".equals(username) && requestBody != null && requestBody.containsKey("deleteReason")) {
+            if (isAdmin(authentication) && requestBody != null && requestBody.containsKey("deleteReason")) {
                 String reasonFromBody = requestBody.get("deleteReason");
                 if (reasonFromBody != null && !reasonFromBody.trim().isEmpty()) {
                     deleteReason = reasonFromBody.trim();
@@ -555,7 +626,7 @@ public class ReviewController {
             }
 
             // 3. 創建系統通知發送給用戶 (僅限管理員刪除時)
-            if ("admin".equals(username)) {
+            if (isAdmin(authentication)) {
                 Notification notification = new Notification();
                 notification.setRecipient(targetUser);
 
@@ -573,19 +644,28 @@ public class ReviewController {
                 notificationRepository.save(notification);
             }
 
-            return ResponseEntity.ok(ApiResponse.ok("評論已刪除"));
+            return ResponseEntity.ok(Result.ok("評論已刪除"));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body(ApiResponse.error("刪除評論失敗: " + e.getMessage()));
+            return ResponseEntity.internalServerError().body(Result.error("刪除評論失敗: " + e.getMessage()));
         }
     }
 
     /**
      * 檢查是否可以評價
      */
+    @Operation(
+            summary = "檢查是否具備評價資格",
+            description = "驗證當前登入用戶是否購買並付款了該商品，且尚未發表過評價。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "檢查完成，返回 canReview 布爾值與 message")
+    })
     @GetMapping("/can-review")
     public ResponseEntity<Map<String, Object>> canReview(
+            @Parameter(description = "商品 ID", required = true, example = "1")
             @RequestParam Integer productId,
+            @Parameter(description = "訂單編號", required = true, example = "ORD-123456")
             @RequestParam String orderNo,
             Authentication authentication) {
 
@@ -631,8 +711,14 @@ public class ReviewController {
     /**
      * 點讚
      */
+    @Operation(summary = "點讚評論", description = "對指定評論進行點讚或取消點讚操作。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "操作成功"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
     @PostMapping("/{reviewId}/like")
     public ResponseEntity<Map<String, Object>> likeReview(
+            @Parameter(description = "評論 ID", required = true, example = "1")
             @PathVariable Long reviewId,
             Principal principal) {
 
@@ -652,11 +738,14 @@ public class ReviewController {
         return ResponseEntity.status(status).body(result);
     }
 
-    /**
-     * 踩
-     */
+    @Operation(summary = "踩評論", description = "對指定評論進行踩或取消踩操作。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "操作成功"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
     @PostMapping("/{reviewId}/dislike")
     public ResponseEntity<Map<String, Object>> dislikeReview(
+            @Parameter(description = "評論 ID", required = true, example = "1")
             @PathVariable Long reviewId,
             Principal principal) {
 
@@ -677,10 +766,21 @@ public class ReviewController {
     }
 
 
+    @Operation(
+            summary = "獲取用戶互動記錄",
+            description = "獲取我的評論、回覆我的、@我的、我點讚的、點讚我的等互動數據分頁列表。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功"),
+            @ApiResponse(responseCode = "400", description = "無效的類型參數")
+    })
     @GetMapping("/interactions")
     public ResponseEntity<?> getInteractions(
+            @Parameter(description = "互動類型: MY, REPLY, MENTION, LIKED_BY_ME, LIKED_ME", example = "MY")
             @RequestParam(defaultValue = "MY") String type,
+            @Parameter(description = "當前頁碼 (0-based)", example = "0")
             @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每頁數量", example = "30")
             @RequestParam(defaultValue = "30") int size,
             Authentication authentication) {
 
@@ -693,7 +793,7 @@ public class ReviewController {
             emptyData.put("totalPages", 34);
             emptyData.put("totalElements", maxRecords);
             emptyData.put("currentPage", page);
-            return ResponseEntity.ok(ApiResponse.okWithData("success", emptyData));
+            return ResponseEntity.ok(Result.okWithData("success", emptyData));
         }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -719,7 +819,7 @@ public class ReviewController {
                     resultPage = Page.empty();
                     break;
                 default:
-                    return ResponseEntity.badRequest().body(ApiResponse.error("無效的類型"));
+                    return ResponseEntity.badRequest().body(Result.error("無效的類型"));
             }
 
             List<Map<String, Object>> list = new ArrayList<>();
@@ -767,7 +867,7 @@ public class ReviewController {
                 data.put("totalElements", displayTotal);
                 data.put("currentPage", page);
 
-                return ResponseEntity.ok(ApiResponse.okWithData("success", data));
+                return ResponseEntity.ok(Result.okWithData("success", data));
             }
 
             // 其他類型的原有邏輯
@@ -804,23 +904,32 @@ public class ReviewController {
             data.put("totalElements", displayTotal);
             data.put("currentPage", page);
 
-            return ResponseEntity.ok(ApiResponse.okWithData("success", data));
+            return ResponseEntity.ok(Result.okWithData("success", data));
 
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body(ApiResponse.error("查詢失敗: " + e.getMessage()));
+            return ResponseEntity.internalServerError().body(Result.error("查詢失敗: " + e.getMessage()));
         }
     }
 
+    @Operation(
+            summary = "置頂/取消置頂評論",
+            description = "僅管理員可用。每個商品的評論區最多只能置頂 3 條評論。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "操作成功"),
+            @ApiResponse(responseCode = "400", description = "已達到置頂數量上限或參數錯誤"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
+    })
     @PostMapping("/{reviewId}/pin")
-    public ResponseEntity<ApiResponse> pinReview(
+    public ResponseEntity<Result> pinReview(
             @PathVariable Long reviewId,
             @RequestBody Map<String, Boolean> request,
             Authentication authentication) {
         try {
             // 1. 權限校驗：必須是 admin
-            if (!"admin".equals(authentication.getName())) {
-                return ResponseEntity.status(403).body(ApiResponse.error("無權操作，僅限管理員"));
+            if (!isAdmin(authentication)) {
+                return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員"));
             }
 
             // 2. 查找評論
@@ -834,27 +943,38 @@ public class ReviewController {
                 if (pinned) {
                     long pinnedCount = reviewRepository.countByProduct_ProductIdAndPinned(review.getProduct().getProductId(), true);
                     if (pinnedCount >= 3) {
-                        return ResponseEntity.badRequest().body(ApiResponse.error("每個物品的評論區最多只能置頂三條評論，請先取消先前的置頂！"));
+                        return ResponseEntity.badRequest().body(Result.error("每個物品的評論區最多只能置頂三條評論，請先取消先前的置頂！"));
                     }
                 }
 
                 review.setPinned(pinned);
                 reviewRepository.save(review);
-                return ResponseEntity.ok(ApiResponse.ok(pinned ? "置頂成功" : "已取消置頂"));
+                return ResponseEntity.ok(Result.ok(pinned ? "置頂成功" : "已取消置頂"));
             } else {
-                return ResponseEntity.badRequest().body(ApiResponse.error("參數錯誤"));
+                return ResponseEntity.badRequest().body(Result.error("參數錯誤"));
             }
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(ApiResponse.error("操作失敗: " + e.getMessage()));
+            return ResponseEntity.internalServerError().body(Result.error("操作失敗: " + e.getMessage()));
         }
     }
 
 
+    @Operation(
+            summary = "獲取商品根評論列表",
+            description = "分頁獲取商品的根評論，包含評分統計、樓中樓數量統計與當前用戶的點讚狀態。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功")
+    })
     @GetMapping("/product/{productId}/root")
     public ResponseEntity<?> getRootReviews(
+            @Parameter(description = "商品 ID", required = true, example = "1")
             @PathVariable Integer productId,
+            @Parameter(description = "當前頁碼 (0-based)", example = "0")
             @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每頁數量", example = "30")
             @RequestParam(defaultValue = "30") int size,
+            @Parameter(description = "排序方式: popular, newest, oldest", example = "popular")
             @RequestParam(defaultValue = "popular") String sort,
             Authentication authentication) {
 
@@ -966,19 +1086,29 @@ public class ReviewController {
             data.put("totalScore", 0.0);
         }
 
-        return ResponseEntity.ok(ApiResponse.okWithData("成功", data));
+        return ResponseEntity.ok(Result.okWithData("成功", data));
     }
 
+
+    @Operation(
+            summary = "管理員恢復已刪除評論",
+            description = "從歸檔中恢復評論，並自動恢復商品評分統計。若是樓中樓回覆，會預檢父評論是否存在。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "恢復成功"),
+            @ApiResponse(responseCode = "400", description = "評論已存在或父評論已刪除"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
+    })
     @PostMapping("/restore/{archiveId}")
     @Transactional
-    public ResponseEntity<ApiResponse> restoreReview(
+    public ResponseEntity<Result> restoreReview(
+            @Parameter(description = "歸檔記錄 ID", required = true, example = "1")
             @PathVariable Long archiveId,
             Authentication authentication) {
         try {
             // 1. 驗證管理員權限
-            if (!"admin".equals(authentication.getName())) {
-                return ResponseEntity.status(403)
-                        .body(ApiResponse.error("無權操作，僅限管理員"));
+            if (!isAdmin(authentication)) {
+                return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員"));
             }
 
             // 2. 查找歸檔記錄
@@ -988,7 +1118,7 @@ public class ReviewController {
             // 3. 檢查原評論是否已存在（防止重複恢復）
             if (reviewRepository.findById(archive.getOriginalReviewId()).isPresent()) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("該評論已經存在，無需恢復"));
+                        .body(Result.error("該評論已經存在，無需恢復"));
             }
 
             // ==========================================
@@ -999,7 +1129,7 @@ public class ReviewController {
                 boolean parentExists = reviewRepository.existsById(archive.getParentId());
                 if (!parentExists) {
                     return ResponseEntity.badRequest()
-                            .body(ApiResponse.error("無法恢復：該回覆的父評論已被刪除，無法單獨恢復樓中樓回覆！"));
+                            .body(Result.error("無法恢復：該回覆的父評論已被刪除，無法單獨恢復樓中樓回覆！"));
                 }
             }
             // ==========================================
@@ -1085,23 +1215,32 @@ public class ReviewController {
             // 7. 刪除歸檔記錄
             reviewArchiveRepository.delete(archive);
 
-            return ResponseEntity.ok(ApiResponse.ok(targetType + "已成功恢復"));
+            return ResponseEntity.ok(Result.ok(targetType + "已成功恢復"));
 
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("恢復失敗: " + e.getMessage()));
+                    .body(Result.error("恢復失敗: " + e.getMessage()));
         }
     }
 
+    @Operation(
+            summary = "預檢恢復評論的可行性",
+            description = "管理員恢復前檢查父評論是否存在及刪除者信息，防止恢復失敗。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "預檢完成，返回檢查結果"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
+    })
     @GetMapping("/restore/{archiveId}/check")
-    public ResponseEntity<ApiResponse> checkRestore(
+    public ResponseEntity<Result> checkRestore(
+            @Parameter(description = "歸檔記錄 ID", required = true, example = "1")
             @PathVariable Long archiveId,
             Authentication authentication) {
         try {
             // 1. 驗證管理員權限
-            if (!"admin".equals(authentication.getName())) {
-                return ResponseEntity.status(403).body(ApiResponse.error("無權操作，僅限管理員"));
+            if (!isAdmin(authentication)) {
+                return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員"));
             }
 
             // 2. 查找歸檔記錄
@@ -1119,7 +1258,7 @@ public class ReviewController {
 
             // 如果父評論不存在，直接返回，前端會根據此字段直接報錯
             if (!parentExists) {
-                return ResponseEntity.ok(ApiResponse.okWithData("預檢完成", data));
+                return ResponseEntity.ok(Result.okWithData("預檢完成", data));
             }
 
             // 4. 檢查刪除者是否為 ADMIN
@@ -1142,12 +1281,12 @@ public class ReviewController {
             data.put("deletedByUsername", deletedByUsername);
             data.put("authorUsername", archive.getAuthor() != null ? archive.getAuthor().getUsername() : "未知用戶");
 
-            return ResponseEntity.ok(ApiResponse.okWithData("預檢完成", data));
+            return ResponseEntity.ok(Result.okWithData("預檢完成", data));
 
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.internalServerError()
-                    .body(ApiResponse.error("預檢失敗: " + e.getMessage()));
+                    .body(Result.error("預檢失敗: " + e.getMessage()));
         }
     }
 
