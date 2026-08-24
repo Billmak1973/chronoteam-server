@@ -2631,6 +2631,50 @@
         // ==========================================
         document.addEventListener('DOMContentLoaded', function () {
             const urlParams = new URLSearchParams(window.location.search);
+
+            // 检查是否有来自用户管理页面的跳转参数
+            const targetTab = urlParams.get('tab');
+            const reporterUsername = urlParams.get('reporterUsername');
+            const reportedUserMode = urlParams.get('reportedUserMode');
+
+            // 如果是跳转到举报管理 Tab
+            if (targetTab === 'reports' && reporterUsername) {
+                // 1. 切换到举报管理 Tab
+                const reportsTabBtn = document.querySelector('.tab-btn:nth-child(3)'); // 第三个按钮是举报管理
+                if (reportsTabBtn) {
+                    AdminReviews.switchTab('reports', reportsTabBtn);
+                }
+
+                // 2. 设置举报者为指定用户
+                const reporterFilterMode = document.getElementById('reporterFilterMode');
+                const reporterSearchInput = document.getElementById('reporterSearchInput');
+
+                if (reporterFilterMode && reporterSearchInput) {
+                    reporterFilterMode.value = 'specific';
+                    reporterSearchInput.value = reporterUsername;
+                    reporterSearchInput.style.display = 'block';
+                }
+
+                // 3. 设置被举报者为全部用户
+                const reportedUserFilterMode = document.getElementById('reportedUserFilterMode');
+                const reportedUserSearchInput = document.getElementById('reportedUserSearchInput');
+
+                if (reportedUserFilterMode && reportedUserSearchInput) {
+                    reportedUserFilterMode.value = reportedUserMode || 'all';
+                    reportedUserSearchInput.style.display = 'none';
+                    reportedUserSearchInput.value = '';
+                }
+
+                // 4. 自动触发筛选
+                setTimeout(() => {
+                    AdminReviews.filterReports();
+                }, 100);
+
+                // 5. 清理 URL 参数（可选，避免刷新后依然保持参数）
+                // window.history.replaceState({}, document.title, '/admin/reviews');
+            }
+
+            // 原有的初始化代码保持不变...
             const targetUsername = urlParams.get('username');
             if (targetUsername) {
                 const config = tableConfigs.reviews;

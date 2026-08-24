@@ -1184,11 +1184,328 @@
                 /* 暗黃色 */
             }
         }
+
+        /* ========================================== */
+        /* ========== 七夕主題 - 浪漫限定 ========== */
+        /* ========================================== */
+
+        /* 1. 全局背景：浪漫粉紫漸變 */
+        body.qixi-mode {
+            background: linear-gradient(180deg, #2d1b2e 0%, #4a1942 50%, #1a1a2e 100%);
+            background-attachment: fixed;
+        }
+
+        /* 2. Hero 區域：七夕專屬浪漫背景 */
+        body.qixi-mode .hero {
+            background: linear-gradient(135deg, #4a1942 0%, #8e2de2 50%, #ff6b81 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 漂浮愛心背景動畫 */
+        body.qixi-mode .hero::before {
+            content: '❤';
+            position: absolute;
+            font-size: 2rem;
+            color: rgba(255, 255, 255, 0.1);
+            animation: floatHeart 8s ease-in-out infinite;
+            top: 20%;
+            left: 10%;
+        }
+
+        body.qixi-mode .hero::after {
+            content: '❤';
+            position: absolute;
+            font-size: 3rem;
+            color: rgba(255, 107, 129, 0.15);
+            animation: floatHeart 10s ease-in-out infinite reverse;
+            bottom: 20%;
+            right: 15%;
+        }
+
+        @keyframes floatHeart {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0.3;
+            }
+
+            50% {
+                transform: translateY(-20px) rotate(10deg);
+                opacity: 0.6;
+            }
+        }
+
+        body.qixi-mode .hero h1 {
+            background: linear-gradient(to right, #fff, #ff9ff3, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(255, 107, 129, 0.4);
+        }
+
+        /* 3. 搜索欄：浪漫粉金邊框 */
+        body.qixi-mode .search-bar {
+            background: linear-gradient(135deg, #2d1b2e 0%, #4a1942 100%);
+            border: 2px solid rgba(255, 107, 129, 0.4);
+            box-shadow: 0 10px 40px rgba(255, 107, 129, 0.2), 0 0 60px rgba(142, 45, 226, 0.1);
+        }
+
+        body.qixi-mode .search-form input,
+        body.qixi-mode .search-form select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 159, 243, 0.3);
+            color: #fff;
+        }
+
+        body.qixi-mode .search-form input:focus,
+        body.qixi-mode .search-form select:focus {
+            border-color: #ff6b81;
+            box-shadow: 0 0 15px rgba(255, 107, 129, 0.4);
+        }
+
+        body.qixi-mode .search-form .btn-primary {
+            background: linear-gradient(135deg, #ff6b81 0%, #ff9ff3 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 129, 0.4);
+        }
+
+        /* 4. 分類區域：粉紫光暈 */
+        body.qixi-mode .categories {
+            background: linear-gradient(180deg, rgba(74, 25, 66, 0.9) 0%, rgba(45, 27, 46, 0.95) 100%);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        body.qixi-mode .categories .section-title {
+            color: #ff9ff3;
+            text-shadow: 0 0 15px rgba(255, 159, 243, 0.5);
+        }
+
+        body.qixi-mode .categories .section-title::after {
+            background: linear-gradient(90deg, #ff6b81, #ffd700, #ff6b81);
+            box-shadow: 0 0 10px rgba(255, 107, 129, 0.6);
+        }
+
+        body.qixi-mode .category-card {
+            background: linear-gradient(135deg, rgba(74, 25, 66, 0.8) 0%, rgba(45, 27, 46, 0.8) 100%);
+            border: 2px solid rgba(255, 159, 243, 0.2);
+        }
+
+        body.qixi-mode .category-card:hover {
+            border-color: #ff6b81;
+            box-shadow: 0 0 25px rgba(255, 107, 129, 0.4);
+            transform: translateY(-6px);
+        }
+
+        body.qixi-mode .category-card i {
+            color: #ff9ff3;
+            text-shadow: 0 0 10px rgba(255, 159, 243, 0.6);
+        }
+
+        /* 5. 熱門商品卡片：七夕限定邊框與光暈 */
+        .featured.qixi-theme {
+            background: linear-gradient(180deg, #1a1a2e 0%, #2d1b2e 50%, #1a1a2e 100%);
+            position: relative;
+        }
+
+        .product-card.qixi-theme {
+            position: relative;
+            z-index: 1;
+            border: 2px solid transparent;
+            background: linear-gradient(#2d1b2e, #2d1b2e) padding-box,
+                linear-gradient(135deg, #ff6b81 0%, #8e2de2 50%, #ffd700 100%) border-box;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(255, 107, 129, 0.15);
+        }
+
+        /* 卡片頂部浪漫流光動畫 */
+        .product-card.qixi-theme::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #ff9ff3, #ffd700, transparent);
+            animation: qixiShine 4s infinite;
+        }
+
+        /* 七夕主题 - 标题样式 */
+        .featured.qixi-theme .section-title {
+            color: white;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 0 20px rgba(255, 107, 129, 0.5);
+        }
+
+        .featured.qixi-theme .section-title i {
+            color: #ff9ff3;
+            animation: heartBeat 2s ease-in-out infinite;
+        }
+
+        @keyframes qixiShine {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        .product-card.qixi-theme:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(255, 107, 129, 0.3);
+        }
+
+        /* 卡片內部文字適配 */
+        .product-card.qixi-theme .product-brand,
+        .product-card.qixi-theme .product-name {
+            color: #f8f9fa;
+        }
+
+        .product-card.qixi-theme .product-price {
+            color: #ff9ff3;
+            text-shadow: 0 0 8px rgba(255, 159, 243, 0.4);
+        }
+
+        .product-card.qixi-theme .product-condition {
+            background: rgba(255, 107, 129, 0.15);
+            color: #ff9ff3;
+            border: 1px solid rgba(255, 159, 243, 0.3);
+        }
+
+        /* 6. Hero 區域按鈕：七夕專屬樣式 (強制覆蓋公共樣式) */
+        body.qixi-mode .hero .btn-primary {
+            background: linear-gradient(135deg, #ff6b81 0%, #ff9ff3 100%) !important;
+            border: none !important;
+            color: white !important;
+            box-shadow: 0 4px 15px rgba(255, 107, 129, 0.4) !important;
+        }
+
+        body.qixi-mode .hero .btn-primary:hover {
+            box-shadow: 0 6px 25px rgba(255, 107, 129, 0.6) !important;
+            transform: translateY(-2px) !important;
+        }
+
+        body.qixi-mode .hero .btn-outline {
+            background: transparent !important;
+            border: 2px solid #ff9ff3 !important;
+            color: #ff9ff3 !important;
+            box-shadow: 0 0 15px rgba(255, 159, 243, 0.2) !important;
+        }
+
+        body.qixi-mode .hero .btn-outline:hover {
+            background: #ff9ff3 !important;
+            color: #2d1b2e !important;
+            box-shadow: 0 0 25px rgba(255, 159, 243, 0.4) !important;
+        }
+
+        /* 查看更多按鈕容器 - 居中 */
+        .featured.qixi-theme .view-more-container {
+            text-align: center;
+            margin-top: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* 查看更多按鈕 - 膠囊形狀 */
+        .featured.qixi-theme .view-more-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.875rem 2.5rem;
+            background: transparent;
+            border: 2px solid #ff9ff3;
+            color: #ff9ff3;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(255, 159, 243, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 按鈕hover效果 - 粉紫漸變填充 */
+        .featured.qixi-theme .view-more-btn:hover {
+            background: linear-gradient(135deg, #ff6b81 0%, #ff9ff3 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 0 30px rgba(255, 107, 129, 0.5), 0 5px 20px rgba(255, 107, 129, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* 按鈕圖標樣式 */
+        .featured.qixi-theme .view-more-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .featured.qixi-theme .view-more-btn:hover i {
+            transform: translateX(5px);
+        }
+
+        /* 裝飾元素：七夕專屬 */
+        .featured.qixi-theme .decoration-left::before {
+            content: '❤';
+            font-size: 6rem;
+            color: #ff6b81;
+            opacity: 0.1;
+            filter: drop-shadow(0 0 20px rgba(255, 107, 129, 0.5));
+            animation: heartBeat 3s ease-in-out infinite;
+        }
+
+        .featured.qixi-theme .decoration-right::before {
+            content: '❤';
+            font-size: 5rem;
+            color: #8e2de2;
+            opacity: 0.1;
+            filter: drop-shadow(0 0 20px rgba(142, 45, 226, 0.5));
+            animation: heartBeat 3s ease-in-out infinite 1.5s;
+        }
+
+        @keyframes heartBeat {
+
+            0%,
+            100% {
+                transform: translateY(-50%) scale(1);
+            }
+
+            50% {
+                transform: translateY(-50%) scale(1.1);
+            }
+        }
+
+        /* 晚上模式 - 分類文字改為白色 */
+        body.night-mode .category-card span {
+            color: #ffffff;
+        }
+
+        /* 七夕模式 - 分類文字改為白色 */
+        body.qixi-mode .category-card span {
+            color: #ffffff;
+        }
+
+        body.qixi-mode .search-form select option {
+            background: white !important;
+            color: #8e2de2 !important;
+        }
+
+        body.qixi-mode .search-form select {
+            color: #fff;
+            appearance: none;
+            -webkit-appearance: none;
+        }
     </style>
 </head>
 
-<body th:classappend="${cardTheme == 'night'} ? 'night-mode' : ''">
+<!--1.要改的模式-->
+<!--<body th:classappend="${cardTheme == 'night'} ? 'night-mode' : ''">-->
+<!-- 如果 cardTheme 是 'qixi'，則加上 qixi-mode class -->
 
+<body th:classappend="${cardTheme == 'night'} ? 'night-mode' : (${cardTheme == 'qixi'} ? 'qixi-mode' : '')">
     <!-- 晚上模式裝飾元素 -->
     <div th:if="${cardTheme == 'night'}" class="night-decorations">
         <!-- 月亮 -->
@@ -1275,10 +1592,13 @@
     </section>
 
     <!-- ========================================== -->
-    <!-- 熱門商品 ( dramatic day/night themes ) -->
+    <!-- 2.熱門商品 ( dramatic day/night themes ) -->
     <!-- ========================================== -->
-    <section class="featured" th:classappend="${cardTheme == 'night'} ? 'night-theme' : 'day-theme'"
+    <section class="featured"
+        th:classappend="${cardTheme == 'night'} ? 'night-theme' : (${cardTheme == 'qixi'} ? 'qixi-theme' : 'day-theme')"
         th:if="${featuredProducts != null and !featuredProducts.isEmpty()}">
+        <!--    <section class="featured" th:classappend="${cardTheme == 'night'} ? 'night-theme' : 'day-theme'"-->
+        <!--        th:if="${featuredProducts != null and !featuredProducts.isEmpty()}">-->
 
         <!-- 裝飾元素（左右兩側） -->
         <div th:classappend="${cardTheme == 'night'} ? 'decoration-left' : 'decoration-left'">
@@ -1291,7 +1611,8 @@
         <h2 class="section-title">
             <i th:if="${cardTheme == 'day'}" class="fas fa-sun"></i>
             <i th:if="${cardTheme == 'night'}" class="fas fa-moon"></i>
-            <span th:text="${cardTheme == 'night'} ? '精選熱賣' : '精選熱賣'"></span>
+            <i th:if="${cardTheme == 'qixi'}" class="fas fa-heart" style="color: #ff6b81;"></i>
+            <span th:text="${cardTheme == 'qixi'} ? '七夕精選熱賣' : '精選熱賣'"></span>
         </h2>
 
         <div class="carousel-wrapper">
@@ -1303,10 +1624,13 @@
             <!-- 滑動軌道 -->
             <div class="carousel-track-container">
                 <div class="carousel-track" id="featuredTrack">
-                    <!-- Thymeleaf 動態生成卡片 -->
+                    <!--  3.Thymeleaf 動態生成卡片 -->
                     <div class="product-card carousel-slide"
-                        th:classappend="${cardTheme == 'night'} ? 'night-theme' : 'day-theme'"
+                        th:classappend="${cardTheme == 'night'} ? 'night-theme' : (${cardTheme == 'qixi'} ? 'qixi-theme' : 'day-theme')"
                         th:each="product : ${featuredProducts}">
+                        <!--                    <div class="product-card carousel-slide"-->
+                        <!--                        th:classappend="${cardTheme == 'night'} ? 'night-theme' : 'day-theme'"-->
+                        <!--                        th:each="product : ${featuredProducts}">-->
 
                         <!-- 白天主題裝飾 -->
                         <div th:if="${cardTheme == 'day'}" class="corner-decoration corner-top-left"></div>
@@ -1365,9 +1689,11 @@
                 <span>查看更多</span>
                 <i th:if="${cardTheme == 'day'}" class="fas fa-arrow-right"></i>
                 <i th:if="${cardTheme == 'night'}" class="fas fa-rocket"></i>
+                <i th:if="${cardTheme == 'qixi'}" class="fas fa-heart" style="animation: pulse 1.5s infinite;"></i>
             </a>
         </div>
     </section>
+
 
     <!-- 平台特色 -->
     <section class="features">

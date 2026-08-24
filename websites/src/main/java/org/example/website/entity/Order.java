@@ -88,6 +88,14 @@ public class Order {
     @Column(name = "deadline_at")
     private LocalDateTime deadlineAt;
 
+    /**
+     * 預計送達日期 (根據後台「配送模式規則」動態計算得出)
+     * 例如：次日達則為明天，指定星期則為下一個符合的星期幾
+     * 使用 LocalDate 即可，因為通常只需精確到「某一天」
+     */
+    @Column(name = "estimated_delivery_date")
+    private java.time.LocalDate estimatedDeliveryDate;
+
 
     // ================= 8. 用戶界面可見性 (新增) =================
     /**

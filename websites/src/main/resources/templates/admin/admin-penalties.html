@@ -466,6 +466,150 @@
         .btn-appeal-blacklist:active {
             transform: translateY(0);
         }
+
+        /* === 篩選工具欄樣式（參考用戶管理頁面）=== */
+        .filter-bar {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            align-items: flex-end;
+            flex-wrap: wrap;
+            border: 1px solid rgba(0, 0, 0, 0.02);
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 180px;
+            /* 稍微減小最小寬度 */
+            flex: 1;
+        }
+
+        .filter-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-label i {
+            color: var(--gold);
+            font-size: 1rem;
+        }
+
+        .filter-input,
+        .filter-select {
+            padding: 0.6rem 0.9rem;
+            /* 稍微減小內距 */
+            border: 2px solid #edf2f9;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            /* 稍微減小字體 */
+            background: #f8fafc;
+            transition: all 0.3s ease;
+            width: 100%;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--gold);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+            transform: translateY(-1px);
+        }
+
+        /* 新增：用戶篩選區域的容器樣式 */
+        .filter-item:has(.filter-select#penaltyUserMode) {
+            min-width: 150px;
+            /* 下拉框區域更窄 */
+            flex: 0 0 150px;
+        }
+
+        .filter-item:has(.filter-input#penaltyUserInput) {
+            flex: 1;
+            /* 輸入框區域更寬 */
+            min-width: 200px;
+        }
+
+        /* 按鈕區域樣式 */
+        .filter-bar>div:last-child {
+            flex: 0 0 auto;
+            /* 不拉伸 */
+            margin-left: auto;
+            /* 推到右側 */
+        }
+
+        .btn-filter {
+            padding: 0.55rem 1.2rem;
+            /* 大幅減小內距 */
+            border: none;
+            border-radius: 8px;
+            /* 稍微減小圓角 */
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            /* 減小字體 */
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            /* 減小間距 */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: auto;
+            /* 改為自動高度 */
+            white-space: nowrap;
+            /* 防止文字換行 */
+        }
+
+        .btn-search {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-reset {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-reset:hover {
+            background: #cbd5e1;
+            color: #1e293b;
+        }
+
+        /* 響應式調整 */
+        @media (max-width: 768px) {
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-item {
+                min-width: 100%;
+                flex: 1 1 100%;
+            }
+
+            .filter-bar>div:last-child {
+                margin-left: 0;
+                justify-content: flex-end;
+            }
+        }
     </style>
 </head>
 
@@ -500,41 +644,48 @@
                 <!-- 1. 處罰記錄 Tab -->
                 <!-- ========================================== -->
                 <div id="tab-penalties" class="tab-content active">
-                    <!-- 篩選器 -->
-                    <div class="filter-container"
-                        style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef;">
-                        <div
-                            style="font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-filter" style="color: var(--gold);"></i> 篩選條件：
+                    <!-- 篩選器 - 參考用戶管理頁面樣式 -->
+                    <div class="filter-bar">
+                        <div class="filter-item">
+                            <label class="filter-label"><i class="fas fa-user"></i> 用戶篩選</label>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <select id="penaltyUserMode" onchange="togglePenaltyUserSearch()" class="filter-select"
+                                    style="flex: 1;">
+                                    <option value="all">所有用戶</option>
+                                    <option value="specific">指定用戶</option>
+                                </select>
+                                <input type="text" id="penaltyUserInput" placeholder="輸入用戶名..." class="filter-input"
+                                    style="flex: 2; display: none;">
+                            </div>
                         </div>
 
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <select id="penaltyUserMode" onchange="togglePenaltyUserSearch()"
-                                style="padding: 0.5rem; border-radius: 6px; border: 1px solid #ced4da; background: white; cursor: pointer; font-size: 0.9rem;">
-                                <option value="all">所有用戶</option>
-                                <option value="specific">指定用戶</option>
+                        <div class="filter-item">
+                            <label class="filter-label"><i class="fas fa-filter"></i> 處罰類型</label>
+                            <select id="filterType" class="filter-select">
+                                <option value="">全部類型</option>
+                                <option value="BAN">封禁 (BAN)</option>
+                                <option value="BLACKLIST">永久拉黑 (BLACKLIST)</option>
                             </select>
-                            <input type="text" id="penaltyUserInput" placeholder="輸入用戶名..."
-                                onkeyup="if(event.key === 'Enter') filterPenalties()"
-                                style="display: none; padding: 0.5rem; border-radius: 6px; border: 1px solid #ced4da; font-size: 0.9rem; width: 150px;">
                         </div>
 
-                        <select id="filterType" onchange="filterPenalties()"
-                            style="padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #ced4da; background: white; cursor: pointer; font-size: 0.9rem;">
-                            <option value="">全部類型</option>
-                            <option value="BAN">封禁 (BAN)</option>
-                            <option value="BLACKLIST">永久拉黑 (BLACKLIST)</option>
-                        </select>
-                        <select id="filterStatus" onchange="filterPenalties()"
-                            style="padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #ced4da; background: white; cursor: pointer; font-size: 0.9rem;">
-                            <option value="">全部狀態</option>
-                            <option value="ACTIVE">生效中 (ACTIVE)</option>
-                            <option value="EXPIRED">已過期 (EXPIRED)</option>
-                            <option value="REVOKED">已撤銷 (REVOKED)</option>
-                        </select>
-                        <button class="btn-sm" onclick="resetFilters('penalties')">
-                            <i class="fas fa-undo"></i> 重置篩選
-                        </button>
+                        <div class="filter-item">
+                            <label class="filter-label"><i class="fas fa-shield-alt"></i> 狀態</label>
+                            <select id="filterStatus" class="filter-select">
+                                <option value="">全部狀態</option>
+                                <option value="ACTIVE">生效中 (ACTIVE)</option>
+                                <option value="EXPIRED">已過期 (EXPIRED)</option>
+                                <option value="REVOKED">已撤銷 (REVOKED)</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; gap: 0.8rem; align-items: flex-end;">
+                            <button class="btn-filter btn-search" onclick="filterPenalties()">
+                                <i class="fas fa-search"></i> 確定
+                            </button>
+                            <button class="btn-filter btn-reset" onclick="resetFilters('penalties')">
+                                <i class="fas fa-undo"></i> 重置篩選
+                            </button>
+                        </div>
                     </div>
 
                     <!-- 表格容器 -->
@@ -891,9 +1042,7 @@
             } else {
                 inputEl.style.display = 'none';
                 inputEl.value = '';
-                if (AP.tabState.penalties.username !== '') {
-                    AP.filterPenalties();
-                }
+                // 移除自動觸發，改為只在點擊確定按鈕時觸發
             }
         };
 
@@ -928,23 +1077,6 @@
                 : (penalty.status === 'EXPIRED' ? '已過期' : '已撤銷');
 
             let actionHtml = '';
-            // 注意：appealStatus 需要從後端返回的 penalty 對象中獲取
-            // 根據 PenaltyAppealController，extraData 中有 appealStatusMap，但 AdminTable 目前只傳 row data
-            // 如果後端沒有把 appealStatus 合併到 row data 中，這裡可能需要調整後端或前端邏輯
-            // 假設後端已經處理好，或者 penalty 對象裡有這個字段 (如果沒有，這裡會顯示默認邏輯)
-            // 為了安全，我們檢查 penalty.appealStatus (如果後端沒返回，這裡是 undefined)
-            // 實際上 PenaltyAppealController 返回的是 extraData.appealStatusMap[appealId]
-            // 這裡為了兼容，我們假設 penalty 對象裡可能沒有直接的 appealStatus，而是需要從 map 取
-            // 但 AdminTable.loadData 目前不支持傳入 extraData 到 renderRow
-            // 所以這裡我們只能依賴 penalty 對象本身是否有這個字段，或者顯示默認
-            // 為了讓代碼跑起來，我們假設 penalty.appealStatus 存在 (如果後端沒改，這裡可能不準確)
-            // 或者我們可以暫時忽略 appealStatus 的精確判斷，只根據 penalty.status 判斷
-            // 但為了保持原有邏輯，我們保留這段代碼，並假設後端會返回 appealStatus
-
-            // 修正：根據 PenaltyAppealController，appealStatusMap 是在 response 根級別
-            // AdminTable 目前無法傳遞這個 map 到 renderRow
-            // 所以這裡我們只能做簡化處理，或者假設 penalty 對象裡包含了這個信息
-            // 為了不報錯，我們使用 penalty.appealStatus || null
             const appealStatus = penalty.appealStatus || null;
 
             if (penalty.type === 'BAN') {
@@ -960,7 +1092,6 @@
                     const isPendingOrNoAppeal = (!appealStatus || appealStatus === 'PENDING');
 
                     if (endTime && endTime > now && isPendingOrNoAppeal) {
-                        // 使用全局橋接函數名，確保 HTML onclick 能找到
                         actionHtml = `<button class="btn-sm btn-unban-btn"
                         onclick="AdminPenalties.handleUnbanClick(${penalty.penaltyId}, '${penalty.appealId || ''}')"
                         style="background: #28a745; color: white; border: none; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">解除封禁</button>`;
@@ -1047,7 +1178,6 @@
                 actionBtn = '<span style="color: #adb5bd; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem;"><i class="fas fa-clock"></i> 無需操作</span>';
             }
 
-            // 注意：reviewContent 同樣依賴後端返回
             const reviewContent = appeal.reviewContent || '無記錄';
 
             return `<tr>
@@ -1187,6 +1317,29 @@
         // 5. 頁面初始化
         // ==========================================
         document.addEventListener('DOMContentLoaded', function () {
+            // 检查URL参数中是否有username
+            const urlParams = new URLSearchParams(window.location.search);
+            const username = urlParams.get('username');
+
+            if (username) {
+                // 如果有username参数，自动设置筛选条件
+                document.getElementById('penaltyUserMode').value = 'specific';
+                document.getElementById('penaltyUserInput').value = username;
+                document.getElementById('penaltyUserInput').style.display = 'block';
+
+                // 设置筛选状态
+                AP.tabState.penalties.username = username;
+                AP.tabState.penalties.type = '';
+                AP.tabState.penalties.status = '';
+                AP.tabState.penalties.page = 1;
+
+                // 显示提示
+                if (typeof showNotification === 'function') {
+                    showNotification(` 正在加载用户 "${username}" 的处罚记录...`);
+                }
+            }
+
+            // 加载数据
             AP.loadPenaltiesData();
         });
 
@@ -1247,9 +1400,9 @@
                     AP.loadAppealsData();
                 } else {
                     if (typeof showNotification === 'function') {
-                        showNotification('❌ ' + (result.message || '操作失敗'), true);
+                        showNotification(' ' + (result.message || '操作失敗'), true);
                     } else {
-                        alert('❌ ' + (result.message || '操作失敗'));
+                        alert(' ' + (result.message || '操作失敗'));
                     }
                 }
             } catch (error) {
@@ -1351,7 +1504,7 @@
             } catch (error) {
                 console.error('解除封禁錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤', true);
-                else alert('❌ 網絡錯誤');
+                else alert(' 網絡錯誤');
                 btn.disabled = false;
             }
         };
@@ -1385,7 +1538,7 @@
                     setTimeout(() => AP.loadPenaltiesData(), 1000);
                 } else {
                     const result = await response.json();
-                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
+                    if (typeof showNotification === 'function') showNotification(' ' + (result.message || '操作失敗'), true);
                     else alert('❌ 操作失敗：' + (result.message || '請稍後重試'));
                     btn.disabled = false;
                 }
@@ -1492,7 +1645,7 @@
             } catch (error) {
                 console.error('處理黑名單申訴錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
-                else alert('❌ 網絡錯誤，請稍後重試');
+                else alert(' 網絡錯誤，請稍後重試');
                 btn.disabled = false;
             }
         };
@@ -1500,17 +1653,14 @@
         // ==========================================
         // 7. 全局橋接 (Global Bridge)
         // ==========================================
-        // 將 AdminPenalties 的方法暴露給 window，以兼容 HTML 中的 onclick
-        window.AdminPenalties = AP; // 確保對象本身可訪問
+        window.AdminPenalties = AP;
 
-        // 暴露具體函數
         window.switchTab = AP.switchTab;
         window.togglePenaltyUserSearch = AP.togglePenaltyUserSearch;
         window.filterPenalties = AP.filterPenalties;
         window.resetFilters = AP.resetFilters;
         window.filterAppeals = AP.filterAppeals;
 
-        // 業務邏輯函數
         window.handleAppealAction = AP.handleAppealAction;
         window.openAppealReviewModal = AP.openAppealReviewModal;
         window.closeAppealReviewModal = AP.closeAppealReviewModal;
@@ -1526,7 +1676,6 @@
         window.closeBlacklistAppealModal = AP.closeBlacklistAppealModal;
         window.submitBlacklistAppeal = AP.submitBlacklistAppeal;
 
-        // 通用彈窗控制
         window.openModal = AP.openModal;
         window.closeModal = AP.closeModal;
         window.goToAppealsTab = AP.goToAppealsTab;
@@ -1534,7 +1683,6 @@
         // ==========================================
         // 8. 全局事件監聽
         // ==========================================
-        // 點擊彈窗外部關閉
         window.onclick = function (event) {
             if (event.target.classList.contains('custom-modal-overlay')) {
                 event.target.style.display = 'none';
@@ -1545,7 +1693,6 @@
             }
         };
 
-        // ESC 鍵關閉彈窗
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 const modals = ['appealReviewModal', 'confirmUnbanModal', 'confirmUnblacklistModal', 'blacklistAppealModal', 'appealExistsModal'];
@@ -1553,7 +1700,6 @@
                     const modal = document.getElementById(id);
                     if (modal && modal.style.display === 'flex') {
                         modal.style.display = 'none';
-                        // 清空對應狀態
                         if (id === 'appealReviewModal') AP.currentReviewAppealId = null;
                         if (id === 'confirmUnbanModal') AP.currentPenaltyIdToUnban = null;
                         if (id === 'confirmUnblacklistModal') AP.currentPenaltyIdToUnblacklist = null;

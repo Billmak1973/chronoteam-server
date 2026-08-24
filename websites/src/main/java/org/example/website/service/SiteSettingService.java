@@ -20,9 +20,6 @@ public class SiteSettingService {
     }
 
     public void updateCardBorderTheme(String theme) {
-        if (!"day".equals(theme) && !"night".equals(theme)) {
-            throw new IllegalArgumentException("主题必须是 day 或 night");
-        }
 
         SiteSetting setting = settingRepository.findByKey("card_border_theme")
                 .orElse(new SiteSetting());

@@ -2,10 +2,12 @@ package org.example.website;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling //  啟用定時任務
+@EnableCaching
 public class WebsiteApplication {
     //cd frontend
     //PS C:\Users\User\IdeaProjects\chronoteam-server\website\frontend>npm run build

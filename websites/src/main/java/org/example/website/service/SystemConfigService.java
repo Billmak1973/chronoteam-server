@@ -4,7 +4,10 @@ import org.example.website.entity.SystemConfig;
 import org.example.website.repository.SystemConfigRepository;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class SystemConfigService {
@@ -62,5 +65,119 @@ public class SystemConfigService {
             config.setConfigValue(value);
             repository.save(config);
         });
+    }
+
+    // 獲取配送模式 (默認為次日達)
+    public String getDeliveryMode() {
+        return repository.findById("DELIVERY_MODE")
+                .map(SystemConfig::getConfigValue)
+                .orElse("NEXT_DAY");
+    }
+
+    // 【新增】獲取指定配送星期 (返回 List<Integer>，例如 [1, 2] 代表週一、週二)
+    public List<Integer> getDeliverySpecificDays() {
+        return repository.findById("DELIVERY_SPECIFIC_DAYS")
+                .map(c -> {
+                    try {
+                        return Arrays.stream(c.getConfigValue().split(","))
+                                .map(Integer::parseInt)
+                                .collect(Collectors.toList());
+                    } catch (NumberFormatException e) {
+                        return Arrays.asList(6, 7); // 異常時默認週末
+                    }
+                })
+                .orElse(Arrays.asList(6, 7)); // 數據庫無配置時，默認週末 (6=週六, 7=週日)
+    }
+
+    // 獲取自定義配送天數 (默認為 3 天)
+    public Integer getDeliveryCustomDays() {
+        return repository.findById("DELIVERY_CUSTOM_DAYS")
+                .map(c -> {
+                    try {
+                        return Integer.parseInt(c.getConfigValue());
+                    } catch (NumberFormatException e) {
+                        return 3;
+                    }
+                })
+                .orElse(3);
+    }
+
+
+    /**
+     * 获取全局最晚下单时间 (截单时间)
+     * @return 默认 "16:00"
+     */
+    public String getGlobalCutoffTime() {
+        return repository.findById("GLOBAL_CUTOFF_TIME")
+                .map(SystemConfig::getConfigValue)
+                .orElse("16:00");
+    }
+
+    /**
+     * 获取截单日偏移量 (天)
+     * @return 默认 -1 (即送货日的前一天)
+     */
+    public Integer getCutoffDayOffset() {
+        return repository.findById("CUTOFF_DAY_OFFSET")
+                .map(c -> {
+                    try {
+                        return Integer.parseInt(c.getConfigValue());
+                    } catch (NumberFormatException e) {
+                        return -1;
+                    }
+                })
+                .orElse(-1);
+    }
+
+    // 獲取連續日子處理模式 (默認為 GROUP)
+    public String getContinuousDaysMode() {
+        return repository.findById("CONTINUOUS_DAYS_MODE")
+                .map(SystemConfig::getConfigValue)
+                .orElse("GROUP");
+    }
+
+    // ==========================================
+    // 【新增】通知文字設置相關獲取方法 (供前端或其它模塊調用)
+    // ==========================================
+    public String getNotificationText() {
+        return repository.findById("NOTIFICATION_TEXT")
+                .map(SystemConfig::getConfigValue)
+                .orElse("这里是通知文字预览");
+    }
+
+    public String getNotificationTextColor() {
+        return repository.findById("NOTIFICATION_TEXT_COLOR")
+                .map(SystemConfig::getConfigValue)
+                .orElse("#FFFFFF");
+    }
+
+    public String getNotificationFontWeight() {
+        return repository.findById("NOTIFICATION_FONT_WEIGHT")
+                .map(SystemConfig::getConfigValue)
+                .orElse("normal");
+    }
+
+    public String getNotificationFontSize() {
+        return repository.findById("NOTIFICATION_FONT_SIZE")
+                .map(SystemConfig::getConfigValue)
+                .orElse("14");
+    }
+
+    public String getNotificationFontItalic() {
+        return repository.findById("NOTIFICATION_FONT_ITALIC")
+                .map(SystemConfig::getConfigValue)
+                .orElse("false");
+    }
+
+    public String getScrollDirection() {
+        return repository.findById("SCROLL_DIRECTION")
+                .map(SystemConfig::getConfigValue)
+                .orElse("rtl"); // 默認從右向左
+    }
+
+    public String getScrollSpeed() {
+        return repository.findById("SCROLL_SPEED")
+                .map(SystemConfig::getConfigValue)
+                .orElse("normal"); // 默認中速
     }
 }

@@ -1451,10 +1451,26 @@
                 <span>支付方式：</span>
                 <span id="paymentMethodDisplay">線上支付</span>
             </div>
-            <div class="summary-row total-row">
-                <span>應付總額：</span>
-                <span>HK$ <span id="totalAmountDisplay"
-                        th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span></span>
+
+            <!-- 修改後的 total-row：改為垂直佈局 (column) -->
+            <div class="summary-row total-row" style="flex-direction: column; align-items: stretch;">
+
+                <!-- 1. 將免運費門檻移入這裡 (橫線下方) -->
+                <div class="summary-row" id="freeShippingThresholdRow"
+                    style="font-size: 0.9rem; color: var(--gray); border-bottom: 1px dashed #e9ecef; padding-bottom: 0.5rem; margin-bottom: 0.5rem; width: 100%;">
+                    <span><i class="fas fa-gift" style="color: var(--gold); margin-right: 0.3rem;"></i>免運費門檻：</span>
+                    <span>HK$ <span
+                            th:text="${#numbers.formatDecimal(freeShippingThreshold, 1, 'COMMA', 0, 'POINT')}">0</span></span>
+                </div>
+
+                <!-- 2. 應付總額 (包裹在一個 flex 容器中保持橫排) -->
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; width: 100%; font-size: 1.5rem; font-weight: 700; color: var(--accent);">
+                    <span>應付總額：</span>
+                    <span>HK$ <span id="totalAmountDisplay"
+                            th:text="${#numbers.formatDecimal(order.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</span></span>
+                </div>
+
             </div>
         </div>
 
@@ -1529,14 +1545,35 @@
                                     <i class="fas fa-shipping-fast" style="color: var(--gold);"></i>
                                     本週發貨：<span id="shippingDate" style="font-weight: 600;">計算中...</span>
                                 </div>
+                                <!-- 在快遞配送選項內，倒數計時區域下方新增 -->
+                                <div id="deliveryDateSelection"
+                                    style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px dashed #e9ecef;">
+                                    <label
+                                        style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--primary); font-weight: 600;">
+                                        <i class="fas fa-calendar-alt"
+                                            style="color: var(--gold); margin-right: 0.5rem;"></i>
+                                        選擇收貨日期：
+                                    </label>
+                                    <select id="deliveryDateSelect" onchange="updateDeliveryDate()"
+                                        style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px; font-size: 0.9rem; cursor: pointer;">
+                                        <option value="">請選擇收貨日期</option>
+                                        <!-- JavaScript 會動態填充選項 -->
+                                    </select>
+                                    <div id="selectedDeliveryDateInfo"
+                                        style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--gray); display: none;">
+                                        <i class="fas fa-info-circle" style="color: var(--gold);"></i>
+                                        預計送達：<span id="selectedDateDisplay"
+                                            style="font-weight: 600; color: var(--primary);"></span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
                     </label>
                 </div>
 
-                <!-- 門店自取 -->
-                <div class="payment-option" style="background: white;">
+                <!-- 門店自取 - 只有當有店鋪時才顯示 -->
+                <div th:if="${hasStores}" class="payment-option" style="background: white;">
                     <input type="radio" name="deliveryMethod" value="STORE_PICKUP" id="delivery-pickup"
                         onchange="toggleDeliveryMethod()"
                         th:checked="${user.address == null || user.address.isEmpty()}">
@@ -1550,8 +1587,8 @@
                 </div>
             </div>
 
-            <!-- 線下支付 -->
-            <div class="payment-option">
+            <!-- 線下支付 - 只有當有店鋪時才顯示 -->
+            <div th:if="${hasStores}" class="payment-option">
                 <input type="radio" name="paymentMethod" value="OFFLINE" id="pay-offline"
                     onchange="togglePaymentMethod()">
                 <label for="pay-offline">
@@ -1563,8 +1600,9 @@
                 </label>
             </div>
 
+
             <!-- 店鋪選擇（線下支付 或 線上支付+門店自取 時顯示） -->
-            <div id="storeSelection" style="display: none;">
+            <div id="storeSelection" th:if="${hasStores}" style="display: none;">
                 <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--primary);">
                     <i class="fas fa-map-marker-alt" style="color: var(--gold); margin-right: 0.5rem;"></i> 選擇取貨/支付店鋪：
                 </label>
@@ -2442,13 +2480,17 @@
         function togglePaymentMethod() {
             const isOnline = document.getElementById('pay-online').checked;
             const deliverySection = document.getElementById('deliveryMethodSection');
+            const storeSelection = document.getElementById('storeSelection');
 
             if (isOnline) {
                 deliverySection.style.display = 'block';
                 toggleDeliveryMethod();
             } else {
                 deliverySection.style.display = 'none';
-                document.getElementById('storeSelection').style.display = 'block';
+                // 只有当有店铺时才显示店铺选择
+                if (storeSelection) {
+                    storeSelection.style.display = 'block';
+                }
             }
 
             document.getElementById('paymentMethodDisplay').textContent = isOnline ? '線上支付' : '線下店鋪支付';
@@ -2461,15 +2503,18 @@
             updateTotal();
         }
 
-        // 切換配送方式 (快遞/門店自取) — 此函數不變，保留原樣
+        // 切換配送方式 (快遞/門店自取) — 修改版
         function toggleDeliveryMethod() {
-            const isExpress = document.getElementById('delivery-express').checked;
+            const isExpress = document.getElementById('delivery-express')?.checked;
             const storeSelection = document.getElementById('storeSelection');
 
             if (isExpress) {
                 storeSelection.style.display = 'none';
             } else {
-                storeSelection.style.display = 'block';
+                // 只有当有店铺时才显示
+                if (storeSelection) {
+                    storeSelection.style.display = 'block';
+                }
             }
             updateTotal();
         }
@@ -2518,9 +2563,11 @@
         // ==========================================
         document.getElementById('confirmPayBtn').addEventListener('click', async function () {
             const btn = this;
+            // 【修復】：在函數開頭保存原始按鈕文本，以便在失敗時恢復按鈕狀態
+            const originalBtnText = btn.innerHTML;
 
             // ==========================================
-            //  核心校驗 1：遍歷所有購物車卡片，檢查庫存
+            // 核心校驗 1：遍歷所有購物車卡片，檢查庫存
             // ==========================================
             const outOfStockItems = [];
             document.querySelectorAll('.cart-item-card').forEach(card => {
@@ -2547,13 +2594,14 @@
             const isOnline = document.getElementById('pay-online').checked;
             const storeSelect = document.getElementById('storeSelect');
             const storeId = storeSelect ? storeSelect.value : '';
+            const selectedDeliveryDate = document.getElementById('deliveryDateSelect') ? document.getElementById('deliveryDateSelect').value : null;
 
-            //  獲取當前選擇的配送方式
+            // 獲取當前選擇的配送方式
             const deliveryMethodRadio = document.querySelector('input[name="deliveryMethod"]:checked');
             const deliveryMethod = deliveryMethodRadio ? deliveryMethodRadio.value : 'STORE_PICKUP';
 
             // ==========================================
-            //  核心校驗 2：判斷當前場景是否需要店鋪
+            // 核心校驗 2：判斷當前場景是否需要店鋪
             // ==========================================
             let needStore = false;
 
@@ -2575,36 +2623,35 @@
             // ==========================================
 
             try {
+                // 【優化】：點擊後立即禁用按鈕並顯示加載狀態，防止重複提交
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
                 if (isOnline) {
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    await new Promise(resolve => setTimeout(resolve, 1500)); // 模擬支付處理時間，提升用戶體驗
                     const response = await fetch('/checkout/api/pay', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({
                             orderNo: orderNo,
                             amount: amount,
-                            deliveryMethod: deliveryMethod, //  傳遞配送方式給後端
-                            storeId: deliveryMethod === 'STORE_PICKUP' ? storeId : null // 如果是快遞，不傳 storeId
+                            deliveryMethod: deliveryMethod, // 傳遞配送方式給後端
+                            storeId: deliveryMethod === 'STORE_PICKUP' ? storeId : null, // 如果是快遞，不傳 storeId
+                            deliveryDate: selectedDeliveryDate // 【關鍵】傳遞選中的日期給後端
                         })
                     });
                     const result = await response.json();
+
                     if (response.ok && result.success) {
                         // 標記支付已完成，解除離開攔截
                         CO.isPaymentCompleted = true;
                         CO.allowExit = true;
                         window.location.href = `/checkout/payment-success?orderNo=${orderNo}`;
                     } else {
-                        btn.disabled = false;
-                        // 注意：這裡 originalBtnText 需要在 click 事件開始時保存，原代碼似乎遺漏了這一步的定義，這裡補上
-                        // 為了安全起見，我們假設按鈕初始文字是固定的或者從 DOM 獲取
-                        // 原代碼邏輯中 btn.innerHTML 被修改了，這裡需要恢復。
-                        // 由於原代碼沒有在 click 開頭保存 originalText，這裡我們簡單恢復默認狀態或依賴 updateTotal 恢復
-                        // 為了保持原邏輯一致性，我們假設 updateTotal 會處理按鈕文字，或者手動恢復
-                        // 這裡為了不破壞原邏輯，我們暫時不恢復 innerHTML，或者依賴外部邏輯
-                        // 但原代碼中有 btn.innerHTML = originalBtnText; 這說明原代碼 somewhere 定義了它。
-                        // 讓我們在 click handler 開頭補上 const originalBtnText = btn.innerHTML;
-                        // 修正：我在下面補上了 originalBtnText 的定義。
                         showNotification('❌ ' + (result.message || '支付失敗'), true);
+                        // 失敗時恢復按鈕狀態
+                        btn.disabled = false;
+                        btn.innerHTML = originalBtnText;
                     }
                 } else {
                     // 線下支付邏輯
@@ -2618,22 +2665,25 @@
                         })
                     });
                     const result = await response.json();
+
                     if (response.ok && result.success) {
                         // 標記支付已完成，解除離開攔截
                         CO.isPaymentCompleted = true;
                         CO.allowExit = true;
                         window.location.replace(`/checkout/offline-success?orderNo=${orderNo}&storeId=${storeId}`);
                     } else {
-                        btn.disabled = false;
-                        // 同上，依賴 originalBtnText
                         showNotification('❌ ' + (result.message || '創建訂單失敗'), true);
+                        // 失敗時恢復按鈕狀態
+                        btn.disabled = false;
+                        btn.innerHTML = originalBtnText;
                     }
                 }
             } catch (error) {
                 console.error('支付錯誤:', error);
-                btn.disabled = false;
-                // 同上
                 showNotification('❌ 網絡連接失敗，請重試', true);
+                // 發生異常時恢復按鈕狀態
+                btn.disabled = false;
+                btn.innerHTML = originalBtnText;
             }
         });
 
@@ -2852,11 +2902,35 @@
         // 8. 頁面初始化與全局監聽
         // ==========================================
         document.addEventListener('DOMContentLoaded', function () {
-            // 初始化總價與按鈕狀態
+            // 1. 初始化總價與按鈕狀態
             updateTotal();
 
-            //  初始化頁面載入時的支付方式狀態 (確保配送區塊正確顯示)
+            // 2. 初始化頁面載入時的支付方式狀態 (確保配送區塊正確顯示)
             togglePaymentMethod();
+
+            // 3. 初始化日期選擇器（只對 NEXT_DAY 模式）
+            initDeliveryDateSelector();
+
+            // ==========================================
+            // 4. 【新增】處理無配送模式 (NONE) 的初始化邏輯
+            // ==========================================
+            const deliveryMode = /*[[${deliveryMode}]]*/ 'NEXT_DAY';
+            const expressOption = document.getElementById('delivery-express');
+            const expressLabel = expressOption ? expressOption.closest('.payment-option') : null;
+
+            if (deliveryMode === 'NONE') {
+                // 如果無配送模式，隱藏快遞選項
+                if (expressLabel) {
+                    expressLabel.style.display = 'none';
+                }
+                // 強制勾選門店自取
+                const pickupOption = document.getElementById('delivery-pickup');
+                if (pickupOption) {
+                    pickupOption.checked = true;
+                    // 觸發切換邏輯以顯示店鋪選擇區塊
+                    toggleDeliveryMethod();
+                }
+            }
         });
 
         // 点击遮罩层关闭确认框 (包含取消全選 和 取消訂單)
@@ -2912,36 +2986,23 @@
         // 9. 发货截止时间倒计时
         // ==========================================
         function updateCountdown() {
-            const now = new Date();
-            const currentDay = now.getDay(); // 0=周日, 1=周一, ..., 6=周六
+            // 从 Thymeleaf 获取后端计算的截止时间 和 预计送货日
+            const cutoffDateTimeStr = /*[[${cutoffDateTime}]]*/ '';
+            const estimatedDeliveryDateStr = /*[[${estimatedDeliveryDate}]]*/ ''; // 后端直接算好的送货日，如 "2026-08-22"
+            const deliveryMode = /*[[${deliveryMode}]]*/ 'NEXT_DAY';
 
-            // 计算下一个周六23:59:59
-            let nextSaturday = new Date(now);
-            const daysUntilSaturday = (6 - currentDay + 7) % 7; // 距离周六还有几天
-
-            if (daysUntilSaturday === 0 && currentDay === 6) {
-                // 如果今天是周六
-                if (now.getHours() >= 23 && now.getMinutes() >= 59) {
-                    // 已经过了截止时间，显示下周
-                    nextSaturday.setDate(nextSaturday.getDate() + 7);
-                }
-            } else {
-                nextSaturday.setDate(nextSaturday.getDate() + daysUntilSaturday);
+            if (!cutoffDateTimeStr || !estimatedDeliveryDateStr) {
+                return;
             }
 
-            nextSaturday.setHours(23, 59, 59, 0);
+            const cutoffDateTime = new Date(cutoffDateTimeStr);
+            const now = new Date();
+            const diff = cutoffDateTime - now;
 
-            // 计算发货日期（周日）
-            let shippingDate = new Date(nextSaturday);
-            shippingDate.setDate(shippingDate.getDate() + 1); // 周六+1天=周日
-
-            // 更新倒计时
             const countdownElement = document.getElementById('cutoffCountdown');
             const shippingDateElement = document.getElementById('shippingDate');
 
             if (countdownElement && shippingDateElement) {
-                const diff = nextSaturday - now;
-
                 if (diff > 0) {
                     // 计算天数、小时、分钟、秒
                     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -2952,12 +3013,24 @@
                     // 显示"x日x时x分x秒"格式
                     countdownElement.textContent = `${days}日${hours}時${minutes}分${seconds}秒`;
 
-                    // 格式化发货日期
+                    // 直接格式化后端传来的预计送货日
+                    // 加上 'T00:00:00' 确保被解析为本地时间，避免时区偏移导致日期差一天
+                    const shippingDate = new Date(estimatedDeliveryDateStr + 'T00:00:00');
                     const options = {month: 'long', day: 'numeric', weekday: 'long'};
-                    shippingDateElement.textContent = shippingDate.toLocaleDateString('zh-TW', options);
+
+                    let shippingDateText = '';
+                    if (deliveryMode === 'NEXT_DAY') {
+                        shippingDateText = '預計最快 ' + shippingDate.toLocaleDateString('zh-TW', options) + ' 送達';
+                    } else if (deliveryMode === 'SPECIFIC_DAYS') {
+                        shippingDateText = '預計 ' + shippingDate.toLocaleDateString('zh-TW', options) + ' 送達';
+                    } else if (deliveryMode === 'CUSTOM') {
+                        shippingDateText = '預計 ' + shippingDate.toLocaleDateString('zh-TW', options) + ' 送達';
+                    }
+
+                    shippingDateElement.textContent = shippingDateText;
                 } else {
                     countdownElement.textContent = '已截止';
-                    shippingDateElement.textContent = '下週日';
+                    shippingDateElement.textContent = '請聯繫客服';
                 }
             }
         }
@@ -2966,6 +3039,96 @@
         setInterval(updateCountdown, 1000);
         // 页面加载时立即执行
         document.addEventListener('DOMContentLoaded', updateCountdown);
+
+        // ==========================================
+        // 新增：配送日期選擇功能
+        // ==========================================
+
+        // 初始化日期選擇器
+        function initDeliveryDateSelector() {
+            const select = document.getElementById('deliveryDateSelect');
+            if (!select) return;
+
+            // 清空現有選項（保留第一個）
+            select.innerHTML = '<option value="">請選擇收貨日期</option>';
+
+            const today = new Date();
+            const deliveryMode = /*[[${deliveryMode}]]*/ 'NEXT_DAY';
+
+            // 只適用於 NEXT_DAY 模式
+            if (deliveryMode !== 'NEXT_DAY') {
+                select.disabled = true;
+                select.innerHTML = '<option value="">此配送方式不支援選擇日期</option>';
+                return;
+            }
+
+            // 生成選項：明天（+1天）到 +7天
+            for (let daysLater = 1; daysLater <= 7; daysLater++) {
+                const deliveryDate = new Date(today);
+                deliveryDate.setDate(today.getDate() + daysLater);
+
+                // 格式化日期為 YYYY-MM-DD
+                const year = deliveryDate.getFullYear();
+                const month = String(deliveryDate.getMonth() + 1).padStart(2, '0');
+                const day = String(deliveryDate.getDate()).padStart(2, '0');
+                const dateString = `${year}-${month}-${day}`;
+
+                // 格式化顯示文字
+                const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                const weekDay = weekDays[deliveryDate.getDay()];
+                const displayText = daysLater === 1 ? '明天' :
+                    daysLater === 2 ? '後天' :
+                        `${daysLater}天後`;
+
+                const option = document.createElement('option');
+                option.value = dateString;
+                option.textContent = `${displayText}（${dateString} ${weekDay}）`;
+
+                // 預設選擇明天
+                if (daysLater === 1) {
+                    option.selected = true;
+                }
+
+                select.appendChild(option);
+            }
+
+            // 觸發初始更新
+            updateDeliveryDate();
+        }
+
+        // 更新配送日期
+        function updateDeliveryDate() {
+            const select = document.getElementById('deliveryDateSelect');
+            const infoDiv = document.getElementById('selectedDeliveryDateInfo');
+            const dateDisplay = document.getElementById('selectedDateDisplay');
+
+            if (!select || !select.value) {
+                if (infoDiv) infoDiv.style.display = 'none';
+                return;
+            }
+
+            // 顯示選中的日期
+            const selectedDate = new Date(select.value + 'T00:00:00');
+            const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            const weekDay = weekDays[selectedDate.getDay()];
+            const formattedDate = `${selectedDate.getFullYear()}年${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日（${weekDay}）`;
+
+            if (dateDisplay) {
+                dateDisplay.textContent = formattedDate;
+            }
+            if (infoDiv) {
+                infoDiv.style.display = 'block';
+            }
+
+            // 更新倒數計時顯示（如果需要）
+            updateCountdown();
+        }
+
+        // 獲取選中的配送日期
+        function getSelectedDeliveryDate() {
+            const select = document.getElementById('deliveryDateSelect');
+            return select ? select.value : null;
+        }
 
         // ==========================================
         //  2. 地址切換功能 (從這裡開始插入代碼 2)

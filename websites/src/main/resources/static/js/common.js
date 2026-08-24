@@ -1122,3 +1122,78 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+
+// ==========================================
+// 5. 滾動通知功能
+// ==========================================
+async function loadScrollingNotification() {
+  try {
+    const response = await fetch('/api/config/notification');
+    const config = await response.json();
+
+    const container = document.getElementById('notificationContainer');
+    const notificationText = document.getElementById('scrollingNotification');
+
+    if (!container || !notificationText) return;
+
+    // 如果沒有通知文字，隱藏容器
+    if (!config.notificationText || config.notificationText.trim() === '') {
+      container.style.display = 'none';
+      return;
+    }
+
+    // 設置通知文字
+    notificationText.textContent = config.notificationText;
+
+    // 應用基礎樣式
+    notificationText.style.color = config.textColor || '#FFFFFF';
+    notificationText.style.fontWeight = config.fontWeight || 'normal';
+    notificationText.style.fontSize = (config.fontSize || '14') + 'px';
+    notificationText.style.fontStyle = (config.fontItalic === 'true') ? 'italic' : 'normal';
+
+    // 【修改】處理滾動啟用狀態
+    const scrollEnabled = config.scrollEnabled !== 'false'; // 默認為 true
+    const direction = config.scrollDirection || 'rtl';
+    const speed = config.scrollSpeed || 'normal';
+
+    if (scrollEnabled) {
+      // 滾動模式：根據方向添加對應類名
+      notificationText.classList.remove('is-scrolling-rtl', 'is-scrolling-ltr');
+
+      const direction = config.scrollDirection || 'rtl';
+      const speed = config.scrollSpeed || 'normal';
+
+      // 計算動畫時長（速度越快，時間越短）
+      let duration = 20; // 默認中速
+      if (speed === 'slow') duration = 30;
+      if (speed === 'fast') duration = 10;
+
+      if (direction === 'ltr') {
+        // 从左向右
+        notificationText.classList.add('is-scrolling-ltr');
+        notificationText.style.animationDuration = `${duration}s`;
+      } else {
+        // 从右向左（默认）
+        notificationText.classList.add('is-scrolling-rtl');
+        notificationText.style.animationDuration = `${duration}s`;
+      }
+    } else {
+      // 固定模式：移除所有滚动类名
+      notificationText.classList.remove('is-scrolling-rtl', 'is-scrolling-ltr');
+      notificationText.style.animation = 'none';
+    }
+
+    // 顯示容器
+    container.style.display = 'flex';
+
+  } catch (error) {
+    console.error('加載滾動通知失敗:', error);
+  }
+}
+
+
+// 頁面加載時初始化滾動通知
+document.addEventListener('DOMContentLoaded', function() {
+  loadScrollingNotification();
+});

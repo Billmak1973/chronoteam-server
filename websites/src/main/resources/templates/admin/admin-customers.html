@@ -834,8 +834,20 @@
         // 操作按鈕跳轉邏輯 (保持不變)
         function viewUserReviews(username) {window.open(`/admin/reviews?username=${encodeURIComponent(username)}`, '_blank');}
         function viewUserOrders(username) {showNotification(`📦 正在查詢 ${username} 的訂單記錄... (開發中)`);}
-        function viewUserPenalties(username) {showNotification(`⚖️ 正在查詢 ${username} 的處罰記錄... (開發中)`);}
-        function viewUserReports(username) {showNotification(`🚩 正在查詢 ${username} 的舉報記錄... (開發中)`);}
+        function viewUserPenalties(username) {
+            // 打開到处罚管理页面，并传递用户名参数
+            //window.location.href = `/admin/penalties?username=${encodeURIComponent(username)}`;
+            window.open(`/admin/penalties?username=${encodeURIComponent(username)}`, '_blank');
+        }
+
+        function viewUserReports(username) {
+            // 1. 构建 URL，带上 tab=reports 参数以及用户名过滤参数
+            // 注意：这里假设您想查看该用户作为“举报人”的记录。如果是查看“被举报”记录，请改为 reportedUsername
+            const url = `/admin/reviews?tab=reports&reporterUsername=${encodeURIComponent(username)}`;
+
+            // 2. 使用 window.open 在新标签页打开 (_blank)
+            window.open(url, '_blank');
+        }
 
         // ==========================================
         //  頁面初始化：一行代碼啟動表格

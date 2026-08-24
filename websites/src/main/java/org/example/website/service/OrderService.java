@@ -20,7 +20,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
     private final ProductRepository productRepository;
-    private final UserRepository userRepository; // 新增：直接獲取用戶實體
+    private final UserRepository userRepository;
     private final OrderItemRepository orderItemRepository;
     private final DailyBusinessReportService dailyBusinessReportService;
     private final SystemConfigRepository systemConfigRepository;
@@ -102,7 +102,8 @@ public class OrderService {
      * 2. 線上模擬支付處理 (支付成功後扣減庫存，並正確處理運費)
      */
     @Transactional
-    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount, String deliveryMethod,Long storeId) {
+    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount,
+                                 String deliveryMethod, Long storeId, LocalDate customerSelectedDeliveryDate) {
         // 1. 查詢訂單並校驗權限
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
@@ -126,43 +127,43 @@ public class OrderService {
             realTotal = realTotal.add(realShippingFee);
         }
 
-        // 5.  核心安全校驗：比對前端傳來的金額與後端計算的真實總價是否一致
+        // 5. 核心安全校驗：比對前端傳來的金額與後端計算的真實總價是否一致
         if (payAmount.compareTo(realTotal) != 0) {
             throw new RuntimeException("安全警告：訂單金額與後端計算不符，可能存在篡改行為！");
         }
 
-
-        // 6.  更新訂單的真實總價與運費記錄 (寫入數據庫)
+        // 6. 更新訂單的真實總價與運費記錄 (寫入數據庫)
         order.setTotalAmount(realTotal);
         order.setShippingFee(realTotal.compareTo(realSubtotal) > 0 ? realShippingFee : BigDecimal.ZERO);
 
-        // 7. 【新增】設置配送方式和delivery字段
+        // 7. 設置配送方式和 delivery 字段
         order.setDeliveryMethod(deliveryMethod);
         order.setDelivery("EXPRESS".equals(deliveryMethod)); // 如果是快遞配送，delivery=true；門店自取=false
 
-        //  如果是門店自取，且前端傳來了有效的 storeId，則保存到數據庫
-        // 如果是门店自取，并且传入了 storeId
+        // 如果是門店自取，且前端傳來了有效的 storeId，則保存到數據庫
         if ("STORE_PICKUP".equals(deliveryMethod) && storeId != null) {
             OfflineStore store = offlineStoreRepository.findById(storeId)
-                    .orElseThrow(() -> new RuntimeException("门店不存在"));
+                    .orElseThrow(() -> new RuntimeException("門店不存在"));
             order.setOfflineStore(store);
         }
 
-        // 8. 【新增】設置發貨截止時間（當前時間 ）
-        order.setDeadlineAt(LocalDateTime.now());
+        // 8. 【核心修正】設置預計送達日期 (如果顧客選擇了快遞且指定了日期)
+        if (customerSelectedDeliveryDate != null && "EXPRESS".equals(deliveryMethod)) {
+            order.setEstimatedDeliveryDate(customerSelectedDeliveryDate);
+        }
 
-        // 7. 更新支付狀態
+        // 9. 更新支付狀態
         order.setPaymentStatus(Order.PaymentStatus.PAID_SIMULATED);
         order.setStatus(Order.OrderStatus.PAID);
         order.setPaidAt(LocalDateTime.now());
 
         Order savedOrder = orderRepository.save(order);
 
-        // 8. 線上支付成功，真正扣減庫存！
+        // 10. 線上支付成功，真正扣減庫存！
         deductStock(savedOrder);
 
         // ==========================================
-        // 9. 記錄季度銷售報表數據
+        // 11. 記錄季度銷售報表數據
         // ==========================================
         for (OrderItem item : savedOrder.getItems()) {
             Product product = item.getProduct();
@@ -177,9 +178,9 @@ public class OrderService {
                     item.getQuantity(),       // quantity
                     itemTotalAmount           // totalAmount
             );
-
         }
-        // 10. 更新每日業務報表
+
+        // 12. 更新每日業務報表
         dailyBusinessReportService.updateDailyReport(savedOrder);
 
         return savedOrder;

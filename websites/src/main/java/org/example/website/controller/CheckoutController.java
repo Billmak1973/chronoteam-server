@@ -26,9 +26,13 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/checkout")
@@ -45,7 +49,7 @@ public class CheckoutController {
     /**
      * 渲染結賬頁面：查詢 OrderItem，而不是 Cart
      */
-    @Hidden // 隱藏純頁面渲染接口，保持 Swagger UI 專注於 REST API
+    @Hidden
     @GetMapping
     public String checkoutPage(@RequestParam String orderNo, Model model, Authentication authentication) {
         String username = authentication.getName();
@@ -53,8 +57,6 @@ public class CheckoutController {
         model.addAttribute("user", currentUser);
 
         Order order = orderService.getOrderByOrderNoAndUsername(orderNo, username);
-
-        // 獲取訂單明細 (OrderItem)
         List<OrderItem> orderItems = orderItemRepository.findByOrder_OrderNo(orderNo);
 
         model.addAttribute("order", order);
@@ -62,12 +64,121 @@ public class CheckoutController {
         model.addAttribute("shippingFee", systemConfigService.getShippingFee());
         model.addAttribute("freeShippingThreshold", systemConfigService.getFreeShippingThreshold());
 
-        // 查詢所有啟用的店鋪並加入 Model
         List<OfflineStore> activeStores = offlineStoreRepository.findByIsActiveTrue();
         model.addAttribute("activeStores", activeStores);
+        model.addAttribute("hasStores", !activeStores.isEmpty());
+
+        // ==========================================
+        // 【核心重構】計算配送截止時間與預計送貨日
+        // ==========================================
+        String deliveryMode = systemConfigService.getDeliveryMode();
+        int cutoffDayOffset = systemConfigService.getCutoffDayOffset();
+
+        // 1. 計算截單時間
+        LocalDateTime cutoffDateTime = calculateCutoffDateTime(deliveryMode, cutoffDayOffset);
+
+        // 2. 計算預計送貨日：截單日 - offset (例如截單日是今天，offset是-1，送貨日就是今天 - (-1) = 明天)
+        LocalDate estimatedDeliveryDate = cutoffDateTime.toLocalDate().plusDays(-cutoffDayOffset);
+
+        model.addAttribute("cutoffDateTime", cutoffDateTime);
+        model.addAttribute("deliveryMode", deliveryMode);
+        model.addAttribute("estimatedDeliveryDate", estimatedDeliveryDate); // 直接傳給前端，前端不用瞎猜
+        // ==========================================
 
         return "checkout";
     }
+
+    /**
+     * 根據配送模式計算截止時間 (統一傳入 offset)
+     */
+    private LocalDateTime calculateCutoffDateTime(String deliveryMode, int cutoffDayOffset) {
+        LocalDateTime now = LocalDateTime.now();
+        String cutoffTimeStr = systemConfigService.getGlobalCutoffTime(); // 例如 "16:00"
+
+        String[] timeParts = cutoffTimeStr.split(":");
+        int cutoffHour = Integer.parseInt(timeParts[0]);
+        int cutoffMinute = Integer.parseInt(timeParts[1]);
+
+        switch (deliveryMode) {
+            case "NEXT_DAY":
+                return calculateNextDayCutoff(now, cutoffHour, cutoffMinute, cutoffDayOffset);
+            case "SPECIFIC_DAYS":
+                return calculateSpecificDaysCutoff(now, cutoffHour, cutoffMinute, cutoffDayOffset);
+            case "CUSTOM":
+                return calculateCustomDaysCutoff(now, cutoffHour, cutoffMinute, cutoffDayOffset);
+            default:
+                return calculateNextDayCutoff(now, cutoffHour, cutoffMinute, cutoffDayOffset);
+        }
+    }
+
+    private LocalDateTime calculateNextDayCutoff(LocalDateTime now, int cutoffHour, int cutoffMinute, int cutoffDayOffset) {
+        // 次日達：基準送貨日是明天
+        LocalDate baseDeliveryDate = now.toLocalDate().plusDays(1);
+        // 截單日 = 基準送貨日 + offset (通常 offset = -1，所以截單日就是今天)
+        LocalDate cutoffDate = baseDeliveryDate.plusDays(cutoffDayOffset);
+        LocalDateTime cutoffDateTime = cutoffDate.atTime(cutoffHour, cutoffMinute, 0);
+
+        // 如果當前時間已過截單時間，說明錯過這一班，基準送貨日順延1天，截單日也順延1天
+        if (now.isAfter(cutoffDateTime)) {
+            baseDeliveryDate = baseDeliveryDate.plusDays(1);
+            cutoffDate = baseDeliveryDate.plusDays(cutoffDayOffset);
+            cutoffDateTime = cutoffDate.atTime(cutoffHour, cutoffMinute, 0);
+        }
+        return cutoffDateTime;
+    }
+
+    private LocalDateTime calculateSpecificDaysCutoff(LocalDateTime now, int cutoffHour, int cutoffMinute, int cutoffDayOffset) {
+        List<Integer> specificDays = systemConfigService.getDeliverySpecificDays();
+
+        // 1. 找到最近的基準送貨日
+        LocalDate baseDeliveryDate = findNextSpecificDayDate(now.toLocalDate(), specificDays);
+        // 2. 計算對應的截單日
+        LocalDate cutoffDate = baseDeliveryDate.plusDays(cutoffDayOffset);
+        LocalDateTime cutoffDateTime = cutoffDate.atTime(cutoffHour, cutoffMinute, 0);
+
+        // 3. 如果當前時間已過截單時間，說明錯過本週期
+        if (now.isAfter(cutoffDateTime)) {
+            // 從當前截單日的下一天開始，尋找下一個週期的送貨日
+            baseDeliveryDate = findNextSpecificDayDate(cutoffDate.plusDays(1), specificDays);
+            cutoffDate = baseDeliveryDate.plusDays(cutoffDayOffset);
+            cutoffDateTime = cutoffDate.atTime(cutoffHour, cutoffMinute, 0);
+        }
+        return cutoffDateTime;
+    }
+
+    private LocalDateTime calculateCustomDaysCutoff(LocalDateTime now, int cutoffHour, int cutoffMinute, int cutoffDayOffset) {
+        Integer customDays = systemConfigService.getDeliveryCustomDays();
+
+        // 基準送貨日 = 今天 + customDays
+        LocalDate baseDeliveryDate = now.toLocalDate().plusDays(customDays);
+        // 截單日 = 基準送貨日 + offset
+        LocalDate cutoffDate = baseDeliveryDate.plusDays(cutoffDayOffset);
+        LocalDateTime cutoffDateTime = cutoffDate.atTime(cutoffHour, cutoffMinute, 0);
+
+        // 如果已過截單時間，順延一個 customDays 週期
+        if (now.isAfter(cutoffDateTime)) {
+            baseDeliveryDate = baseDeliveryDate.plusDays(customDays);
+            cutoffDate = baseDeliveryDate.plusDays(cutoffDayOffset);
+            cutoffDateTime = cutoffDate.atTime(cutoffHour, cutoffMinute, 0);
+        }
+        return cutoffDateTime;
+    }
+
+    /**
+     * 輔助方法：從指定日期開始，尋找下一個符合 specificDays 的日期
+     */
+    private LocalDate findNextSpecificDayDate(LocalDate startDate, List<Integer> specificDays) {
+        LocalDate date = startDate;
+        for (int i = 0; i < 14; i++) { // 最多找兩週
+            int dayOfWeek = date.getDayOfWeek().getValue(); // 1=Monday, 7=Sunday
+            if (specificDays.contains(dayOfWeek)) {
+                return date;
+            }
+            date = date.plusDays(1);
+        }
+        return startDate; // fallback
+    }
+
 
     /**
      * API: 前端點擊「去結賬」時調用，生成訂單並返回 orderNo
@@ -96,6 +207,9 @@ public class CheckoutController {
     /**
      * API: 模擬線上支付
      */
+    /**
+     * API: 模擬線上支付
+     */
     @Operation(
             summary = "模擬線上支付",
             description = "模擬線上支付流程，校驗前端傳來的金額與後端計算是否一致，更新訂單狀態為已付款，並扣減對應商品庫存。"
@@ -116,18 +230,40 @@ public class CheckoutController {
             @Parameter(hidden = true) Authentication authentication) {
         try {
             String orderNo = (String) payload.get("orderNo");
+
             // 1. 前端傳來的金額轉為 BigDecimal
             BigDecimal payAmount = new BigDecimal(payload.get("amount").toString());
+
             // 2. 從 payload 中提取配送方式
             String deliveryMethod = payload.containsKey("deliveryMethod") ? (String) payload.get("deliveryMethod") : null;
-            // 3. 從 payload 中提取 storeId
-            Long storeId = payload.containsKey("storeId") ? Long.valueOf(payload.get("storeId").toString()) : null;
+
+            // 3. 【核心修復】從 payload 中提取 storeId (安全解析，防止 null.toString() 拋出 NullPointerException)
+            Long storeId = null;
+            Object storeIdObj = payload.get("storeId");
+            if (storeIdObj != null) {
+                String storeIdStr = storeIdObj.toString();
+                // 過濾掉空字符串或字面上的 "null"
+                if (!storeIdStr.isEmpty() && !"null".equalsIgnoreCase(storeIdStr)) {
+                    try {
+                        storeId = Long.valueOf(storeIdStr);
+                    } catch (NumberFormatException e) {
+                        // 忽略無效的 storeId 字符串，保持為 null
+                    }
+                }
+            }
+
+            LocalDate customerSelectedDeliveryDate = null;
+            if (payload.containsKey("deliveryDate") && payload.get("deliveryDate") != null) {
+                customerSelectedDeliveryDate = LocalDate.parse(payload.get("deliveryDate").toString());
+            }
 
             // 將 storeId 作為第 5 個參數傳遞給 Service 層
-            Order order = orderService.simulatePayment(orderNo, authentication.getName(), payAmount, deliveryMethod, storeId);
+            Order order = orderService.simulatePayment(orderNo, authentication.getName(), payAmount, deliveryMethod, storeId,customerSelectedDeliveryDate);
 
             return ResponseEntity.ok(Result.okWithData("支付成功", order.getOrderNo()));
         } catch (Exception e) {
+            // 建議在開發階段打印日誌，方便排查其他潛在錯誤
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         }
     }
