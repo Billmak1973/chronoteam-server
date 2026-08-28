@@ -1125,7 +1125,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 // ==========================================
-// 5. 滾動通知功能
+// 5. 滾動通知功能 (已整合 LTR 反轉 + 動態速度計算)
 // ==========================================
 async function loadScrollingNotification() {
   try {
@@ -1143,31 +1143,63 @@ async function loadScrollingNotification() {
       return;
     }
 
-    // 設置通知文字
-    notificationText.textContent = config.notificationText;
+    // 【核心修改】不再直接使用 textContent，而是根據方向重建 DOM 節點
+    // 這樣才能實現 LTR 模式下的字符反轉
+    const text = config.notificationText;
+    const scrollEnabled = config.scrollEnabled !== 'false';
+    const direction = config.scrollDirection || 'rtl';
 
-    // 應用基礎樣式
+    // 清空原有內容，準備重新生成 span
+    notificationText.innerHTML = '';
+    notificationText.style.whiteSpace = 'nowrap'; // 確保不換行
+
+    // 【條件分支】處理文字排序與 DOM 生成
+    if (scrollEnabled && direction === 'ltr') {
+      // 【數據處理】將文字拆分為字符數組並反轉，實現 LTR 反向排列
+      // 這樣 "祝" 會在 DOM 的最後面，配合 LTR 動畫，視覺上 "祝" 會最先從左邊出來
+      const chars = text.split('').reverse();
+      for (let char of chars) {
+        const span = document.createElement('span');
+        span.textContent = char;
+        notificationText.appendChild(span);
+      }
+    } else {
+      // 【其他情況】RTL 方向或固定顯示模式均保持原始文字順序
+      for (let char of text) {
+        const span = document.createElement('span');
+        span.textContent = char;
+        notificationText.appendChild(span);
+      }
+    }
+
+    // 應用基礎樣式 (顏色、字體等)
     notificationText.style.color = config.textColor || '#FFFFFF';
     notificationText.style.fontWeight = config.fontWeight || 'normal';
     notificationText.style.fontSize = (config.fontSize || '14') + 'px';
     notificationText.style.fontStyle = (config.fontItalic === 'true') ? 'italic' : 'normal';
 
-    // 【修改】處理滾動啟用狀態
-    const scrollEnabled = config.scrollEnabled !== 'false'; // 默認為 true
-    const direction = config.scrollDirection || 'rtl';
-    const speed = config.scrollSpeed || 'normal';
-
+    // 【修改】處理滾動啟用狀態與動畫參數
     if (scrollEnabled) {
-      // 滾動模式：根據方向添加對應類名
+      // 移除舊的類名
       notificationText.classList.remove('is-scrolling-rtl', 'is-scrolling-ltr');
 
-      const direction = config.scrollDirection || 'rtl';
       const speed = config.scrollSpeed || 'normal';
 
-      // 計算動畫時長（速度越快，時間越短）
-      let duration = 20; // 默認中速
-      if (speed === 'slow') duration = 30;
-      if (speed === 'fast') duration = 10;
+      /*
+       * 速度計算階段：根據用戶選擇的速度檔位確定單字符耗時
+       */
+      // 【變量初始化】設置默認單字符耗時為 0.4 秒 (對應中速)
+      let secondsPerChar = 0.4; // 默認 (中速)
+      // 【條件賦值】如果選擇慢速，單字符耗時改為 0.7 秒
+      if (speed === 'slow') secondsPerChar = 0.7;
+      // 【條件賦值】如果選擇快速，單字符耗時改為 0.2 秒
+      else if (speed === 'fast') secondsPerChar = 0.2;
+
+      // 【核心優化】根據實際文字長度動態計算總時長
+      // 公式：總時長 = 字符數 × 單字符耗時
+      // 這樣無論是 5 個字還是 50 個字，每秒滑過的字數都是一樣的
+      const totalChars = text.length;
+      const duration = Math.max(5, totalChars * secondsPerChar); // 設置最小 5s 防止過快閃過
 
       if (direction === 'ltr') {
         // 从左向右
@@ -1191,7 +1223,6 @@ async function loadScrollingNotification() {
     console.error('加載滾動通知失敗:', error);
   }
 }
-
 
 // 頁面加載時初始化滾動通知
 document.addEventListener('DOMContentLoaded', function() {
