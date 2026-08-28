@@ -65,7 +65,7 @@ public class SystemConfigController {
 
         // 獲取滾動方向
         config.put("scrollDirection",
-                systemConfigRepository.findById("NOTIFICATION_SCROLL_DIRECTION")
+                systemConfigRepository.findById("SCROLL_DIRECTION")
                         .map(SystemConfig::getConfigValue)
                         .orElse("rtl"));
 
@@ -74,6 +74,11 @@ public class SystemConfigController {
                 systemConfigRepository.findById("NOTIFICATION_SCROLL_SPEED")
                         .map(SystemConfig::getConfigValue)
                         .orElse("normal"));
+
+        config.put("scrollInterval",
+                systemConfigRepository.findById("SCROLL_INTERVAL")
+                        .map(SystemConfig::getConfigValue)
+                        .orElse("1")); // 默認 1 秒
 
         return ResponseEntity.ok(config);
     }

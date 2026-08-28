@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <head>
@@ -9,7 +8,7 @@
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/admin.css">
     <style>
-        /* === 系統配置專屬樣式 === */
+        /* === 系統配置專屬樣式 (完整替換版) === */
         .config-card {
             background: white;
             border-radius: 16px;
@@ -45,7 +44,7 @@
             padding: 2.5rem;
         }
 
-        /* === Tab 导航样式 === */
+        /* === Tab 導航樣式 === */
         .config-tabs {
             display: flex;
             border-bottom: 2px solid #e9ecef;
@@ -98,7 +97,7 @@
             }
         }
 
-        /* === 表单样式 === */
+        /* === 表單樣式 === */
         .form-group {
             margin-bottom: 1.8rem;
         }
@@ -137,6 +136,14 @@
             border-color: var(--gold);
             background: white;
             box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+        }
+
+        .form-input:disabled,
+        select.form-input:disabled {
+            background-color: #f1f3f5;
+            color: #adb5bd;
+            cursor: not-allowed;
+            border-color: #e9ecef;
         }
 
         .form-hint {
@@ -180,19 +187,7 @@
             transform: none;
         }
 
-        /* 响应式 */
-        @media (max-width: 768px) {
-            .config-card-body {
-                padding: 1.5rem;
-            }
-
-            .config-tab {
-                padding: 0.8rem 1rem;
-                font-size: 0.9rem;
-            }
-        }
-
-        /* 颜色选择器专属样式 */
+        /* 顏色選擇器專屬樣式 */
         .color-option-label {
             cursor: pointer;
             text-align: center;
@@ -218,37 +213,171 @@
             margin-top: 0.3rem;
         }
 
-        /* 选中状态的高亮效果 */
         input[type="radio"][name="textColor"]:checked+.color-swatch {
             border-color: var(--gold);
             box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
             transform: scale(1.05);
         }
 
-        /* 跑马灯基础动画：从右向左移动 */
-        @keyframes scrollText {
+        /* ========================================== */
+        /* 【JS 驅動預覽區樣式 - 終極修復版】 */
+        /* ========================================== */
+        /* ========================================== */
+        /* 【JS 驅動預覽區樣式 - 終極修復版】 */
+        /* ========================================== */
+        .preview-container {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            padding: 0;
+            border-radius: 12px;
+            height: 100px;
+            position: relative;
+
+            /* 【核心修改 1】：移除 !important，允許 JS 動態控制 overflow */
+            /* 默認情況下，我們希望它隱藏溢出，直到 JS 根據模式改變它 */
+            overflow: hidden;
+
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            box-sizing: border-box;
+
+            /* 【核心修改 2】：美化滾動條 (僅在 overflow-x: auto 時生效) */
+            scrollbar-width: thin;
+            /* Firefox */
+            scrollbar-color: var(--gold) rgba(255, 255, 255, 0.1);
+            /* Firefox */
+        }
+
+        /* 針對 Chrome/Safari/Edge 的滾動條樣式美化 */
+        .preview-container::-webkit-scrollbar {
+            height: 8px;
+            /* 滾動條高度 */
+        }
+
+        .preview-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+        }
+
+        .preview-container::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            /* 使用你的金色主題色 */
+            border-radius: 4px;
+        }
+
+        .preview-container::-webkit-scrollbar-thumb:hover {
+            background: #b8972b;
+        }
+
+        /* 空狀態提示 */
+        #emptyNotificationHint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+            text-align: center;
+            width: 100%;
+            margin: 0;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        /* 動態生成的文字容器 */
+        .preview-text {
+            position: absolute;
+            top: 50%;
+            /* 初始水平位置由 JS 決定 */
+            transform: translateY(-50%);
+            white-space: nowrap;
+            /* 強制不換行，這是出現橫向滾動的關鍵 */
+            display: flex;
+            align-items: center;
+            will-change: transform;
+            /* 優化動畫性能 */
+            z-index: 10;
+        }
+
+        .preview-char {
+            display: inline-block;
+            line-height: 1;
+            margin: 0 2px;
+        }
+
+        /* 注意：這裡保留原有的 keyframes，但 JS 會動態生成更精確的 */
+        @keyframes scrollRTLWithPause {
             0% {
-                transform: translateX(100%);
+                left: 100%;
             }
 
             100% {
-                transform: translateX(-100%);
+                left: -100%;
             }
+        }
+
+        @keyframes scrollLTRWithPause {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        .preview-control-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 30;
+            /* 確保在最上層 */
+
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .preview-control-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: var(--gold);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .preview-control-btn i {
+            font-size: 0.9rem;
+            transition: transform 0.2s;
+        }
+
+        /* 當處於暫停狀態時，給按鈕一個視覺反饋 */
+        .preview-control-btn.paused {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: var(--gold);
+            color: var(--gold);
         }
     </style>
 </head>
 
 <body>
-    <!-- 引入公共导航栏 -->
     <div th:replace="~{fragments/common :: navbar}"></div>
 
     <div class="admin-layout">
-        <!-- 引入左侧边栏 (activePage 设为 'config') -->
         <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='config')}"></div>
 
-        <!-- 右侧内容区 -->
         <main class="admin-main">
-            <!-- 顶部标题与面包屑 -->
             <div class="content-header">
                 <h2><i class="fas fa-cogs"></i> <span id="pageTitle">系统配置管理</span></h2>
                 <div class="breadcrumb">
@@ -258,7 +387,6 @@
                 </div>
             </div>
 
-            <!-- 动态内容容器 -->
             <div class="content-body">
                 <div class="config-card">
                     <div class="config-card-header">
@@ -266,7 +394,6 @@
                         <h3>平台规则设置</h3>
                     </div>
                     <div class="config-card-body">
-                        <!-- Tab 导航 -->
                         <div class="config-tabs">
                             <button class="config-tab active" onclick="switchConfigTab('shipping', this)">
                                 <i class="fas fa-truck-fast"></i> 物流与运费
@@ -274,241 +401,174 @@
                             <button class="config-tab" onclick="switchConfigTab('return', this)">
                                 <i class="fas fa-undo"></i> 退换货政策
                             </button>
-                            <!-- 新增：通知文字设置 Tab -->
                             <button class="config-tab" onclick="switchConfigTab('notification', this)">
                                 <i class="fas fa-bell"></i> 通知文字设置
                             </button>
                         </div>
 
-                        <!-- Tab 1: 物流与运费设置 -->
+                        <!-- Tab 1 & 2 保持不變，此處省略 -->
                         <div id="tab-shipping" class="tab-content active">
+                            <!-- 原有物流表單內容 -->
                             <form id="shippingConfigForm" onsubmit="saveShippingConfig(event)">
-                                <!-- 1. 基礎快遞費用 -->
                                 <div class="form-group">
-                                    <label for="shippingFee">
-                                        <i class="fas fa-coins"></i> 基礎快遞費用 (HKD)
-                                    </label>
+                                    <label for="shippingFee"><i class="fas fa-coins"></i> 基礎快遞費用 (HKD)</label>
                                     <input type="number" id="shippingFee" step="0.01" min="0" required
                                         class="form-input" placeholder="例如：50">
-                                    <small class="form-hint">
-                                        <i class="fas fa-info-circle"></i> 當訂單未達到免郵門檻時，將向顧客收取此固定運費。
-                                    </small>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i>
+                                        當訂單未達到免郵門檻時，將向顧客收取此固定運費。</small>
                                 </div>
-
-                                <!-- 2. 免運費門檻 -->
                                 <div class="form-group">
-                                    <label for="freeShippingThreshold">
-                                        <i class="fas fa-gift"></i> 免運費門檻 (HKD)
-                                    </label>
+                                    <label for="freeShippingThreshold"><i class="fas fa-gift"></i> 免運費門檻 (HKD)</label>
                                     <input type="number" id="freeShippingThreshold" step="0.01" min="0" required
                                         class="form-input" placeholder="例如：30000">
-                                    <small class="form-hint">
-                                        <i class="fas fa-info-circle"></i> 例如填寫 30000，則顧客訂單總額滿 3 萬即可自動免除快遞費。
-                                    </small>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i> 例如填寫 30000，則顧客訂單總額滿 3
+                                        萬即可自動免除快遞費。</small>
                                 </div>
-
-                                <!-- 3. 配送模式選擇 (已移至免運費門檻下方) -->
                                 <div class="form-group">
-                                    <label for="deliveryMode">
-                                        <i class="fas fa-shipping-fast"></i> 配送模式規則
-                                    </label>
+                                    <label for="deliveryMode"><i class="fas fa-shipping-fast"></i> 配送模式規則</label>
                                     <select id="deliveryMode" class="form-input" onchange="toggleDeliveryModeInput()">
                                         <option value="NEXT_DAY">次日達 (今天下單，明天送)</option>
                                         <option value="SPECIFIC_DAYS">指定星期配送 (例如：每週一、二送)</option>
                                         <option value="CUSTOM">自定義天數 (例如：3天後送達)</option>
                                         <option value="NONE">無配送模式 (僅限門店自取 / 不支持快遞)</option>
                                     </select>
-                                    <small class="form-hint">
-                                        <i class="fas fa-info-circle"></i> 選擇顧客下單後的默認配送策略。若選擇「無配送模式」，結帳時將隱藏所有快遞選項。
-                                    </small>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i>
+                                        選擇顧客下單後的默認配送策略。若選擇「無配送模式」，結帳時將隱藏所有快遞選項。</small>
                                 </div>
-
-                                <!-- 4. 全局截單時間設置 (新增 id="globalCutoffGroup") -->
                                 <div class="form-group" id="globalCutoffGroup">
-                                    <label for="globalCutoffTime">
-                                        <i class="fas fa-clock"></i> 全局最晚下單時間 (截單時間)
-                                    </label>
+                                    <label for="globalCutoffTime"><i class="fas fa-clock"></i> 全局最晚下單時間 (截單時間)</label>
                                     <input type="time" id="globalCutoffTime" class="form-input" value="16:00" required>
-                                    <small class="form-hint">
-                                        <i class="fas fa-info-circle"></i> 所有配送模式共用的每日截單時間。超過此時間下單，將順延至下一個配送週期。
-                                    </small>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i>
+                                        所有配送模式共用的每日截單時間。超過此時間下單，將順延至下一個配送週期。</small>
                                 </div>
-
-                                <!-- 5. 截單日偏移量設置 (新增 id="cutoffOffsetGroup") -->
                                 <div class="form-group" id="cutoffOffsetGroup">
-                                    <label for="cutoffDayOffset">
-                                        <i class="fas fa-calendar-minus"></i> 截單日偏移量 (天)
-                                    </label>
+                                    <label for="cutoffDayOffset"><i class="fas fa-calendar-minus"></i> 截單日偏移量
+                                        (天)</label>
                                     <input type="number" id="cutoffDayOffset" class="form-input" value="-1" step="1"
                                         required>
-                                    <small class="form-hint">
-                                        <i class="fas fa-info-circle"></i> 截单日与送货日的间隔天数：
-                                        <br>• -1：提前一天截单
-                                        <br>• 0 ：当天截单
-                                    </small>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i> 截单日与送货日的间隔天数：<br>•
+                                        -1：提前一天截单<br>• 0 ：当天截单</small>
                                 </div>
-
-                                <!-- 6. 指定星期配送選擇框 -->
                                 <div class="form-group" id="specificDaysGroup" style="display: none;">
-                                    <label>
-                                        <i class="fas fa-calendar-week"></i> 選擇可配送的星期
-                                    </label>
+                                    <label><i class="fas fa-calendar-week"></i> 選擇可配送的星期</label>
                                     <div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem;">
                                         <label
-                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                            <input type="checkbox" class="delivery-day-checkbox" value="1"> 星期一
-                                        </label>
+                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;"><input
+                                                type="checkbox" class="delivery-day-checkbox" value="1"> 星期一</label>
                                         <label
-                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                            <input type="checkbox" class="delivery-day-checkbox" value="2"> 星期二
-                                        </label>
+                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;"><input
+                                                type="checkbox" class="delivery-day-checkbox" value="2"> 星期二</label>
                                         <label
-                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                            <input type="checkbox" class="delivery-day-checkbox" value="3"> 星期三
-                                        </label>
+                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;"><input
+                                                type="checkbox" class="delivery-day-checkbox" value="3"> 星期三</label>
                                         <label
-                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                            <input type="checkbox" class="delivery-day-checkbox" value="4"> 星期四
-                                        </label>
+                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;"><input
+                                                type="checkbox" class="delivery-day-checkbox" value="4"> 星期四</label>
                                         <label
-                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                            <input type="checkbox" class="delivery-day-checkbox" value="5"> 星期五
-                                        </label>
+                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;"><input
+                                                type="checkbox" class="delivery-day-checkbox" value="5"> 星期五</label>
                                         <label
-                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                            <input type="checkbox" class="delivery-day-checkbox" value="6"> 星期六
-                                        </label>
+                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;"><input
+                                                type="checkbox" class="delivery-day-checkbox" value="6"> 星期六</label>
                                         <label
-                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                                            <input type="checkbox" class="delivery-day-checkbox" value="7"> 星期日
-                                        </label>
+                                            style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;"><input
+                                                type="checkbox" class="delivery-day-checkbox" value="7"> 星期日</label>
                                     </div>
-                                    <small class="form-hint">
-                                        <i class="fas fa-info-circle"></i> 請至少選擇一天。系統會自動結合「全局截單時間」計算下一個符合條件的配送日。
-                                    </small>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i>
+                                        請至少選擇一天。系統會自動結合「全局截單時間」計算下一個符合條件的配送日。</small>
                                 </div>
-
-                                <!-- 在「選擇可配送的星期」下方添加這兩個選項 -->
                                 <div class="form-group" id="continuousDaysModeGroup" style="display: none;">
-                                    <label>
-                                        <i class="fas fa-layer-group"></i> 連續配送日處理模式
-                                    </label>
+                                    <label><i class="fas fa-layer-group"></i> 連續配送日處理模式</label>
                                     <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem;">
                                         <label
                                             style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; flex: 1; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; transition: all 0.3s;">
                                             <input type="radio" name="continuousDaysMode" value="GROUP" checked
                                                 onchange="updateContinuousModeHint()">
                                             <div>
-                                                <div style="font-weight: 600; color: var(--primary);">
-                                                    <i class="fas fa-object-group" style="color: var(--gold);"></i> 整體模式
-                                                </div>
+                                                <div style="font-weight: 600; color: var(--primary);"><i
+                                                        class="fas fa-object-group" style="color: var(--gold);"></i>
+                                                    整體模式</div>
                                                 <div
                                                     style="font-size: 0.85rem; color: var(--gray); margin-top: 0.3rem;">
-                                                    連續日子視為一個整體配送週期<br>
-                                                    <small>例如：週六日為一組，錯過截單則等下週的週六日</small>
-                                                </div>
+                                                    連續日子視為一個整體配送週期<br><small>例如：週六日為一組，錯過截單則等下週的週六日</small></div>
                                             </div>
                                         </label>
-
                                         <label
                                             style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; flex: 1; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; transition: all 0.3s;">
                                             <input type="radio" name="continuousDaysMode" value="INDEPENDENT"
                                                 onchange="updateContinuousModeHint()">
                                             <div>
-                                                <div style="font-weight: 600; color: var(--primary);">
-                                                    <i class="fas fa-object-ungroup" style="color: var(--gold);"></i>
-                                                    獨立模式
-                                                </div>
+                                                <div style="font-weight: 600; color: var(--primary);"><i
+                                                        class="fas fa-object-ungroup" style="color: var(--gold);"></i>
+                                                    獨立模式</div>
                                                 <div
                                                     style="font-size: 0.85rem; color: var(--gray); margin-top: 0.3rem;">
-                                                    連續日子各自獨立計算配送日<br>
-                                                    <small>例如：週五截單前→週六送，週六截單前→週日送</small>
-                                                </div>
+                                                    連續日子各自獨立計算配送日<br><small>例如：週五截單前→週六送，週六截單前→週日送</small></div>
                                             </div>
                                         </label>
                                     </div>
-                                    <small class="form-hint" id="continuousModeHint">
-                                        <i class="fas fa-info-circle"></i>
-                                        <span id="continuousModeText">當前選擇的配送日為連續日子，系統將按照「整體模式」計算配送週期。</span>
-                                        <br>
-                                        <span id="independentModeText"
-                                            style="display:none; margin-top:4px; color: var(--gold);">
-                                            <strong>獨立模式範例：</strong>若設定提前 <span id="hintDays">2</span> 天截單，則
-                                            <span id="hintDay1">週四</span>前下單可選<span id="hintTarget1">週六</span>配送，
-                                            <span id="hintDay2">週五</span>前下單可選<span id="hintTarget2">週日</span>配送。
-                                        </span>
-                                    </small>
+                                    <small class="form-hint" id="continuousModeHint"><i
+                                            class="fas fa-info-circle"></i><span
+                                            id="continuousModeText">當前選擇的配送日為連續日子，系統將按照「整體模式」計算配送週期。</span><br><span
+                                            id="independentModeText"
+                                            style="display:none; margin-top:4px; color: var(--gold);"><strong>獨立模式範例：</strong>若設定提前
+                                            <span id="hintDays">2</span> 天截單，則<span id="hintDay1">週四</span>前下單可選<span
+                                                id="hintTarget1">週六</span>配送，<span id="hintDay2">週五</span>前下單可選<span
+                                                id="hintTarget2">週日</span>配送。</span></small>
                                 </div>
-
-                                <!-- 7. 自定義天數輸入框 -->
                                 <div class="form-group" id="customDaysGroup" style="display: none;">
-                                    <label for="deliveryCustomDays">
-                                        <i class="fas fa-calendar-day"></i> 自定義配送天數
-                                    </label>
+                                    <label for="deliveryCustomDays"><i class="fas fa-calendar-day"></i> 自定義配送天數</label>
                                     <input type="number" id="deliveryCustomDays" step="1" min="2" max="30"
                                         class="form-input" placeholder="例如：3">
-                                    <small class="form-hint">
-                                        <i class="fas fa-info-circle"></i> 當選擇「自定義天數」時生效，表示下單後 N 天送達。
-                                    </small>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i> 當選擇「自定義天數」時生效，表示下單後 N
+                                        天送達。</small>
                                 </div>
-
-                                <!-- 8. 保存按鈕 -->
-                                <button type="submit" class="btn-save-config" id="saveShippingBtn">
-                                    <i class="fas fa-save"></i> 保存運費與配送設置
-                                </button>
+                                <button type="submit" class="btn-save-config" id="saveShippingBtn"><i
+                                        class="fas fa-save"></i> 保存運費與配送設置</button>
                             </form>
                         </div>
 
-                        <!-- Tab 2: 退换货政策设置 -->
                         <div id="tab-return" class="tab-content">
                             <form id="returnConfigForm" onsubmit="saveReturnConfig(event)">
                                 <div class="form-group">
-                                    <label for="returnDays">
-                                        <i class="fas fa-calendar-alt"></i> 无条件退货天数
-                                    </label>
+                                    <label for="returnDays"><i class="fas fa-calendar-alt"></i> 无条件退货天数</label>
                                     <input type="number" id="returnDays" step="1" min="0" max="30" required
                                         class="form-input" placeholder="例如：7">
-                                    <small class="form-hint">
-                                        <i class="fas fa-info-circle"></i> 顾客收货后可无条件申请退货的天数（0 表示不支持退货）。
-                                    </small>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i> 顾客收货后可无条件申请退货的天数（0
+                                        表示不支持退货）。</small>
                                 </div>
-
                                 <div class="form-group">
-                                    <label for="exchangeDays">
-                                        <i class="fas fa-exchange-alt"></i> 无条件换货天数
-                                    </label>
+                                    <label for="exchangeDays"><i class="fas fa-exchange-alt"></i> 无条件换货天数</label>
                                     <input type="number" id="exchangeDays" step="1" min="0" max="30" required
                                         class="form-input" placeholder="例如：14">
-                                    <small class="form-hint">
-                                        <i class="fas fa-info-circle"></i> 顾客收货后可无条件申请换货的天数（0 表示不支持换货）。
-                                    </small>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i> 顾客收货后可无条件申请换货的天数（0
+                                        表示不支持换货）。</small>
                                 </div>
-
-                                <button type="submit" class="btn-save-config" id="saveReturnBtn">
-                                    <i class="fas fa-save"></i> 保存退换货设置
-                                </button>
+                                <button type="submit" class="btn-save-config" id="saveReturnBtn"><i
+                                        class="fas fa-save"></i> 保存退换货设置</button>
                             </form>
                         </div>
 
+                        <!-- Tab 3: 通知文字设置 (已修復) -->
                         <div id="tab-notification" class="tab-content">
                             <form id="notificationConfigForm" onsubmit="saveNotificationConfig(event)">
-                                <!-- 1. 通知文字内容 -->
                                 <div class="form-group">
-                                    <label for="notificationText">
-                                        <i class="fas fa-font"></i> 通知文字内容
-                                    </label>
+                                    <label for="notificationText"><i class="fas fa-font"></i> 通知文字内容</label>
                                     <input type="text" id="notificationText" maxlength="100" class="form-input"
                                         placeholder="例如：新品上架、限时优惠..." value="" oninput="updateNotificationPreview()">
                                     <small class="form-hint">
-                                        <i class="fas fa-info-circle"></i> 最多 100 个字符，留空则关闭通知显示。
+                                        <i class="fas fa-info-circle"></i>
+                                        儅字體固定時，最多可輸入37個字為最合適
+                                        <span id="charCountDisplay"
+                                            style="color: var(--accent); font-weight: bold; margin-left: 4px;">(你已經寫了 0
+                                            個字)</span>
                                     </small>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i> 最多 100
+                                        个字符，留空则关闭通知显示。</small>
                                 </div>
 
-                                <!-- 2. 是否启用滚动（新增） -->
                                 <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-arrows-alt-h"></i> 滚动设置
-                                    </label>
+                                    <label><i class="fas fa-arrows-alt-h"></i> 滚动设置</label>
                                     <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem;">
                                         <label
                                             style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
@@ -523,16 +583,10 @@
                                             <span><i class="fas fa-pause"></i> 固定显示（不滚动）</span>
                                         </label>
                                     </div>
-                                    <small class="form-hint" style="margin-top: 0.5rem; color: var(--accent);">
-                                        <i class="fas fa-info-circle"></i> 当文字为空时，将自动关闭通知显示。
-                                    </small>
                                 </div>
 
-                                <!-- 3. 滚动方向（仅在启用滚动时显示） -->
                                 <div class="form-group" id="scrollDirectionGroup">
-                                    <label>
-                                        <i class="fas fa-arrows-alt-h"></i> 滚动方向
-                                    </label>
+                                    <label><i class="fas fa-arrows-alt-h"></i> 滚动方向</label>
                                     <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem;">
                                         <label
                                             style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
@@ -549,11 +603,8 @@
                                     </div>
                                 </div>
 
-                                <!-- 4. 滚动速度（仅在启用滚动时显示） -->
                                 <div class="form-group" id="scrollSpeedGroup">
-                                    <label>
-                                        <i class="fas fa-tachometer-alt"></i> 滚动速度
-                                    </label>
+                                    <label><i class="fas fa-tachometer-alt"></i> 滚动速度</label>
                                     <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem;">
                                         <label
                                             style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
@@ -576,145 +627,137 @@
                                     </div>
                                 </div>
 
-                                <!-- 5. 文字颜色选择 (7浅 + 7深) -->
-                                <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-palette"></i> 文字颜色 (共14种)
-                                    </label>
+                                <!-- 新增：滾動間隔設置 -->
+                                <div class="form-group" id="scrollIntervalGroup">
+                                    <label><i class="fas fa-hourglass-half"></i> 滾動間隔 (秒)</label>
+                                    <input type="number" id="scrollInterval" min="0" max="60" step="0.5" value="1"
+                                        class="form-input" onchange="updateNotificationPreview()">
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i>
+                                        文字完全滑出預覽區後，等待多少秒才重新開始下一輪滾動。</small>
+                                </div>
 
-                                    <!-- 浅色系 (适合深色导航栏背景) -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-palette"></i> 文字颜色 (共14种)</label>
                                     <div style="margin-bottom: 1rem;">
                                         <div
                                             style="font-size: 0.85rem; font-weight: 600; color: var(--gray); margin-bottom: 0.5rem;">
                                             浅色系</div>
                                         <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#FFFFFF" checked
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#FFFFFF" checked style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #FFFFFF;"></div>
                                                 <div class="color-name">纯白</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#F8F9FA"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#F8F9FA" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #F8F9FA;"></div>
                                                 <div class="color-name">象牙白</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#CED4DA"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#CED4DA" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #CED4DA;"></div>
                                                 <div class="color-name">银灰</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#A5D8FF"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#A5D8FF" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #A5D8FF;"></div>
                                                 <div class="color-name">浅蓝</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#96F2D7"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#96F2D7" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #96F2D7;"></div>
                                                 <div class="color-name">浅绿</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#FFE066"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#FFE066" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #FFE066;"></div>
                                                 <div class="color-name">浅黄</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#FFC9C9"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#FFC9C9" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #FFC9C9;"></div>
                                                 <div class="color-name">浅粉</div>
                                             </label>
                                         </div>
                                     </div>
-
-                                    <!-- 深色系 (适合浅色导航栏背景) -->
                                     <div>
                                         <div
                                             style="font-size: 0.85rem; font-weight: 600; color: var(--gray); margin-bottom: 0.5rem;">
                                             深色系</div>
                                         <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#212529"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#212529" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #212529;"></div>
                                                 <div class="color-name">纯黑</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#495057"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#495057" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #495057;"></div>
                                                 <div class="color-name">深灰</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#1864AB"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#1864AB" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #1864AB;"></div>
                                                 <div class="color-name">深蓝</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#2B8A3E"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#2B8A3E" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #2B8A3E;"></div>
                                                 <div class="color-name">深绿</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#E03131"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#E03131" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #E03131;"></div>
                                                 <div class="color-name">深红</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#5F3DC4"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#5F3DC4" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #5F3DC4;"></div>
                                                 <div class="color-name">深紫</div>
                                             </label>
-                                            <label class="color-option-label">
-                                                <input type="radio" name="textColor" value="#5C3A21"
-                                                    style="display: none;" onchange="updateNotificationPreview()">
+                                            <label class="color-option-label"><input type="radio" name="textColor"
+                                                    value="#5C3A21" style="display: none;"
+                                                    onchange="updateNotificationPreview()">
                                                 <div class="color-swatch" style="background: #5C3A21;"></div>
                                                 <div class="color-name">深棕</div>
                                             </label>
                                         </div>
                                     </div>
-
-                                    <small class="form-hint" style="margin-top: 0.5rem;">
-                                        <i class="fas fa-info-circle"></i> 点击色块选择文字颜色，下方预览区会实时更新效果。
-                                    </small>
+                                    <small class="form-hint" style="margin-top: 0.5rem;"><i
+                                            class="fas fa-info-circle"></i> 点击色块选择文字颜色，下方预览区会实时更新效果。</small>
                                 </div>
 
-                                <!-- 6. 字体粗细 -->
                                 <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-bold"></i> 字体粗细
-                                    </label>
+                                    <label><i class="fas fa-bold"></i> 字体粗细</label>
                                     <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem;">
                                         <label
-                                            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                            <input type="radio" name="fontWeight" value="normal" checked
-                                                onchange="updateNotificationPreview()">
-                                            <span style="font-weight: 400;">正常字体</span>
-                                        </label>
+                                            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"><input
+                                                type="radio" name="fontWeight" value="normal" checked
+                                                onchange="updateNotificationPreview()"><span
+                                                style="font-weight: 400;">正常字体</span></label>
                                         <label
-                                            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                            <input type="radio" name="fontWeight" value="bold"
-                                                onchange="updateNotificationPreview()">
-                                            <span style="font-weight: 700;">粗体</span>
-                                        </label>
+                                            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"><input
+                                                type="radio" name="fontWeight" value="bold"
+                                                onchange="updateNotificationPreview()"><span
+                                                style="font-weight: 700;">粗体</span></label>
                                     </div>
                                 </div>
 
-                                <!-- 7. 字体大小 -->
                                 <div class="form-group">
-                                    <label for="fontSize">
-                                        <i class="fas fa-text-height"></i> 字体大小
-                                    </label>
+                                    <label for="fontSize"><i class="fas fa-text-height"></i> 字体大小</label>
                                     <select id="fontSize" class="form-input" onchange="updateNotificationPreview()">
                                         <option value="12">12px (小)</option>
                                         <option value="14" selected>14px (中)</option>
@@ -723,65 +766,54 @@
                                     </select>
                                 </div>
 
-                                <!-- 8. 是否斜体 -->
                                 <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-italic"></i> 字体样式
-                                    </label>
+                                    <label><i class="fas fa-italic"></i> 字体样式</label>
                                     <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem;">
                                         <label
-                                            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                                            <input type="checkbox" id="fontItalic"
-                                                onchange="updateNotificationPreview()">
-                                            <span style="font-style: italic;">启用斜体</span>
-                                        </label>
+                                            style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;"><input
+                                                type="checkbox" id="fontItalic"
+                                                onchange="updateNotificationPreview()"><span
+                                                style="font-style: italic;">启用斜体</span></label>
                                     </div>
                                 </div>
 
-                                <!-- 9. 预览区域 -->
                                 <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-eye"></i> 实时预览
-                                    </label>
-                                    <div
-                                        style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); padding: 1.5rem; border-radius: 8px; margin-top: 0.5rem; text-align: center; min-height: 60px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; position: relative;">
-                                        <span id="notificationPreview"
-                                            style="white-space: nowrap; display: inline-block;">
-                                            这里是通知文字预览
-                                        </span>
-                                        <div id="emptyNotificationHint"
-                                            style="color: rgba(255,255,255,0.5); font-style: italic; display: none;">
-                                            <i class="fas fa-info-circle"></i> 通知文字为空，将不显示
+                                    <label><i class="fas fa-eye"></i> 实时预览</label>
+                                    <!-- 預覽容器 -->
+                                    <div class="preview-container" id="notificationStage">
+                                        <!-- 【新增】右上角控制按鈕 -->
+                                        <button type="button" id="previewToggleBtn" class="preview-control-btn"
+                                            onclick="togglePreview()">
+                                            <i class="fas fa-play"></i>
+                                            <span id="previewBtnText">開始預覽</span>
+                                        </button>
+
+                                        <!-- 空狀態提示 -->
+                                        <div id="emptyNotificationHint"><i class="fas fa-info-circle"></i> 通知文字为空，将不显示
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- 10. 保存按钮 -->
-                                <button type="submit" class="btn-save-config" id="saveNotificationBtn">
-                                    <i class="fas fa-save"></i> 保存通知文字设置
-                                </button>
+                                <button type="submit" class="btn-save-config" id="saveNotificationBtn"><i
+                                        class="fas fa-save"></i> 保存通知文字设置</button>
                             </form>
                         </div>
-
                     </div>
                 </div>
             </div>
 
             <footer class="admin-footer"
                 style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 12px; text-align: center; color: rgba(255,255,255,0.7);">
-                <p style="margin: 0; font-size: 0.9rem;">
-                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
-                    ChronoTeam Admin Panel. All Rights Reserved.
-                </p>
+                <p style="margin: 0; font-size: 0.9rem;"><i class="fas fa-shield-alt"
+                        style="color: var(--gold); margin-right: 0.5rem;"></i>&copy; <span
+                        th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam Admin
+                    Panel. All Rights Reserved.</p>
             </footer>
         </main>
     </div>
 
-    <!-- 引入公共弹窗 -->
     <div th:replace="~{fragments/common :: modals}"></div>
 
-    <!-- 注入登入状态 -->
     <script th:inline="javascript">
         const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
@@ -791,321 +823,197 @@
 
     <!-- 页面专属 JS -->
     <script>
-        // 页面加载时，从后端获取当前配置并填充表单
-        document.addEventListener('DOMContentLoaded', async function () {
-            await loadAllConfigs();
-            await loadNotificationConfig();
-        });
+        // ==========================================
+        // 【關鍵修復】全局變量必須在這裡顯式聲明
+        // ==========================================
+        let animationFrameId = null;
+        let charElements = [];
+        let charPositions = [];
+        let stageWidth = 0;
 
-        // Tab 切换功能
+        // 配置參數對象
+        let config = {
+            speed: 1.5,
+            direction: 'rtl',
+            enabled: true,
+            bigGapRatio: 0.5 // 大間隙佔屏幕寬度的比例
+        };
+
+        // ==========================================
+        // Tab 切換與其他基礎功能
+        // ==========================================
         function switchConfigTab(tabName, btn) {
-            // 隐藏所有 Tab 内容
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-
-            // 移除所有 Tab 按钮的 active 状态
-            document.querySelectorAll('.config-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            // 显示当前 Tab 内容
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.config-tab').forEach(tab => tab.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
-
-            // 激活当前 Tab 按钮
             btn.classList.add('active');
+
+            if (tabName !== 'notification') {
+                stopAnimation();
+            } else {
+                setTimeout(() => {
+                    stageWidth = document.getElementById('notificationStage').offsetWidth;
+                    startAnimation();
+                }, 100);
+            }
         }
 
         // ==========================================
-        // 1. 切換配送模式顯示邏輯 (修復版：確保非 NONE 模式下可編輯運費)
+        // 1. 切換配送模式顯示邏輯
         // ==========================================
         function toggleDeliveryModeInput() {
             const mode = document.getElementById('deliveryMode').value;
-
-            // 獲取所有需要控制顯示/隱藏的區塊
             const globalCutoffGroup = document.getElementById('globalCutoffGroup');
             const cutoffOffsetGroup = document.getElementById('cutoffOffsetGroup');
             const specificDaysGroup = document.getElementById('specificDaysGroup');
             const customDaysGroup = document.getElementById('customDaysGroup');
             const cutoffDayOffsetInput = document.getElementById('cutoffDayOffset');
-
-            // 獲取運費相關輸入框
             const shippingFeeInput = document.getElementById("shippingFee");
             const freeShippingThresholdInput = document.getElementById('freeShippingThreshold');
 
-            // 先隱藏所有擴展選項
             globalCutoffGroup.style.display = 'none';
             cutoffOffsetGroup.style.display = 'none';
             specificDaysGroup.style.display = 'none';
             customDaysGroup.style.display = 'none';
 
             if (mode === 'NONE') {
-                // 無配送模式：運費和免郵門檻設為 0 並禁用，防止用戶手動修改
-                if (shippingFeeInput) {
-                    shippingFeeInput.value = '0';
-                    shippingFeeInput.disabled = true;
-                }
-                if (freeShippingThresholdInput) {
-                    freeShippingThresholdInput.value = '0';
-                    freeShippingThresholdInput.disabled = true;
-                }
+                if (shippingFeeInput) {shippingFeeInput.value = '0'; shippingFeeInput.disabled = true;}
+                if (freeShippingThresholdInput) {freeShippingThresholdInput.value = '0'; freeShippingThresholdInput.disabled = true;}
             } else {
-                // 【核心修復】：其他模式 (NEXT_DAY, SPECIFIC_DAYS, CUSTOM)：啟用運費和免郵門檻輸入框，允許修改數字
                 if (shippingFeeInput) shippingFeeInput.disabled = false;
                 if (freeShippingThresholdInput) freeShippingThresholdInput.disabled = false;
-
-                // 顯示全局截單時間和偏移量
                 globalCutoffGroup.style.display = 'block';
                 cutoffOffsetGroup.style.display = 'block';
 
-                // 次日達模式：強制截單偏移量為 -1 並禁用偏移量輸入框
                 if (mode === 'NEXT_DAY') {
-                    if (cutoffDayOffsetInput) {
-                        cutoffDayOffsetInput.value = '-1';
-                        cutoffDayOffsetInput.disabled = true;
-                    }
+                    if (cutoffDayOffsetInput) {cutoffDayOffsetInput.value = '-1'; cutoffDayOffsetInput.disabled = true;}
                 } else {
-                    // 其他模式：啟用截單偏移量輸入框
-                    if (cutoffDayOffsetInput) {
-                        cutoffDayOffsetInput.disabled = false;
-                    }
+                    if (cutoffDayOffsetInput) cutoffDayOffsetInput.disabled = false;
                 }
 
-                // 根據具體模式顯示額外選項
-                if (mode === 'SPECIFIC_DAYS') {
-                    specificDaysGroup.style.display = 'block';
-                } else if (mode === 'CUSTOM') {
-                    customDaysGroup.style.display = 'block';
-                }
+                if (mode === 'SPECIFIC_DAYS') specificDaysGroup.style.display = 'block';
+                else if (mode === 'CUSTOM') customDaysGroup.style.display = 'block';
             }
         }
 
         // ==========================================
-        // 2. 加載所有配置 (新增加載 GLOBAL_CUTOFF_TIME 和 CUTOFF_DAY_OFFSET)
+        // 2. 加載所有配置
         // ==========================================
         async function loadAllConfigs() {
             try {
-                const res = await fetch('/api/admin/config/get', {
-                    method: 'GET',
-                    credentials: 'same-origin'
-                });
-
+                const res = await fetch('/api/admin/config/get', {method: 'GET', credentials: 'same-origin'});
                 if (res.ok) {
                     const configs = await res.json();
+                    if (configs.SHIPPING_FEE) document.getElementById('shippingFee').value = configs.SHIPPING_FEE;
+                    if (configs.FREE_SHIPPING_THRESHOLD) document.getElementById('freeShippingThreshold').value = configs.FREE_SHIPPING_THRESHOLD;
+                    if (configs.GLOBAL_CUTOFF_TIME) document.getElementById('globalCutoffTime').value = configs.GLOBAL_CUTOFF_TIME;
+                    if (configs.CUTOFF_DAY_OFFSET !== undefined) document.getElementById('cutoffDayOffset').value = configs.CUTOFF_DAY_OFFSET;
 
-                    // 填充運費設置
-                    if (configs.SHIPPING_FEE) {
-                        document.getElementById('shippingFee').value = configs.SHIPPING_FEE;
-                    }
-                    if (configs.FREE_SHIPPING_THRESHOLD) {
-                        document.getElementById('freeShippingThreshold').value = configs.FREE_SHIPPING_THRESHOLD;
-                    }
-
-                    // 【新增】填充全局截單時間設置
-                    if (configs.GLOBAL_CUTOFF_TIME) {
-                        document.getElementById('globalCutoffTime').value = configs.GLOBAL_CUTOFF_TIME;
-                    }
-                    if (configs.CUTOFF_DAY_OFFSET !== undefined) {
-                        document.getElementById('cutoffDayOffset').value = configs.CUTOFF_DAY_OFFSET;
-                    }
-
-                    // 填充配送規則設置
                     if (configs.DELIVERY_MODE) {
                         document.getElementById('deliveryMode').value = configs.DELIVERY_MODE;
-                        toggleDeliveryModeInput(); // 觸發顯示/隱藏邏輯
+                        toggleDeliveryModeInput();
                     }
+                    if (configs.DELIVERY_CUSTOM_DAYS) document.getElementById('deliveryCustomDays').value = configs.DELIVERY_CUSTOM_DAYS;
 
-                    if (configs.DELIVERY_CUSTOM_DAYS) {
-                        document.getElementById('deliveryCustomDays').value = configs.DELIVERY_CUSTOM_DAYS;
-                    }
-
-                    // 填充指定星期 (後端返回格式如 "1,2,3")
                     if (configs.DELIVERY_SPECIFIC_DAYS && configs.DELIVERY_SPECIFIC_DAYS.trim() !== '') {
                         const days = configs.DELIVERY_SPECIFIC_DAYS.split(',').map(d => d.trim());
-                        document.querySelectorAll('.delivery-day-checkbox').forEach(cb => {
-                            cb.checked = days.includes(cb.value);
-                        });
-
-                        // 加載後檢查是否應該顯示連續模式選項
+                        document.querySelectorAll('.delivery-day-checkbox').forEach(cb => {cb.checked = days.includes(cb.value);});
                         setTimeout(() => {
                             updateContinuousDaysModeVisibility();
-
-                            // 如果存在連續日子處理模式配置，設置 radio button
                             if (configs.CONTINUOUS_DAYS_MODE) {
                                 const radio = document.querySelector(`input[name="continuousDaysMode"][value="${configs.CONTINUOUS_DAYS_MODE}"]`);
-                                if (radio) {
-                                    radio.checked = true;
-                                    updateContinuousModeHint();
-                                }
+                                if (radio) {radio.checked = true; updateContinuousModeHint();}
                             }
                         }, 100);
                     }
 
-                    // 填充退換貨設置
-                    if (configs.RETURN_DAYS !== undefined) {
-                        document.getElementById('returnDays').value = configs.RETURN_DAYS;
-                    }
-                    if (configs.EXCHANGE_DAYS !== undefined) {
-                        document.getElementById('exchangeDays').value = configs.EXCHANGE_DAYS;
-                    }
+                    if (configs.RETURN_DAYS !== undefined) document.getElementById('returnDays').value = configs.RETURN_DAYS;
+                    if (configs.EXCHANGE_DAYS !== undefined) document.getElementById('exchangeDays').value = configs.EXCHANGE_DAYS;
                 }
-            } catch (error) {
-                console.warn('加載當前配置失敗:', error);
-            }
+            } catch (error) {console.warn('加載當前配置失敗:', error);}
         }
 
         // ==========================================
-        // 檢測是否有連續的配送日
+        // 檢測是否有連續的配送日 & 更新提示
         // ==========================================
         function hasConsecutiveDays() {
             const checkedBoxes = document.querySelectorAll('.delivery-day-checkbox:checked');
             if (checkedBoxes.length < 2) return false;
-
             const values = Array.from(checkedBoxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
-
-            // 檢查是否有連續的數字（考慮週日7和週一1的循環）
             for (let i = 0; i < values.length - 1; i++) {
                 const diff = values[i + 1] - values[i];
-                // 正常連續（如 1,2 或 6,7）或循環連續（7,1）
-                if (diff === 1 || (values[i] === 7 && values[i + 1] === 1)) {
-                    return true;
-                }
+                if (diff === 1 || (values[i] === 7 && values[i + 1] === 1)) return true;
             }
             return false;
         }
 
-        // ==========================================
-        // 更新連續日子處理模式的顯示
-        // ==========================================
         function updateContinuousDaysModeVisibility() {
             const mode = document.getElementById('deliveryMode').value;
             const continuousModeGroup = document.getElementById('continuousDaysModeGroup');
-
-            // 只有在「指定星期配送」模式且存在連續日子時才顯示
-            if (mode === 'SPECIFIC_DAYS' && hasConsecutiveDays()) {
-                continuousModeGroup.style.display = 'block';
-            } else {
-                continuousModeGroup.style.display = 'none';
-            }
+            if (mode === 'SPECIFIC_DAYS' && hasConsecutiveDays()) continuousModeGroup.style.display = 'block';
+            else continuousModeGroup.style.display = 'none';
         }
 
-        // ==========================================
-        // 更新連續模式提示文字 (動態計算版)
-        // ==========================================
         function updateContinuousModeHint() {
             const mode = document.querySelector('input[name="continuousDaysMode"]:checked').value;
             const cutoffOffset = parseInt(document.getElementById('cutoffDayOffset').value) || -1;
             const independentText = document.getElementById('independentModeText');
-
-            // 獲取用戶勾選的連續日子
             const checkedBoxes = document.querySelectorAll('.delivery-day-checkbox:checked');
-            const selectedDays = Array.from(checkedBoxes)
-                .map(cb => parseInt(cb.value))
-                .sort((a, b) => a - b);
+            const selectedDays = Array.from(checkedBoxes).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
 
             if (mode === 'INDEPENDENT' && selectedDays.length >= 2) {
                 independentText.style.display = 'block';
-
-                // 找到第一組連續的日子
                 let consecutivePair = null;
                 for (let i = 0; i < selectedDays.length - 1; i++) {
                     const diff = selectedDays[i + 1] - selectedDays[i];
-                    // 正常連續（如 1,2 或 6,7）或循環連續（7,1）
                     if (diff === 1 || (selectedDays[i] === 7 && selectedDays[i + 1] === 1)) {
-                        consecutivePair = [selectedDays[i], selectedDays[i + 1]];
-                        break;
+                        consecutivePair = [selectedDays[i], selectedDays[i + 1]]; break;
                     }
                 }
-
                 if (consecutivePair) {
                     const [day1, day2] = consecutivePair;
                     const weekMap = {1: '週一', 2: '週二', 3: '週三', 4: '週四', 5: '週五', 6: '週六', 7: '週日'};
-
-                    // 計算截单日（目標日 - 提前天數）
-                    // 注意：cutoffOffset 是負數，例如 -2 表示提前2天
                     const absOffset = Math.abs(cutoffOffset);
                     const cutoffDay1 = day1 - absOffset;
                     const cutoffDay2 = day2 - absOffset;
-
-                    // 處理跨週情況（如果結果小於1，加上7）
                     const adjustedCutoffDay1 = cutoffDay1 < 1 ? cutoffDay1 + 7 : cutoffDay1;
                     const adjustedCutoffDay2 = cutoffDay2 < 1 ? cutoffDay2 + 7 : cutoffDay2;
-
-                    // 更新提示文字
-                    independentText.innerHTML = `
-                <strong>獨立模式範例：</strong>若設定提前 <strong>${absOffset}</strong> 天截單，則
-                <span style="color: var(--primary); font-weight: 600;">${weekMap[adjustedCutoffDay1] || '週X'}</span>前下單可選
-                <span style="color: var(--gold); font-weight: 600;">${weekMap[day1]}</span>配送，
-                <span style="color: var(--primary); font-weight: 600;">${weekMap[adjustedCutoffDay2] || '週X'}</span>前下單可選
-                <span style="color: var(--gold); font-weight: 600;">${weekMap[day2]}</span>配送。
-            `;
+                    independentText.innerHTML = `<strong>獨立模式範例：</strong>若設定提前 <strong>${absOffset}</strong> 天截單，則<span style="color: var(--primary); font-weight: 600;">${weekMap[adjustedCutoffDay1] || '週X'}</span>前下單可選<span style="color: var(--gold); font-weight: 600;">${weekMap[day1]}</span>配送，<span style="color: var(--primary); font-weight: 600;">${weekMap[adjustedCutoffDay2] || '週X'}</span>前下單可選<span style="color: var(--gold); font-weight: 600;">${weekMap[day2]}</span>配送。`;
                 }
-            } else {
-                independentText.style.display = 'none';
-            }
+            } else {independentText.style.display = 'none';}
         }
 
-        // 監聽截單偏移量變化
         document.getElementById('cutoffDayOffset').addEventListener('input', updateContinuousModeHint);
-
-        // 監聽配送日 checkbox 變化
-        document.querySelectorAll('.delivery-day-checkbox').forEach(cb => {
-            cb.addEventListener('change', updateContinuousModeHint);
-        });
-
-        // 初始調用
+        document.querySelectorAll('.delivery-day-checkbox').forEach(cb => {cb.addEventListener('change', updateContinuousModeHint);});
         updateContinuousModeHint();
 
-
-        // ==========================================
-        // 修改 checkbox 事件監聽
-        // ==========================================
         document.addEventListener('DOMContentLoaded', function () {
-            // 為每個配送日 checkbox 添加事件監聽
             document.querySelectorAll('.delivery-day-checkbox').forEach(cb => {
-                cb.addEventListener('change', function () {
-                    updateContinuousDaysModeVisibility();
-                });
+                cb.addEventListener('change', function () {updateContinuousDaysModeVisibility();});
             });
-
-            // 初始化時檢查
             updateContinuousDaysModeVisibility();
         });
 
         // ==========================================
-        // 3. 保存運費與配送設置 (改為保存全局截單配置)
+        // 3. 保存運費與配送設置
         // ==========================================
         async function saveShippingConfig(e) {
             e.preventDefault();
-
-            // 收集選中的星期
             const selectedDays = [];
-            document.querySelectorAll('.delivery-day-checkbox:checked').forEach(cb => {
-                selectedDays.push(cb.value);
-            });
-
+            document.querySelectorAll('.delivery-day-checkbox:checked').forEach(cb => {selectedDays.push(cb.value);});
             const mode = document.getElementById('deliveryMode').value;
+
             if (mode === 'SPECIFIC_DAYS' && selectedDays.length === 7) {
-                if (typeof showNotification === 'function') {
-                    showNotification('⚠️ 检测到您勾选了所有星期（周一至周日），建议直接选择「次日达」模式！', true);
-                } else {
-                    alert('检测到您勾选了所有星期（周一至周日），建议直接选择「次日达」模式！');
-                }
-                return; // 阻止表单提交
+                if (typeof showNotification === 'function') showNotification('⚠️ 检测到您勾选了所有星期（周一至周日），建议直接选择「次日达」模式！', true);
+                else alert('检测到您勾选了所有星期（周一至周日），建议直接选择「次日达」模式！');
+                return;
             }
-
-
-            // 校驗：如果選擇了指定星期，但沒勾選任何一天，給出提示
             if (mode === 'SPECIFIC_DAYS' && selectedDays.length === 0) {
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ 請至少選擇一天作為配送日！', true);
-                } else {
-                    alert('請至少選擇一天作為配送日！');
-                }
+                if (typeof showNotification === 'function') showNotification(' 請至少選擇一天作為配送日！', true);
+                else alert('請至少選擇一天作為配送日！');
                 return;
             }
 
-            // 獲取連續日子處理模式（如果有顯示）
             const continuousModeGroup = document.getElementById('continuousDaysModeGroup');
             let continuousDaysMode = null;
             if (continuousModeGroup.style.display !== 'none') {
@@ -1116,215 +1024,752 @@
             const data = {
                 "SHIPPING_FEE": document.getElementById('shippingFee').value,
                 "FREE_SHIPPING_THRESHOLD": document.getElementById('freeShippingThreshold').value,
-                // 保存全局截單設置
                 "GLOBAL_CUTOFF_TIME": document.getElementById('globalCutoffTime').value || "16:00",
                 "CUTOFF_DAY_OFFSET": document.getElementById('cutoffDayOffset').value || "-1",
-                // 配送模式設置
                 "DELIVERY_MODE": mode,
-                "DELIVERY_SPECIFIC_DAYS": selectedDays.join(','), // 保存為 "1,2" 格式
+                "DELIVERY_SPECIFIC_DAYS": selectedDays.join(','),
                 "DELIVERY_CUSTOM_DAYS": document.getElementById('deliveryCustomDays').value || "0",
                 "CONTINUOUS_DAYS_MODE": continuousDaysMode || "GROUP"
             };
-
             await saveConfig('/api/admin/config/update-shipping', data, 'saveShippingBtn', '物流與配送規則已成功保存！');
         }
 
-        // 保存退换货设置
         async function saveReturnConfig(e) {
             e.preventDefault();
-
-            const data = {
-                "RETURN_DAYS": document.getElementById('returnDays').value,
-                "EXCHANGE_DAYS": document.getElementById('exchangeDays').value
-            };
-
+            const data = {"RETURN_DAYS": document.getElementById('returnDays').value, "EXCHANGE_DAYS": document.getElementById('exchangeDays').value};
             await saveConfig('/api/admin/config/update-return-policy', data, 'saveReturnBtn', '退换货政策已成功保存！');
         }
 
-        // 通用保存配置函数
         async function saveConfig(url, data, btnId, successMessage) {
             const btn = document.getElementById(btnId);
             const originalText = btn.innerHTML;
-
             try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    credentials: 'same-origin',
-                    body: JSON.stringify(data)
-                });
-
+                const res = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, credentials: 'same-origin', body: JSON.stringify(data)});
                 if (res.ok) {
                     const result = await res.json();
-                    if (typeof showNotification === 'function') {
-                        showNotification('✅ ' + (result.message || successMessage));
-                    } else {
-                        alert('✅ ' + (result.message || successMessage));
-                    }
+                    if (typeof showNotification === 'function') showNotification('✅ ' + (result.message || successMessage));
+                    else alert('✅ ' + (result.message || successMessage));
                 } else {
                     const err = await res.json().catch(() => ({}));
-                    if (typeof showNotification === 'function') {
-                        showNotification(' ' + (err.message || '保存失败，请检查权限'), true);
-                    } else {
-                        alert('❌ 保存失败，请检查权限');
-                    }
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (err.message || '保存失败，请检查权限'), true);
+                    else alert(' 保存失败，请检查权限');
                 }
             } catch (error) {
                 console.error('保存配置错误:', error);
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ 网络错误，请稍后重试', true);
-                } else {
-                    alert('❌ 网络错误，请稍后重试');
-                }
+                if (typeof showNotification === 'function') showNotification('❌ 网络错误，请稍后重试', true);
+                else alert(' 网络错误，请稍后重试');
             } finally {
-                // 恢复按钮状态
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
         }
+
+        let isPreviewPlaying = false; // 默認為暫停狀態
+        let configSnapshot = null; // 記錄最後一次「配置參數」改變時的指紋
+        let playSnapshot = null;   // 記錄最後一次「播放狀態」改變時的指紋
+        /**
+         * 切換預覽播放/暫停狀態
+         * 點擊按鈕時觸發，會重新調用 updateNotificationPreview() 來應用新狀態
+         */
         // ==========================================
-        // 通知文字設置相關邏輯
+        // 【修復版】切換預覽播放/暫停狀態
         // ==========================================
+        function togglePreview() {
+            // 切換狀態
+            isPreviewPlaying = !isPreviewPlaying;
 
-        // 實時預覽更新函數
-        function updateNotificationPreview() {
-            const textInput = document.getElementById('notificationText');
-            const text = textInput.value.trim();
+            // 獲取按鈕元素
+            const btn = document.getElementById('previewToggleBtn');
+            const icon = btn.querySelector('i');
+            const textSpan = document.getElementById('previewBtnText');
 
-            const preview = document.getElementById('notificationPreview');
-            const emptyHint = document.getElementById('emptyNotificationHint');
-
-            // 1. 處理空文本情況：隱藏預覽，顯示提示，並停止動畫
-            if (!text) {
-                preview.style.display = 'none';
-                emptyHint.style.display = 'block';
-                preview.style.animationName = 'none';
-                return; // 提前返回，不應用其他樣式
-            }
-
-            // 2. 文本不為空：顯示預覽並隱藏提示
-            preview.style.display = 'inline-block';
-            emptyHint.style.display = 'none';
-            preview.textContent = text;
-
-            // 3. 獲取基礎樣式設置
-            const color = document.querySelector('input[name="textColor"]:checked')?.value || '#FFFFFF';
-            const weight = document.querySelector('input[name="fontWeight"]:checked')?.value || 'normal';
-            const size = document.getElementById('fontSize')?.value || '14';
-            const isItalic = document.getElementById('fontItalic')?.checked || false;
-
-            // 應用基礎樣式
-            preview.style.color = color;
-            preview.style.fontWeight = weight;
-            preview.style.fontSize = size + 'px';
-            preview.style.fontStyle = isItalic ? 'italic' : 'normal';
-
-            // 4. 處理滾動設置
-            const scrollEnabled = document.querySelector('input[name="scrollEnabled"]:checked')?.value === 'true';
-
-            // 【新增】控制滾動方向和速度的啟用/禁用狀態
-            const scrollDirectionRadios = document.querySelectorAll('input[name="scrollDirection"]');
-            const scrollSpeedRadios = document.querySelectorAll('input[name="scrollSpeed"]');
-
-            // 獲取所有相關的 label 元素（用於視覺上的灰色效果）
-            const scrollDirectionLabels = document.querySelectorAll('input[name="scrollDirection"]')?.[0]?.closest('.form-group')?.querySelectorAll('label') || [];
-            const scrollSpeedLabels = document.querySelectorAll('input[name="scrollSpeed"]')?.[0]?.closest('.form-group')?.querySelectorAll('label') || [];
-
-            if (scrollEnabled) {
-                // 啟用滾動：恢復所有選項
-                scrollDirectionRadios.forEach(radio => {
-                    radio.disabled = false;
-                    radio.parentElement.style.opacity = '1';
-                    radio.parentElement.style.cursor = 'pointer';
-                });
-
-                scrollSpeedRadios.forEach(radio => {
-                    radio.disabled = false;
-                    radio.parentElement.style.opacity = '1';
-                    radio.parentElement.style.cursor = 'pointer';
-                });
-
-                // 應用滾動動畫
-                const direction = document.querySelector('input[name="scrollDirection"]:checked')?.value || 'rtl';
-                const speed = document.querySelector('input[name="scrollSpeed"]:checked')?.value || 'normal';
-
-                const speedMap = {
-                    'slow': '20s',
-                    'normal': '12s',
-                    'fast': '8s'
-                };
-
-                preview.style.animationName = 'scrollText';
-                preview.style.animationDuration = speedMap[speed] || '12s';
-                preview.style.animationTimingFunction = 'linear';
-                preview.style.animationIterationCount = 'infinite';
-                preview.style.animationDirection = (direction === 'ltr') ? 'reverse' : 'normal';
+            if (isPreviewPlaying) {
+                // === 進入播放狀態 ===
+                icon.className = 'fas fa-pause';      // 圖標變為暫停
+                textSpan.textContent = '暫停預覽';     // 文字變為暫停
+                btn.classList.remove('paused');       // 移除暫停樣式
             } else {
-                // 固定顯示：禁用並灰化所有滾動選項
-                scrollDirectionRadios.forEach(radio => {
-                    radio.disabled = true;
-                    radio.parentElement.style.opacity = '0.5';
-                    radio.parentElement.style.cursor = 'not-allowed';
-                });
-
-                scrollSpeedRadios.forEach(radio => {
-                    radio.disabled = true;
-                    radio.parentElement.style.opacity = '0.5';
-                    radio.parentElement.style.cursor = 'not-allowed';
-                });
-
-                // 移除動畫
-                preview.style.animationName = 'none';
+                // === 進入暫停狀態 ===
+                icon.className = 'fas fa-play';       // 圖標變為播放
+                textSpan.textContent = '開始預覽';     // 文字變為開始
+                btn.classList.add('paused');          // 添加暫停樣式（金色高亮）
             }
+            // 3. 【核心】更新「播放快照」為當前時刻的狀態指紋
+            // 這意味著：從這一刻起，我們希望保持當前的 DOM 結構不變，僅切換動畫狀態
+            playSnapshot = generateConfigFingerprint();
+
+            // 【核心】重新渲染預覽區，讓 updateNotificationPreview 根據新的 isPreviewPlaying 狀態生成對應的 CSS
+            // 注意：由於 updateNotificationPreview 內部增加了「復用節點」邏輯，這裡的調用不會導致 DOM 重建和位置重置
+            updateNotificationPreview();
         }
 
-        // 頁面加載完成後綁定所有相關輸入的事件
-        document.addEventListener('DOMContentLoaded', () => {
-            // 綁定文字內容輸入 (input 實時觸發)
-            const textInput = document.getElementById('notificationText');
-            if (textInput) {
-                textInput.addEventListener('input', updateNotificationPreview);
-            }
-
-            // 統一綁定所有會觸發預覽更新的元素 (change 事件)
-            const previewTriggers = [
-                'input[name="scrollEnabled"]',
-                'input[name="scrollDirection"]',
-                'input[name="scrollSpeed"]',
-                'input[name="textColor"]',
-                'input[name="fontWeight"]',
-                '#fontSize',
-                '#fontItalic'
-            ];
-
-            previewTriggers.forEach(selector => {
-                document.querySelectorAll(selector).forEach(el => {
-                    el.addEventListener('change', updateNotificationPreview);
-                });
-            });
-
-            // 初始化一次預覽
-            updateNotificationPreview();
-        });
-
-        // 保存通知文字設置
-        // 保存通知文字設置
-        async function saveNotificationConfig(e) {
-            e.preventDefault();
-
+        /**
+         * 生成當前配置的「指紋字符串」
+         * 用於快速判斷配置是否發生變化
+         */
+        function generateConfigFingerprint() {
             const textInput = document.getElementById('notificationText');
             const text = textInput.value.trim();
 
+            // 提取所有影響渲染的關鍵參數
+            return [
+                text, // 文字內容
+                document.querySelector('input[name="textColor"]:checked')?.value || '#FFFFFF',
+                document.querySelector('input[name="fontWeight"]:checked')?.value || 'normal',
+                document.getElementById('fontSize')?.value || '14',
+                document.getElementById('fontItalic')?.checked || false,
+                document.querySelector('input[name="scrollEnabled"]:checked')?.value === 'true',
+                document.querySelector('input[name="scrollDirection"]:checked')?.value || 'rtl',
+                document.querySelector('input[name="scrollSpeed"]:checked')?.value || 'normal',
+                parseFloat(document.getElementById('scrollInterval').value) || 0
+            ].join('|'); // 拼接成唯一字符串
+        }
+
+        /**
+         * 更新通知文字預覽 (雙緩存智能版 - 完整整合版)
+         *
+         * 本函數負責根據表單配置實時渲染預覽區，並採用「雙緩存指紋」機制優化性能。
+         * 主要功能模塊如下：
+         *
+         * 1. 【新增】實時文字計數器與超長警告
+         *    - 動態獲取輸入框長度並更新顯示文案。
+         *    - 當處於「固定顯示」模式且字數超過 37 字時，自動變紅警示用戶。
+         *
+         * 2. 【第一部分】DOM 獲取、清理與空值處理
+         *    - 獲取輸入內容、預覽容器及提示元素。
+         *    - 清理舊的預覽節點與動態注入的 CSS Keyframes 標籤，防止樣式衝突。
+         *    - 處理空文本邏輯：顯示佔位提示、重置快照狀態並終止後續渲染。
+         *
+         * 3. 【第二部分】配置讀取與 UI 交互反饋
+         *    - 提取顏色、字體、滾動方向、速度、間隔等所有視覺與動畫參數。
+         *    - 根據「是否啟用滾動」動態禁用/置灰相關選項組（方向、速度）。
+         *    - 控制「開始預覽」按鈕的顯隱：僅在滾動模式下顯示，固定模式下隱藏。
+         *    - 根據模式切換容器的 overflow 屬性（滾動時 hidden，固定時 auto），解決捲軸問題。
+         *
+         * 4. 【第三部分】雙緩存智能判斷與 DOM 重建策略
+         *    - 生成當前配置的「指紋字符串」。
+         *    - 對比 configSnapshot 與 playSnapshot：若兩者一致且等於當前指紋，則標記為「復用模式」(needsRebuild=false)。
+         *    - 若配置發生變更，則標記為「重建模式」，同步更新基礎快照與播放快照。
+         *    - 在重建模式下創建新的 previewDiv 並填充字符；在復用模式下直接保留舊節點以維持動畫進度。
+         *
+         * 5. 【第四部分】異步渲染、動畫計算與應用
+         *    - 使用 requestAnimationFrame 確保佈局計算完成後再執行渲染。
+         *    - 滾動模式：測量真實寬度，計算精確的動畫時長與暫停百分比，動態生成並注入 CSS Keyframes。
+         *      - 智能判斷是否需要更新 animation 屬性，避免無效賦值導致動畫重置。
+         *      - 無論是否重建，均同步全局 isPreviewPlaying 狀態，實現原位暫停/恢復。
+         *    - 固定模式：根據文本寬度智能決策對齊方式（短文本居中，長文本左對齊+手動滾動）。
+         */
+        function updateNotificationPreview() {
+
+            // ==========================================
+            // 實時更新文字計數器
+            // ==========================================
+            const textInput = document.getElementById('notificationText');
+            const countDisplay = document.getElementById('charCountDisplay');
+
+            if (textInput && countDisplay) {
+                const currentLength = textInput.value.length;
+                // 更新顯示的文字
+                countDisplay.textContent = `(你已經寫了 ${currentLength} 個字)`;
+
+                // (可選) 如果超過 37 字且處於固定模式，可以變色提醒
+                const isFixedMode = document.querySelector('input[name="scrollEnabled"]:checked')?.value === 'false';
+                if (isFixedMode && currentLength > 37) {
+                    countDisplay.style.color = '#dc3545'; // 紅色警告
+                } else {
+                    countDisplay.style.color = 'var(--accent)'; // 恢復正常顏色
+                }
+            }
+
+            // ==========================================
+            // 【第一部分】：DOM 獲取與清理階段 (完全保留原版)
+            // ==========================================
+            // 【DOM 獲取】獲取通知文字輸入框元素
+            //  const textInput = document.getElementById('notificationText');
+            // 【數據處理】獲取輸入框內容並去除首尾空格
+            const text = textInput.value.trim();
+            // 【DOM 獲取】獲取預覽區域容器元素
+            const stage = document.getElementById('notificationStage');
+            // 【DOM 獲取】獲取空狀態提示文本元素
+            const hint = document.getElementById('emptyNotificationHint');
+
+            /*
+             * ------------------------------------------------------------------------
+             * 清理階段：移除上一次渲染產生的預覽節點和動態注入的 CSS 樣式標籤
+             * ------------------------------------------------------------------------
+             */
+            // 【DOM 查找】查找容器中是否存在舊的預覽文字 div
+            const oldPreview = stage.querySelector('.preview-text');
+
+            // 【DOM 查找】查找 head 中是否存在舊的動態 keyframes 樣式標籤
+            const oldStyle = document.getElementById('dynamic-scroll-style');
+            // 【條件刪除】如果存在舊樣式標籤則將其移除，防止關鍵幀衝突
+            if (oldStyle) oldStyle.remove();
+
+            /*
+             * ------------------------------------------------------------------------
+             * 空值判斷階段：當沒有輸入文字時，顯示提示並終止後續渲染邏輯
+             * ------------------------------------------------------------------------
+             */
+            // 【業務邏輯】如果處理後的文字為空字符串
+            if (!text) {
+                // 【UI 控制】顯示「通知文字為空」的提示區塊
+                hint.style.display = 'block';
+                // 【核心修復】：空值時，恢復默認隱藏溢出，防止殘留樣式影響
+                stage.style.overflow = 'hidden';
+                // 【條件刪除】如果存在舊節點則將其從 DOM 中移除
+                if (oldPreview) oldPreview.remove();
+
+                // 【新增】重置快照，防止空值後再次輸入時判斷錯誤
+                configSnapshot = null;
+                playSnapshot = null;
+
+                // 【流程控制】直接返回，不執行後續的預覽生成邏輯
+                return;
+            }
+            // 【UI 控制】文字不為空時，隱藏提示區塊
+            hint.style.display = 'none';
+
+            /*
+             * ------------------------------------------------------------------------
+             * 配置讀取階段：從表單控件中提取用戶選擇的所有視覺與動畫參數
+             * ------------------------------------------------------------------------
+             */
+            // 【參數提取】獲取選中的文字顏色，若未選中則默認為白色 (#FFFFFF)
+            const color = document.querySelector('input[name="textColor"]:checked')?.value || '#FFFFFF';
+            // 【參數提取】獲取選中的字體粗細，若未選中則默認為 normal
+            const weight = document.querySelector('input[name="fontWeight"]:checked')?.value || 'normal';
+            // 【參數提取】獲取選中的字體大小(px)，若未選中則默認為 14px
+            const size = document.getElementById('fontSize')?.value || '14';
+            // 【參數提取】獲取是否勾選斜體，若未勾選則默認為 false
+            const isItalic = document.getElementById('fontItalic')?.checked || false;
+            // 【參數提取】獲取滾動開關狀態，檢查 value 是否嚴格等於 'true'
+            const scrollEnabled = document.querySelector('input[name="scrollEnabled"]:checked')?.value === 'true';
+            // 【參數提取】獲取滾動方向，若未選中則默認為 rtl (從右向左)
+            const scrollDirection = document.querySelector('input[name="scrollDirection"]:checked')?.value || 'rtl';
+            // 【參數提取】獲取滾動速度，若未選中則默認為 normal (中速)
+            const scrollSpeed = document.querySelector('input[name="scrollSpeed"]:checked')?.value || 'normal';
+            // 【參數提取】獲取滾動間隔秒數，解析為浮點數，無效值則默認為 0
+            const intervalSeconds = parseFloat(document.getElementById('scrollInterval').value) || 0;
+
+            // ==========================================
+            // 【新增功能 2】：控制下方選項的啟用/禁用狀態與置灰效果 (完全保留原版)
+            // ==========================================
+            /*
+             * ------------------------------------------------------------------------
+             * 交互反饋階段：根據滾動開關狀態，動態禁用並置灰相關選項組
+             * ------------------------------------------------------------------------
+             */
+            // 【DOM 獲取】獲取滾動方向與滾動速度的選項組容器
+            const directionGroup = document.getElementById('scrollDirectionGroup');
+            const speedGroup = document.getElementById('scrollSpeedGroup');
+
+            // 【條件檢查】確保兩個選項組容器都存在於 DOM 中
+            if (directionGroup && speedGroup) {
+                // 【DOM 查找】獲取所有滾動方向與速度的 radio input 元素
+                const directionInputs = directionGroup.querySelectorAll('input[type="radio"]');
+                const speedInputs = speedGroup.querySelectorAll('input[type="radio"]');
+
+                // 【遍歷操作】統一設置所有相關 input 的 disabled 屬性
+                [...directionInputs, ...speedInputs].forEach(input => {
+                    // 【核心邏輯】當 scrollEnabled 為 false 時，設置為 true (禁用)
+                    input.disabled = !scrollEnabled;
+                });
+
+                /*
+                 * 視覺優化階段：通過修改父級容器的透明度來實現「變灰」效果
+                 */
+                // 【閉包函數】封裝設置選項組透明度和指針事件的邏輯
+                const setGroupOpacity = (group, enabled) => {
+                    // 【樣式設置】根據 enabled 狀態切換透明度 (1 或 0.5)
+                    group.style.opacity = enabled ? '1' : '0.5';
+                    // 【樣式設置】禁用時移除 pointerEvents，防止點擊被禁用的區域
+                    group.style.pointerEvents = enabled ? 'auto' : 'none';
+                    // 【樣式設置】添加過渡動畫，使置灰效果更平滑
+                    group.style.transition = 'opacity 0.3s ease';
+                };
+
+                // 【調用執行】分別對方向和速度選項組應用置灰邏輯
+                setGroupOpacity(directionGroup, scrollEnabled);
+                setGroupOpacity(speedGroup, scrollEnabled);
+
+                // ==========================================
+                // 根據滾動開關狀態，控制「開始預覽」按鈕的顯隱
+                // ==========================================
+                const previewBtn = document.getElementById('previewToggleBtn');
+                if (previewBtn) {
+                    // 如果啟用了滾動(scrollEnabled為true)，則顯示按鈕；否則隱藏
+                    previewBtn.style.display = scrollEnabled ? 'flex' : 'none';
+                }
+            }
+
+            // ==========================================
+            // 【核心修復】：根據模式動態設置 Overflow (解決捲軸問題) (完全保留原版)
+            // ==========================================
+            /*
+             * ------------------------------------------------------------------------
+             * 樣式控制階段：根據是否啟用滾動，切換容器的 overflow 屬性
+             * ------------------------------------------------------------------------
+             */
+            if (scrollEnabled) {
+                // 【啟用滾動】：強制隱藏溢出，禁止出現滾動條，確保跑馬燈在容器內無縫循環
+                stage.style.overflow = 'hidden';
+            } else {
+                // 【固定顯示】：允許水平滾動 (overflow-x: auto)，以便用戶手動查看超長文本
+                // 同時保持垂直方向隱藏 (overflow-y: hidden)，防止高度溢出
+                stage.style.overflowX = 'auto';
+                stage.style.overflowY = 'hidden';
+            }
+
+            // ==========================================
+            // 【第二部分】：智能判斷是否需要重建 DOM (使用雙緩存指紋邏輯)
+            // ==========================================
+
+            // 1. 獲取當前實時配置的指紋
+            const currentFingerprint = generateConfigFingerprint();
+
+            // 2. 【智能判斷】決定是否需要重建 DOM
+            let needsRebuild = true;
+
+            // 如果存在基礎快照，且基礎快照與播放快照一致，說明之前沒有發生配置變更
+            // 此時如果當前指紋也與它們一致，則完全復用
+            if (configSnapshot && playSnapshot && configSnapshot === playSnapshot) {
+                if (currentFingerprint === configSnapshot) {
+                    needsRebuild = false; // 配置沒變，播放狀態也沒變（或剛切換完），復用 DOM
+                }
+            }
+
+            // 如果當前指紋與基礎快照不同，說明用戶修改了配置，必須重建
+            if (currentFingerprint !== configSnapshot) {
+                needsRebuild = true;
+            }
+
+            // 3. 如果需要重建，更新「基礎快照」
+            if (needsRebuild) {
+                configSnapshot = currentFingerprint;
+                // 重建時，同步更新播放快照，確保兩者再次保持一致
+                playSnapshot = currentFingerprint;
+            }
+
+            // ==========================================
+            // 【第三部分】：節點創建與填充 (僅在 needsRebuild 為 true 時執行)
+            // ==========================================
+
+            let previewDiv;
+
+            if (needsRebuild) {
+                // 【條件刪除】如果存在舊節點則將其從 DOM 中移除
+                if (oldPreview) oldPreview.remove();
+
+                // 【DOM 創建】創建一個新的 div 元素作為預覽文字的外層容器
+                previewDiv = document.createElement('div');
+                // 【樣式設置】設置容器的 class 名，用於 CSS 定位與樣式匹配
+                previewDiv.className = 'preview-text';
+                // 【樣式設置】使用絕對定位以便在容器內自由移動
+                previewDiv.style.position = 'absolute';
+                // 【樣式設置】垂直居中基準線設為 50%
+                previewDiv.style.top = '50%';
+                // 【樣式設置】強制文字不換行，確保跑馬燈效果正常
+                previewDiv.style.whiteSpace = 'nowrap';
+
+                // 【數據標記】將當前狀態存入 dataset，方便下次判斷是否變化
+                previewDiv.setAttribute('data-fingerprint', currentFingerprint);
+
+                /*
+                 * ------------------------------------------------------------------------
+                 * 輔助工具階段：定義生成單個字符 span 元素的工廠函數
+                 * ------------------------------------------------------------------------
+                 */
+                // 【閉包函數】接收一個字符，返回帶有完整樣式的 span 節點
+                const createCharSpan = (char) => {
+                    // 【DOM 創建】創建 span 元素用於包裹單個字符
+                    const span = document.createElement('span');
+                    // 【樣式設置】設置字符節點的 class 名
+                    span.className = 'preview-char';
+                    // 【內容設置】將傳入的字符賦值給 span 的文本內容
+                    span.textContent = char;
+                    // 【樣式設置】應用從表單讀取的文字顏色
+                    span.style.color = color;
+                    // 【樣式設置】應用從表單讀取的字體大小，拼接 px 單位
+                    span.style.fontSize = size + 'px';
+                    // 【樣式設置】應用從表單讀取的字體粗細
+                    span.style.fontWeight = weight;
+                    // 【樣式設置】根據 isItalic 布爾值動態切換 italic 或 normal
+                    span.style.fontStyle = isItalic ? 'italic' : 'normal';
+                    // 【樣式設置】設置字符之間的左右間距為 2px
+                    span.style.margin = '0 2px';
+                    // 【樣式設置】設置為 inline-block 以便正確測量寬度
+                    span.style.display = 'inline-block';
+                    // 【返回值】返回構建完成的 span 節點
+                    return span;
+                };
+
+                // ==========================================
+                // 【核心恢復】：1. 添加文字 (只加一次！) - 嚴格遵循原始 LTR 反向排列邏輯
+                // ==========================================
+                /*
+                 * ------------------------------------------------------------------------
+                 * 文字填充階段：根據滾動方向決定字符的排列順序
+                 * ------------------------------------------------------------------------
+                 */
+                // 【條件分支】如果啟用了滾動 且 滾動方向為從左向右 (ltr)
+                if (scrollEnabled && scrollDirection === 'ltr') {
+                    // 【數據處理】將文字拆分為字符數組並反轉，實現 LTR 反向排列
+                    const chars = text.split('').reverse();
+                    // 【循環遍歷】遍歷反轉後的每個字符
+                    for (let char of chars) {
+                        // 【DOM 操作】將生成的字符 span 追加到預覽容器中
+                        previewDiv.appendChild(createCharSpan(char));
+                    }
+                } else {
+                    // 【其他情況】RTL 方向或固定顯示模式均保持原始文字順序
+                    // 【循環遍歷】遍歷原始文字的每個字符
+                    for (let char of text) {
+                        // 【DOM 操作】將生成的字符 span 追加到預覽容器中
+                        previewDiv.appendChild(createCharSpan(char));
+                    }
+                }
+            } else {
+                // 【復用模式】：直接使用舊節點
+                previewDiv = oldPreview;
+                // 注意：因為我們已經判斷過樣式沒變，所以這裡不需要再更新 spans 的樣式
+                // 也不需要更新 dataset，因為參數也沒變
+            }
+
+            // ==========================================
+            // 【第四部分】：異步渲染與動畫計算 (完全保留原版邏輯，僅增加 needsRebuild 判斷)
+            // ==========================================
+            /*
+             * ------------------------------------------------------------------------
+             * 異步渲染階段：使用 requestAnimationFrame 確保 DOM 佈局計算完成
+             *              防止因容器尚未渲染導致 stageWidth 為 0 而引發動畫卡死
+             * ------------------------------------------------------------------------
+             */
+            // 【異步回調】在瀏覽器下一次重繪前執行內部邏輯
+            requestAnimationFrame(() => {
+                // 【條件分支】如果啟用了滾動效果
+                if (scrollEnabled) {
+
+                    // ==========================================
+                    // 【核心修復 1】：為了測量真實寬度，先臨時加入 DOM (隱藏)
+                    // （僅在 needsRebuild 為 true 時執行）
+                    // ==========================================
+                    let stageWidth, textWidth, charCount;
+
+                    if (needsRebuild) {
+                        /*
+                         * 測量準備階段：將節點插入 DOM 但設為不可見以獲取真實像素寬度
+                         */
+                        // 【樣式設置】暫時隱藏預覽 div，避免閃爍影響用戶體驗
+                        previewDiv.style.visibility = 'hidden';
+                        // 【DOM 操作】將隱藏的預覽 div 追加到 stage 容器中觸發佈局計算
+                        stage.appendChild(previewDiv);
+
+                        // 【尺寸獲取】獲取預覽容器的實際渲染寬度 (px)
+                        stageWidth = stage.offsetWidth;
+                        // 【尺寸獲取】獲取預覽文字 div 的實際渲染總寬度 (px)
+                        textWidth = previewDiv.offsetWidth;
+                        // 【數據獲取】獲取文字的總字符數量
+                        charCount = text.length;
+
+                        // 【核心修復 2】：測量完後立即移除
+                        /*
+                         * 清理測量節點階段：獲取數據後立即從 DOM 中移除臨時節點
+                         */
+                        // 【DOM 操作】從 stage 容器中移除臨時插入的預覽 div
+                        stage.removeChild(previewDiv);
+                        // 【樣式設置】恢復預覽 div 的可見性，準備正式渲染
+                        previewDiv.style.visibility = 'visible';
+                    } else {
+                        // 【復用模式】：直接獲取現有尺寸，無需重新測量
+                        stageWidth = stage.offsetWidth;
+                        textWidth = previewDiv.offsetWidth;
+                        charCount = text.length;
+                    }
+
+                    /*
+                     * 安全兜底階段：防止 Tab 未激活等異常情況導致容器寬度為 0
+                     */
+                    // 【條件檢查】如果容器寬度為 0 (例如當前 Tab 處於隱藏狀態)
+                    if (stageWidth === 0) {
+                        // 【降級處理】將預覽 div 水平居中定位
+                        previewDiv.style.left = '50%';
+                        // 【降級處理】使用 transform 進行精確的垂直+水平居中
+                        previewDiv.style.transform = 'translate(-50%, -50%)';
+                        // 【降級處理】禁用動畫，切換為固定顯示模式
+                        previewDiv.style.animation = 'none';
+                        // 【DOM 操作】將降級後的預覽 div 重新加入容器（如果還沒在的話）
+                        if (!previewDiv.parentNode) stage.appendChild(previewDiv);
+                        // 【流程控制】終止後續動畫計算邏輯
+                        return;
+                    }
+
+                    // ==========================================
+                    // 計算動畫參數 (嚴格使用你指定的數值)
+                    // ==========================================
+                    /*
+                     * 速度計算階段：根據用戶選擇的速度檔位確定單字符耗時
+                     */
+                    // 【變量初始化】設置默認單字符耗時為 0.4 秒 (對應中速)
+                    let secondsPerChar = 0.4; // 默認 (中速)
+                    // 【條件賦值】如果選擇慢速，單字符耗時改為 0.7 秒
+                    if (scrollSpeed === 'slow') secondsPerChar = 0.7;
+                    // 【條件賦值】如果選擇快速，單字符耗時改為 0.2 秒
+                    else if (scrollSpeed === 'fast') secondsPerChar = 0.2;
+
+                    /*
+                     * 距離與時間計算階段：基於真實像素寬度推算精確動畫時長
+                     */
+                    // 【數學計算】用文字總寬度除以字符數，得到單字符平均真實寬度 (px)
+                    const charWidth = textWidth / charCount;
+                    // 【數學計算】用單字符寬度除以單字符耗時，得到每秒滾動像素數
+                    const pixelsPerSecond = charWidth / secondsPerChar;
+                    // 【數學計算】總移動距離 = 容器寬度 + 文字自身寬度 (確保完全移出屏幕)
+                    const totalDistance = stageWidth + textWidth;
+                    // 【數學計算】純滾動所需時間(秒) = 總距離 / 每秒像素數
+                    const pureScrollDuration = totalDistance / pixelsPerSecond;
+                    // 【數學計算】完整週期時間 = 純滾動時間 + 用戶設置的靜止間隔時間
+                    const totalCycleDuration = pureScrollDuration + intervalSeconds;
+                    // 【格式轉換】將總週期時間拼接 's' 單位，供 CSS animation-duration 使用
+                    const duration = totalCycleDuration + 's';
+                    // 【數學計算】計算滾動結束時在整個週期中所佔的百分比 (用於 keyframes 斷點)
+                    const scrollEndPercentage = (pureScrollDuration / totalCycleDuration) * 100;
+
+                    // ==========================================
+                    // 動態生成 CSS 關鍵幀
+                    // ==========================================
+                    /*
+                     * 樣式注入階段：根據方向動態創建 @keyframes 規則並插入 <head>
+                     */
+                    // 【常量定義】定義動態樣式標籤的唯一 ID，方便後續清理
+                    const styleId = 'dynamic-scroll-style';
+                    // 【DOM 創建】創建一個新的 style 標籤元素
+                    const styleEl = document.createElement('style');
+                    // 【屬性設置】將唯一 ID 賦值給 style 標籤
+                    styleEl.id = styleId;
+
+                    // 【變量初始化】初始化關鍵幀 CSS 字符串為空
+                    let keyframesCSS = '';
+                    // 【變量初始化】初始化動畫名稱字符串為空
+                    let animationName = '';
+
+                    // 【條件分支】如果滾動方向為從右向左 (rtl)
+                    if (scrollDirection === 'rtl') {
+                        // 【模板字符串】構建 RTL 方向的關鍵幀 CSS，包含起始、滾動結束、靜止三個斷點
+                        keyframesCSS = `
+                    @keyframes scrollRTLWithPause {
+                        0% { transform: translate(${stageWidth}px, -50%); }
+                        ${scrollEndPercentage}% { transform: translate(-${textWidth}px, -50%); }
+                        100% { transform: translate(-${textWidth}px, -50%); }
+                    }
+                `;
+                        // 【變量賦值】設置 RTL 模式的動畫名稱
+                        animationName = 'scrollRTLWithPause';
+                    } else {
+                        // 【其他情況】滾動方向為從左向右 (ltr)
+                        // 【模板字符串】構建 LTR 方向的關鍵幀 CSS，起點與終點坐標與 RTL 相反
+                        keyframesCSS = `
+                    @keyframes scrollLTRWithPause {
+                        0% { transform: translate(-${textWidth}px, -50%); }
+                        ${scrollEndPercentage}% { transform: translate(${stageWidth}px, -50%); }
+                        100% { transform: translate(${stageWidth}px, -50%); }
+                    }
+                `;
+                        // 【變量賦值】設置 LTR 模式的動畫名稱
+                        animationName = 'scrollLTRWithPause';
+                    }
+
+                    // 【DOM 操作】將構建好的關鍵幀 CSS 寫入 style 標籤的 innerHTML
+                    styleEl.innerHTML = keyframesCSS;
+                    // 【DOM 操作】將動態生成的 style 標籤追加到 document.head 中生效
+                    document.head.appendChild(styleEl);
+
+                    // ==========================================
+                    // 應用動畫並正式加入 DOM
+                    // ==========================================
+                    /*
+                     * 最終渲染階段：綁定動畫並將預覽節點正式顯示在容器中
+                     */
+
+                    // 【核心邏輯】：構建新的動畫字符串
+                    const newAnimationStr = `${animationName} ${duration} linear infinite`;
+
+                    // 【智能判斷】：如果復用模式下，動畫定義沒變，則不要重新賦值 animation 屬性！
+                    // 因為重新賦值會導致 CSS Animation 重置進度。
+                    // 只有當 needsRebuild 為 true，或者動畫字符串確實變了，才更新。
+                    const currentAnim = previewDiv.style.animation;
+                    const shouldUpdateAnimation = needsRebuild || (currentAnim !== newAnimationStr);
+
+                    if (shouldUpdateAnimation) {
+                        previewDiv.style.animation = newAnimationStr;
+                    }
+
+                    // 【核心修復】：無論是否重建，都必須同步全局播放狀態
+                    // 這確保了 togglePreview 設置的 paused/running 狀態能被正確應用
+                    // 這是實現「原位暫停/恢復」的唯一正確入口
+                    previewDiv.style.animationPlayState = isPreviewPlaying ? 'running' : 'paused';
+
+                    // 【DOM 操作】將帶有動畫的預覽 div 追加到 stage 容器中（如果還沒在的話）
+                    if (!previewDiv.parentNode) {
+                        stage.appendChild(previewDiv);
+                    }
+
+                } else {
+                    // ==========================================
+                    // 固定模式 (智能對齊：短文本居中，長文本左對齊+滾動)
+                    // ==========================================
+                    /*
+                     * 非滾動渲染階段：根據文字長度動態切換對齊方式
+                     */
+
+                    // 【步驟 1】：先將文字加入 DOM 以獲取真實寬度（僅在重建時需要）
+                    if (needsRebuild) {
+                        previewDiv.style.visibility = 'hidden'; // 隱藏避免閃爍
+                        stage.appendChild(previewDiv);
+                    }
+
+                    const textWidth = previewDiv.offsetWidth;
+                    const stageWidth = stage.offsetWidth;
+
+                    // 【步驟 2】：核心智能判斷邏輯
+                    if (textWidth <= stageWidth) {
+                        // === 情況 A：文字未超出容器 ===
+                        // 使用絕對定位 + transform 實現完美的上下左右居中
+                        previewDiv.style.left = '50%';
+                        previewDiv.style.transform = 'translate(-50%, -50%)';
+
+                        // 確保不觸發水平滾動條
+                        stage.style.overflowX = 'hidden';
+                    } else {
+                        // === 情況 B：文字超出容器 ===
+                        // 取消水平居中偏移，改為靠左對齊 (left: 0)
+                        previewDiv.style.left = '0';
+
+                        // 僅保留垂直居中，去掉 translateX(-50%)
+                        previewDiv.style.transform = 'translateY(-50%)';
+
+                        // 允許水平滾動，讓用戶可以向右拖動查看剩餘文字
+                        stage.style.overflowX = 'auto';
+                    }
+
+                    // 【步驟 3】：恢復可見性並清除動畫
+                    previewDiv.style.visibility = 'visible';
+                    previewDiv.style.animation = 'none';
+
+                    // 注意：此時 previewDiv 已經在 DOM 中了（如果是重建則剛 append，如果是復用則原本就在）
+                }
+            });
+        }
+
+        function startAnimation() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            function loop() {
+                if (!config.enabled || charElements.length === 0) return;
+                const stage = document.getElementById('notificationStage');
+                const rightBound = stage.offsetWidth;
+
+                let maxRightX = -1000;
+                charPositions.forEach(pos => {if (pos > maxRightX) maxRightX = pos;});
+
+                for (let i = 0; i < charElements.length; i++) {
+                    const el = charElements[i];
+                    const elWidth = el.offsetWidth || parseInt(document.getElementById('fontSize').value);
+
+                    if (config.direction === 'rtl') charPositions[i] -= config.speed;
+                    else charPositions[i] += config.speed;
+
+                    el.style.left = charPositions[i] + 'px';
+
+                    if (config.direction === 'rtl') {
+                        if (charPositions[i] < -elWidth) {
+                            let gapToAdd = (i === 0) ? (rightBound * config.bigGapRatio) : (elWidth + 5);
+                            charPositions[i] = maxRightX + gapToAdd;
+                            el.style.left = charPositions[i] + 'px';
+                            maxRightX = charPositions[i];
+                        }
+                    } else {
+                        if (charPositions[i] > rightBound) {
+                            let minLeftX = Infinity;
+                            charPositions.forEach(p => {if (p < minLeftX) minLeftX = p;});
+                            let gapToAdd = (i === charElements.length - 1) ? (rightBound * config.bigGapRatio) : (elWidth + 5);
+                            charPositions[i] = minLeftX - gapToAdd - elWidth;
+                            el.style.left = charPositions[i] + 'px';
+                        }
+                    }
+                }
+                animationFrameId = requestAnimationFrame(loop);
+            }
+            loop();
+        }
+
+        function stopAnimation() {
+            if (animationFrameId) {cancelAnimationFrame(animationFrameId); animationFrameId = null;}
+        }
+
+        // ==========================================
+        // 頁面加載初始化
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', async function () {
+            await loadAllConfigs();
+            await loadNotificationConfig();
+            setTimeout(() => {
+                stageWidth = document.getElementById('notificationStage').offsetWidth;
+                startAnimation();
+            }, 500);
+        });
+
+        window.addEventListener('resize', () => {
+            if (document.getElementById('tab-notification').classList.contains('active')) {
+                stageWidth = document.getElementById('notificationStage').offsetWidth;
+            }
+        });
+
+        // ==========================================
+        // 保存與加載配置
+        // ==========================================
+        async function loadNotificationConfig() {
+            try {
+                const res = await fetch('/api/admin/config/get-notification');
+                if (res.ok) {
+                    const configData = await res.json();
+                    if (configData.NOTIFICATION_TEXT) document.getElementById('notificationText').value = configData.NOTIFICATION_TEXT;
+
+                    const colorRadio = document.querySelector(`input[name="textColor"][value="${configData.NOTIFICATION_TEXT_COLOR}"]`);
+                    if (colorRadio) colorRadio.checked = true;
+                    const weightRadio = document.querySelector(`input[name="fontWeight"][value="${configData.NOTIFICATION_FONT_WEIGHT}"]`);
+                    if (weightRadio) weightRadio.checked = true;
+                    if (configData.NOTIFICATION_FONT_SIZE) document.getElementById('fontSize').value = configData.NOTIFICATION_FONT_SIZE;
+                    if (configData.NOTIFICATION_FONT_ITALIC) document.getElementById('fontItalic').checked = (configData.NOTIFICATION_FONT_ITALIC === 'true');
+                    const scrollEnabledRadio = document.querySelector(`input[name="scrollEnabled"][value="${configData.SCROLL_ENABLED}"]`);
+                    if (scrollEnabledRadio) scrollEnabledRadio.checked = true;
+                    const directionRadio = document.querySelector(`input[name="scrollDirection"][value="${configData.SCROLL_DIRECTION}"]`);
+                    if (directionRadio) directionRadio.checked = true;
+                    const speedRadio = document.querySelector(`input[name="scrollSpeed"][value="${configData.SCROLL_SPEED}"]`);
+                    if (speedRadio) speedRadio.checked = true;
+                    const intervalInput = document.getElementById('scrollInterval');
+                    if (configData.SCROLL_INTERVAL && intervalInput) {
+                        intervalInput.value = configData.SCROLL_INTERVAL;
+                    }
+
+                    updateNotificationPreview();
+                }
+            } catch (error) {console.warn('加載通知配置失敗:', error);}
+        }
+
+        async function saveNotificationConfig(e) {
+            e.preventDefault();
+            const textInput = document.getElementById('notificationText');
+            const text = textInput.value.trim();
             const data = {
                 "NOTIFICATION_TEXT": text,
                 "NOTIFICATION_TEXT_COLOR": document.querySelector('input[name="textColor"]:checked')?.value || '#FFFFFF',
                 "NOTIFICATION_FONT_WEIGHT": document.querySelector('input[name="fontWeight"]:checked')?.value || 'normal',
                 "NOTIFICATION_FONT_SIZE": document.getElementById('fontSize')?.value || '14',
                 "NOTIFICATION_FONT_ITALIC": (document.getElementById('fontItalic')?.checked || false).toString(),
-                // 新增滾動相關字段
                 "SCROLL_ENABLED": document.querySelector('input[name="scrollEnabled"]:checked')?.value || 'true',
                 "SCROLL_DIRECTION": document.querySelector('input[name="scrollDirection"]:checked')?.value || 'rtl',
-                "SCROLL_SPEED": document.querySelector('input[name="scrollSpeed"]:checked')?.value || 'normal'
+                "SCROLL_SPEED": document.querySelector('input[name="scrollSpeed"]:checked')?.value || 'normal',
+                "SCROLL_INTERVAL": document.getElementById('scrollInterval')?.value || '1'
             };
 
             const btn = document.getElementById('saveNotificationBtn');
@@ -1334,88 +1779,28 @@
 
             try {
                 const res = await fetch('/api/admin/config/update-notification', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
                 });
-
                 const result = await res.json();
                 if (res.ok && result.success) {
-                    if (typeof showNotification === 'function') {
-                        showNotification('✅ 通知文字設置已成功保存！');
-                    } else {
-                        alert('✅ 通知文字設置已成功保存！');
-                    }
-
-                    // 【新增】延迟 1.5 秒后刷新页面，让用户能看到成功提示
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-
+                    if (typeof showNotification === 'function') showNotification('✅ 通知文字設置已成功保存！');
+                    else alert('✅ 通知文字設置已成功保存！');
+                    setTimeout(() => {window.location.reload();}, 1500);
                 } else {
-                    if (typeof showNotification === 'function') {
-                        showNotification('❌ ' + (result.message || '保存失敗'), true);
-                    } else {
-                        alert('❌ ' + (result.message || '保存失敗'));
-                    }
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '保存失敗'), true);
+                    else alert('❌ ' + (result.message || '保存失敗'));
                 }
             } catch (error) {
                 console.error('保存配置錯誤:', error);
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ 網絡錯誤，請稍後重試', true);
-                } else {
-                    alert('❌ 網絡錯誤，請稍後重試');
-                }
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
+                else alert(' 網絡錯誤，請稍後重試');
             } finally {
-                // 注意：如果刷新了页面，这里的 finally 其实不会执行到，但保留着也没问题
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             }
         }
-
-        // 加載通知文字設置 (如果您的頁面有 loadAllConfigs，可以將此邏輯合併進去)
-        async function loadNotificationConfig() {
-            try {
-                const res = await fetch('/api/admin/config/get-notification');
-                if (res.ok) {
-                    const config = await res.json();
-
-                    if (config.NOTIFICATION_TEXT) {
-                        document.getElementById('notificationText').value = config.NOTIFICATION_TEXT;
-                    }
-
-                    const colorRadio = document.querySelector(`input[name="textColor"][value="${config.NOTIFICATION_TEXT_COLOR}"]`);
-                    if (colorRadio) colorRadio.checked = true;
-
-                    const weightRadio = document.querySelector(`input[name="fontWeight"][value="${config.NOTIFICATION_FONT_WEIGHT}"]`);
-                    if (weightRadio) weightRadio.checked = true;
-
-                    if (config.NOTIFICATION_FONT_SIZE) {
-                        document.getElementById('fontSize').value = config.NOTIFICATION_FONT_SIZE;
-                    }
-
-                    if (config.NOTIFICATION_FONT_ITALIC) {
-                        document.getElementById('fontItalic').checked = (config.NOTIFICATION_FONT_ITALIC === 'true');
-                    }
-
-                    // 加載新增的滾動字段
-                    const scrollEnabledRadio = document.querySelector(`input[name="scrollEnabled"][value="${config.SCROLL_ENABLED}"]`);
-                    if (scrollEnabledRadio) scrollEnabledRadio.checked = true;
-
-                    const directionRadio = document.querySelector(`input[name="scrollDirection"][value="${config.SCROLL_DIRECTION}"]`);
-                    if (directionRadio) directionRadio.checked = true;
-
-                    const speedRadio = document.querySelector(`input[name="scrollSpeed"][value="${config.SCROLL_SPEED}"]`);
-                    if (speedRadio) speedRadio.checked = true;
-
-                    // 加載後更新一次預覽
-                    updateNotificationPreview();
-                }
-            } catch (error) {
-                console.warn('加載通知配置失敗:', error);
-            }
-        }
     </script>
+
 </body>
 
 </html>

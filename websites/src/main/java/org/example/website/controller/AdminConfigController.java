@@ -39,6 +39,7 @@ public class AdminConfigController {
     private static final String KEY_SCROLL_ENABLED = "config:ui:scroll_enabled";
     private static final String KEY_SCROLL_DIRECTION = "config:ui:scroll_direction";
     private static final String KEY_SCROLL_SPEED = "config:ui:scroll_speed";
+    private static final String KEY_SCROLL_INTERVAL = "config:ui:scroll_interval";
 
     public AdminConfigController(SystemConfigService systemConfigService, StringRedisTemplate redisTemplate) {
         this.systemConfigService = systemConfigService;
@@ -214,6 +215,10 @@ public class AdminConfigController {
         if (configs.containsKey("SCROLL_SPEED")) {
             redisTemplate.opsForValue().set(KEY_SCROLL_SPEED, configs.get("SCROLL_SPEED"));
         }
+        if (configs.containsKey("SCROLL_INTERVAL")) {
+            redisTemplate.opsForValue().set(KEY_SCROLL_INTERVAL, configs.get("SCROLL_INTERVAL"));
+        }
+
         // 2. 同時保存到數據庫
         systemConfigService.updateConfigs(configs);
 
@@ -239,6 +244,10 @@ public class AdminConfigController {
                 ? redisTemplate.opsForValue().get(KEY_SCROLL_DIRECTION) : "rtl");
         configs.put("SCROLL_SPEED", redisTemplate.opsForValue().get(KEY_SCROLL_SPEED) != null
                 ? redisTemplate.opsForValue().get(KEY_SCROLL_SPEED) : "normal");
+        configs.put("SCROLL_INTERVAL",
+                redisTemplate.opsForValue().get(KEY_SCROLL_INTERVAL) != null
+                        ? redisTemplate.opsForValue().get(KEY_SCROLL_INTERVAL)
+                        : "1"); // 默認值為 1 秒
         return ResponseEntity.ok(configs);
     }
 }
