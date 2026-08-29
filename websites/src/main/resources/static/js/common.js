@@ -1125,7 +1125,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 // ==========================================
-// 5. 滾動通知功能 (已整合 LTR 反轉 + 動態速度計算)
+// 5. 滾動通知功能 (已整合 LTR 反轉 + 動態速度計算 + 間隔設置)
 // ==========================================
 async function loadScrollingNotification() {
   try {
@@ -1185,30 +1185,41 @@ async function loadScrollingNotification() {
 
       const speed = config.scrollSpeed || 'normal';
 
+      // 【新增】獲取滾動間隔 (秒)，默認為 0 (無額外間隔)
+      const intervalSeconds = parseFloat(config.scrollInterval) || 0;
+
       /*
        * 速度計算階段：根據用戶選擇的速度檔位確定單字符耗時
        */
-      // 【變量初始化】設置默認單字符耗時為 0.4 秒 (對應中速)
-      let secondsPerChar = 0.4; // 默認 (中速)
-      // 【條件賦值】如果選擇慢速，單字符耗時改為 0.7 秒
-      if (speed === 'slow') secondsPerChar = 0.7;
-      // 【條件賦值】如果選擇快速，單字符耗時改為 0.2 秒
-      else if (speed === 'fast') secondsPerChar = 0.2;
+      // 【變量初始化】設置默認單字符耗時為 1.4 秒 (對應中速)
+      let secondsPerChar = 1.4; // 默認 (中速)
+      // 【條件賦值】如果選擇慢速，單字符耗時改為 1.7 秒
+      if (speed === 'slow') secondsPerChar = 1.7;
+      // 【條件賦值】如果選擇快速，單字符耗時改為 1.2 秒
+      else if (speed === 'fast') secondsPerChar = 1.2;
 
       // 【核心優化】根據實際文字長度動態計算總時長
-      // 公式：總時長 = 字符數 × 單字符耗時
-      // 這樣無論是 5 個字還是 50 個字，每秒滑過的字數都是一樣的
+      // 公式：純滾動時間 = 字符數 × 單字符耗時
       const totalChars = text.length;
-      const duration = Math.max(5, totalChars * secondsPerChar); // 設置最小 5s 防止過快閃過
+      const pureScrollDuration = totalChars * secondsPerChar;
+
+      // 【新增】總週期時間 = 純滾動時間 + 用戶設置的靜止間隔時間
+      // 這意味著動畫播放一遍所需的總時間變長了，從而實現「間隔」效果
+      const totalCycleDuration = pureScrollDuration + intervalSeconds;
+
+      // 設置最小 5s 防止過快閃過 (這裡只限制純滾動部分，或者整體，視需求而定，建議整體)
+      const finalDuration = Math.max(5, totalCycleDuration);
 
       if (direction === 'ltr') {
         // 从左向右
         notificationText.classList.add('is-scrolling-ltr');
-        notificationText.style.animationDuration = `${duration}s`;
+        // 【應用總時長】
+        notificationText.style.animationDuration = `${finalDuration}s`;
       } else {
         // 从右向左（默认）
         notificationText.classList.add('is-scrolling-rtl');
-        notificationText.style.animationDuration = `${duration}s`;
+        // 【應用總時長】
+        notificationText.style.animationDuration = `${finalDuration}s`;
       }
     } else {
       // 固定模式：移除所有滚动类名
