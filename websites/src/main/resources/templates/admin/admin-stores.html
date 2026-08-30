@@ -666,6 +666,8 @@
       </div>
       <form id="storeForm" onsubmit="saveStore(event)">
         <input type="hidden" id="storeId">
+
+        <!-- 店鋪基本信息 -->
         <div class="modal-grid">
           <div class="form-group">
             <label><i class="fas fa-barcode"></i> 店鋪代碼 (唯一標識)</label>
@@ -677,113 +679,456 @@
             <label><i class="fas fa-signature"></i> 店鋪名稱</label>
             <input type="text" id="storeName" required placeholder="例如: 中環旗艦店">
           </div>
-          <div class="form-group modal-grid-full">
-            <label><i class="fas fa-map-marker-alt"></i> 詳細地址</label>
-            <input type="text" id="storeAddress" required placeholder="例如: 中環皇后大道中 99 號">
-          </div>
-          <div class="form-group">
-            <label><i class="fas fa-phone"></i> 聯繫電話</label>
-            <input type="text" id="storePhone" placeholder="例如: +852 2123 4567">
-          </div>
-          <!-- 營業時間 (結構化輸入) -->
-          <div class="form-group">
-            <label><i class="fas fa-clock"></i> 營業時間</label>
-            <div
-              style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; background: #f8f9fa; padding: 0.8rem; border-radius: 8px; border: 1px solid #e9ecef;">
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">開始:</span>
-                <input type="number" id="startHour" min="1" max="12" placeholder="時"
-                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
-                <span style="color: var(--gray);">:</span>
-                <input type="number" id="startMinute" min="0" max="59" placeholder="分"
-                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
-                <select id="startPeriod"
-                  style="padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
-                  <option value="AM">AM</option>
-                  <option value="PM">PM</option>
-                </select>
+        </div>
+
+        <div class="form-group modal-grid-full">
+          <label><i class="fas fa-map-marker-alt"></i> 詳細地址</label>
+          <input type="text" id="storeAddress" required placeholder="例如: 中環皇后大道中 99 號">
+        </div>
+
+        <!-- 1. 聯繫電話 -->
+        <div class="form-group">
+          <label><i class="fas fa-phone"></i> 聯繫電話</label>
+          <input type="text" id="storePhone" placeholder="例如: +852 2123 4567">
+        </div>
+
+        <!-- 2. 营业时间设置模式选择 -->
+        <div class="form-group">
+          <label><i class="fas fa-calendar-alt"></i> 营业时间设置模式</label>
+          <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+            <label
+              style="flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.8rem; border: 2px solid var(--gold); border-radius: 8px; cursor: pointer; background: rgba(212, 175, 55, 0.05);">
+              <input type="radio" name="scheduleMode" value="unified" checked onchange="toggleScheduleMode()"
+                style="width: 18px; height: 18px;">
+              <div>
+                <div style="font-weight: 600; color: var(--primary);">一周统一营业时间</div>
+                <div style="font-size: 0.8rem; color: var(--gray);">每天营业时间相同</div>
               </div>
-              <span style="color: var(--gray); font-weight: bold;">至</span>
-              <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">結束:</span>
-                <input type="number" id="endHour" min="1" max="12" placeholder="時"
-                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
-                <span style="color: var(--gray);">:</span>
-                <input type="number" id="endMinute" min="0" max="59" placeholder="分"
-                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
-                <select id="endPeriod"
-                  style="padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
-                  <option value="AM">AM</option>
-                  <option value="PM" selected>PM</option>
-                </select>
+            </label>
+            <label
+              style="flex: 1; display: flex; align-items: center; gap: 0.5rem; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; cursor: pointer; background: white;">
+              <input type="radio" name="scheduleMode" value="daily" onchange="toggleScheduleMode()"
+                style="width: 18px; height: 18px;">
+              <div>
+                <div style="font-weight: 600; color: var(--primary);">每天分别设置</div>
+                <div style="font-size: 0.8rem; color: var(--gray);">每天可设置不同时间</div>
               </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 3. 营业时间 -->
+        <!-- 统一营业时间（默认显示） -->
+        <div id="unifiedSchedule" class="form-group">
+          <label><i class="fas fa-clock"></i> 营业时间</label>
+          <div
+            style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; background: #f8f9fa; padding: 0.8rem; border-radius: 8px; border: 1px solid #e9ecef;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">開始:</span>
+              <input type="number" id="startHour" min="1" max="12" placeholder="時"
+                style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+              <span style="color: var(--gray);">:</span>
+              <input type="number" id="startMinute" min="0" max="59" placeholder="分"
+                style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+              <select id="startPeriod"
+                style="padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
             </div>
-            <small style="color: var(--gray); font-size: 0.8rem; margin-top: 0.3rem; display: block;">
-              <i class="fas fa-info-circle"></i> 請選擇上午 (AM) 或下午 (PM)，時數限制 1-12，分鐘限制 0-59。
-            </small>
+            <span style="color: var(--gray); font-weight: bold;">至</span>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">結束:</span>
+              <input type="number" id="endHour" min="1" max="12" placeholder="時"
+                style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+              <span style="color: var(--gray);">:</span>
+              <input type="number" id="endMinute" min="0" max="59" placeholder="分"
+                style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+              <select id="endPeriod"
+                style="padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                <option value="AM">AM</option>
+                <option value="PM" selected>PM</option>
+              </select>
+            </div>
           </div>
-          <!-- 退貨設置區塊 -->
+          <small style="color: var(--gray); font-size: 0.8rem; margin-top: 0.3rem; display: block;">
+            <i class="fas fa-info-circle"></i> 請選擇上午 (AM) 或下午 (PM)，時數限制 1-12，分鐘限制 0-59。
+          </small>
+
+          <!-- 暫停營業設置區塊 (统一模式) -->
           <div style="border-top: 1px dashed #e9ecef; margin: 1.5rem 0 1rem; padding-top: 0.5rem;">
             <h4
               style="font-size: 1rem; color: var(--primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-              <i class="fas fa-undo-alt" style="color: var(--accent);"></i> 退貨預約設置
+              <i class="fas fa-calendar-times" style="color: var(--accent);"></i> 暫停營業設置
             </h4>
             <div class="modal-grid">
-              <div class="form-group">
-                <label><i class="fas fa-calendar-day"></i> 最早提前預約天數</label>
-                <input type="number" id="returnAdvanceDays" min="0" placeholder="例如: 3 (0表示無限制)">
-                <small>用戶必須至少提前此天數才能預約到店退貨。</small>
-              </div>
               <div class="form-group" style="grid-column: span 2;">
-                <label><i class="fas fa-calendar-alt"></i> 暫停退貨日期範圍</label>
+                <label><i class="fas fa-calendar-alt"></i> 暫停營業日期範圍</label>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                  <div><input type="date" id="returnBlackoutStartDate" placeholder="開始日期"></div>
-                  <div><input type="date" id="returnBlackoutEndDate" placeholder="結束日期"></div>
+                  <div>
+                    <input type="date" id="unifiedClosedStartDate" placeholder="開始日期"
+                      style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px;">
+                    <small
+                      style="color: var(--gray); font-size: 0.75rem; margin-top: 0.3rem; display: block;">開始日期</small>
+                  </div>
+                  <div>
+                    <input type="date" id="unifiedClosedEndDate" placeholder="結束日期"
+                      style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px;">
+                    <small
+                      style="color: var(--gray); font-size: 0.75rem; margin-top: 0.3rem; display: block;">結束日期</small>
+                  </div>
                 </div>
               </div>
               <div class="form-group modal-grid-full">
-                <label><i class="fas fa-calendar-week"></i> 每週固定不處理退貨日</label>
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
-                  <label
-                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
-                    <input type="checkbox" class="closed-day-checkbox" value="1" style="margin: 0;"> 週一
-                  </label>
-                  <label
-                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
-                    <input type="checkbox" class="closed-day-checkbox" value="2" style="margin: 0;"> 週二
-                  </label>
-                  <label
-                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
-                    <input type="checkbox" class="closed-day-checkbox" value="3" style="margin: 0;"> 週三
-                  </label>
-                  <label
-                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
-                    <input type="checkbox" class="closed-day-checkbox" value="4" style="margin: 0;"> 週四
-                  </label>
-                  <label
-                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
-                    <input type="checkbox" class="closed-day-checkbox" value="5" style="margin: 0;"> 週五
-                  </label>
-                  <label
-                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
-                    <input type="checkbox" class="closed-day-checkbox" value="6" style="margin: 0;"> 週六
-                  </label>
-                  <label
-                    style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
-                    <input type="checkbox" class="closed-day-checkbox" value="7" style="margin: 0;"> 週日
-                  </label>
-                </div>
+                <label><i class="fas fa-comment-dots"></i> 暫停營業原因備註</label>
+                <input type="text" id="unifiedClosedReason" placeholder="例如: 農曆新年假期 或 店鋪裝修"
+                  style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px;">
                 <small style="color: var(--gray); font-size: 0.8rem; margin-top: 0.3rem; display: block;">
-                  <i class="fas fa-info-circle"></i> 勾選的星期幾將無法預約到店退貨。若不勾選則表示每天都可處理。
+                  <i class="fas fa-info-circle"></i> 此原因將在前台顯示給顧客。
                 </small>
-              </div>
-              <div class="form-group modal-grid-full">
-                <label><i class="fas fa-comment-dots"></i> 暫停退貨原因備註</label>
-                <input type="text" id="returnBlackoutReason" placeholder="例如: 農曆新年期間暫停退貨服務 或 店鋪年度盤點">
               </div>
             </div>
           </div>
         </div>
+
+        <!-- 每天分别设置营业时间（初始隐藏） -->
+        <div id="dailySchedule" class="form-group" style="display: none;">
+          <label><i class="fas fa-calendar-week"></i> 每周营业时间设置</label>
+          <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef;">
+            <!-- 周一 -->
+            <div class="day-schedule"
+              style="display: grid; grid-template-columns: 80px 1fr 80px; gap: 0.8rem; align-items: center; margin-bottom: 0.8rem; padding: 0.6rem; background: white; border-radius: 6px;">
+              <span style="font-weight: 600; color: var(--primary);">周一</span>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" class="day-start-hour" data-day="1" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-start-minute" data-day="1" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-start-period" data-day="1"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+                <span style="color: var(--gray); margin: 0 0.5rem;">至</span>
+                <input type="number" class="day-end-hour" data-day="1" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-end-minute" data-day="1" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-end-period" data-day="1"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                <input type="checkbox" class="day-closed-checkbox" data-day="1" style="width: 16px; height: 16px;">
+                <span style="font-size: 0.85rem; color: var(--gray);">休息</span>
+              </label>
+            </div>
+
+            <!-- 周二 -->
+            <div class="day-schedule"
+              style="display: grid; grid-template-columns: 80px 1fr 80px; gap: 0.8rem; align-items: center; margin-bottom: 0.8rem; padding: 0.6rem; background: white; border-radius: 6px;">
+              <span style="font-weight: 600; color: var(--primary);">周二</span>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" class="day-start-hour" data-day="2" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-start-minute" data-day="2" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-start-period" data-day="2"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+                <span style="color: var(--gray); margin: 0 0.5rem;">至</span>
+                <input type="number" class="day-end-hour" data-day="2" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-end-minute" data-day="2" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-end-period" data-day="2"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                <input type="checkbox" class="day-closed-checkbox" data-day="2" style="width: 16px; height: 16px;">
+                <span style="font-size: 0.85rem; color: var(--gray);">休息</span>
+              </label>
+            </div>
+
+            <!-- 周三 -->
+            <div class="day-schedule"
+              style="display: grid; grid-template-columns: 80px 1fr 80px; gap: 0.8rem; align-items: center; margin-bottom: 0.8rem; padding: 0.6rem; background: white; border-radius: 6px;">
+              <span style="font-weight: 600; color: var(--primary);">周三</span>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" class="day-start-hour" data-day="3" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-start-minute" data-day="3" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-start-period" data-day="3"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+                <span style="color: var(--gray); margin: 0 0.5rem;">至</span>
+                <input type="number" class="day-end-hour" data-day="3" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-end-minute" data-day="3" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-end-period" data-day="3"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                <input type="checkbox" class="day-closed-checkbox" data-day="3" style="width: 16px; height: 16px;">
+                <span style="font-size: 0.85rem; color: var(--gray);">休息</span>
+              </label>
+            </div>
+
+            <!-- 周四 -->
+            <div class="day-schedule"
+              style="display: grid; grid-template-columns: 80px 1fr 80px; gap: 0.8rem; align-items: center; margin-bottom: 0.8rem; padding: 0.6rem; background: white; border-radius: 6px;">
+              <span style="font-weight: 600; color: var(--primary);">周四</span>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" class="day-start-hour" data-day="4" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-start-minute" data-day="4" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-start-period" data-day="4"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+                <span style="color: var(--gray); margin: 0 0.5rem;">至</span>
+                <input type="number" class="day-end-hour" data-day="4" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-end-minute" data-day="4" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-end-period" data-day="4"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                <input type="checkbox" class="day-closed-checkbox" data-day="4" style="width: 16px; height: 16px;">
+                <span style="font-size: 0.85rem; color: var(--gray);">休息</span>
+              </label>
+            </div>
+
+            <!-- 周五 -->
+            <div class="day-schedule"
+              style="display: grid; grid-template-columns: 80px 1fr 80px; gap: 0.8rem; align-items: center; margin-bottom: 0.8rem; padding: 0.6rem; background: white; border-radius: 6px;">
+              <span style="font-weight: 600; color: var(--primary);">周五</span>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" class="day-start-hour" data-day="5" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-start-minute" data-day="5" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-start-period" data-day="5"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+                <span style="color: var(--gray); margin: 0 0.5rem;">至</span>
+                <input type="number" class="day-end-hour" data-day="5" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-end-minute" data-day="5" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-end-period" data-day="5"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                <input type="checkbox" class="day-closed-checkbox" data-day="5" style="width: 16px; height: 16px;">
+                <span style="font-size: 0.85rem; color: var(--gray);">休息</span>
+              </label>
+            </div>
+
+            <!-- 周六 -->
+            <div class="day-schedule"
+              style="display: grid; grid-template-columns: 80px 1fr 80px; gap: 0.8rem; align-items: center; margin-bottom: 0.8rem; padding: 0.6rem; background: white; border-radius: 6px;">
+              <span style="font-weight: 600; color: var(--primary);">周六</span>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" class="day-start-hour" data-day="6" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-start-minute" data-day="6" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-start-period" data-day="6"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+                <span style="color: var(--gray); margin: 0 0.5rem;">至</span>
+                <input type="number" class="day-end-hour" data-day="6" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-end-minute" data-day="6" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-end-period" data-day="6"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                <input type="checkbox" class="day-closed-checkbox" data-day="6" style="width: 16px; height: 16px;">
+                <span style="font-size: 0.85rem; color: var(--gray);">休息</span>
+              </label>
+            </div>
+
+            <!-- 周日 -->
+            <div class="day-schedule"
+              style="display: grid; grid-template-columns: 80px 1fr 80px; gap: 0.8rem; align-items: center; margin-bottom: 0.8rem; padding: 0.6rem; background: white; border-radius: 6px;">
+              <span style="font-weight: 600; color: var(--primary);">周日</span>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <input type="number" class="day-start-hour" data-day="7" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-start-minute" data-day="7" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-start-period" data-day="7"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+                <span style="color: var(--gray); margin: 0 0.5rem;">至</span>
+                <input type="number" class="day-end-hour" data-day="7" min="1" max="12" placeholder="時"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <span style="color: var(--gray);">:</span>
+                <input type="number" class="day-end-minute" data-day="7" min="0" max="59" placeholder="分"
+                  style="width: 50px; padding: 0.4rem; text-align: center; border: 1px solid #ced4da; border-radius: 4px;">
+                <select class="day-end-period" data-day="7"
+                  style="min-width: 70px; padding: 0.4rem; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+              <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer;">
+                <input type="checkbox" class="day-closed-checkbox" data-day="7" style="width: 16px; height: 16px;">
+                <span style="font-size: 0.85rem; color: var(--gray);">休息</span>
+              </label>
+            </div>
+
+          </div>
+          <small style="color: var(--gray); font-size: 0.8rem; margin-top: 0.5rem; display: block;">
+            <i class="fas fa-info-circle"></i> 設置每天的營業時間，勾選「休息」表示該天不營業。
+          </small>
+
+          <!-- 暫停營業設置區塊 (每天模式) -->
+          <div style="border-top: 1px dashed #e9ecef; margin: 1.5rem 0 1rem; padding-top: 0.5rem;">
+            <h4
+              style="font-size: 1rem; color: var(--primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fas fa-calendar-times" style="color: var(--accent);"></i> 暫停營業設置
+            </h4>
+            <div class="modal-grid">
+              <div class="form-group" style="grid-column: span 2;">
+                <label><i class="fas fa-calendar-alt"></i> 暫停營業日期範圍</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                  <div>
+                    <input type="date" id="dailyClosedStartDate" placeholder="開始日期"
+                      style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px;">
+                    <small
+                      style="color: var(--gray); font-size: 0.75rem; margin-top: 0.3rem; display: block;">開始日期</small>
+                  </div>
+                  <div>
+                    <input type="date" id="dailyClosedEndDate" placeholder="結束日期"
+                      style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px;">
+                    <small
+                      style="color: var(--gray); font-size: 0.75rem; margin-top: 0.3rem; display: block;">結束日期</small>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group modal-grid-full">
+                <label><i class="fas fa-comment-dots"></i> 暫停營業原因備註</label>
+                <input type="text" id="dailyClosedReason" placeholder="例如: 農曆新年假期 或 店鋪裝修"
+                  style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px;">
+                <small style="color: var(--gray); font-size: 0.8rem; margin-top: 0.3rem; display: block;">
+                  <i class="fas fa-info-circle"></i> 此原因將在前台顯示給顧客。
+                </small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 退貨設置區塊 -->
+        <div style="border-top: 1px dashed #e9ecef; margin: 1.5rem 0 1rem; padding-top: 0.5rem;">
+          <h4
+            style="font-size: 1rem; color: var(--primary); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-undo-alt" style="color: var(--accent);"></i> 退貨預約設置
+          </h4>
+          <div class="modal-grid">
+            <div class="form-group">
+              <label><i class="fas fa-calendar-day"></i> 最早提前預約天數</label>
+              <input type="number" id="returnAdvanceDays" min="0" placeholder="例如: 3 (0表示無限制)">
+              <small>用戶必須至少提前此天數才能預約到店退貨。</small>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label><i class="fas fa-calendar-alt"></i> 暫停退貨日期範圍</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div><input type="date" id="returnBlackoutStartDate" placeholder="開始日期"></div>
+                <div><input type="date" id="returnBlackoutEndDate" placeholder="結束日期"></div>
+              </div>
+            </div>
+            <div class="form-group modal-grid-full">
+              <label><i class="fas fa-calendar-week"></i> 每週固定不處理退貨日</label>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                <label
+                  style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                  <input type="checkbox" class="closed-day-checkbox" value="1" style="margin: 0;"> 週一
+                </label>
+                <label
+                  style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                  <input type="checkbox" class="closed-day-checkbox" value="2" style="margin: 0;"> 週二
+                </label>
+                <label
+                  style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                  <input type="checkbox" class="closed-day-checkbox" value="3" style="margin: 0;"> 週三
+                </label>
+                <label
+                  style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                  <input type="checkbox" class="closed-day-checkbox" value="4" style="margin: 0;"> 週四
+                </label>
+                <label
+                  style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                  <input type="checkbox" class="closed-day-checkbox" value="5" style="margin: 0;"> 週五
+                </label>
+                <label
+                  style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                  <input type="checkbox" class="closed-day-checkbox" value="6" style="margin: 0;"> 週六
+                </label>
+                <label
+                  style="flex: 1; min-width: 60px; display: flex; align-items: center; gap: 0.3rem; padding: 0.4rem; border: 1px solid #e9ecef; border-radius: 6px; cursor: pointer; background: white;">
+                  <input type="checkbox" class="closed-day-checkbox" value="7" style="margin: 0;"> 週日
+                </label>
+              </div>
+              <small style="color: var(--gray); font-size: 0.8rem; margin-top: 0.3rem; display: block;">
+                <i class="fas fa-info-circle"></i> 勾選的星期幾將無法預約到店退貨。若不勾選則表示每天都可處理。
+              </small>
+            </div>
+            <div class="form-group modal-grid-full">
+              <label><i class="fas fa-comment-dots"></i> 暫停退貨原因備註</label>
+              <input type="text" id="returnBlackoutReason" placeholder="例如: 農曆新年期間暫停退貨服務 或 店鋪年度盤點">
+            </div>
+          </div>
+        </div>
+
         <div class="modal-actions">
           <button type="button" class="btn-modal-cancel" onclick="closeStoreModal()">取消</button>
           <button type="submit" class="btn-modal-save" id="saveStoreBtn"><i class="fas fa-save"></i> 儲存</button>
@@ -844,6 +1189,64 @@
     const AS = window.AdminStores;
 
     // ==========================================
+    // 營業時間設置模式切換函數 (全局可用)
+    // ==========================================
+    window.toggleScheduleMode = function () {
+      const unifiedRadio = document.querySelector('input[name="scheduleMode"][value="unified"]');
+      const dailyRadio = document.querySelector('input[name="scheduleMode"][value="daily"]');
+      const unifiedSchedule = document.getElementById('unifiedSchedule');
+      const dailySchedule = document.getElementById('dailySchedule');
+
+      // 【核心修改 1】：获取 Modal 的容器元素
+      const modalBox = document.querySelector('#storeModal .edit-modal-box');
+
+      if (unifiedRadio && unifiedRadio.checked) {
+        // 显示统一营业时间，隐藏每天分别设置
+        if (unifiedSchedule) unifiedSchedule.style.display = 'block';
+        if (dailySchedule) dailySchedule.style.display = 'none';
+
+        // 更新样式
+        if (unifiedRadio.closest('label')) {
+          unifiedRadio.closest('label').style.borderColor = 'var(--gold)';
+          unifiedRadio.closest('label').style.background = 'rgba(212, 175, 55, 0.05)';
+        }
+        if (dailyRadio && dailyRadio.closest('label')) {
+          dailyRadio.closest('label').style.borderColor = '#e9ecef';
+          dailyRadio.closest('label').style.background = 'white';
+        }
+
+        // 【核心修改 2】：恢复默认宽度 (统一模式不需要太宽)
+        if (modalBox) {
+          modalBox.style.maxWidth = '600px';
+          modalBox.style.width = '90%';
+        }
+      } else {
+        // 显示每天分别设置，隐藏统一营业时间
+        if (unifiedSchedule) unifiedSchedule.style.display = 'none';
+        if (dailySchedule) dailySchedule.style.display = 'block';
+
+        // 更新样式
+        if (dailyRadio && dailyRadio.closest('label')) {
+          dailyRadio.closest('label').style.borderColor = 'var(--gold)';
+          dailyRadio.closest('label').style.background = 'rgba(212, 175, 55, 0.05)';
+        }
+        if (unifiedRadio && unifiedRadio.closest('label')) {
+          unifiedRadio.closest('label').style.borderColor = '#e9ecef';
+          unifiedRadio.closest('label').style.background = 'white';
+        }
+
+        // 【核心修改 3】：变宽！设置一个足够宽的宽度 (例如 1000px)
+        // 这样绿色圈住的部分就会变宽，且内容不会溢出，自然就没有横向滚动条了
+        if (modalBox) {
+          modalBox.style.maxWidth = '750px';
+          modalBox.style.width = '95%';
+          // 强制隐藏横向滚动条，双重保险
+          modalBox.style.overflowX = 'hidden';
+        }
+      }
+    };
+
+    // ==========================================
     // 1. 核心：使用 AdminTable 加載數據
     // ==========================================
     const storeTableConfig = {
@@ -853,6 +1256,7 @@
       paginationId: 'stores-pagination',
       emptyText: '暫無線下店鋪，點擊右上角新增',
 
+      // 核心：渲染單個卡片 (返回 HTML 字符串)
       // 核心：渲染單個卡片 (返回 HTML 字符串)
       renderRow: function (store) {
         // 緩存數據以便編輯 (存入命名空間)
@@ -865,6 +1269,13 @@
         const toggleIcon = store.isActive ? 'eye-slash' : 'eye';
         const toggleText = store.isActive ? '隱藏' : '顯示';
 
+        // 【核心修改】：判斷營業時間的顯示文字
+        let hoursDisplay = store.hours || '未填寫';
+        if (store.scheduleMode === 'DAILY') {
+          // 如果是每天分別設置，顯示簡潔的提示，並用主題色高亮
+          hoursDisplay = '<span style="color: var(--gold); font-weight: 600;">自定義營業時間</span>';
+        }
+
         return `
             <div class="${cardClass}">
               <span class="status-badge-store ${statusClass}">
@@ -875,7 +1286,8 @@
               <div class="store-info">
                 <div><i class="fas fa-map-marker-alt"></i> <span>${store.address || '未填寫'}</span></div>
                 <div><i class="fas fa-phone"></i> <span>${store.phone || '未填寫'}</span></div>
-                <div><i class="fas fa-clock"></i> <span>${store.hours || '未填寫'}</span></div>
+                <!-- 使用動態生成的 hoursDisplay -->
+                <div><i class="fas fa-clock"></i> ${hoursDisplay}</div>
               </div>
               <div class="store-actions">
                 <button class="btn-store btn-edit" onclick="openEditStoreModal(${store.storeId})"><i class="fas fa-edit"></i> 編輯</button>
@@ -888,7 +1300,7 @@
           `;
       },
 
-      // 成功回調：更新緩存 (可選，renderRow 已經在做緩存了，這裡可以做全量同步)
+      // 成功回調：更新緩存
       onSuccess: function (data) {
         AS.currentStoresMap = {};
         if (data.content) {
@@ -900,6 +1312,8 @@
     // 頁面加載完成後初始化
     document.addEventListener('DOMContentLoaded', () => {
       AdminTable.loadData(storeTableConfig);
+      // 確保初始狀態：統一營業時間顯示，每天分別設置隱藏
+      window.toggleScheduleMode();
     });
 
     // ==========================================
@@ -910,12 +1324,19 @@
       document.getElementById('modalTitle').textContent = '新增店鋪';
       document.getElementById('storeForm').reset();
       document.getElementById('storeId').value = '';
+
+      // 重置營業時間模式為統一
+      const unifiedRadio = document.querySelector('input[name="scheduleMode"][value="unified"]');
+      if (unifiedRadio) {
+        unifiedRadio.checked = true;
+        window.toggleScheduleMode();
+      }
+
       document.getElementById('storeModal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
     };
 
     AdminStores.openEditStoreModal = function (id) {
-      // 從命名空間緩存中獲取數據
       const store = AS.currentStoresMap[id];
       if (!store) {
         showNotification('❌ 找不到店鋪數據', true);
@@ -929,8 +1350,59 @@
       document.getElementById('storeAddress').value = store.address;
       document.getElementById('storePhone').value = store.phone || '';
 
-      // 解析營業時間
-      if (store.hours) {
+      // 智能解析營業時間與模式
+      const unifiedRadio = document.querySelector('input[name="scheduleMode"][value="unified"]');
+      const dailyRadio = document.querySelector('input[name="scheduleMode"][value="daily"]');
+      const daysMap = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+      // 1. 設置模式並切換顯示
+      if (store.scheduleMode === 'DAILY') {
+        if (dailyRadio) dailyRadio.checked = true;
+      } else {
+        if (unifiedRadio) unifiedRadio.checked = true;
+      }
+      window.toggleScheduleMode();
+
+      // 2. 解析營業時間
+      if (store.scheduleMode === 'DAILY' && store.dailyHours) {
+        try {
+          const dailyObj = JSON.parse(store.dailyHours);
+          for (let i = 1; i <= 7; i++) {
+            const dayData = dailyObj[i];
+            if (dayData) {
+              if (dayData.closed) {
+                const checkbox = document.querySelector(`.day-closed-checkbox[data-day="${i}"]`);
+                if (checkbox) checkbox.checked = true;
+              } else if (dayData.start && dayData.end) {
+                const startParts = dayData.start.trim().split(' ');
+                const endParts = dayData.end.trim().split(' ');
+
+                if (startParts.length >= 1) {
+                  const timeArr = startParts[0].split(':');
+                  const startH = document.querySelector(`.day-start-hour[data-day="${i}"]`);
+                  const startM = document.querySelector(`.day-start-minute[data-day="${i}"]`);
+                  const startP = document.querySelector(`.day-start-period[data-day="${i}"]`);
+                  if (startH) startH.value = timeArr[0];
+                  if (startM) startM.value = timeArr[1] || '00';
+                  if (startP) startP.value = startParts[1] || 'AM';
+                }
+                if (endParts.length >= 1) {
+                  const timeArr = endParts[0].split(':');
+                  const endH = document.querySelector(`.day-end-hour[data-day="${i}"]`);
+                  const endM = document.querySelector(`.day-end-minute[data-day="${i}"]`);
+                  const endP = document.querySelector(`.day-end-period[data-day="${i}"]`);
+                  if (endH) endH.value = timeArr[0];
+                  if (endM) endM.value = timeArr[1] || '00';
+                  if (endP) endP.value = endParts[1] || 'PM';
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("解析 dailyHours JSON 失敗", e);
+        }
+      } else if (store.hours) {
+        // 統一營業時間模式解析
         const parts = store.hours.split(' - ');
         if (parts.length === 2) {
           const startParts = parts[0].trim().split(' ');
@@ -950,6 +1422,33 @@
         }
       }
 
+      // 3. 填充暫停營業設置 (同時填充兩套 ID，方便切換模式時數據不丟失)
+      const startDate = store.closedStartDate ? store.closedStartDate.substring(0, 10) : '';
+      const endDate = store.closedEndDate ? store.closedEndDate.substring(0, 10) : '';
+      const reason = store.closedReason || '';
+
+      // 根据当前模式决定填充哪套字段
+      if (store.scheduleMode === 'DAILY') {
+        // 每天模式：填充 daily 字段
+        document.getElementById('dailyClosedStartDate').value = startDate;
+        document.getElementById('dailyClosedEndDate').value = endDate;
+        document.getElementById('dailyClosedReason').value = reason;
+        // 清空 unified 字段
+        document.getElementById('unifiedClosedStartDate').value = '';
+        document.getElementById('unifiedClosedEndDate').value = '';
+        document.getElementById('unifiedClosedReason').value = '';
+      } else {
+        // 统一模式：填充 unified 字段
+        document.getElementById('unifiedClosedStartDate').value = startDate;
+        document.getElementById('unifiedClosedEndDate').value = endDate;
+        document.getElementById('unifiedClosedReason').value = reason;
+        // 清空 daily 字段
+        document.getElementById('dailyClosedStartDate').value = '';
+        document.getElementById('dailyClosedEndDate').value = '';
+        document.getElementById('dailyClosedReason').value = '';
+      }
+
+      // 4. 填充退貨設置
       document.getElementById('returnAdvanceDays').value = (store.returnAdvanceDays !== null && store.returnAdvanceDays !== undefined) ? store.returnAdvanceDays : '';
       document.getElementById('returnBlackoutStartDate').value = store.returnBlackoutStartDate ? store.returnBlackoutStartDate.substring(0, 10) : '';
       document.getElementById('returnBlackoutEndDate').value = store.returnBlackoutEndDate ? store.returnBlackoutEndDate.substring(0, 10) : '';
@@ -971,6 +1470,36 @@
     AdminStores.closeStoreModal = function () {
       document.getElementById('storeModal').style.display = 'none';
       document.body.style.overflow = '';
+
+      // 核心修复：重置整个表单
+      document.getElementById('storeForm').reset();
+
+      //  重置营业时间模式为统一模式
+      const unifiedRadio = document.querySelector('input[name="scheduleMode"][value="unified"]');
+      if (unifiedRadio) {
+        unifiedRadio.checked = true;
+        window.toggleScheduleMode();
+      }
+
+      //  清空所有暂停营业日期
+      document.getElementById('unifiedClosedStartDate').value = '';
+      document.getElementById('unifiedClosedEndDate').value = '';
+      document.getElementById('unifiedClosedReason').value = '';
+      document.getElementById('dailyClosedStartDate').value = '';
+      document.getElementById('dailyClosedEndDate').value = '';
+      document.getElementById('dailyClosedReason').value = '';
+
+      //  清空所有每日营业时间输入框
+      for (let i = 1; i <= 7; i++) {
+        document.querySelector(`.day-start-hour[data-day="${i}"]`).value = '';
+        document.querySelector(`.day-start-minute[data-day="${i}"]`).value = '';
+        document.querySelector(`.day-end-hour[data-day="${i}"]`).value = '';
+        document.querySelector(`.day-end-minute[data-day="${i}"]`).value = '';
+        document.querySelector(`.day-closed-checkbox[data-day="${i}"]`).checked = false;
+      }
+
+      //  清空退货设置的复选框
+      document.querySelectorAll('.closed-day-checkbox').forEach(cb => cb.checked = false);
     };
 
     AdminStores.saveStore = async function (e) {
@@ -978,32 +1507,76 @@
       const checkedBoxes = Array.from(document.querySelectorAll('.closed-day-checkbox:checked'));
       const closedDaysString = checkedBoxes.length > 0 ? checkedBoxes.map(cb => cb.value).join(',') : null;
 
-      const startH = document.getElementById('startHour').value;
-      const startM = document.getElementById('startMinute').value || '00';
-      const startP = document.getElementById('startPeriod').value;
-      const endH = document.getElementById('endHour').value;
-      const endM = document.getElementById('endMinute').value || '00';
-      const endP = document.getElementById('endPeriod').value;
+      const scheduleMode = document.querySelector('input[name="scheduleMode"]:checked').value;
+      let hoursString = '';
+      let dailyHoursString = null;
+      const daysMap = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
-      if (!startH || !endH) {
-        showNotification('❌ 請填寫完整的營業時間', true);
-        return;
+      if (scheduleMode === 'unified') {
+        const startH = document.getElementById('startHour').value;
+        const startM = document.getElementById('startMinute').value || '00';
+        const startP = document.getElementById('startPeriod').value;
+        const endH = document.getElementById('endHour').value;
+        const endM = document.getElementById('endMinute').value || '00';
+        const endP = document.getElementById('endPeriod').value;
+
+        if (!startH || !endH) {
+          showNotification('❌ 請填寫完整的營業時間', true);
+          return;
+        }
+
+        function timeToMinutes(h, m, p) {
+          let hour = parseInt(h);
+          let min = parseInt(m);
+          if (p === 'PM' && hour !== 12) hour += 12;
+          else if (p === 'AM' && hour === 12) hour = 0;
+          return hour * 60 + min;
+        }
+
+        if (startP === endP && timeToMinutes(startH, startM, startP) >= timeToMinutes(endH, endM, endP)) {
+          showNotification('❌ 同為 AM 或 PM 時，結束時間必須晚於開始時間！', true);
+          return;
+        }
+
+        hoursString = `${startH}:${startM.padStart(2, '0')} ${startP} - ${endH}:${endM.padStart(2, '0')} ${endP}`;
+        dailyHoursString = null; // 統一模式下清空 dailyHours
+      } else {
+        // 每天分別設置模式：組裝為 JSON 字符串
+        const dailyHoursObj = {};
+        for (let i = 1; i <= 7; i++) {
+          const isClosed = document.querySelector(`.day-closed-checkbox[data-day="${i}"]`).checked;
+          if (isClosed) {
+            dailyHoursObj[i] = {closed: true};
+          } else {
+            const startH = document.querySelector(`.day-start-hour[data-day="${i}"]`).value;
+            const startM = document.querySelector(`.day-start-minute[data-day="${i}"]`).value || '00';
+            const startP = document.querySelector(`.day-start-period[data-day="${i}"]`).value;
+            const endH = document.querySelector(`.day-end-hour[data-day="${i}"]`).value;
+            const endM = document.querySelector(`.day-end-minute[data-day="${i}"]`).value || '00';
+            const endP = document.querySelector(`.day-end-period[data-day="${i}"]`).value;
+
+            if (startH && endH) {
+              dailyHoursObj[i] = {
+                closed: false,
+                start: `${startH}:${startM.padStart(2, '0')} ${startP}`,
+                end: `${endH}:${endM.padStart(2, '0')} ${endP}`
+              };
+            } else {
+              showNotification(`❌ 請填寫完整 ${daysMap[i - 1]} 的營業時間`, true);
+              return;
+            }
+          }
+        }
+        dailyHoursString = JSON.stringify(dailyHoursObj);
+        hoursString = null; // 每天模式下清空統一 hours
       }
 
-      function timeToMinutes(h, m, p) {
-        let hour = parseInt(h);
-        let min = parseInt(m);
-        if (p === 'PM' && hour !== 12) hour += 12;
-        else if (p === 'AM' && hour === 12) hour = 0;
-        return hour * 60 + min;
-      }
+      // 根據當前模式獲取暫停營業數據
+      const isUnified = scheduleMode === 'unified';
+      const closedStartDate = document.getElementById(isUnified ? 'unifiedClosedStartDate' : 'dailyClosedStartDate').value || null;
+      const closedEndDate = document.getElementById(isUnified ? 'unifiedClosedEndDate' : 'dailyClosedEndDate').value || null;
+      const closedReason = document.getElementById(isUnified ? 'unifiedClosedReason' : 'dailyClosedReason').value.trim() || null;
 
-      if (startP === endP && timeToMinutes(startH, startM, startP) >= timeToMinutes(endH, endM, endP)) {
-        showNotification('❌ 同為 AM 或 PM 時，結束時間必須晚於開始時間！', true);
-        return;
-      }
-
-      const hoursString = `${startH}:${startM.padStart(2, '0')} ${startP} - ${endH}:${endM.padStart(2, '0')} ${endP}`;
       const id = document.getElementById('storeId').value;
 
       const payload = {
@@ -1011,15 +1584,18 @@
         name: document.getElementById('storeName').value.trim(),
         address: document.getElementById('storeAddress').value.trim(),
         phone: document.getElementById('storePhone').value.trim(),
+        scheduleMode: isUnified ? 'UNIFIED' : 'DAILY',
         hours: hoursString,
+        dailyHours: dailyHoursString,
+        closedStartDate: closedStartDate,
+        closedEndDate: closedEndDate,
+        closedReason: closedReason,
         returnAdvanceDays: document.getElementById('returnAdvanceDays').value ? parseInt(document.getElementById('returnAdvanceDays').value) : null,
         returnBlackoutStartDate: document.getElementById('returnBlackoutStartDate').value || null,
         returnBlackoutEndDate: document.getElementById('returnBlackoutEndDate').value || null,
         returnBlackoutReason: document.getElementById('returnBlackoutReason').value.trim() || null,
         returnClosedDaysOfWeek: closedDaysString
       };
-
-      // 【已移除】btn.disabled 和 innerHTML 修改邏輯
 
       try {
         const url = id ? `/admin/stores/api/update/${id}` : '/admin/stores/api/add';
@@ -1033,7 +1609,6 @@
         if (res.ok) {
           showNotification('✅ ' + result.message);
           AdminStores.closeStoreModal();
-          // 核心：使用 AdminTable 刷新數據
           AdminTable.loadData(storeTableConfig);
         } else {
           showNotification('❌ ' + (result.message || '操作失敗'), true);

@@ -1543,7 +1543,7 @@
                                 </div>
                                 <div style="font-size: 0.85rem; color: var(--gray);">
                                     <i class="fas fa-shipping-fast" style="color: var(--gold);"></i>
-                                    本週發貨：<span id="shippingDate" style="font-weight: 600;">計算中...</span>
+                                    最早發貨時間：<span id="shippingDate" style="font-weight: 600;">計算中...</span>
                                 </div>
                                 <!-- 在快遞配送選項內，倒數計時區域下方新增 -->
                                 <div id="deliveryDateSelection"
@@ -2986,110 +2986,160 @@
         // 9. 发货截止时间倒计时
         // ==========================================
         function updateCountdown() {
-            // 从 Thymeleaf 获取后端计算的截止时间 和 预计送货日
+            // 1. 獲取後端傳來的數據 (來自代碼片段 2)
             const cutoffDateTimeStr = /*[[${cutoffDateTime}]]*/ '';
-            const estimatedDeliveryDateStr = /*[[${estimatedDeliveryDate}]]*/ ''; // 后端直接算好的送货日，如 "2026-08-22"
-            const deliveryMode = /*[[${deliveryMode}]]*/ 'NEXT_DAY';
+            const estimatedDeliveryDateStr = /*[[${estimatedDeliveryDate}]]*/ '';
 
-            if (!cutoffDateTimeStr || !estimatedDeliveryDateStr) {
-                return;
-            }
+            if (!cutoffDateTimeStr) return;
 
             const cutoffDateTime = new Date(cutoffDateTimeStr);
             const now = new Date();
             const diff = cutoffDateTime - now;
 
+            // 2. 獲取 DOM 元素 (合併代碼片段 1 和 2)
             const countdownElement = document.getElementById('cutoffCountdown');
             const shippingDateElement = document.getElementById('shippingDate');
 
+            // 【新增】獲取前面的標籤元素 (來自代碼片段 1)
+            const shippingLabelElement = document.getElementById('shippingLabel');
+
+            // 獲取下拉選單 (來自代碼片段 2)
+            const select = document.getElementById('deliveryDateSelect');
+
             if (countdownElement && shippingDateElement) {
+
+                // ==========================================
+                // 3. 核心修復：根據是否截止，修改前面的標籤 (來自代碼片段 1)
+                // ==========================================
+                if (shippingLabelElement) {
+                    if (diff <= 0) {
+                        // 情況 A：已截止 -> 顯示「預計發貨」或「下週發貨」
+                        // 這裡簡單處理，改為「預計發貨」，或者你可以根據 estimatedDeliveryDateStr 判斷是否為下週
+                        shippingLabelElement.textContent = '🚚 預計發貨：';
+                        // 進階寫法示例：
+                        // if (estimatedDeliveryDateStr) {
+                        //     const shipDate = new Date(estimatedDeliveryDateStr);
+                        //     const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7);
+                        //     shippingLabelElement.textContent = (shipDate > nextWeek) ? '🚚 下週發貨：' : '🚚 預計發貨：';
+                        // }
+                    } else {
+                        // 情況 B：未截止 -> 顯示「本週發貨」
+                        shippingLabelElement.textContent = '🚚 本週發貨：';
+                    }
+                }
+
+                // ==========================================
+                // 4. 更新日期顯示 (來自代碼片段 2)
+                // ==========================================
+                if (select && select.options.length > 1) {
+                    // 獲取第一個可用日期選項（options[1]，因為 options[0] 是預設選項）
+                    const selectedOption = select.options[1];
+                    const displayText = selectedOption.textContent; // 直接使用後端返回的完整文本，例如 "本週一 (12月30日)"
+
+                    // 前端只需添加「送達」即可
+                    shippingDateElement.textContent = displayText + ' 送達';
+
+                } else if (estimatedDeliveryDateStr) {
+                    // 降級方案：如果下拉選單沒加載出來，使用後端傳來的預計日期
+                    const shippingDate = new Date(estimatedDeliveryDateStr + 'T00:00:00');
+                    const options = {month: 'long', day: 'numeric', weekday: 'long'};
+                    shippingDateElement.textContent = '預計 ' + shippingDate.toLocaleDateString('zh-TW', options) + ' 送達';
+                }
+
+                // ==========================================
+                // 5. 處理倒數計時顯示 (保持原有邏輯不變)
+                // ==========================================
                 if (diff > 0) {
-                    // 计算天数、小时、分钟、秒
                     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
                     const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-                    // 显示"x日x时x分x秒"格式
+                    countdownElement.style.color = 'var(--accent)'; // 或者你想要的顏色
                     countdownElement.textContent = `${days}日${hours}時${minutes}分${seconds}秒`;
 
-                    // 直接格式化后端传来的预计送货日
-                    // 加上 'T00:00:00' 确保被解析为本地时间，避免时区偏移导致日期差一天
-                    const shippingDate = new Date(estimatedDeliveryDateStr + 'T00:00:00');
-                    const options = {month: 'long', day: 'numeric', weekday: 'long'};
-
-                    let shippingDateText = '';
-                    if (deliveryMode === 'NEXT_DAY') {
-                        shippingDateText = '預計最快 ' + shippingDate.toLocaleDateString('zh-TW', options) + ' 送達';
-                    } else if (deliveryMode === 'SPECIFIC_DAYS') {
-                        shippingDateText = '預計 ' + shippingDate.toLocaleDateString('zh-TW', options) + ' 送達';
-                    } else if (deliveryMode === 'CUSTOM') {
-                        shippingDateText = '預計 ' + shippingDate.toLocaleDateString('zh-TW', options) + ' 送達';
-                    }
-
-                    shippingDateElement.textContent = shippingDateText;
                 } else {
+                    // 已截止
+                    countdownElement.style.color = '#dc3545'; // 紅色
                     countdownElement.textContent = '已截止';
-                    shippingDateElement.textContent = '請聯繫客服';
                 }
             }
         }
 
-        // 每秒更新倒计时
+        // 每秒更新倒計時
         setInterval(updateCountdown, 1000);
-        // 页面加载时立即执行
+
+        // 頁面加載時立即執行
         document.addEventListener('DOMContentLoaded', updateCountdown);
 
         // ==========================================
-        // 新增：配送日期選擇功能
-        // ==========================================
+        // 配送日期選擇功能
+        // ===========================================
 
         // 初始化日期選擇器
         function initDeliveryDateSelector() {
             const select = document.getElementById('deliveryDateSelect');
             if (!select) return;
 
-            // 清空現有選項（保留第一個）
+            // 清空現有選項（保留第一個提示選項）
             select.innerHTML = '<option value="">請選擇收貨日期</option>';
 
             const today = new Date();
             const deliveryMode = /*[[${deliveryMode}]]*/ 'NEXT_DAY';
 
-            // 只適用於 NEXT_DAY 模式
-            if (deliveryMode !== 'NEXT_DAY') {
-                select.disabled = true;
-                select.innerHTML = '<option value="">此配送方式不支援選擇日期</option>';
-                return;
-            }
+            // 【核心修改】檢查是否有後端傳來的特定日期列表
+            // 無論是哪種模式，只要後端傳了 availableDeliveryDates，就優先使用
+            const availableDates = /*[[${availableDeliveryDates}]]*/ null;
 
-            // 生成選項：明天（+1天）到 +7天
-            for (let daysLater = 1; daysLater <= 7; daysLater++) {
-                const deliveryDate = new Date(today);
-                deliveryDate.setDate(today.getDate() + daysLater);
+            if (availableDates && availableDates.length > 0) {
+                // 情況 A：使用後端生成的選項（適用於 SPECIFIC_DAYS 單日或多日，以及未來擴展的其他模式）
+                availableDates.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.date;       // YYYY-MM-DD
+                    option.textContent = item.displayText; // 例如：本週三 (10月25日) 或 本週三, 本週五
+                    select.appendChild(option);
+                });
 
-                // 格式化日期為 YYYY-MM-DD
-                const year = deliveryDate.getFullYear();
-                const month = String(deliveryDate.getMonth() + 1).padStart(2, '0');
-                const day = String(deliveryDate.getDate()).padStart(2, '0');
-                const dateString = `${year}-${month}-${day}`;
-
-                // 格式化顯示文字
-                const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-                const weekDay = weekDays[deliveryDate.getDay()];
-                const displayText = daysLater === 1 ? '明天' :
-                    daysLater === 2 ? '後天' :
-                        `${daysLater}天後`;
-
-                const option = document.createElement('option');
-                option.value = dateString;
-                option.textContent = `${displayText}（${dateString} ${weekDay}）`;
-
-                // 預設選擇明天
-                if (daysLater === 1) {
-                    option.selected = true;
+                // 預設選擇第一個選項
+                if (select.options.length > 1) {
+                    select.selectedIndex = 1;
                 }
 
-                select.appendChild(option);
+                // 啟用下拉選單
+                select.disabled = false;
+
+            } else if (deliveryMode === 'NEXT_DAY') {
+                // 情況 B：次日達模式（兜底邏輯），保持原有的明天+7天邏輯
+                for (let daysLater = 1; daysLater <= 7; daysLater++) {
+                    const deliveryDate = new Date(today);
+                    deliveryDate.setDate(today.getDate() + daysLater);
+
+                    const year = deliveryDate.getFullYear();
+                    const month = String(deliveryDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(deliveryDate.getDate()).padStart(2, '0');
+                    const dateString = `${year}-${month}-${day}`;
+
+                    const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                    const weekDay = weekDays[deliveryDate.getDay()];
+                    const displayText = daysLater === 1 ? '明天' :
+                        daysLater === 2 ? '後天' :
+                            `${daysLater}天後`;
+
+                    const option = document.createElement('option');
+                    option.value = dateString;
+                    option.textContent = `${displayText}（${dateString} ${weekDay}）`;
+
+                    // 預設選擇明天
+                    if (daysLater === 1) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                }
+                select.disabled = false;
+            } else {
+                // 情況 C：其他模式（如 CUSTOM 或 NONE），禁用或顯示提示
+                select.disabled = true;
+                select.innerHTML = '<option value="">此配送方式不支援選擇日期</option>';
             }
 
             // 觸發初始更新

@@ -3,6 +3,7 @@ package org.example.website.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -17,69 +18,82 @@ public class OfflineStore {
     private Long storeId;
 
     @Column(name = "store_code", nullable = false, unique = true, length = 50)
-    private String storeCode; // 唯一標識，如 "store-central" (結帳系統依賴此代碼)
+    private String storeCode;
 
     @Column(name = "name", nullable = false, length = 100)
-    private String name;      // 店鋪名稱
+    private String name;
 
     @Column(name = "address", nullable = false, length = 255)
-    private String address;   // 地址
+    private String address;
 
     @Column(name = "phone", length = 50)
-    private String phone;     // 電話
+    private String phone;
 
+    // ==========================================
+    // 【營業時間相關欄位】
+    // ==========================================
+
+    /**
+     * 營業時間設置模式
+     * "UNIFIED": 一周統一營業時間
+     * "DAILY": 每天分別設置營業時間
+     */
+    @Column(name = "schedule_mode", length = 20)
+    private String scheduleMode;
+
+    /**
+     * 統一營業時間
+     * 例如："10:00 AM - 06:00 PM"
+     */
     @Column(name = "hours", length = 100)
-    private String hours;     // 營業時間
+    private String hours;
+
+    /**
+     * 每天分別設置的營業時間
+     * 存儲為 JSON 格式字符串。
+     * 例如: {"1":{"start":"10:00 AM","end":"06:00 PM","closed":false}, "2":{"closed":true}, ...}
+     */
+    @Column(name = "daily_hours", columnDefinition = "TEXT")
+    private String dailyHours;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true; // 控制前台結帳時是否顯示該店鋪
 
-    /**
-     * 退貨預約最早提前天數
-     * 例如：設置為 3，表示用戶必須至少提前 3 天預約才能到店退貨。
-     * (若用戶 8月5日 申請，最早只能預約 8月8日 到店)
-     * 若為 null 或 0，則表示無限制或當天可預約。
-     */
+    // ==========================================
+    // 【暫停營業相關欄位】(通用)
+    // ==========================================
+    @Column(name = "closed_start_date")
+    private LocalDate closedStartDate;
+
+    @Column(name = "closed_end_date")
+    private LocalDate closedEndDate;
+
+    @Column(name = "closed_reason", length = 255)
+    private String closedReason;
+
+    // ==========================================
+    // 【退貨預約相關欄位】
+    // ==========================================
     @Column(name = "return_advance_days")
     private Integer returnAdvanceDays;
 
-    /**
-     * 暫停退貨的開始日期 (包含)
-     * 例如：2026-02-01 (農曆新年期間)
-     * 若為 null，表示沒有設置暫停退貨時段。
-     */
     @Column(name = "return_blackout_start_date")
     private LocalDate returnBlackoutStartDate;
 
-    /**
-     * 暫停退貨的結束日期 (包含)
-     * 例如：2026-02-15
-     * 若為 null，表示沒有設置暫停退貨時段。
-     */
     @Column(name = "return_blackout_end_date")
     private LocalDate returnBlackoutEndDate;
 
-    /**
-     * 暫停退貨的原因備註 (選填)
-     * 例如："農曆新年期間暫停退貨服務" 或 "店鋪年度盤點"
-     * 用於在前端提示用戶，提升用戶體驗。
-     */
     @Column(name = "return_blackout_reason", length = 255)
     private String returnBlackoutReason;
 
-    // ==========================================
-    // 【新增欄位】：每週固定不處理退貨的星期幾
-    // ==========================================
-    /**
-     * 每週固定不處理退貨的星期幾 (逗號分隔)
-     * 規則：1=週一, 2=週二, 3=週三, 4=週四, 5=週五, 6=週六, 7=週日 (與 Java DayOfWeek.getValue() 一致)
-     * 例如: "1,3,7" 表示週一、週三、週日不處理退貨。
-     * 若為 null 或空字符串，表示每週每天都可處理退貨。
-     */
     @Column(name = "return_closed_days_of_week", length = 20)
     private String returnClosedDaysOfWeek;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }

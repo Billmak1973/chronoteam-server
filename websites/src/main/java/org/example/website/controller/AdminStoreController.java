@@ -79,18 +79,13 @@ public class AdminStoreController {
     public ResponseEntity<?> getAllStores(
             @Parameter(description = "當前頁碼 (1-based)", example = "1")
             @RequestParam(defaultValue = "1") int page,
-
             @Parameter(description = "每頁顯示數量", example = "12")
             @RequestParam(defaultValue = "12") int size) {
 
-        // 將 1-based 頁碼轉換為 0-based 索引供 Spring Data JPA 使用
         int pageIndex = Math.max(0, page - 1);
-
-        // 1. 按創建時間倒序分頁查詢
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<OfflineStore> storesPage = storeRepository.findAll(pageable);
 
-        // 2. 數據清洗 (Data Cleaning)：將 Entity 轉換為 Map，避免 Jackson 序列化 Hibernate Proxy 導致報錯
         List<Map<String, Object>> cleanStores = storesPage.getContent().stream().map(store -> {
             Map<String, Object> map = new HashMap<>();
             map.put("storeId", store.getStoreId());
@@ -98,7 +93,17 @@ public class AdminStoreController {
             map.put("name", store.getName());
             map.put("address", store.getAddress());
             map.put("phone", store.getPhone());
+
+            // 營業時間相關字段
+            map.put("scheduleMode", store.getScheduleMode());
             map.put("hours", store.getHours());
+            map.put("dailyHours", store.getDailyHours());
+
+            // 暫停營業相關字段
+            map.put("closedStartDate", store.getClosedStartDate());
+            map.put("closedEndDate", store.getClosedEndDate());
+            map.put("closedReason", store.getClosedReason());
+
             map.put("isActive", store.getIsActive());
 
             // 退貨相關字段
@@ -112,10 +117,7 @@ public class AdminStoreController {
             return map;
         }).collect(Collectors.toList());
 
-        // 3. 使用 PaginationUtils 構建標準響應
         Map<String, Object> response = PaginationUtils.buildPageResponse(storesPage, cleanStores);
-
-        // 關鍵步驟：覆蓋 currentPage 為 1-based
         response.put("currentPage", page);
 
         return ResponseEntity.ok(response);
@@ -156,7 +158,7 @@ public class AdminStoreController {
      */
     @Operation(
             summary = "更新店鋪信息",
-            description = "管理員修改指定店鋪的詳細信息（包含退貨政策設置）。"
+            description = "管理員修改指定店鋪的詳細信息（包含營業時間與退貨政策設置）。"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "更新成功"),
@@ -168,7 +170,6 @@ public class AdminStoreController {
     public ResponseEntity<?> updateStore(
             @Parameter(description = "店鋪 ID", required = true, example = "1")
             @PathVariable Long id,
-
             @Parameter(description = "更新後的店鋪詳細信息", required = true)
             @RequestBody OfflineStore storeDetails,
             Authentication authentication) {
@@ -176,17 +177,30 @@ public class AdminStoreController {
         if (!isAdmin(authentication)) {
             return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員"));
         }
+
         OfflineStore store = storeRepository.findById(id).orElseThrow(() -> new RuntimeException("店鋪不存在"));
 
         if (!store.getStoreCode().equals(storeDetails.getStoreCode()) && storeRepository.existsByStoreCode(storeDetails.getStoreCode())) {
             return ResponseEntity.badRequest().body(Result.error("店鋪代碼已存在"));
         }
 
+        // 基礎信息
         store.setStoreCode(storeDetails.getStoreCode());
         store.setName(storeDetails.getName());
         store.setAddress(storeDetails.getAddress());
         store.setPhone(storeDetails.getPhone());
+
+        // 【新增】營業時間相關欄位映射
+        store.setScheduleMode(storeDetails.getScheduleMode());
         store.setHours(storeDetails.getHours());
+        store.setDailyHours(storeDetails.getDailyHours());
+
+        // 【新增】暫停營業相關欄位映射
+        store.setClosedStartDate(storeDetails.getClosedStartDate());
+        store.setClosedEndDate(storeDetails.getClosedEndDate());
+        store.setClosedReason(storeDetails.getClosedReason());
+
+        // 退貨相關欄位
         store.setReturnAdvanceDays(storeDetails.getReturnAdvanceDays());
         store.setReturnBlackoutStartDate(storeDetails.getReturnBlackoutStartDate());
         store.setReturnBlackoutEndDate(storeDetails.getReturnBlackoutEndDate());
