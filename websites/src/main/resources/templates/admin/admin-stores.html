@@ -1577,6 +1577,24 @@
       const closedEndDate = document.getElementById(isUnified ? 'unifiedClosedEndDate' : 'dailyClosedEndDate').value || null;
       const closedReason = document.getElementById(isUnified ? 'unifiedClosedReason' : 'dailyClosedReason').value.trim() || null;
 
+      if(closedStartDate && closedEndDate){
+        if(closedStartDate>closedEndDate){
+          showNotification('❌ 暫停營業的開始日期不得晚於結束日期', true);
+          return;
+        }
+      }
+
+      // 驗證暫停退貨日期範圍
+      const returnBlackoutStartDate = document.getElementById('returnBlackoutStartDate').value || null;
+      const returnBlackoutEndDate = document.getElementById('returnBlackoutEndDate').value || null;
+
+      if (returnBlackoutStartDate && returnBlackoutEndDate) {
+        if (returnBlackoutStartDate > returnBlackoutEndDate) {
+          showNotification('❌ 暫停退貨的開始日期不得晚於結束日期', true);
+          return;
+        }
+      }
+
       const id = document.getElementById('storeId').value;
 
       const payload = {

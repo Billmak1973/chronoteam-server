@@ -31,6 +31,11 @@ public class Product {
     @Column(name = "prod_image", length = 255)
     private String image = "watch1.png";
 
+    /**
+     * 【重要修改】：此字段現在僅代表「線上總倉」的可用庫存。
+     * 線下門店的庫存請查詢 store_inventory 表。
+     * 默認為 100
+     */
     @Column(name = "stock_quantity")
     private Integer stock = 100;
 

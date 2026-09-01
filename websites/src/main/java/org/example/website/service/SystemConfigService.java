@@ -57,6 +57,22 @@ public class SystemConfigService {
                 .orElse(null); // 數據庫中找不到該配置時也返回 null
     }
 
+    /**
+     * 獲取線下付款/取貨保留天數
+     * @return 若無配置，則默認返回 3 天
+     */
+    public Integer getOfflinePaymentDays() {
+        return repository.findById("OFFLINE_PAYMENT_DAYS")
+                .map(c -> {
+                    try {
+                        return Integer.parseInt(c.getConfigValue());
+                    } catch (NumberFormatException e) {
+                        return 3;
+                    }
+                })
+                .orElse(3); // 默認 3 天
+    }
+
     // 批量更新配置 (供管理員後台調用)
     public void updateConfigs(Map<String, String> configs) {
         configs.forEach((key, value) -> {

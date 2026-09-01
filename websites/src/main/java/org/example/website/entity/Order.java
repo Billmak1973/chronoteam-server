@@ -97,6 +97,10 @@ public class Order {
     private java.time.LocalDate estimatedDeliveryDate;
 
 
+    /** 預約到店取貨/付費日期 (針對門店自取) */
+    @Column(name = "appointment_date")
+    private java.time.LocalDate appointmentDate;
+
     // ================= 8. 用戶界面可見性 (新增) =================
     /**
      * 訂單在用戶端是否可見 (用於取消/退貨訂單的「軟刪除」/隱藏)

@@ -25,6 +25,7 @@ public class AdminConfigController {
     private static final String KEY_DELIVERY_CUSTOM_DAYS = "config:delivery:custom_days";
     private static final String KEY_RETURN_DAYS = "config:return:days";
     private static final String KEY_EXCHANGE_DAYS = "config:exchange:days";
+    private static final String KEY_OFFLINE_PAYMENT_DAYS = "config:return:offline_payment_days";
 
     // 【新增】全局截单时间与偏移量
     private static final String KEY_GLOBAL_CUTOFF_TIME = "config:delivery:global_cutoff_time";
@@ -138,16 +139,35 @@ public class AdminConfigController {
             return ResponseEntity.status(403).body(errorResp);
         }
 
+        // 1. 保存到 Redis
         if (configs.containsKey("RETURN_DAYS")) {
             redisTemplate.opsForValue().set(KEY_RETURN_DAYS, configs.get("RETURN_DAYS"));
         }
         if (configs.containsKey("EXCHANGE_DAYS")) {
             redisTemplate.opsForValue().set(KEY_EXCHANGE_DAYS, configs.get("EXCHANGE_DAYS"));
         }
+        if (configs.containsKey("OFFLINE_PAYMENT_DAYS")) {
+            redisTemplate.opsForValue().set(KEY_OFFLINE_PAYMENT_DAYS, configs.get("OFFLINE_PAYMENT_DAYS"));
+        }
+
+        // 2. 【核心修復】同時保存到數據庫，防止重啟後配置丟失
+        Map<String, String> dbConfigs = new HashMap<>();
+        if (configs.containsKey("RETURN_DAYS")) {
+            dbConfigs.put("RETURN_DAYS", configs.get("RETURN_DAYS"));
+        }
+        if (configs.containsKey("EXCHANGE_DAYS")) {
+            dbConfigs.put("EXCHANGE_DAYS", configs.get("EXCHANGE_DAYS"));
+        }
+        if (configs.containsKey("OFFLINE_PAYMENT_DAYS")) {
+            dbConfigs.put("OFFLINE_PAYMENT_DAYS", configs.get("OFFLINE_PAYMENT_DAYS"));
+        }
+
+        // 調用 Service 批量保存到數據庫
+        systemConfigService.updateConfigs(dbConfigs);
 
         Map<String, Object> successResp = new HashMap<>();
         successResp.put("success", true);
-        successResp.put("message", "退換貨政策已更新，將立即生效！");
+        successResp.put("message", "退換貨及線下取貨政策已更新，將立即生效！");
 
         return ResponseEntity.ok(successResp);
     }
@@ -176,6 +196,9 @@ public class AdminConfigController {
 
         String exchangeDays = redisTemplate.opsForValue().get(KEY_EXCHANGE_DAYS);
         configs.put("EXCHANGE_DAYS", exchangeDays != null ? exchangeDays : "0");
+
+        String offlinePaymentDays = redisTemplate.opsForValue().get(KEY_OFFLINE_PAYMENT_DAYS);
+        configs.put("OFFLINE_PAYMENT_DAYS", offlinePaymentDays != null ? offlinePaymentDays : "3");
 
         // 【新增】获取全局截单时间与偏移量
         String globalCutoffTime = redisTemplate.opsForValue().get(KEY_GLOBAL_CUTOFF_TIME);

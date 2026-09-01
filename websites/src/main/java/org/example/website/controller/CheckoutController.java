@@ -63,6 +63,7 @@ public class CheckoutController {
         model.addAttribute("orderItems", orderItems);
         model.addAttribute("shippingFee", systemConfigService.getShippingFee());
         model.addAttribute("freeShippingThreshold", systemConfigService.getFreeShippingThreshold());
+        model.addAttribute("offlinePaymentDays",systemConfigService.getOfflinePaymentDays());
 
         List<OfflineStore> activeStores = offlineStoreRepository.findByIsActiveTrue();
         model.addAttribute("activeStores", activeStores);
@@ -518,8 +519,17 @@ public class CheckoutController {
                 customerSelectedDeliveryDate = LocalDate.parse(payload.get("deliveryDate").toString());
             }
 
+            LocalDate appointmentDate = null;
+            if (payload.containsKey("appointmentDate") && payload.get("appointmentDate") != null) {
+                try {
+                    appointmentDate = LocalDate.parse(payload.get("appointmentDate").toString());
+                } catch (Exception e) {
+                    return ResponseEntity.badRequest().body(Result.error("預約取貨日期格式不正確，請使用 yyyy-MM-dd 格式"));
+                }
+            }
+
             // 將 storeId 作為第 5 個參數傳遞給 Service 層
-            Order order = orderService.simulatePayment(orderNo, authentication.getName(), payAmount, deliveryMethod, storeId,customerSelectedDeliveryDate);
+            Order order = orderService.simulatePayment(orderNo, authentication.getName(), payAmount, deliveryMethod, storeId,customerSelectedDeliveryDate,appointmentDate);
 
             return ResponseEntity.ok(Result.okWithData("支付成功", order.getOrderNo()));
         } catch (Exception e) {
@@ -580,8 +590,16 @@ public class CheckoutController {
             // 從 payload 中提取配送方式（線下支付時也可能有配送方式選擇）
             String deliveryMethod = payload.containsKey("deliveryMethod") ? (String) payload.get("deliveryMethod") : "STORE_PICKUP";
 
+            LocalDate appointmentDate=null;
+            if (payload.containsKey("appointmentDate") && payload.get("appointmentDate") != null) {
+                try{
+                    appointmentDate=LocalDate.parse(payload.get("appointmentDate").toString());
+                }catch (Exception e){
+                    return ResponseEntity.badRequest().body(Result.error("預約取貨日期格式不正確，請使用 yyyy-MM-dd 格式"));
+                }
+            }
             // 核心：調用 Service 層處理業務與數據庫操作
-            Order order = orderService.processOfflinePayment(orderNo, authentication.getName(), storeId, deliveryMethod);
+            Order order = orderService.processOfflinePayment(orderNo, authentication.getName(), storeId, deliveryMethod,appointmentDate);
 
             // 構建返回數據
             Map<String, Object> data = new HashMap<>();

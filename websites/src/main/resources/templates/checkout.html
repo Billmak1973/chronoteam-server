@@ -800,7 +800,7 @@
             }
         }
 
-        /* === 🟢 未選擇店鋪警告彈窗樣式 === */
+        /* === 未選擇店鋪警告彈窗樣式 === */
         .alert-modal-overlay {
             position: fixed;
             top: 0;
@@ -1609,16 +1609,40 @@
 
                 <select id="storeSelect" name="storeId" onchange="updateStoreInfo()">
                     <option value="">請選擇店鋪</option>
-                    <!-- 將 th:value 改為 store.storeId，這樣前端傳給後端的就是數字 ID (如 "1", "2") -->
-                    <option th:each="store : ${activeStores}" th:value="${store.storeId}" th:data-name="${store.name}"
-                        th:data-address="${store.address}" th:data-phone="${store.phone}" th:data-hours="${store.hours}"
-                        th:text="${store.name + ' - ' + store.address}">
+                    <option th:each="store : ${activeStores}"
+                            th:value="${store.storeId}"
+                            th:data-name="${store.name}"
+                            th:data-address="${store.address}"
+                            th:data-phone="${store.phone}"
+                            th:data-hours="${store.hours}"
+                            th:data-schedule-mode="${store.scheduleMode}"
+                            th:data-daily-hours="${store.dailyHours}"
+                            th:data-closed-start-date="${store.closedStartDate}"
+                            th:data-closed-end-date="${store.closedEndDate}"
+                            th:data-closed-reason="${store.closedReason}"
+                            th:text="${store.name + ' - ' + store.address}">
                     </option>
                 </select>
 
                 <div id="storeInfo" class="store-info" style="display: none;">
                     <strong><i class="fas fa-info-circle"></i> 重要提示：</strong>
                     <ul id="storeInfoList"></ul>
+
+                    <!-- 新增：取貨日期選擇區域 -->
+                    <div id="pickupDateSelection" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed rgba(133, 100, 4, 0.3);">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #856404;">
+                            <i class="fas fa-calendar-alt" style="margin-right: 0.3rem;"></i> 選擇取貨日期：
+                        </label>
+                        <select id="pickupDateSelect" onchange="updatePickupDate()"
+                                style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px; font-size: 0.9rem; cursor: pointer;">
+                            <option value="">請選擇取貨日期</option>
+                            <!-- JavaScript 會動態填充可用日期 -->
+                        </select>
+                        <div id="pickupDateInfo" style="margin-top: 0.5rem; font-size: 0.85rem; color: #856404; display: none;">
+                            <i class="fas fa-info-circle" style="margin-right: 0.3rem;"></i>
+                            預計取貨：<span id="selectedPickupDate" style="font-weight: 600;"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1858,6 +1882,7 @@
         //  接收後端傳來的動態配置
         const baseShippingFee = [[${shippingFee}]];
         const freeShippingThreshold = [[${freeShippingThreshold}]];
+        const offlinePaymentDays = /*[[${offlinePaymentDays}]]*/ 7;
 
         // ==========================================
         // 0. 命名空間初始化
@@ -2519,7 +2544,7 @@
             updateTotal();
         }
 
-        //  重寫：從 <option> 的 data-* 屬性動態讀取店鋪信息
+        // 重寫：從 <option> 的 data-* 屬性動態讀取店鋪信息，並智能解析營業時間
         function updateStoreInfo() {
             const select = document.getElementById('storeSelect');
             const selectedOption = select.options[select.selectedIndex];
@@ -2536,26 +2561,125 @@
             const name = selectedOption.getAttribute('data-name') || '';
             const address = selectedOption.getAttribute('data-address') || '';
             const phone = selectedOption.getAttribute('data-phone') || '未提供';
-            const hours = selectedOption.getAttribute('data-hours') || '未提供';
+            const scheduleMode = selectedOption.getAttribute('data-schedule-mode') || 'UNIFIED';
+            const unifiedHours = selectedOption.getAttribute('data-hours') || '未提供';
+            const dailyHoursJson = selectedOption.getAttribute('data-daily-hours') || '{}';
+
+            // 【新增】讀取暫停營業數據 (防禦性處理 Thymeleaf 渲染出的 "null" 字符串)
+            const closedStartDateStr = selectedOption.getAttribute('data-closed-start-date');
+            const closedEndDateStr = selectedOption.getAttribute('data-closed-end-date');
+            const closedReason = selectedOption.getAttribute('data-closed-reason');
+
+            // ==========================================
+            // 核心邏輯：處理營業時間顯示
+            // ==========================================
+            let hoursDisplay = '';
+
+            if (scheduleMode === 'UNIFIED') {
+                hoursDisplay = unifiedHours;
+            } else if (scheduleMode === 'DAILY') {
+                try {
+                    const dailyHours = JSON.parse(dailyHoursJson);
+                    const weekDays = {
+                        1: '星期一', 2: '星期二', 3: '星期三',
+                        4: '星期四', 5: '星期五', 6: '星期六', 7: '星期日'
+                    };
+
+                    const hoursList = [];
+                    for (let i = 1; i <= 7; i++) {
+                        const dayData = dailyHours[i];
+                        const dayName = weekDays[i];
+
+                        if (dayData) {
+                            if (dayData.closed) {
+                                hoursList.push(`<span style="display:inline-block; min-width: 70px;">${dayName}</span>：<span style="color: #dc3545;">休息</span>`);
+                            } else {
+                                hoursList.push(`<span style="display:inline-block; min-width: 70px;">${dayName}</span>：${dayData.start} - ${dayData.end}`);
+                            }
+                        } else {
+                            hoursList.push(`<span style="display:inline-block; min-width: 70px;">${dayName}</span>：未設置`);
+                        }
+                    }
+                    hoursDisplay = hoursList.join('<br>');
+                } catch (e) {
+                    console.error('解析每日營業時間 JSON 失敗:', e);
+                    hoursDisplay = '營業時間數據格式錯誤';
+                }
+            } else {
+                hoursDisplay = unifiedHours || '未提供';
+            }
+
+            // ==========================================
+            // 【新增】核心邏輯：處理暫停營業通知
+            // ==========================================
+            let suspensionHtml = '';
+            const hasStart = closedStartDateStr && closedStartDateStr !== 'null';
+            const hasEnd = closedEndDateStr && closedEndDateStr !== 'null';
+            const hasReason = closedReason && closedReason !== 'null';
+
+            if (hasStart && hasEnd) {
+                const startDate = new Date(closedStartDateStr);
+                const endDate = new Date(closedEndDateStr);
+                const today = new Date();
+
+                // 清除時間部分，確保只比較「年月日」
+                today.setHours(0, 0, 0, 0);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(23, 59, 59, 999); // 結束日期包含整天
+
+                // 判斷今天是否在暫停營業期間，且日期格式正確
+                if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime()) && today >= startDate && today <= endDate) {
+                    const formatDate = (date) => {
+                        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    };
+
+                    // 生成醒目的黃色警告框
+                    suspensionHtml = `
+                <li style="margin-top: 0.8rem; padding: 0.8rem; background-color: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; color: #856404; list-style-type: none;">
+                    <strong style="display: block; margin-bottom: 0.4rem; color: #d9534f; font-size: 1rem;"><i class="fas fa-exclamation-triangle" style="margin-right: 0.3rem;"></i> 暫停營業通知</strong>
+                    <div style="font-size: 0.9rem; line-height: 1.5;">
+                        <div><strong>暫停期間：</strong>${formatDate(startDate)} 至 ${formatDate(endDate)}</div>
+                        ${hasReason ? `<div style="margin-top: 0.3rem;"><strong>暫停原因：</strong>${closedReason}</div>` : ''}
+                        <div style="margin-top: 0.4rem; font-weight: 600; color: #d9534f;">* 暫停營業期間無法到店取貨或支付，請務必留意時間！</div>
+                    </div>
+                </li>
+            `;
+                }
+            }
 
             // 通用注意事項（所有店鋪共用）
             const tips = [
                 '訂單確認後，請前往選定店鋪支付',
-                '店鋪保留訂單 7 天，逾期自動取消',
+                `店鋪保留訂單 <span style="color: #007bff; font-weight: bold;">${offlinePaymentDays}</span> 天，逾期自動取消`,
                 '支付完成後，店員會即時更新訂單狀態',
                 '請出示訂單編號給店員'
             ];
 
+            // 渲染到 DOM
             storeInfoList.innerHTML = `
         <li><strong>店鋪：</strong>${name}</li>
         <li><strong>地址：</strong>${address}</li>
         <li><strong>電話：</strong>${phone}</li>
-        <li><strong>營業時間：</strong>${hours}</li>
-        <li style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(133, 100, 4, 0.3);">
+        <li>
+            <strong>營業時間：</strong>
+            <span style="font-size: 0.9rem; line-height: 1.6; color: #555; margin-top: 0.3rem; display: block;">
+                ${hoursDisplay}
+            </span>
+        </li>
+        ${suspensionHtml} <!-- 【新增】插入暫停營業信息 -->
+        <li style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid rgba(133, 100, 4, 0.3);">
             <strong>注意事項：</strong>
-            <ul style="margin-top: 0.3rem;">${tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
+            <ul style="margin-top: 0.3rem; padding-left: 1.2rem; font-size: 0.9rem; color: #666;">
+                ${tips.map(tip => `<li style="margin-bottom: 0.2rem;">${tip}</li>`).join('')}
+            </ul>
         </li>`;
+
             storeInfo.style.display = 'block';
+
+            // 在顯示店鋪信息後，重新初始化日期選擇器
+            setTimeout(() => {
+                initPickupDateSelector();
+            }, 100);
         }
 
         // ==========================================
@@ -2595,7 +2719,7 @@
             const storeSelect = document.getElementById('storeSelect');
             const storeId = storeSelect ? storeSelect.value : '';
             const selectedDeliveryDate = document.getElementById('deliveryDateSelect') ? document.getElementById('deliveryDateSelect').value : null;
-
+            const selectedPickupDate = document.getElementById('pickupDateSelect') ? document.getElementById('pickupDateSelect').value : null;
             // 獲取當前選擇的配送方式
             const deliveryMethodRadio = document.querySelector('input[name="deliveryMethod"]:checked');
             const deliveryMethod = deliveryMethodRadio ? deliveryMethodRadio.value : 'STORE_PICKUP';
@@ -2637,7 +2761,8 @@
                             amount: amount,
                             deliveryMethod: deliveryMethod, // 傳遞配送方式給後端
                             storeId: deliveryMethod === 'STORE_PICKUP' ? storeId : null, // 如果是快遞，不傳 storeId
-                            deliveryDate: selectedDeliveryDate // 【關鍵】傳遞選中的日期給後端
+                            deliveryDate: selectedDeliveryDate, //傳遞選中的日期給後端
+                            appointmentDate: deliveryMethod === 'STORE_PICKUP' ? selectedPickupDate : null//如果是門店自取，則傳遞預約取貨日期
                         })
                     });
                     const result = await response.json();
@@ -2661,7 +2786,8 @@
                         body: JSON.stringify({
                             orderNo: orderNo,
                             storeId: storeId,
-                            deliveryMethod: 'STORE_PICKUP' // 線下支付默認為門店自取
+                            deliveryMethod: 'STORE_PICKUP', // 線下支付默認為門店自取
+                            appointmentDate: selectedPickupDate // 傳遞預約取貨日期給後端
                         })
                     });
                     const result = await response.json();
@@ -2931,6 +3057,9 @@
                     toggleDeliveryMethod();
                 }
             }
+
+            // 初始化取貨日期選擇器
+            initPickupDateSelector();
         });
 
         // 点击遮罩层关闭确认框 (包含取消全選 和 取消訂單)
@@ -2986,7 +3115,7 @@
         // 9. 发货截止时间倒计时
         // ==========================================
         function updateCountdown() {
-            // 1. 獲取後端傳來的數據 (來自代碼片段 2)
+            // 1. 獲取後端傳來的數據
             const cutoffDateTimeStr = /*[[${cutoffDateTime}]]*/ '';
             const estimatedDeliveryDateStr = /*[[${estimatedDeliveryDate}]]*/ '';
 
@@ -2996,20 +3125,20 @@
             const now = new Date();
             const diff = cutoffDateTime - now;
 
-            // 2. 獲取 DOM 元素 (合併代碼片段 1 和 2)
+            // 2. 獲取 DOM 元素
             const countdownElement = document.getElementById('cutoffCountdown');
             const shippingDateElement = document.getElementById('shippingDate');
 
-            // 【新增】獲取前面的標籤元素 (來自代碼片段 1)
+            // 獲取前面的標籤元素
             const shippingLabelElement = document.getElementById('shippingLabel');
 
-            // 獲取下拉選單 (來自代碼片段 2)
+            // 獲取下拉選單
             const select = document.getElementById('deliveryDateSelect');
 
             if (countdownElement && shippingDateElement) {
 
                 // ==========================================
-                // 3. 核心修復：根據是否截止，修改前面的標籤 (來自代碼片段 1)
+                // 3. 核心修復：根據是否截止，修改前面的標籤
                 // ==========================================
                 if (shippingLabelElement) {
                     if (diff <= 0) {
@@ -3300,6 +3429,144 @@
                     style.remove();
                 }, 300);
             }, 2000);
+        }
+
+        // 初始化取貨日期選擇器
+        function initPickupDateSelector() {
+            const select = document.getElementById('pickupDateSelect');
+            if (!select) return;
+
+            // 清空現有選項
+            select.innerHTML = '<option value="">請選擇取貨日期</option>';
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // 清除時間部分，只保留日期
+
+            // 【核心修復】獲取店鋪暫停營業日期
+            const storeSelect = document.getElementById('storeSelect');
+            let closedStartDate = null;
+            let closedEndDate = null;
+
+            if (storeSelect && storeSelect.value) {
+                const selectedOption = storeSelect.options[storeSelect.selectedIndex];
+                const closedStartDateStr = selectedOption.getAttribute('data-closed-start-date');
+                const closedEndDateStr = selectedOption.getAttribute('data-closed-end-date');
+
+                // 解析暫停營業開始日期
+                if (closedStartDateStr && closedStartDateStr !== 'null') {
+                    closedStartDate = new Date(closedStartDateStr);
+                    closedStartDate.setHours(0, 0, 0, 0);
+                }
+
+                // 解析暫停營業結束日期
+                if (closedEndDateStr && closedEndDateStr !== 'null') {
+                    closedEndDate = new Date(closedEndDateStr);
+                    closedEndDate.setHours(23, 59, 59, 999); // 包含結束日期的整天
+                }
+            }
+
+            const storeClosedDays = getStoreClosedDays(); // 需要從店鋪數據獲取
+
+            // 【核心修復】使用後端傳來的 offlinePaymentDays 變量
+            const maxDays = offlinePaymentDays || 7; // 如果後端沒傳，默認 7 天
+
+            // 生成未來 offlinePaymentDays 天的可用日期
+            for (let daysLater = 0; daysLater <= maxDays; daysLater++) {
+                const pickupDate = new Date(today);
+                pickupDate.setDate(today.getDate() + daysLater);
+                pickupDate.setHours(0, 0, 0, 0); // 清除時間部分
+
+                // 【核心修復】檢查是否在暫停營業期間
+                if (closedStartDate && closedEndDate) {
+                    if (pickupDate >= closedStartDate && pickupDate <= closedEndDate) {
+                        continue; // 跳過暫停營業期間的日期
+                    }
+                }
+
+                // 檢查是否為店鋪休息日
+                const dayOfWeek = pickupDate.getDay(); // 0=星期日, 6=星期六
+                if (storeClosedDays && storeClosedDays.includes(dayOfWeek)) {
+                    continue; // 跳過休息日
+                }
+
+                const year = pickupDate.getFullYear();
+                const month = String(pickupDate.getMonth() + 1).padStart(2, '0');
+                const day = String(pickupDate.getDate()).padStart(2, '0');
+                const dateString = `${year}-${month}-${day}`;
+
+                const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                const weekDay = weekDays[pickupDate.getDay()];
+
+                const displayText = daysLater === 1 ? '明天' :
+                    daysLater === 2 ? '後天' :
+                        `${weekDay}（${month}/${day}）`;
+
+                const option = document.createElement('option');
+                option.value = dateString;
+                option.textContent = displayText;
+
+                // 預設選擇第一個可用日期
+                if (select.options.length === 1) { // 第一個可用日期（排除提示選項）
+                    option.selected = true;
+                }
+
+                select.appendChild(option);
+            }
+
+            // 觸發初始更新
+            updatePickupDate();
+        }
+
+        // 更新取貨日期顯示
+        function updatePickupDate() {
+            const select = document.getElementById('pickupDateSelect');
+            const infoDiv = document.getElementById('pickupDateInfo');
+            const dateDisplay = document.getElementById('selectedPickupDate');
+
+            if (!select || !select.value) {
+                if (infoDiv) infoDiv.style.display = 'none';
+                return;
+            }
+
+            // 顯示選中的日期
+            const selectedDate = new Date(select.value + 'T00:00:00');
+            const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+            const weekDay = weekDays[selectedDate.getDay()];
+            const formattedDate = `${selectedDate.getFullYear()}年${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日（${weekDay}）`;
+
+            if (dateDisplay) {
+                dateDisplay.textContent = formattedDate;
+            }
+            if (infoDiv) {
+                infoDiv.style.display = 'block';
+            }
+        }
+
+        // 獲取店鋪休息日（需要從後端傳遞或從店鋪數據解析）
+        function getStoreClosedDays() {
+            // 這個函數需要根據實際店鋪的營業時間數據來實現
+            // 例如：如果店鋪每週二和週日休息，返回 [0, 2]
+            const select = document.getElementById('storeSelect');
+            if (!select || !select.value) return [];
+
+            const selectedOption = select.options[select.selectedIndex];
+            const dailyHoursJson = selectedOption.getAttribute('data-daily-hours') || '{}';
+
+            try {
+                const dailyHours = JSON.parse(dailyHoursJson);
+                const closedDays = [];
+
+                for (let day = 1; day <= 7; day++) {
+                    if (dailyHours[day] && dailyHours[day].closed) {
+                        closedDays.push(day === 7 ? 0 : day); // 將週日從 7 轉為 0
+                    }
+                }
+
+                return closedDays;
+            } catch (e) {
+                console.error('解析店鋪休息日失敗:', e);
+                return [];
+            }
         }
 
         // 点击遮罩层关闭弹窗

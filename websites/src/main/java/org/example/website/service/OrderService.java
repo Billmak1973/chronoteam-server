@@ -103,7 +103,7 @@ public class OrderService {
      */
     @Transactional
     public Order simulatePayment(String orderNo, String username, BigDecimal payAmount,
-                                 String deliveryMethod, Long storeId, LocalDate customerSelectedDeliveryDate) {
+                                 String deliveryMethod, Long storeId, LocalDate customerSelectedDeliveryDate,LocalDate appointmentDate) {
         // 1. 查詢訂單並校驗權限
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
@@ -127,6 +127,15 @@ public class OrderService {
             realTotal = realTotal.add(realShippingFee);
         }
 
+//        System.out.println("====== 支付金额校验失败调试 ======");
+//        System.out.println("1. 前端传来的金额 (payAmount): " + payAmount);
+//        System.out.println("2. 订单原始商品总额 (realSubtotal): " + realSubtotal);
+//        System.out.println("3. 当前数据库配置的运费: " + realShippingFee);
+//        System.out.println("4. 当前数据库配置的免邮门槛: " + realThreshold);
+//        System.out.println("5. 前端传来的配送方式: " + deliveryMethod);
+//        System.out.println("6. 后端最终计算总额 (realTotal): " + realTotal);
+//        System.out.println("================================");
+
         // 5. 核心安全校驗：比對前端傳來的金額與後端計算的真實總價是否一致
         if (payAmount.compareTo(realTotal) != 0) {
             throw new RuntimeException("安全警告：訂單金額與後端計算不符，可能存在篡改行為！");
@@ -145,6 +154,10 @@ public class OrderService {
             OfflineStore store = offlineStoreRepository.findById(storeId)
                     .orElseThrow(() -> new RuntimeException("門店不存在"));
             order.setOfflineStore(store);
+
+            if (appointmentDate != null) {
+                order.setAppointmentDate(appointmentDate);
+            }
         }
 
         // 8. 【核心修正】設置預計送達日期 (如果顧客選擇了快遞且指定了日期)
@@ -206,7 +219,7 @@ public class OrderService {
      * 4. 處理線下支付邏輯 (確認線下支付訂單後扣減庫存)
      */
     @Transactional
-    public Order processOfflinePayment(String orderNo, String username, Long storeId,String deliveryMethod) {
+    public Order processOfflinePayment(String orderNo, String username, Long storeId,String deliveryMethod,LocalDate appointmentDate) {
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
 
@@ -224,7 +237,9 @@ public class OrderService {
         order.setDeliveryMethod("STORE_PICKUP");
         order.setDelivery(false); // 線下支付=門店自取，delivery=false
 
-        // 設置發貨截止時間（當前時間 + 7天）
+        if(appointmentDate != null) {
+            order.setAppointmentDate(appointmentDate);
+        }
         order.setDeadlineAt(LocalDateTime.now());
 
         Order savedOrder = orderRepository.save(order);

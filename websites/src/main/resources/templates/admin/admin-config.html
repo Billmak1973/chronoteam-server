@@ -396,7 +396,7 @@
                                 <i class="fas fa-truck-fast"></i> 物流与运费
                             </button>
                             <button class="config-tab" onclick="switchConfigTab('return', this)">
-                                <i class="fas fa-undo"></i> 退换货政策
+                                <i class="fas fa-undo"></i> 貨物政策
                             </button>
                             <button class="config-tab" onclick="switchConfigTab('notification', this)">
                                 <i class="fas fa-bell"></i> 通知文字设置
@@ -540,6 +540,12 @@
                                         class="form-input" placeholder="例如：14">
                                     <small class="form-hint"><i class="fas fa-info-circle"></i> 顾客收货后可无条件申请换货的天数（0
                                         表示不支持换货）。</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="offlinePaymentDays"><i class="fas fa-store"></i> 線下付款/取貨保留天數</label>
+                                    <input type="number" id="offlinePaymentDays" step="1" min="1" max="30" required
+                                           class="form-input" placeholder="例如：3">
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i> 顧客選擇「線下付款/門店自取」後，訂單保留的最長天數。逾期系統將自動取消訂單並恢復庫存。</small>
                                 </div>
                                 <button type="submit" class="btn-save-config" id="saveReturnBtn"><i
                                         class="fas fa-save"></i> 保存退换货设置</button>
@@ -926,6 +932,7 @@
 
                     if (configs.RETURN_DAYS !== undefined) document.getElementById('returnDays').value = configs.RETURN_DAYS;
                     if (configs.EXCHANGE_DAYS !== undefined) document.getElementById('exchangeDays').value = configs.EXCHANGE_DAYS;
+                    if (configs.OFFLINE_PAYMENT_DAYS !== undefined) document.getElementById('offlinePaymentDays').value = configs.OFFLINE_PAYMENT_DAYS; // 【新增】
                 }
             } catch (error) {console.warn('加載當前配置失敗:', error);}
         }
@@ -1033,7 +1040,9 @@
 
         async function saveReturnConfig(e) {
             e.preventDefault();
-            const data = {"RETURN_DAYS": document.getElementById('returnDays').value, "EXCHANGE_DAYS": document.getElementById('exchangeDays').value};
+            const data = {"RETURN_DAYS": document.getElementById('returnDays').value,
+                "EXCHANGE_DAYS": document.getElementById('exchangeDays').value,
+                "OFFLINE_PAYMENT_DAYS": document.getElementById('offlinePaymentDays').value};
             await saveConfig('/api/admin/config/update-return-policy', data, 'saveReturnBtn', '退换货政策已成功保存！');
         }
 
