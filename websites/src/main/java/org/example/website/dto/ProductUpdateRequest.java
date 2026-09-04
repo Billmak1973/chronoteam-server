@@ -21,4 +21,5 @@ public class ProductUpdateRequest {
     private Boolean conditionVisible;
     private WatchCondition condition;
     private Integer homeDisplayOrder;
+    private String stockChangeReason;
 }

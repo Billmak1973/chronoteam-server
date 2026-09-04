@@ -3,6 +3,8 @@ package org.example.website.repository;
 import org.example.website.entity.OfflineStore;
 import org.example.website.entity.Product;
 import org.example.website.entity.StoreInventory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -39,4 +41,9 @@ public interface StoreInventoryRepository extends JpaRepository<StoreInventory, 
     int deductStoreStock(@Param("storeId") Long storeId,
                          @Param("productId") Integer productId,
                          @Param("deductQty") Integer deductQty);
+
+    Optional<StoreInventory> findByStore_StoreIdAndProduct_ProductId(Long storeId, Integer productId);
+
+    Page<StoreInventory> findByStore_StoreId(Long storeId, Pageable pageable);
+
 }

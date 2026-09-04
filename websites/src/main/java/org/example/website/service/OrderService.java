@@ -28,7 +28,7 @@ public class OrderService {
     private final QuarterlySalesReportRepository quarterlySalesReportRepository;
     private final DailyBusinessReportRepository dailyBusinessReportRepository;
     private final OfflineStoreRepository offlineStoreRepository;
-
+    private final StoreInventoryRepository storeInventoryRepository;
 
     /**
      * 1. 創建訂單 (移除庫存扣減，僅校驗庫存是否充足)
@@ -83,18 +83,43 @@ public class OrderService {
     }
 
     /**
-     * 統一的庫存扣減方法 (防止代碼重複，並加入支付時的二次校驗防超賣)
+     * 線上訂單支付成功後的庫存扣減 (扣減線上總倉)
      */
-    private void deductStock(Order order) {
+    private void deductOnlineStock(Order order) {
         for (OrderItem item : order.getItems()) {
             Product product = item.getProduct();
-            //  關鍵防護：支付時再次校驗庫存，防止並發情況下創建訂單後、支付前庫存被他人買走
-            if (product.getStock() < item.getQuantity()) {
-                throw new RuntimeException("支付失敗：商品 [" + product.getDescription() + "] 庫存不足，可能已被他人搶購，請取消訂單重試。");
+            int qty = item.getQuantity();
+
+            // 二次校驗防超賣
+            if (product.getStock() < qty) {
+                throw new RuntimeException("支付失敗：線上商品 [" + product.getDescription() + "] 庫存不足！");
             }
-            // 真正執行扣減
-            product.setStock(product.getStock() - item.getQuantity());
+
+            // 扣減線上庫存
+            product.setStock(product.getStock() - qty);
             productRepository.save(product);
+        }
+    }
+
+    /**
+     * 線下門店訂單確認後的庫存扣減 (扣減特定門店)
+     */
+    private void deductOfflineStock(Order order) {
+        OfflineStore store = order.getOfflineStore();
+        if (store == null) {
+            throw new RuntimeException("線下訂單未關聯門店，無法扣減庫存");
+        }
+
+        for (OrderItem item : order.getItems()) {
+            Integer productId = item.getProduct().getProductId();
+            int qty = item.getQuantity();
+
+            // 使用原子更新語句扣減，如果返回 0 說明庫存不足
+            int updatedRows = storeInventoryRepository.deductStoreStock(store.getStoreId(), productId, qty);
+
+            if (updatedRows == 0) {
+                throw new RuntimeException("支付失敗：門店 [" + store.getName() + "] 的商品 [" + item.getProduct().getDescription() + "] 庫存不足！");
+            }
         }
     }
 
@@ -172,9 +197,8 @@ public class OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // 10. 線上支付成功，真正扣減庫存！
-        deductStock(savedOrder);
-
+        // 10. 線上支付成功，呼叫線上專屬的庫存扣減方法！
+        deductOnlineStock(savedOrder);
         // ==========================================
         // 11. 記錄季度銷售報表數據
         // ==========================================
@@ -247,7 +271,7 @@ public class OrderService {
         // 【修改處 3】：線下支付確認生成訂單後，扣減庫存。
         // (註：由於前端流程在此直接跳轉成功頁，此處視為「確認支付」並扣減。
         // 若未來有「後台店員確認收款」的功能，應將此行移至後台確認收款的 API 中)
-        deductStock(savedOrder);
+        deductOfflineStock(savedOrder);
 
         return savedOrder;
     }
@@ -408,18 +432,31 @@ public class OrderService {
     }
 
     /**
-     *  恢復庫存方法 (私有輔助方法)
-     * 遍歷訂單中的商品，將賣出的數量加回對應商品的庫存中
+     * 恢復庫存方法 (配合拆分邏輯，區分線上與線下)
+     * 遍歷訂單中的商品，將賣出的數量加回對應的庫存中
      */
     private void restoreStock(Order order) {
+        boolean isOffline = "STORE_PICKUP".equals(order.getDeliveryMethod());
+        OfflineStore store = order.getOfflineStore();
+
         for (OrderItem item : order.getItems()) {
             Product product = item.getProduct();
-            // 將庫存加回
-            product.setStock(product.getStock() + item.getQuantity());
-            // 保存更新後的庫存
-            productRepository.save(product);
+            int qty = item.getQuantity();
+
+            if (isOffline && store != null) {
+                // 線下訂單：將庫存還給特定門店
+                StoreInventory inventory = storeInventoryRepository.findByStoreAndProduct(store, product)
+                        .orElseThrow(() -> new RuntimeException("找不到門店庫存記錄，無法恢復庫存"));
+                inventory.setQuantity(inventory.getQuantity() + qty);
+                storeInventoryRepository.save(inventory);
+            } else {
+                // 線上訂單：將庫存還給線上總倉
+                product.setStock(product.getStock() + qty);
+                productRepository.save(product);
+            }
         }
     }
+
 
     /**
      * 更新每日業務報告 (記錄退款)

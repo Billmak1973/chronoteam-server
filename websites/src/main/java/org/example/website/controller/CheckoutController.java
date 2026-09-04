@@ -15,9 +15,11 @@ import org.example.website.entity.Order;
 import org.example.website.entity.OrderItem;
 import org.example.website.repository.OfflineStoreRepository;
 import org.example.website.repository.OrderItemRepository;
+import org.example.website.repository.OrderRepository;
 import org.example.website.service.OrderService;
 import org.example.website.entity.User;
 import org.example.website.repository.UserRepository;
+import org.example.website.service.SiteSettingService;
 import org.example.website.service.SystemConfigService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -45,6 +47,8 @@ public class CheckoutController {
     private final UserRepository userRepository;
     private final SystemConfigService systemConfigService;
     private final OfflineStoreRepository offlineStoreRepository;
+    private final OrderRepository orderRepository;
+    private final SiteSettingService siteSettingService;
 
     /**
      * 渲染結賬頁面：查詢 OrderItem，而不是 Cart
@@ -613,35 +617,43 @@ public class CheckoutController {
         }
     }
 
-    /**
-     * 渲染線下支付成功頁面
-     */
-    @Hidden // 隱藏純頁面渲染接口
+    @Hidden
     @GetMapping("/offline-success")
     public String offlinePaymentSuccess(
             @RequestParam String orderNo,
             @RequestParam String storeId,
-            Model model) {
+            Model model,
+            Authentication authentication) {
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("orderNo", orderNo);
+        // 1. 查詢訂單信息 (確保是當前用戶的訂單，並獲取預約日期)
+        String username = authentication.getName();
+        Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
+                .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
 
-        // 改為從資料庫查詢店鋪信息
-        OfflineStore store = offlineStoreRepository.findByStoreCode(storeId).orElse(null);
+        // 2. 查詢店鋪信息
+        OfflineStore store = offlineStoreRepository.findById(Long.parseLong(storeId))
+                .orElseThrow(() -> new RuntimeException("店鋪不存在"));
 
-        if (store != null) {
-            data.put("storeName", store.getName());
-            data.put("storeAddress", store.getAddress());
-            data.put("storePhone", store.getPhone() != null ? store.getPhone() : "未提供");
-            data.put("storeHours", store.getHours() != null ? store.getHours() : "未提供");
-        } else {
-            data.put("storeName", "未知店鋪");
-            data.put("storeAddress", "地址待定");
-            data.put("storePhone", "電話待定");
-            data.put("storeHours", "營業時間待定");
+        // 3. 格式化預約日期 (將 LocalDate 轉換為易讀的字符串)
+        String appointmentDateStr = "未設定";
+        if (order.getAppointmentDate() != null) {
+            appointmentDateStr = order.getAppointmentDate().format(java.time.format.DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
         }
 
+        // 4. 將數據傳遞給前端
+        Map<String, Object> data = new HashMap<>();
+        data.put("orderNo", orderNo);
+        data.put("storeName", store.getName());
+        data.put("storeAddress", store.getAddress());
+        data.put("storePhone", store.getPhone() != null ? store.getPhone() : "未提供");
+        data.put("appointmentDate", appointmentDateStr);
+
         model.addAttribute("data", data);
+
+        // 【核心新增】：獲取並傳遞卡片邊框主題 (day / night / qixi) 到前端
+        String cardTheme = siteSettingService.getCardBorderTheme();
+        model.addAttribute("cardTheme", cardTheme);
+
         return "offline-payment-success";
     }
 

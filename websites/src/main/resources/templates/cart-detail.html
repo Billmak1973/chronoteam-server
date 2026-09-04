@@ -497,6 +497,34 @@
             margin-bottom: 1.5rem;
         }
 
+        /* 庫存溫馨提示框樣式 */
+        .stock-notice-box {
+            background: linear-gradient(135deg, #fffdf5 0%, #fff9e6 100%);
+            border: 1px solid #ffeeba;
+            border-left: 4px solid var(--gold);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            color: #856404;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.1);
+        }
+
+        .stock-notice-box i {
+            font-size: 1.2rem;
+            margin-top: 0.15rem;
+            flex-shrink: 0;
+            color: var(--gold);
+        }
+
+        .stock-notice-box strong {
+            color: #664d03;
+        }
+
         .footer {
             background: var(--primary);
             color: rgba(255, 255, 255, 0.7);
@@ -530,6 +558,14 @@
                 <span style="color: var(--gray);">
                     已選擇 <strong id="selectedCount">0</strong> 件商品
                 </span>
+            </div>
+
+            <!-- 庫存溫馨提示框  -->
+            <div th:if="${cartItems != null and !cartItems.isEmpty()}" class="stock-notice-box">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>溫馨提示：</strong>當前頁面顯示的庫存為「線上總倉」數量。若您計劃購買多件商品並選擇「線下門店自取」，部分門店可能因庫存不足而無法完成交易。建議您<strong>分次購買</strong>，或提前聯繫門店確認庫存狀況。
+                </div>
             </div>
 
             <!-- 購物車商品列表 (分組版) -->

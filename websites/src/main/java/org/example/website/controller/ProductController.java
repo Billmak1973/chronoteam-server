@@ -21,6 +21,7 @@ import org.example.website.repository.OrderRepository;
 import org.example.website.repository.ProductRepository;
 import org.example.website.repository.ReviewRepository;
 import org.example.website.security.CustomUserDetails;
+import org.example.website.service.InventoryManagementService;
 import org.example.website.service.ProductService;
 import org.example.website.service.ViewHistoryService;
 import org.example.website.util.PaginationUtils;
@@ -50,6 +51,7 @@ public class ProductController {
     private final OrderItemRepository orderItemRepository;
     private final FavoriteRepository favoriteRepository;
     private final ProductService productService;
+    private final InventoryManagementService inventoryManagementService;
 
     public ProductController(ProductRepository productRepository,
                              ReviewRepository reviewRepository,
@@ -57,7 +59,7 @@ public class ProductController {
                              OrderRepository orderRepository,
                              OrderItemRepository orderItemRepository,
                              FavoriteRepository favoriteRepository,
-                             ProductService productService) {
+                             ProductService productService, InventoryManagementService inventoryManagementService) {
         this.productRepository = productRepository;
         this.reviewRepository = reviewRepository;
         this.viewHistoryService = viewHistoryService;
@@ -65,6 +67,7 @@ public class ProductController {
         this.orderItemRepository = orderItemRepository;
         this.favoriteRepository = favoriteRepository;
         this.productService = productService;
+        this.inventoryManagementService = inventoryManagementService;
     }
 
     /**
@@ -274,6 +277,16 @@ public class ProductController {
             Product product = productRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("商品不存在"));
 
+            // 【關鍵 1】：記錄原始庫存，用於後續判斷是否發生變化
+            Integer originalStock = product.getStock();
+
+            // 【關鍵 2】：核心校驗：若庫存發生變化，必須填寫原因
+            if (request.getStock() != null && !request.getStock().equals(originalStock)) {
+                if (request.getStockChangeReason() == null || request.getStockChangeReason().trim().isEmpty()) {
+                    return ResponseEntity.badRequest().body(Result.error("庫存數量發生變化，必須填寫「庫存變更原因」！"));
+                }
+            }
+
             if (request.getPrice() != null) product.setPrice(request.getPrice());
             if (request.getStock() != null) product.setStock(request.getStock());
             if (request.getCategory() != null) product.setCategory(request.getCategory());
@@ -295,6 +308,17 @@ public class ProductController {
             }
 
             productRepository.save(product);
+
+            if (request.getStock() != null && !request.getStock().equals(originalStock)) {
+                String operatorUsername = authentication.getName();
+                inventoryManagementService.adjustOnlineStock(
+                        id,
+                        request.getStock(),
+                        request.getStockChangeReason().trim(),
+                        operatorUsername
+                );
+            }
+
             return ResponseEntity.ok(Result.ok("修改成功"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Result.error("修改失敗: " + e.getMessage()));

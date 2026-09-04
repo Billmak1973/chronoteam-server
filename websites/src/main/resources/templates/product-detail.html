@@ -3602,6 +3602,15 @@
                     </small>
                 </div>
 
+                <div id="stockChangeReasonGroup" style="display: none; margin-bottom: 1.5rem; background: #fff3cd; padding: 1rem; border-radius: 8px; border: 1px solid #ffeeba;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #856404;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i> 庫存調整原因 <span style="color: #dc3545;">*</span>
+                    </label>
+                    <textarea id="editStockReason" rows="3"
+                              placeholder="請說明庫存數量發生變化的原因（例如：盤點修正、進貨入庫、破損報廢等）..."
+                              style="width: 100%; padding: 0.8rem; border: 2px solid #ffeeba; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+                </div>
+
                 <!-- 按钮 -->
                 <div style="display: flex; gap: 1rem; justify-content: flex-end;">
                     <button type="button" onclick="closeEditModal()"
@@ -3925,7 +3934,8 @@
 
             // 解除禁言狀態
             unblockTargetUser: '',
-            unblockCallback: null
+            unblockCallback: null,
+            originalStock: 0, // 記錄打開彈窗時的原始庫存
         };
 
         // 簡寫引用 (可選，方便內部使用)
@@ -4789,13 +4799,50 @@
             // 4. 管理員專屬：編輯商品
             // ==========================================
 
-            function openEditModal() {
+            // 建议给函数加上参数，或者确保在填充数据后再记录
+            function openEditModal(productId, currentStockFromDb) {
                 const modal = document.getElementById('editProductModal');
+                const stockInput = document.getElementById('editStock');
+
                 if (modal) {
                     modal.style.display = 'flex';
                     document.body.style.overflow = 'hidden';
                 }
+
+                // 【关键修改 1】：先记录真正的原始值（从参数或数据源来，不要从 Input 读！）
+                // 如果你没有传参，请确保这里读取的是你刚刚 Fetch 到的最新数据
+                if (currentStockFromDb !== undefined) {
+                    CTP.originalStock = currentStockFromDb;
+                } else {
+                    // 兜底：如果没传参，尝试从 Input 读，但必须先确保 Input 已经被正确填充了！
+                    // 最好还是通过参数传进来最稳妥
+                    CTP.originalStock = parseInt(stockInput.value) || 0;
+                }
+
+                // 【关键修改 2】：确保 Input 显示的是正确的值（防止残留）
+                stockInput.value = CTP.originalStock;
+
+                // 绑定事件
+                stockInput.addEventListener('input', CTP.checkStockChange);
+                CTP.checkStockChange();
             }
+
+            // 3. 檢查庫存是否變化的函數
+            CTP.checkStockChange = function() {
+                const currentStock = parseInt(document.getElementById('editStock').value) || 0;
+                const reasonGroup = document.getElementById('stockChangeReasonGroup');
+                const reasonInput = document.getElementById('editStockReason');
+
+                if (currentStock !== CTP.originalStock) {
+                    reasonGroup.style.display = 'block';
+                    reasonInput.setAttribute('required', 'required'); // 變化時設為必填
+                } else {
+                    reasonGroup.style.display = 'none';
+                    reasonInput.removeAttribute('required'); // 恢復原狀時取消必填
+                    reasonInput.value = ''; // 清空已填寫的原因
+                }
+            };
+
 
             function closeEditModal() {
                 const modal = document.getElementById('editProductModal');
@@ -4803,10 +4850,29 @@
                     modal.style.display = 'none';
                     document.body.style.overflow = '';
                 }
+                // 移除監聽器
+                const stockInput = document.getElementById('editStock');
+                stockInput.removeEventListener('input', CTP.checkStockChange);
             }
 
             async function saveProduct(event) {
                 event.preventDefault();
+
+                // 重新获取当前库存值
+                const currentStock = parseInt(document.getElementById('editStock').value) || 0;
+                const reasonInput = document.getElementById('editStockReason');
+                const reasonValue = reasonInput.value.trim();
+
+                // 添加验证逻辑
+                if (currentStock !== CTP.originalStock) {
+                    if (!reasonValue) {
+                        if (typeof showNotification === 'function') {
+                            showNotification('❌ 库存数量发生变化，必须填写「库存变更原因」！', true);
+                        }
+                        reasonInput.focus();
+                        return; // 阻止提交
+                    }
+                }
 
                 const formData = {
                     price: parseFloat(document.getElementById('editPrice').value),
@@ -4815,7 +4881,11 @@
                     brand: document.getElementById('editBrand').value,
                     description: document.getElementById('editDescription').value,
                     details: document.getElementById('editDetails').value,
-                    image: document.getElementById('editImage').value
+                    image: document.getElementById('editImage').value,
+                    // 只有當庫存變化時，才發送原因
+                    stockChangeReason: (currentStock !== CTP.originalStock)
+                        ? document.getElementById('editStockReason').value.trim()
+                        : null
                 };
 
                 try {

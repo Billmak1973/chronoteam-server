@@ -10,14 +10,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.Result;
 import org.example.website.entity.Product;
+import org.example.website.entity.StoreInventory;
 import org.example.website.entity.WatchCondition;
 import org.example.website.repository.ProductRepository;
+import org.example.website.repository.StoreInventoryRepository;
 import org.example.website.service.ProductService;
 import org.example.website.util.PaginationUtils;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.example.website.util.SecurityUtils;
+import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -26,10 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -39,10 +36,12 @@ public class AdminProductController {
 
     private final ProductService productService;
     private final ProductRepository productRepository;
+    private final StoreInventoryRepository storeInventoryRepository;
 
-    public AdminProductController(ProductService productService, ProductRepository productRepository) {
+    public AdminProductController(ProductService productService, ProductRepository productRepository, StoreInventoryRepository storeInventoryRepository) {
         this.productService = productService;
         this.productRepository = productRepository;
+        this.storeInventoryRepository = storeInventoryRepository;
     }
 
     /**
@@ -297,5 +296,92 @@ public class AdminProductController {
             e.printStackTrace();
             return ResponseEntity.badRequest().body(Result.error("新建失敗: " + e.getMessage()));
         }
+    }
+
+    /**
+     * 獲取門店庫存分頁列表
+     * 【核心邏輯】：接收 1-based 頁碼 -> 轉 0-based 查詢 -> 數據清洗防循環引用 -> 返回 1-based 分頁結果
+     */
+    @Operation(
+            summary = "獲取門店庫存分頁列表",
+            description = "管理員分頁獲取所有門店的庫存分配情況。支持按門店 ID 篩選。返回的 currentPage 為 1-based。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功", content = @Content(schema = @Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "401", description = "未登入"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員 (Role: ADMIN)")
+    })
+    @GetMapping("api/store-inventory/list")
+    public ResponseEntity<?> getStoreInventoryList(
+            @Parameter(description = "當前頁碼 (1-based)", example = "1")
+            @RequestParam(defaultValue = "1") int page,
+
+            @Parameter(description = "每頁顯示數量", example = "25")
+            @RequestParam(defaultValue = "25") int size,
+
+            @Parameter(description = "篩選門店 ID (可選)", example = "1")
+            @RequestParam(required = false) Long storeId
+    ) {
+        // 1. 權限校驗
+        if (!SecurityUtils.isAdmin()) {
+            return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員 (Role: ADMIN)"));
+        }
+
+        // 2. 將 1-based 頁碼轉換為 0-based 供 Spring Data 使用
+        int pageIndex = Math.max(0, page - 1);
+
+        // 按庫存數量降序排列，方便管理員快速看到缺貨/多貨情況
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "quantity"));
+
+        // 3. 執行分頁查詢
+        Page<StoreInventory> inventoryPage;
+        if (storeId != null) {
+            inventoryPage = storeInventoryRepository.findByStore_StoreId(storeId, pageable);
+        } else {
+            inventoryPage = storeInventoryRepository.findAll(pageable);
+        }
+
+        // 4. 數據清洗：手動提取需要的字段，避免 Hibernate 懶加載異常 (LazyInitializationException) 和 JSON 循環引用
+        List<Map<String, Object>> cleanData = inventoryPage.getContent().stream().map(inv -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("inventoryId", inv.getInventoryId());
+            map.put("quantity", inv.getQuantity());
+            map.put("updatedAt", inv.getUpdatedAt());
+
+            // 提取門店信息
+            if (inv.getStore() != null) {
+                Map<String, Object> storeMap = new HashMap<>();
+                storeMap.put("storeId", inv.getStore().getStoreId());
+                storeMap.put("storeCode", inv.getStore().getStoreCode());
+                storeMap.put("name", inv.getStore().getName());
+                map.put("store", storeMap);
+            }
+
+            // 提取商品信息
+            if (inv.getProduct() != null) {
+                Map<String, Object> productMap = new HashMap<>();
+                productMap.put("productId", inv.getProduct().getProductId());
+                productMap.put("description", inv.getProduct().getDescription());
+                productMap.put("brand", inv.getProduct().getBrand());
+                productMap.put("image", inv.getProduct().getImage());
+                productMap.put("groupCode", inv.getProduct().getGroupCode());
+                map.put("product", productMap);
+            }
+
+            return map;
+        }).collect(Collectors.toList());
+
+        // 5. 使用 PaginationUtils 構建標準響應 (包含 smartPages)
+        Map<String, Object> response = PaginationUtils.buildPageResponse(inventoryPage, cleanData);
+
+        // 6. 【關鍵修復】：覆蓋 currentPage 為 1-based，以便前端直接使用
+        response.put("currentPage", page);
+
+        // 確保 totalPages 至少為 1 (防止前端分頁組件報錯)
+        if ((int) response.get("totalPages") == 0) {
+            response.put("totalPages", 1);
+        }
+
+        return ResponseEntity.ok(response);
     }
 }
