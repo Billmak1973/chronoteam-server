@@ -1065,8 +1065,7 @@
                 if (typeof showNotification === 'function') showNotification('❌ 网络错误，请稍后重试', true);
                 else alert(' 网络错误，请稍后重试');
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+
             }
         }
 
@@ -1780,9 +1779,6 @@
 
             const btn = document.getElementById('saveNotificationBtn');
             const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
-
             try {
                 const res = await fetch('/api/admin/config/update-notification', {
                     method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
@@ -1801,8 +1797,7 @@
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 else alert(' 網絡錯誤，請稍後重試');
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+
             }
         }
     </script>

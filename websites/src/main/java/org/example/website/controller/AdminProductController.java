@@ -12,8 +12,10 @@ import org.example.website.dto.Result;
 import org.example.website.entity.Product;
 import org.example.website.entity.StoreInventory;
 import org.example.website.entity.WatchCondition;
+import org.example.website.repository.OfflineStoreRepository;
 import org.example.website.repository.ProductRepository;
 import org.example.website.repository.StoreInventoryRepository;
+import org.example.website.service.InventoryManagementService;
 import org.example.website.service.ProductService;
 import org.example.website.util.PaginationUtils;
 import org.example.website.util.SecurityUtils;
@@ -37,11 +39,15 @@ public class AdminProductController {
     private final ProductService productService;
     private final ProductRepository productRepository;
     private final StoreInventoryRepository storeInventoryRepository;
+    private final OfflineStoreRepository offlineStoreRepository; // 新增依賴
+    private final InventoryManagementService inventoryManagementService;
 
-    public AdminProductController(ProductService productService, ProductRepository productRepository, StoreInventoryRepository storeInventoryRepository) {
+    public AdminProductController(ProductService productService, ProductRepository productRepository, StoreInventoryRepository storeInventoryRepository, OfflineStoreRepository offlineStoreRepository, InventoryManagementService inventoryManagementService) {
         this.productService = productService;
         this.productRepository = productRepository;
         this.storeInventoryRepository = storeInventoryRepository;
+        this.offlineStoreRepository = offlineStoreRepository;
+        this.inventoryManagementService = inventoryManagementService;
     }
 
     /**
@@ -58,6 +64,8 @@ public class AdminProductController {
                 .collect(Collectors.toSet());
         model.addAttribute("allBrands", allBrands);
 
+        long storeCount = offlineStoreRepository.count();
+        model.addAttribute("hasStores", storeCount > 0);
         return "admin/admin-products";
     }
 
@@ -229,8 +237,8 @@ public class AdminProductController {
             @Parameter(description = "售價 (HKD)", example = "85000.00")
             @RequestParam BigDecimal price,
 
-            @Parameter(description = "庫存數量", example = "1")
-            @RequestParam Integer stock,
+            @Parameter(description = "庫存數量 (新建時強制為0)", example = "0")
+            @RequestParam(defaultValue = "0") Integer stock,
 
             @Parameter(description = "手錶成色枚舉", example = "EXCELLENT")
             @RequestParam WatchCondition condition,
@@ -261,6 +269,10 @@ public class AdminProductController {
         // 這會從 SecurityContext 中獲取 CustomUserDetails 並檢查 Role 枚舉
         if (!org.example.website.util.SecurityUtils.isAdmin()) {
             return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員 (Role: ADMIN)"));
+        }
+
+        if (stock != null && stock != 0) {
+            return ResponseEntity.badRequest().body(Result.error("新建商品時庫存必須為 0，請通過進貨流程增加庫存"));
         }
 
         try {
@@ -383,5 +395,61 @@ public class AdminProductController {
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/api/product-information/{id}")
+    @ResponseBody
+    public ResponseEntity<?> getProductById(
+            @Parameter(description = "商品ID", example = "1", required = true)
+            @PathVariable Integer id,
+            Authentication authentication) {
+
+        // 權限校驗
+        if (!SecurityUtils.isAdmin()) {
+            return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員"));
+        }
+
+        try {
+            Product product = productRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("商品不存在"));
+
+            return ResponseEntity.ok(Result.okWithData("獲取成功", product));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Result.error("獲取失敗: " + e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "調整門店庫存", description = "管理員手動調整指定門店的特定商品庫存，並記錄變更原因。")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "調整成功"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
+    })
+    @PutMapping("/api/store-inventory/update")
+    @ResponseBody
+    public ResponseEntity<?> updateStoreInventory(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "庫存調整參數", required = true)
+            @RequestBody Map<String, Object> payload,
+            Authentication authentication) {
+
+        if (!SecurityUtils.isAdmin()) {
+            return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員 (Role: ADMIN)"));
+        }
+
+        try {
+            Long storeId = Long.valueOf(payload.get("storeId").toString());
+            Integer productId = Integer.valueOf(payload.get("productId").toString());
+            Integer newQuantity = Integer.valueOf(payload.get("newQuantity").toString());
+            String reason = payload.get("reason") != null ? payload.get("reason").toString() : "常規調整";
+
+            // 從 SecurityContext 獲取當前操作的管理員用戶名
+            String operatorUsername = authentication.getName();
+
+            // 調用你提供的 Service 方法
+            inventoryManagementService.adjustOfflineStock(storeId, productId, newQuantity, reason, operatorUsername);
+
+            return ResponseEntity.ok(Result.ok("門店庫存調整成功，日誌已記錄"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Result.error("調整失敗: " + e.getMessage()));
+        }
     }
 }

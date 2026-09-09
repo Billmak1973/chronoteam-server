@@ -3417,9 +3417,13 @@
                     <i class="fas fa-arrow-left"></i> 返回瀏覽
                 </a>
                 <!-- 使用 sec:authorize 檢查是否具有 ROLE_ADMIN 權限 -->
-                <button sec:authorize="hasRole('ADMIN')" type="button" class="btn-stock" onclick="openEditModal()">
+                <button sec:authorize="hasRole('ADMIN')" type="button" class="btn-stock"
+                        th:onclick="'openEditModal(' + ${product.productId} + ', ' + ${product.stock} + ')'">
                     <i class="fas fa-edit"></i> 编辑商品
                 </button>
+<!--                <button sec:authorize="hasRole('ADMIN')" type="button" class="btn-stock" onclick="openEditModal()">-->
+<!--                    <i class="fas fa-edit"></i> 编辑商品-->
+<!--                </button>-->
             </div>
         </div>
     </div>
@@ -4276,7 +4280,6 @@
             if (agreementSection) agreementSection.style.display = 'none';
 
             const submitBtn = document.getElementById('submitReportBtn');
-            if (submitBtn) submitBtn.disabled = true;
 
             if (reasonSection) reasonSection.scrollIntoView({behavior: 'smooth', block: 'nearest'});
         }
@@ -4329,8 +4332,6 @@
             if (agreementCheckbox) agreementCheckbox.checked = false;
 
             const submitBtn = document.getElementById('submitReportBtn');
-            if (submitBtn) submitBtn.disabled = true;
-
             // 填充隱藏字段
             const reviewIdInput = document.getElementById('reportReviewId');
             if (reviewIdInput) reviewIdInput.value = reviewId || '';
@@ -4737,7 +4738,6 @@
                         if (list.length === 0) {
                             body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);">暫無用戶訂閱此商品</div>';
                             const sendBtn = document.getElementById('sendNotifyBtn');
-                            if (sendBtn) sendBtn.disabled = true;
                         } else {
                             let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
                             list.forEach(item => {
@@ -4749,7 +4749,6 @@
                             html += '</ul>';
                             body.innerHTML = html;
                             const sendBtn = document.getElementById('sendNotifyBtn');
-                            if (sendBtn) sendBtn.disabled = false;
                         }
                     } else if (body) {
                         body.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--accent);">${data.message || '加載失敗'}</div>`;
@@ -4809,20 +4808,24 @@
                     document.body.style.overflow = 'hidden';
                 }
 
-                // 【关键修改 1】：先记录真正的原始值（从参数或数据源来，不要从 Input 读！）
-                // 如果你没有传参，请确保这里读取的是你刚刚 Fetch 到的最新数据
-                if (currentStockFromDb !== undefined) {
-                    CTP.originalStock = currentStockFromDb;
-                } else {
-                    // 兜底：如果没传参，尝试从 Input 读，但必须先确保 Input 已经被正确填充了！
-                    // 最好还是通过参数传进来最稳妥
-                    CTP.originalStock = parseInt(stockInput.value) || 0;
+                // 【关键修复】：必须先验证参数！
+                if (currentStockFromDb === undefined || currentStockFromDb === null) {
+                    console.error('❌ 致命错误：openEditModal 没有收到 currentStockFromDb 参数！');
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ 系统错误：无法获取库存数据', true);
+                    }
+                    closeEditModal();
+                    return;
                 }
 
-                // 【关键修改 2】：确保 Input 显示的是正确的值（防止残留）
+                // 【关键修复】：只从数据库值设置，绝不从 input 读！
+                CTP.originalStock = parseInt(currentStockFromDb);
+
+                // 然后才填充到 input
                 stockInput.value = CTP.originalStock;
 
                 // 绑定事件
+                stockInput.removeEventListener('input', CTP.checkStockChange); // 先移除旧的
                 stockInput.addEventListener('input', CTP.checkStockChange);
                 CTP.checkStockChange();
             }

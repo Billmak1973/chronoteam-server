@@ -2419,14 +2419,10 @@
             if (confirmBtn) {
                 confirmBtn.setAttribute('data-amount', totalAmount.toFixed(2));
                 if (selectedCount === 0) {
-                    confirmBtn.disabled = true;
-                    confirmBtn.innerHTML = '<i class="fas fa-shopping-cart"></i> 請選擇商品';
                 } else {
-                    confirmBtn.disabled = false;
                     const isOnline = document.getElementById('pay-online')?.checked;
                     const icon = isOnline ? 'fa-credit-card' : 'fa-store';
                     const text = isOnline ? '確認線上支付' : '確認訂單（到店支付）';
-                    confirmBtn.innerHTML = `<i class="fas ${icon}"></i> ${text} HK$ ${totalAmount.toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                 }
             }
 
@@ -2747,10 +2743,6 @@
             // ==========================================
 
             try {
-                // 【優化】：點擊後立即禁用按鈕並顯示加載狀態，防止重複提交
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-
                 if (isOnline) {
                     await new Promise(resolve => setTimeout(resolve, 1500)); // 模擬支付處理時間，提升用戶體驗
                     const response = await fetch('/checkout/api/pay', {
@@ -2774,9 +2766,6 @@
                         window.location.href = `/checkout/payment-success?orderNo=${orderNo}`;
                     } else {
                         showNotification('❌ ' + (result.message || '支付失敗'), true);
-                        // 失敗時恢復按鈕狀態
-                        btn.disabled = false;
-                        btn.innerHTML = originalBtnText;
                     }
                 } else {
                     // 線下支付邏輯
@@ -2799,16 +2788,12 @@
                         window.location.replace(`/checkout/offline-success?orderNo=${orderNo}&storeId=${storeId}`);
                     } else {
                         showNotification('❌ ' + (result.message || '創建訂單失敗'), true);
-                        // 失敗時恢復按鈕狀態
-                        btn.disabled = false;
-                        btn.innerHTML = originalBtnText;
                     }
                 }
             } catch (error) {
                 console.error('支付錯誤:', error);
                 showNotification('❌ 網絡連接失敗，請重試', true);
                 // 發生異常時恢復按鈕狀態
-                btn.disabled = false;
                 btn.innerHTML = originalBtnText;
             }
         });
@@ -2880,15 +2865,11 @@
                     // 失败处理
                     closeDeleteOrderModal();
                     showNotification('❌ ' + (result.message || '取消訂單失敗'), true);
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
                 }
             } catch (error) {
                 console.error('取消訂單錯誤:', error);
                 closeDeleteOrderModal();
                 showNotification('❌ 網絡錯誤，請稍後重試', true);
-                btn.disabled = false;
-                btn.innerHTML = originalText;
             }
         }
 
@@ -3234,8 +3215,6 @@
                     select.selectedIndex = 1;
                 }
 
-                // 啟用下拉選單
-                select.disabled = false;
 
             } else if (deliveryMode === 'NEXT_DAY') {
                 // 情況 B：次日達模式（兜底邏輯），保持原有的明天+7天邏輯
@@ -3264,10 +3243,8 @@
                     }
                     select.appendChild(option);
                 }
-                select.disabled = false;
             } else {
                 // 情況 C：其他模式（如 CUSTOM 或 NONE），禁用或顯示提示
-                select.disabled = true;
                 select.innerHTML = '<option value="">此配送方式不支援選擇日期</option>';
             }
 

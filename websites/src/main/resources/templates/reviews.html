@@ -1202,10 +1202,7 @@
             }
 
             // 2. 進入加載狀態 (樂觀更新 UI)
-            btn.disabled = true;
             btn.style.opacity = '0.6';
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
             try {
                 // 3. 調用後端 API
                 const response = await fetch(`/api/review/${reviewId}/like`, {
@@ -1239,21 +1236,12 @@
                         showNotification('❌ ' + (result.message || '操作失敗'), true);
                     }
 
-                    // 2. 【關鍵步驟】UI 回滾：恢復原本的按鈕樣式和數字
-                    btn.disabled = false;
-                    btn.style.opacity = '1';
-                    btn.innerHTML = originalInnerHtml;
                 }
             } catch (error) {
                 console.error('取消點贊錯誤:', error);
 
                 // === 網絡錯誤或其他異常 ===
                 showNotification('❌ 網絡錯誤，請稍後重試', true);
-
-                // 【關鍵步驟】UI 回滾：恢復原本的按鈕樣式和數字
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.innerHTML = originalInnerHtml;
             }
         }
 

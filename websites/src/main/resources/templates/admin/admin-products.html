@@ -785,8 +785,8 @@
             <button class="tab-btn active" onclick="switchInventoryTab('warehouse', this)">
                 <i class="fas fa-warehouse"></i> 网购仓库库存
             </button>
-            <button class="tab-btn" onclick="switchInventoryTab('store', this)">
-                <i class="fas fa-store"></i> 线下门店库存
+            <button class="tab-btn" th:if="${hasStores}" onclick="switchInventoryTab('store', this)">
+                <i class="fas fa-store"></i> 線下門店庫存
             </button>
         </div>
 
@@ -841,11 +841,11 @@
                     <label><i class="fas fa-gem" style="color: var(--gold); margin-right: 0.3rem;"></i>成色篩選</label>
                     <select id="conditionFilter">
                         <option value="">全部成色</option>
-                        <option value="NEAR_MINT">近全新 (98-100%)</option>
-                        <option value="EXCELLENT">極佳 (95-97%)</option>
-                        <option value="GOOD">良好 (90-94%)</option>
-                        <option value="FAIR">正常使用痕跡 (85-89%)</option>
-                        <option value="HEAVILY_USED">重度使用痕跡</option>
+                        <option value="NEAR_MINT">近全新 (NEAR_MINT 98-100%)</option>
+                        <option value="EXCELLENT">極佳 (EXCELLENT 95-97%)</option>
+                        <option value="GOOD">良好 (GOOD 90-94%)</option>
+                        <option value="FAIR">正常使用痕跡 (FAIR 85-89%)</option>
+                        <option value="HEAVILY_USED">重度使用痕跡(HEAVILY_USED 80%+)</option>
                     </select>
                 </div>
 
@@ -1079,6 +1079,13 @@
                     <label><i class="fas fa-boxes"></i> 庫存數量</label>
                     <input type="number" id="editStock" min="0" required>
                 </div>
+                <div class="form-group" id="stockChangeReasonGroup" style="display: none; background: #fff3cd; padding: 1rem; border-radius: 8px; border: 1px solid #ffeeba;">
+                    <label style="color: #856404; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        庫存調整原因 <span style="color: #dc3545;">*</span>
+                    </label>
+                    <textarea id="editStockReason" rows="3" placeholder="請說明庫存數量發生變化的原因（例如：盤點修正、進貨入庫、破損報廢等）..." style="width: 100%; padding: 0.8rem; border: 2px solid #ffeeba; border-radius: 8px; font-size: 1rem; resize: vertical; font-family: inherit;"></textarea>
+                </div>
             </div>
 
             <!-- 第三行：狀態與成色顯示 -->
@@ -1210,8 +1217,14 @@
                     <input type="number" id="newPrice" name="price" step="0.01" min="0" required placeholder="0.00">
                 </div>
                 <div class="form-group">
-                    <label><i class="fas fa-boxes"></i> 庫存數量 <span style="color:var(--accent)">*</span></label>
-                    <input type="number" id="newStock" name="stock" min="0" required placeholder="0">
+                    <label><i class="fas fa-boxes"></i> 庫存數量</label>
+                    <!-- 【核心修改】：預設為 0，且設為 readonly 禁止修改，背景變灰 -->
+                    <input type="number" id="newStock" name="stock" value="0" readonly
+                           style="background: #e9ecef; cursor: not-allowed; color: #6c757d; font-weight: 600;">
+                    <!-- 新增提示小字 -->
+                    <small style="color: var(--gray); font-size: 0.75rem; margin-top: 0.3rem;">
+                        <i class="fas fa-info-circle"></i> 新建商品默認庫存為 0。請通過「渠道進貨」或「庫存調整」增加。
+                    </small>
                 </div>
             </div>
 
@@ -1328,6 +1341,102 @@
     </div>
 </div>
 
+<!-- ==================== 調整門店庫存 Modal ==================== -->
+<div id="editStoreInventoryModal" class="edit-modal-overlay">
+    <div class="edit-modal-box" style="max-width: 550px;">
+        <div class="edit-modal-header">
+            <h3><i class="fas fa-boxes"></i> 調整門店庫存</h3>
+            <button class="modal-close-btn" onclick="closeStoreInventoryModal()">&times;</button>
+        </div>
+
+        <form id="editStoreInventoryForm" onsubmit="saveStoreInventory(event)">
+            <!-- 隱藏字段：用於傳遞必要參數 -->
+            <input type="hidden" id="editInv_inventoryId">
+            <input type="hidden" id="editInv_storeId">
+            <input type="hidden" id="editInv_productId">
+            <input type="hidden" id="editInv_currentQty">
+
+            <div class="form-group">
+                <label><i class="fas fa-tag"></i> 商品名稱</label>
+                <input type="text" id="displayProductName" disabled style="background: #e9ecef; cursor: not-allowed;">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-boxes"></i> 當前庫存數量</label>
+                <input type="number" id="displayCurrentQty" disabled style="background: #e9ecef; cursor: not-allowed;">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-edit"></i> 新庫存數量 <span style="color:var(--accent)">*</span></label>
+                <input type="number" id="editInv_newQty" min="0" required placeholder="請輸入新的庫存數量">
+            </div>
+
+            <!-- 庫存調整原因區塊 (動態顯示) -->
+            <div class="form-group" id="invChangeReasonGroup" style="display: none; background: #fff3cd; padding: 1rem; border-radius: 8px; border: 1px solid #ffeeba;">
+                <label style="color: #856404; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    庫存調整原因 <span style="color: #dc3545;">*</span>
+                </label>
+                <textarea id="editInv_reason" rows="3" placeholder="請說明庫存數量發生變化的原因（例如：盤點修正、進貨入庫、破損報廢等）..." style="width: 100%; padding: 0.8rem; border: 2px solid #ffeeba; border-radius: 8px; font-size: 1rem; resize: vertical; font-family: inherit;"></textarea>
+            </div>
+
+            <!-- 按鈕區 -->
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeStoreInventoryModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button type="submit" class="btn-modal-save" id="saveStoreInventoryBtn">
+                    <i class="fas fa-save"></i> 保存修改
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 轉移門店 Modal -->
+<div id="transferStoreModal" class="edit-modal-overlay" style="display: none;">
+    <div class="edit-modal-box" style="max-width: 500px;">
+        <div class="edit-modal-header">
+            <h3><i class="fas fa-exchange-alt"></i> 轉移商品至線下門店</h3>
+            <button class="modal-close-btn" onclick="closeTransferModal()">&times;</button>
+        </div>
+        <form id="transferForm" onsubmit="executeTransfer(event)">
+            <input type="hidden" id="transferProductId">
+            <div class="form-group">
+                <label><i class="fas fa-box"></i> 商品名稱</label>
+                <input type="text" id="transferProductName" disabled style="background: #f1f3f5; color: #6c757d;">
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-warehouse"></i> 當前線上總倉庫存</label>
+                <input type="number" id="transferCurrentStock" disabled style="background: #f1f3f5; color: #6c757d;">
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-store"></i> 目標門店 <span style="color:var(--accent)">*</span></label>
+                <select id="transferStoreId" required>
+                    <option value="">請選擇目標門店</option>
+                    <!-- JS 動態填充 -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-sort-numeric-up"></i> 轉移數量 <span style="color:var(--accent)">*</span></label>
+                <input type="number" id="transferQuantity" min="1" required placeholder="請輸入轉移數量">
+                <small style="color: var(--gray);">轉移後，線上庫存將相應扣減，門店庫存將增加。</small>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-comment"></i> 調撥備註 (選填)</label>
+                <input type="text" id="transferReason" placeholder="例如：補充門店A庫存">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeTransferModal()">取消</button>
+                <button type="submit" class="btn-modal-save" id="transferSubmitBtn">
+                    <i class="fas fa-check"></i> 確認轉移
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
 <div th:replace="~{fragments/common :: modals}"></div>
 
 
@@ -1426,8 +1535,15 @@
         renderRow: renderStoreInventoryRow
     };
 
+    // 加載門店庫存數據
+    function loadStoreInventoryData() {
+        AdminTable.loadData(storeInventoryConfig);
+    }
+
+    // ==========================================
+    // 渲染門店庫存行 (修改：傳遞更多參數給編輯函數)
+    // ==========================================
     function renderStoreInventoryRow(item) {
-        // 安全地構建產品圖片URL
         let imageUrl = '/images/placeholder.png';
         if (item.product && item.product.image) {
             imageUrl = `/images/products/${item.product.image}`;
@@ -1436,6 +1552,14 @@
         const brand = item.product?.brand || 'ChronoTeam';
         const description = item.product?.description || '未知商品';
         const groupCode = item.product?.groupCode || '無';
+
+        // 【新增】：只有當庫存大於 0 時，才生成轉移按鈕
+        const transferBtnHtml = (item.quantity > 0)
+            ? `<button class="btn-edit-product" onclick="openTransferInventoryModal(${item.inventoryId}, ${item.store.storeId}, ${item.product.productId}, '${description.replace(/'/g, "\\'")}', ${item.quantity}, '${item.store.name}')"
+            style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 5px rgba(23, 162, 184, 0.3); transition: all 0.3s; margin-top: 0.5rem;">
+            <i class="fas fa-exchange-alt"></i> 調撥轉移
+           </button>`
+            : '';
 
         return `
     <tr>
@@ -1470,29 +1594,135 @@
             ${item.updatedAt ? new Date(item.updatedAt).toISOString().split('T')[0] : '-'}
         </td>
         <td style="text-align: center;">
-            <button class="btn-edit-product" onclick="editStoreInventory(${item.inventoryId}, '${description.replace(/'/g, "\\'")}', ${item.quantity})">
-                <i class="fas fa-edit"></i> 調整庫存
-            </button>
+            <!-- 【修改處】：使用 flex 容器讓按鈕垂直排列，間距美觀 -->
+            <div class="action-buttons" style="display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
+                <button class="btn-edit-product" onclick="openStoreInventoryModal(${item.inventoryId}, ${item.store.storeId}, ${item.product.productId}, '${description.replace(/'/g, "\\'")}', ${item.quantity})">
+                    <i class="fas fa-edit"></i> 調整庫存
+                </button>
+                ${transferBtnHtml} <!-- 👈 新增在這裡 -->
+            </div>
         </td>
     </tr>
-`;
+    `;
     }
 
-    // 加載門店庫存數據
-    function loadStoreInventoryData() {
-        AdminTable.loadData(storeInventoryConfig);
+
+    // ==========================================
+    // 調整門店庫存 Modal 邏輯
+    // ==========================================
+    function openStoreInventoryModal(inventoryId, storeId, productId, productName, currentQty) {
+        // 填充隱藏字段
+        document.getElementById('editInv_inventoryId').value = inventoryId;
+        document.getElementById('editInv_storeId').value = storeId;
+        document.getElementById('editInv_productId').value = productId;
+        document.getElementById('editInv_currentQty').value = currentQty;
+
+        // 填充顯示字段
+        document.getElementById('displayProductName').value = productName;
+        document.getElementById('displayCurrentQty').value = currentQty;
+        document.getElementById('editInv_newQty').value = currentQty; // 預設填入當前數量
+
+        // 重置原因區塊
+        document.getElementById('invChangeReasonGroup').style.display = 'none';
+        document.getElementById('editInv_reason').value = '';
+        document.getElementById('editInv_reason').removeAttribute('required');
+
+        // 顯示 Modal
+        document.getElementById('editStoreInventoryModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
     }
 
-    // 調整門店庫存 (佔位函數，可根據實際需求擴展為打開 Modal)
-    function editStoreInventory(inventoryId, productName, currentQty) {
-        const newQty = prompt(`請輸入 [${productName}] 的新庫存數量：`, currentQty);
-        if (newQty !== null && !isNaN(newQty) && newQty >= 0) {
-            // TODO: 這裡需要調用後端 API 來更新庫存
-            // 例如: fetch(`/admin/api/store-inventory/update/${inventoryId}`, { method: 'PUT', body: JSON.stringify({quantity: newQty}) })
-            showNotification(`✅ 準備更新庫存為 ${newQty} (請確保後端 API 已實現)`);
+    function closeStoreInventoryModal() {
+        document.getElementById('editStoreInventoryModal').style.display = 'none';
+        document.body.style.overflow = '';
+        document.getElementById('editStoreInventoryForm').reset();
+    }
 
-            // 更新成功後重新加載數據
-            // loadStoreInventoryData();
+    // 監聽「新庫存數量」輸入框的變化，動態顯示/隱藏原因欄
+    document.addEventListener('DOMContentLoaded', function() {
+        const newQtyInput = document.getElementById('editInv_newQty');
+        if (newQtyInput) {
+            newQtyInput.addEventListener('input', function() {
+                const currentQty = parseInt(document.getElementById('editInv_currentQty').value) || 0;
+                const newQty = parseInt(this.value) || 0;
+                const reasonGroup = document.getElementById('invChangeReasonGroup');
+                const reasonInput = document.getElementById('editInv_reason');
+
+                if (newQty !== currentQty) {
+                    reasonGroup.style.display = 'block'; // 顯示原因框
+                    reasonInput.setAttribute('required', 'required'); // 設為必填
+                } else {
+                    reasonGroup.style.display = 'none'; // 隱藏原因框
+                    reasonInput.removeAttribute('required'); // 取消必填
+                    reasonInput.value = ''; // 清空已填寫的原因
+                }
+            });
+        }
+    });
+
+    // 提交保存門店庫存
+    async function saveStoreInventory(event) {
+        event.preventDefault();
+        const saveBtn = document.getElementById('saveStoreInventoryBtn');
+        const originalBtnText = saveBtn.innerHTML;
+
+        const inventoryId = document.getElementById('editInv_inventoryId').value;
+        const storeId = document.getElementById('editInv_storeId').value;
+        const productId = document.getElementById('editInv_productId').value;
+        const currentQty = parseInt(document.getElementById('editInv_currentQty').value) || 0;
+        const newQty = parseInt(document.getElementById('editInv_newQty').value) || 0;
+        const reason = document.getElementById('editInv_reason').value.trim();
+
+        // 前端二次校驗：如果庫存改變了，但沒填原因，阻止提交
+        if (newQty !== currentQty && !reason) {
+            if (typeof showNotification === 'function') {
+                showNotification('❌ 庫存數量發生變化，必須填寫「庫存變更原因」！', true);
+            } else {
+                alert('❌ 庫存數量發生變化，必須填寫「庫存變更原因」！');
+            }
+            document.getElementById('editInv_reason').focus();
+            return;
+        }
+
+
+        const payload = {
+            inventoryId: inventoryId,
+            storeId: storeId,
+            productId: productId,
+            newQuantity: newQty,
+            reason: newQty !== currentQty ? reason : null // 數量不變時不傳原因
+        };
+
+        try {
+            // 注意：此 API 路徑需與後端 Controller 對應
+            const response = await fetch('/admin/api/store-inventory/update', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                if (typeof showNotification === 'function') showNotification('✅ 門店庫存調整成功！');
+                else alert('✅ 門店庫存調整成功！');
+
+                closeStoreInventoryModal();
+                // 重新加載門店庫存數據
+                loadStoreInventoryData();
+            } else {
+                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '調整失敗'), true);
+                else alert('❌ ' + (result.message || '調整失敗'));
+
+                saveBtn.innerHTML = originalBtnText;
+            }
+        } catch (error) {
+            console.error('保存失敗:', error);
+            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
+            else alert('❌ 網絡錯誤，請稍後重試');
+
+
+            saveBtn.innerHTML = originalBtnText;
         }
     }
 
@@ -1528,55 +1758,63 @@
             ? `<button class="btn-notify-stock" onclick="openWaitlistModal(${product.productId})"><i class="fas fa-bell"></i> 通知訂閱者</button>`
             : '';
 
-        return `
-            <tr>
-                <td style="color: var(--gray); font-family: monospace; position: relative;">
-                    <div style="margin-bottom: 0.3rem;">${product.productId}</div>
-                    ${homeOrderHtml}
-                </td>
-                <td>
-                    <img src="/images/products/${product.image}" alt="${product.description}" class="product-thumb" onerror="this.src='/images/placeholder.png'">
-                </td>
-                <td>
-                    <span class="product-brand">${product.brand || 'ChronoTeam'}</span>
-                    <div class="product-name-wrapper">
-                        <span class="product-name" title="${product.description}">${product.description}</span>
-                        <a href="/product/${product.productId}" target="_blank" class="product-view-icon" title="查看商品詳情"><i class="fas fa-external-link-alt"></i></a>
-                    </div>
-                    <div class="product-meta">
-                        ${groupCodeHtml}
-                        <div style="color: #6c757d; font-size: 0.8rem; line-height: 1.4; margin-top: 0.2rem;">${detailsHtml}</div>
-                    </div>
-                </td>
-                <td><span style="background: #f1f3f5; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${product.category}</span></td>
-                <td><span class="condition-badge">${product.condition || '未設定'}</span></td>
-                <td style="font-weight: 700; color: var(--accent);">HK$ ${new Intl.NumberFormat('zh-HK').format(product.price)}</td>
-                <td><span style="${product.stock <= 10 ? 'color: var(--accent); font-weight: 700;' : ''}">${product.stock}</span></td>
-                <td>${ratingHtml}</td>
-                <td>${statusBadge}</td>
-                <td>${conditionVisibleHtml}</td>
-                <td><span style="color: var(--primary); font-weight: 600;">${product.favoriteCount || 0}</span></td>
-                <td><span style="color: var(--gold); font-weight: 600;">${product.stockNotificationCount || 0}</span></td>
-                <td style="color: var(--gray); font-size: 0.85rem; white-space: nowrap;">${product.createdAt ? new Date(product.createdAt).toISOString().split('T')[0] : '-'}</td>
-                <td style="text-align: center;">
-                    <div class="action-buttons">
-                        <button class="btn-edit-product" onclick="openEditModal(this)"
-                            data-id="${product.productId}" data-brand="${product.brand}"
-                            data-category="${product.category}" data-condition="${product.condition}"
-                            data-description="${product.description}" data-details="${product.details}"
-                            data-image="${product.image}" data-price="${product.price}"
-                            data-stock="${product.stock}" data-visible="${product.visible}"
-                            data-condition-visible="${product.conditionVisible}"
-                            data-group-code="${product.groupCode}" data-home-order="${product.homeDisplayOrder}">
-                            <i class="fas fa-edit"></i> 修改
-                        </button>
-                        ${notifyBtnHtml}
-                    </div>
-                </td>
-            </tr>
-        `;
-    }
+        // 【新增】轉移門店按鈕的 HTML 生成邏輯 (僅當庫存 > 0 時顯示)
+        const transferBtnHtml = (product.stock > 0)
+            ? `<button class="btn-transfer-store" onclick="openTransferModal(${product.productId}, '${product.description.replace(/'/g, "\\'")}', ${product.stock})"
+            style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 5px rgba(23, 162, 184, 0.3); transition: all 0.3s; margin-top: 0.5rem;">
+            <i class="fas fa-exchange-alt"></i> 轉移門店
+           </button>`
+            : '';
 
+        return `
+        <tr>
+            <td style="color: var(--gray); font-family: monospace; position: relative;">
+                <div style="margin-bottom: 0.3rem;">${product.productId}</div>
+                ${homeOrderHtml}
+            </td>
+            <td>
+                <img src="/images/products/${product.image}" alt="${product.description}" class="product-thumb" onerror="this.src='/images/placeholder.png'">
+            </td>
+            <td>
+                <span class="product-brand">${product.brand || 'ChronoTeam'}</span>
+                <div class="product-name-wrapper">
+                    <span class="product-name" title="${product.description}">${product.description}</span>
+                    <a href="/product/${product.productId}" target="_blank" class="product-view-icon" title="查看商品詳情"><i class="fas fa-external-link-alt"></i></a>
+                </div>
+                <div class="product-meta">
+                    ${groupCodeHtml}
+                    <div style="color: #6c757d; font-size: 0.8rem; line-height: 1.4; margin-top: 0.2rem;">${detailsHtml}</div>
+                </div>
+            </td>
+            <td><span style="background: #f1f3f5; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${product.category}</span></td>
+            <td><span class="condition-badge">${product.condition || '未設定'}</span></td>
+            <td style="font-weight: 700; color: var(--accent);">HK$ ${new Intl.NumberFormat('zh-HK').format(product.price)}</td>
+            <td><span style="${product.stock <= 10 ? 'color: var(--accent); font-weight: 700;' : ''}">${product.stock}</span></td>
+            <td>${ratingHtml}</td>
+            <td>${statusBadge}</td>
+            <td>${conditionVisibleHtml}</td>
+            <td><span style="color: var(--primary); font-weight: 600;">${product.favoriteCount || 0}</span></td>
+            <td><span style="color: var(--gold); font-weight: 600;">${product.stockNotificationCount || 0}</span></td>
+            <td style="color: var(--gray); font-size: 0.85rem; white-space: nowrap;">${product.createdAt ? new Date(product.createdAt).toISOString().split('T')[0] : '-'}</td>
+            <td style="text-align: center;">
+                <div class="action-buttons">
+                    <button class="btn-edit-product" onclick="openEditModal(this)"
+                        data-id="${product.productId}" data-brand="${product.brand}"
+                        data-category="${product.category}" data-condition="${product.condition}"
+                        data-description="${product.description}" data-details="${product.details}"
+                        data-image="${product.image}" data-price="${product.price}"
+                        data-stock="${product.stock}" data-visible="${product.visible}"
+                        data-condition-visible="${product.conditionVisible}"
+                        data-group-code="${product.groupCode}" data-home-order="${product.homeDisplayOrder}">
+                        <i class="fas fa-edit"></i> 修改
+                    </button>
+                    ${notifyBtnHtml}
+                    ${transferBtnHtml} <!-- 👈 新增的轉移門店按鈕 -->
+                </div>
+            </td>
+        </tr>
+    `;
+    }
     // ==========================================
     // 頁面初始化
     // ==========================================
@@ -1712,10 +1950,10 @@
         const saveBtn = document.getElementById('saveNewProductBtn');
         const originalBtnText = saveBtn.innerHTML;
 
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 新建中...';
 
         const formData = new FormData(form);
+        // 【核心修改】：強制將庫存設為 0，防止前端篡改
+        formData.set('stock', '0');
 
         try {
             const response = await fetch('/admin/add', {
@@ -1739,14 +1977,12 @@
             } else {
                 if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '新建失敗'), true);
                 else alert('❌ ' + (result.message || '新建失敗'));
-                saveBtn.disabled = false;
                 saveBtn.innerHTML = originalBtnText;
             }
         } catch (error) {
             console.error('新建失敗詳細錯誤:', error);
             if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤或路徑錯誤', true);
             else alert('❌ 網絡錯誤或路徑錯誤');
-            saveBtn.disabled = false;
             saveBtn.innerHTML = originalBtnText;
         }
     }
@@ -1763,7 +1999,7 @@
         const details = button.getAttribute('data-details') || '';
         const image = button.getAttribute('data-image') || '';
         const price = button.getAttribute('data-price') || 0;
-        const stock = button.getAttribute('data-stock') || 0;
+        const stock = button.getAttribute('data-stock') || 0; // 獲取原始庫存
         const visible = button.getAttribute('data-visible') === 'true';
         const conditionVisible = button.getAttribute('data-condition-visible') === 'true';
         const groupCode = button.getAttribute('data-group-code') || '';
@@ -1778,7 +2014,12 @@
         document.getElementById('editDetails').value = details;
         document.getElementById('editImage').value = image;
         document.getElementById('editPrice').value = price;
-        document.getElementById('editStock').value = stock;
+
+        // 【核心修改】：填入庫存並記錄原始值，用於後續比對
+        const stockInput = document.getElementById('editStock');
+        stockInput.value = stock;
+        stockInput.dataset.originalStock = stock;
+
         document.getElementById('editVisible').value = visible.toString();
         document.getElementById('editConditionVisible').value = conditionVisible.toString();
         document.getElementById('editGroupCode').value = groupCode;
@@ -1793,22 +2034,77 @@
             orderInput.value = '';
         }
 
+        // 【核心修改】：打開時強制隱藏原因框並清空
+        document.getElementById('stockChangeReasonGroup').style.display = 'none';
+        document.getElementById('editStockReason').value = '';
+        document.getElementById('editStockReason').removeAttribute('required');
+
         document.getElementById('editProductModal').style.display = 'flex';
         document.body.style.overflow = 'hidden';
     }
 
+    // ==========================================
+    // 2. 關閉編輯視窗：重置表單
+    // ==========================================
     function closeEditModal() {
         document.getElementById('editProductModal').style.display = 'none';
         document.body.style.overflow = '';
         document.getElementById('editProductForm').reset();
+        // 重置時也清除自定義的 data 屬性
+        document.getElementById('editStock').dataset.originalStock = '';
     }
 
+    // ==========================================
+    // 3. 監聽庫存輸入框的變化 (建議放在頁面加載時執行一次即可)
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const stockInput = document.getElementById('editStock');
+        if (stockInput) {
+            stockInput.addEventListener('input', function() {
+                const originalStock = parseInt(this.dataset.originalStock) || 0;
+                const currentStock = parseInt(this.value) || 0;
+                const reasonGroup = document.getElementById('stockChangeReasonGroup');
+                const reasonInput = document.getElementById('editStockReason');
+
+                if (currentStock !== originalStock) {
+                    reasonGroup.style.display = 'block'; // 顯示原因框
+                    reasonInput.setAttribute('required', 'required'); // 設為必填
+                } else {
+                    reasonGroup.style.display = 'none'; // 隱藏原因框
+                    reasonInput.removeAttribute('required'); // 取消必填
+                    reasonInput.value = ''; // 清空已填寫的原因
+                }
+            });
+        }
+    });
+
+    // ==========================================
+    // 4. 保存商品：加入前端二次校驗
+    // ==========================================
     async function saveProduct(event) {
         event.preventDefault();
         const productId = document.getElementById('editProductId').value;
         const saveBtn = document.getElementById('saveProductBtn');
         const originalBtnText = saveBtn.innerHTML;
 
+        // 【核心修改】：獲取當前庫存與原始庫存進行比對
+        const currentStock = parseInt(document.getElementById('editStock').value) || 0;
+        const originalStock = parseInt(document.getElementById('editStock').dataset.originalStock) || 0;
+        const reasonInput = document.getElementById('editStockReason');
+        const reasonValue = reasonInput.value.trim();
+
+        // 前端校驗：如果庫存改變了，但沒填原因，阻止提交
+        if (currentStock !== originalStock) {
+            if (!reasonValue) {
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 庫存數量發生變化，必須填寫「庫存變更原因」！', true);
+                } else {
+                    alert('❌ 庫存數量發生變化，必須填寫「庫存變更原因」！');
+                }
+                reasonInput.focus(); // 聚焦到原因輸入框
+                return; // 阻止後續的 fetch 請求
+            }
+        }
 
         const isFeatured = document.getElementById('editIsFeatured').checked;
         const homeOrderVal = document.getElementById('editHomeDisplayOrder').value;
@@ -1822,11 +2118,13 @@
             details: document.getElementById('editDetails').value,
             image: document.getElementById('editImage').value,
             price: parseFloat(document.getElementById('editPrice').value),
-            stock: parseInt(document.getElementById('editStock').value),
+            stock: currentStock, // 使用校驗後的 currentStock
             visible: document.getElementById('editVisible').value === 'true',
             conditionVisible: document.getElementById('editConditionVisible').value === 'true',
             groupCode: document.getElementById('editGroupCode').value || null,
-            homeDisplayOrder: homeDisplayOrder
+            homeDisplayOrder: homeDisplayOrder,
+            // 只有當庫存變化時，才將原因發送給後端
+            stockChangeReason: (currentStock !== originalStock) ? reasonValue : null
         };
 
         try {
@@ -1847,14 +2145,15 @@
             } else {
                 if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '修改失敗'), true);
                 else alert('❌ ' + (result.message || '修改失敗'));
-                saveBtn.disabled = false;
+
+                // 恢復按鈕狀態
                 saveBtn.innerHTML = originalBtnText;
             }
         } catch (error) {
             console.error('保存失敗:', error);
             if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
             else alert('❌ 網絡錯誤，請稍後重試');
-            saveBtn.disabled = false;
+
             saveBtn.innerHTML = originalBtnText;
         }
     }
@@ -1967,8 +2266,6 @@
         const sendBtn = document.getElementById('sendNotifyBtn');
 
         modal.style.display = 'flex';
-        body.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--gray);"><i class="fas fa-spinner fa-spin"></i> 加載中...</div>';
-        sendBtn.disabled = true;
 
         try {
             const response = await fetch(`/api/stock-notification/waitlist/${productId}`);
@@ -1990,7 +2287,6 @@
                     });
                     html += '</ul>';
                     body.innerHTML = html;
-                    sendBtn.disabled = false;
                 }
             } else {
                 body.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--accent);">${result.message || '加載失敗'}</div>`;
@@ -2012,8 +2308,6 @@
         const btn = document.getElementById('sendNotifyBtn');
         const originalText = btn.innerHTML;
 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發送中...';
 
         try {
             const response = await fetch(`/api/stock-notification/notify/${currentNotifyProductId}`, {method: 'POST'});
@@ -2028,14 +2322,12 @@
             } else {
                 if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '發送失敗'), true);
                 else alert('❌ ' + (result.message || '發送失敗'));
-                btn.disabled = false;
                 btn.innerHTML = originalText;
             }
         } catch (error) {
             console.error('發送通知失敗:', error);
             if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
             else alert('❌ 網絡錯誤，請稍後重試');
-            btn.disabled = false;
             btn.innerHTML = originalText;
         }
     }
@@ -2077,6 +2369,80 @@
             }
         } catch (error) {
             console.error('查詢分組信息失敗:', error);
+        }
+    }
+
+    // 打開轉移 Modal
+    async function openTransferModal(productId, productName, currentStock) {
+        document.getElementById('transferProductId').value = productId;
+        document.getElementById('transferProductName').value = productName;
+        document.getElementById('transferCurrentStock').value = currentStock;
+        document.getElementById('transferQuantity').max = currentStock;
+        document.getElementById('transferQuantity').value = '';
+        document.getElementById('transferReason').value = '';
+
+        // 加載門店列表
+        const storeSelect = document.getElementById('transferStoreId');
+        storeSelect.innerHTML = '<option value="">加載中...</option>';
+        try {
+            // 假設你有一個獲取所有門店的 API，如果沒有，可以新建一個簡單的 GET /admin/stores/api/list
+            const res = await fetch('/admin/stores/api/list?page=1&size=100');
+            const data = await res.json();
+            storeSelect.innerHTML = '<option value="">請選擇目標門店</option>';
+            if (data.content) {
+                data.content.forEach(store => {
+                    if (store.isActive) { // 只顯示啟用中的門店
+                        const option = document.createElement('option');
+                        option.value = store.storeId;
+                        option.textContent = `${store.name} (${store.storeCode})`;
+                        storeSelect.appendChild(option);
+                    }
+                });
+            }
+        } catch (e) {
+            storeSelect.innerHTML = '<option value="">加載門店失敗</option>';
+            console.error(e);
+            // 降級處理：如果你還沒有這個 API，可以手動寫死幾個測試門店
+            // storeSelect.innerHTML = '<option value="1">中環旗艦店</option><option value="2">旺角分店</option>';
+        }
+
+        document.getElementById('transferStoreModal').style.display = 'flex';
+    }
+
+    function closeTransferModal() {
+        document.getElementById('transferStoreModal').style.display = 'none';
+    }
+
+    async function executeTransfer(event) {
+        event.preventDefault();
+        const btn = document.getElementById('transferSubmitBtn');
+        const originalText = btn.innerHTML;
+
+        const productId = document.getElementById('transferProductId').value;
+        const storeId = document.getElementById('transferStoreId').value;
+        const quantity = parseInt(document.getElementById('transferQuantity').value);
+        const reason = document.getElementById('transferReason').value.trim() || '線上總倉調撥至門店';
+
+        try {
+            const res = await fetch('/api/admin/inventory/transfer-to-store', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ productId, storeId, quantity, reason })
+            });
+            const result = await res.json();
+            if (res.ok && result.success) {
+                if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
+                closeTransferModal();
+                // 刷新商品列表，更新庫存顯示
+                setTimeout(() => { AdminTable.loadData(tableConfig); }, 1000);
+            } else {
+                if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '轉移失敗'), true);
+                btn.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('轉移失敗:', error);
+            if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
+            btn.innerHTML = originalText;
         }
     }
 

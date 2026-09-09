@@ -1443,7 +1443,6 @@
             const btn = document.getElementById(btnId);
             if (!btn) return;
 
-            btn.disabled = true;
 
             try {
                 const res = await fetch(`/api/admin/appeal/${AP.currentReviewAppealId}/review`, {
@@ -1460,13 +1459,11 @@
                 } else {
                     if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
                     else alert('❌ ' + (result.message || '操作失敗'));
-                    btn.disabled = false;
                 }
             } catch (error) {
                 console.error('處理申訴錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 else alert('❌ 網絡錯誤，請稍後重試');
-                btn.disabled = false;
             }
         };
 
@@ -1485,7 +1482,6 @@
             const btn = document.getElementById('confirmUnbanBtn');
             if (!btn) return;
 
-            btn.disabled = true;
 
             try {
                 const response = await fetch(`/api/admin/penalty/${AP.currentPenaltyIdToUnban}/revoke`, {
@@ -1499,13 +1495,11 @@
                 } else {
                     if (typeof showNotification === 'function') showNotification('❌ 操作失敗，請稍後重試', true);
                     else alert('❌ 操作失敗，請稍後重試');
-                    btn.disabled = false;
                 }
             } catch (error) {
                 console.error('解除封禁錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤', true);
                 else alert(' 網絡錯誤');
-                btn.disabled = false;
             }
         };
 
@@ -1524,7 +1518,6 @@
             const btn = document.getElementById('confirmUnblacklistBtn');
             if (!btn) return;
 
-            btn.disabled = true;
 
             try {
                 const response = await fetch(`/api/admin/penalty/${AP.currentPenaltyIdToUnblacklist}/revoke`, {
@@ -1540,13 +1533,11 @@
                     const result = await response.json();
                     if (typeof showNotification === 'function') showNotification(' ' + (result.message || '操作失敗'), true);
                     else alert('❌ 操作失敗：' + (result.message || '請稍後重試'));
-                    btn.disabled = false;
                 }
             } catch (error) {
                 console.error('解除拉黑錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 else alert('❌ 網絡錯誤');
-                btn.disabled = false;
             }
         };
 
@@ -1624,8 +1615,6 @@
             const btn = document.getElementById(btnId);
             if (!btn) return;
 
-            btn.disabled = true;
-
             try {
                 const res = await fetch(`/api/admin/appeal/${AP.currentBlacklistAppealId}/review`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -1640,13 +1629,11 @@
                 } else {
                     if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
                     else alert('❌ ' + (result.message || '操作失敗'));
-                    btn.disabled = false;
                 }
             } catch (error) {
                 console.error('處理黑名單申訴錯誤:', error);
                 if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
                 else alert(' 網絡錯誤，請稍後重試');
-                btn.disabled = false;
             }
         };
 

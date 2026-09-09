@@ -2751,7 +2751,7 @@
                     showNotification('❌ ' + result.message, true);
                 }
             } catch (e) {showNotification('❌ 網絡錯誤', true);}
-            finally {btn.disabled = false; btn.innerHTML = '確認刪除';}
+            finally {}
         };
         window.confirmDeleteReview = AdminReviews.confirmDeleteReview;
 
@@ -2913,7 +2913,6 @@
             const btn = document.getElementById('confirmRestoreBtn') || document.getElementById('confirmForceRestoreBtn');
             if (!btn) return;
 
-            btn.disabled = true;
             try {
                 const res = await fetch(`/api/review/restore/${AR.currentRestoreArchiveId}`, {method: 'POST'});
                 const result = await res.json();
@@ -2926,7 +2925,9 @@
                     showNotification('❌ ' + result.message, true);
                 }
             } catch (e) {showNotification('❌ 網絡錯誤', true);}
-            finally {btn.disabled = false;}
+            finally {
+
+            }
         };
         window.executeRestoreReview = AdminReviews.executeRestoreReview;
 

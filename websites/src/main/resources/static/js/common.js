@@ -416,8 +416,6 @@ Cart.checkout = async function () {
 
   const btn = document.querySelector(".checkout-btn");
   const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
 
   try {
     const response = await fetch("/checkout/api/create", {
@@ -433,14 +431,10 @@ Cart.checkout = async function () {
       window.location.href = `/checkout?orderNo=${result.data}`;
     } else {
       showNotification("❌ " + (result.message || "創建訂單失敗"), true);
-      btn.disabled = false;
-      btn.innerHTML = originalText;
     }
   } catch (error) {
     console.error("結賬錯誤:", error);
     showNotification("❌ 網絡錯誤", true);
-    btn.disabled = false;
-    btn.innerHTML = originalText;
   }
 };
 
@@ -692,8 +686,6 @@ Auth.handleRegister = async function (e) {
         return;
     }
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 註冊中...';
     msg.textContent = "";
 
     try {
@@ -733,8 +725,7 @@ Auth.handleRegister = async function (e) {
         msg.textContent = "❌ 網絡錯誤，請檢查連接";
         msg.style.color = "var(--accent)";
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-user-check"></i> 立即註冊';
+
     }
 };
 
@@ -751,8 +742,6 @@ Auth.handleLogin = async function (e) {
     const msg = document.getElementById("loginMsg");
     const btn = form.querySelector('button[type="submit"]');
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 登入中...';
     msg.textContent = "";
     msg.style.color = "var(--accent)";
 
@@ -805,8 +794,7 @@ Auth.handleLogin = async function (e) {
     } catch (error) {
         msg.textContent = "❌ 網絡錯誤，請檢查連接";
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> 立即登入';
+
     }
 };
 

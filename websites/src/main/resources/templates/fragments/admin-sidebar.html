@@ -32,6 +32,11 @@
                     <i class="fas fa-chevron-right"></i>
                 </div>
                 <ul class="menu-items">
+                    <li>
+                        <a href="/admin/purchases" th:classappend="${activePage == 'purchases'} ? 'active' : ''" data-page="purchases">
+                            <i class="fas fa-dolly"></i> 採購管理
+                        </a>
+                    </li>
                     <li><a href="/admin/products" th:classappend="${activePage == 'products'} ? 'active' : ''"
                             data-page="products">
                             <i class="fas fa-box"></i> 商品管理

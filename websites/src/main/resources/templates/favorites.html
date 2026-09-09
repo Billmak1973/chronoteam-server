@@ -496,10 +496,6 @@
 
             const originalText = this.innerHTML;
 
-            // 按鈕進入 Loading 狀態
-            this.disabled = true;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-
             try {
                 const response = await fetch(`/api/favorites/toggle/${currentProductId}`, {
                     method: 'POST',

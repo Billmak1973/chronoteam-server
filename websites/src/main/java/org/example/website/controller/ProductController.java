@@ -40,7 +40,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
-@RequestMapping("/") // 建議加上基礎路徑，便於 Swagger 分類
+@RequestMapping("/")
 @Tag(name = "商品管理", description = "商品詳情頁面渲染、變體查詢及管理端商品更新接口")
 public class ProductController {
 
@@ -274,21 +274,21 @@ public class ProductController {
         }
 
         try {
+            // 1. 獲取商品並記錄原始庫存 (此時數據庫中仍是舊庫存)
             Product product = productRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("商品不存在"));
 
-            // 【關鍵 1】：記錄原始庫存，用於後續判斷是否發生變化
             Integer originalStock = product.getStock();
 
-            // 【關鍵 2】：核心校驗：若庫存發生變化，必須填寫原因
+            // 2. 核心校驗：若庫存發生變化，必須填寫原因
             if (request.getStock() != null && !request.getStock().equals(originalStock)) {
                 if (request.getStockChangeReason() == null || request.getStockChangeReason().trim().isEmpty()) {
                     return ResponseEntity.badRequest().body(Result.error("庫存數量發生變化，必須填寫「庫存變更原因」！"));
                 }
             }
 
+            // 3. 更新【非庫存】的其他字段 (注意：這裡絕對不要寫 product.setStock)
             if (request.getPrice() != null) product.setPrice(request.getPrice());
-            if (request.getStock() != null) product.setStock(request.getStock());
             if (request.getCategory() != null) product.setCategory(request.getCategory());
             if (request.getBrand() != null) product.setBrand(request.getBrand());
             if (request.getDescription() != null) product.setDescription(request.getDescription());
@@ -303,12 +303,14 @@ public class ProductController {
             Integer newOrder = request.getHomeDisplayOrder();
             if (newOrder != null && newOrder > 0) {
                 productService.updateHomeDisplayOrder(id, newOrder);
-            } else {
-                productService.updateHomeDisplayOrder(id, null);
             }
 
+            // 4. 【關鍵步驟】：先保存【非庫存】的修改到數據庫
+            // 因為我們沒有執行 product.setStock()，所以此時數據庫裡的 stock 字段依然是舊值！
             productRepository.save(product);
 
+            // 5. 只有當庫存發生變化時，才調用調整庫存的方法
+            // 因為上一步沒有更新 stock，所以 adjustOnlineStock 內部 findById 查出來的 previousQuantity 就會是真正的舊值！
             if (request.getStock() != null && !request.getStock().equals(originalStock)) {
                 String operatorUsername = authentication.getName();
                 inventoryManagementService.adjustOnlineStock(

@@ -8,9 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/admin.css">
-    <!-- 保留原有全部 <style> 內容不變 -->
     <style>
-        /* ... 原有 CSS 全部保留 ... */
         .table-responsive {
             overflow-x: auto;
             background: white;
@@ -720,9 +718,6 @@
         async function executePickup() {
             if (!currentPickupOrderNo) return;
             const btn = document.getElementById('confirmPickupBtn');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
             try {
                 const response = await fetch(`/api/order/${currentPickupOrderNo}/pickup`, {
                     method: 'POST', headers: {'Content-Type': 'application/json'}
@@ -735,14 +730,10 @@
                     setTimeout(() => AdminTable.loadData(tableConfig), 1000);
                 } else {
                     showNotification('❌ ' + (result.message || '取貨確認失敗'), true);
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
                 }
             } catch (error) {
                 console.error('取貨確認錯誤:', error);
                 showNotification('❌ 網絡錯誤，請稍後重試', true);
-                btn.disabled = false;
-                btn.innerHTML = originalText;
             }
         }
 
