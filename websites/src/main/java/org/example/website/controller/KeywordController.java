@@ -33,7 +33,7 @@ public class KeywordController {
             @ApiResponse(responseCode = "401", description = "未登入或無權限"),
             @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
     })
-    @GetMapping
+    @GetMapping//@GetMapping (GET)：用於讀取/查詢資源。特點是冪等（多次請求結果一樣）且安全（不修改數據）。
     public ResponseEntity<?> getAllKeywords() {
         return ResponseEntity.ok(Result.okWithData("獲取成功", keywordService.getAllKeywords()));
     }
@@ -48,13 +48,14 @@ public class KeywordController {
             @ApiResponse(responseCode = "401", description = "未登入或無權限"),
             @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
     })
-    @PostMapping
+    @PostMapping//@PostMapping (POST)：用於創建新資源。特點是非冪等，每次請求可能會創建新數據。
     public ResponseEntity<?> addKeyword(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "包含關鍵詞內容的請求體",
                     required = true,
                     content = @Content(schema = @Schema(example = "{\"keyword\": \"違規詞\"}"))
             )
+            //@RequestBody：用於接收 HTTP Request Body 中的數據（通常是 JSON 或 XML），一般配合 POST / PUT 使用。
             @RequestBody Map<String, String> request) {
         try {
             Keyword keyword = keywordService.addKeyword(request.get("keyword"));
@@ -74,7 +75,7 @@ public class KeywordController {
             @ApiResponse(responseCode = "401", description = "未登入或無權限"),
             @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
     })
-    @PutMapping("/{id}")
+    @PutMapping("/{id}")//@PutMapping (PUT)：用於全量更新/替換現有資源。特點是冪等。
     public ResponseEntity<?> updateKeyword(
             @Parameter(description = "要修改的關鍵詞 ID", example = "1", required = true)
             @PathVariable Long id,
@@ -103,7 +104,7 @@ public class KeywordController {
             @ApiResponse(responseCode = "401", description = "未登入或無權限"),
             @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
     })
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{id}")//@DeleteMapping (DELETE)：用於刪除資源。特點是冪等。
     public ResponseEntity<?> deleteKeyword(
             @Parameter(description = "要刪除的關鍵詞 ID", example = "1", required = true)
             @PathVariable Long id) {

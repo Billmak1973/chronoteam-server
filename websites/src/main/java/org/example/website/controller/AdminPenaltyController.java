@@ -69,10 +69,10 @@ public class AdminPenaltyController {
             @ApiResponse(responseCode = "400", description = "請求參數錯誤或用戶已被拉黑"),
             @ApiResponse(responseCode = "403", description = "無權操作（非管理員）")
     })
-    @PostMapping("/blacklist/{targetUsername}")
+    @PostMapping("/blacklist/{targetUsername}")//@PostMapping:用於創建新資源。特點是非冪等，每次請求可能會創建新數據。
     public ResponseEntity<Result> blacklistUser(
             @Parameter(description = "目標用戶名", example = "bad_user_123", required = true)
-            @PathVariable String targetUsername,
+            @PathVariable String targetUsername,//@PathVariable：用於接收 URL 路徑中的變量（如 /users/{id} 中的 id），常用於 RESTful 風格的資源定位。
 
             @Parameter(description = "拉黑原因", example = "嚴重違反社區規範")
             @RequestParam(required = false, defaultValue = "嚴重違反社區規範") String reason,
@@ -107,7 +107,7 @@ public class AdminPenaltyController {
             @ApiResponse(responseCode = "400", description = "用戶不存在或未被拉黑"),
             @ApiResponse(responseCode = "403", description = "無權操作（非管理員）")
     })
-    @DeleteMapping("/blacklist/{targetUsername}")
+    @DeleteMapping("/blacklist/{targetUsername}")//@DeleteMapping (DELETE)：用於刪除資源。特點是冪等。
     public ResponseEntity<Result> unblacklistUser(
             @Parameter(description = "目標用戶名", example = "bad_user_123", required = true)
             @PathVariable String targetUsername,
@@ -135,7 +135,7 @@ public class AdminPenaltyController {
             @ApiResponse(responseCode = "404", description = "申訴記錄不存在"),
             @ApiResponse(responseCode = "500", description = "服務器內部錯誤")
     })
-    @GetMapping("/appeal/{appealId}")
+    @GetMapping("/appeal/{appealId}")//@GetMapping (GET)：用於讀取/查詢資源。特點是冪等（多次請求結果一樣）且安全（不修改數據）。
     @Transactional(readOnly = true) // 關鍵：防止懶加載異常
     public ResponseEntity<Result> getAppealDetail(
             @Parameter(description = "申訴記錄的唯一 ID", example = "1001", required = true)

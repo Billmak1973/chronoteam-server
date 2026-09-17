@@ -84,6 +84,7 @@ public class SellController {
                     description = "出售申請表單數據及圖片文件 (multipart/form-data)",
                     required = true
             )
+            // 因為包含圖片(MultipartFile)，不能用 @RequestBody，必須用 @ModelAttribute 接收表單數據
             @ModelAttribute @Valid SellApplicationDTO dto,
             Authentication authentication) {
 

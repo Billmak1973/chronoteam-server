@@ -179,7 +179,7 @@ public class OrderController {
     @DeleteMapping("/{orderNo}/hide")
     public ResponseEntity<Result> hideOrder(
             @Parameter(description = "訂單編號", example = "ORD-1715600000000-ABC123", required = true)
-            @PathVariable String orderNo,
+            @PathVariable String orderNo,// @PathVariable 接收 URL 路徑中的參數
 
             @Parameter(hidden = true)
             Authentication authentication) {

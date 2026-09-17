@@ -21,23 +21,30 @@ public class RateLimitService {
     private final RateLimitLogRepository rateLimitLogRepository;
     private final UserRepository userRepository;
 
-    private static final int MAX_ACTIONS_PER_MINUTE = 10; // 1分鐘內最大次數
-    private static final int BAN_DURATION_MINUTES = 10;   // 封禁時長：10分鐘
+    // 全局操作限制：1分鐘內最多 20 次
+    private static final int MAX_GLOBAL_ACTIONS_PER_MINUTE = 20;
+    // 單條評論操作限制：1分鐘內最多 10 次
+    private static final int MAX_REVIEW_ACTIONS_PER_MINUTE = 10;
 
-    private static final String REDIS_COUNTER_KEY_PREFIX = "rate_limit:action:";
+    private static final int BAN_DURATION_MINUTES = 10;   // 封禁時長：10分鐘
+    private static final int WINDOW_SECONDS = 60;         // 滑動窗口大小：60秒
+
+    private static final String REDIS_REVIEW_WINDOW_PREFIX = "rate_limit:review:"; // 單條評論窗口
+    private static final String REDIS_GLOBAL_WINDOW_PREFIX = "rate_limit:global:"; // 全局窗口
     private static final String REDIS_BAN_KEY_PREFIX = "rate_limit:ban:";
 
     /**
-     * 檢查並記錄用戶操作 (點贊/踩)
+     * 檢查並記錄用戶操作 (點贊/踩) - 使用 ZSet 滑動窗口
      * @param username 用戶名
+     * @param reviewId 評論 ID
      * @throws RuntimeException 如果被限流或封禁，將拋出異常攔截操作
      */
-    public void checkAndRecordAction(String username) {
+    public void checkAndRecordAction(String username, Long reviewId) {
         // 1. 【高性能攔截】先檢查 Redis 中是否處於封禁狀態
         String banKey = REDIS_BAN_KEY_PREFIX + username;
         if (Boolean.TRUE.equals(redisTemplate.hasKey(banKey))) {
             Long ttl = redisTemplate.getExpire(banKey, TimeUnit.SECONDS);
-            long minutesLeft = (ttl != null && ttl >0) ? (ttl / 60 + 1) : 1;
+            long minutesLeft = (ttl != null && ttl > 0) ? (ttl / 60 + 1) : 1;
             throw new RuntimeException("操作過於頻繁，已被暫時限制，請 " + minutesLeft + " 分鐘後再試。");
         }
 
@@ -57,31 +64,57 @@ public class RateLimitService {
             throw new RuntimeException("操作過於頻繁，已被暫時限制，請 " + minutesLeft + " 分鐘後再試。");
         }
 
-        // 3. 【高頻計數】日常點贊只在 Redis 中 +1，不寫數據庫！
-        String counterKey = REDIS_COUNTER_KEY_PREFIX + username;
-        Long count = redisTemplate.opsForValue().increment(counterKey);
+        long now = System.currentTimeMillis();
+        long windowStart = now - (WINDOW_SECONDS * 1000L);
+        // 使用 時間戳 + 納米時間 確保極端併發下 member 唯一
+        String member = now + ":" + System.nanoTime();
 
-        // 如果是這 1 分鐘內的第一次操作，設置 60 秒過期
-        if (count != null && count == 1) {
-            redisTemplate.expire(counterKey, 60, TimeUnit.SECONDS);
+        // 3. 【滑動窗口計數 A】檢查單條評論限制 (10次/分鐘)
+        String reviewKey = REDIS_REVIEW_WINDOW_PREFIX + username + ":" + reviewId;
+        if (isLimitExceeded(reviewKey, now, windowStart, member, MAX_REVIEW_ACTIONS_PER_MINUTE)) {
+            triggerBan(user, MAX_REVIEW_ACTIONS_PER_MINUTE, "對同一條評論1分鐘內頻繁操作");
+            setBanRedis(username);
+            throw new RuntimeException("對同一條評論1分鐘內操作達到 " + MAX_REVIEW_ACTIONS_PER_MINUTE + " 次，已被限制操作 " + BAN_DURATION_MINUTES + " 分鐘。");
         }
 
-        // 4. 【觸發閾值】如果達到 30 次，寫入數據庫封禁記錄
-        if (count != null && count >= MAX_ACTIONS_PER_MINUTE) {
-            triggerBan(user, count.intValue());
-
-            // 在 Redis 中設置封禁標記，10分鐘過期
-            redisTemplate.opsForValue().set(banKey, "1", BAN_DURATION_MINUTES, TimeUnit.MINUTES);
-
-            throw new RuntimeException("1分鐘內操作達到 " + MAX_ACTIONS_PER_MINUTE + " 次，已被限制操作 " + BAN_DURATION_MINUTES + " 分鐘。");
+        // 4. 【滑動窗口計數 B】檢查全局操作限制 (20次/分鐘)
+        String globalKey = REDIS_GLOBAL_WINDOW_PREFIX + username;
+        if (isLimitExceeded(globalKey, now, windowStart, member, MAX_GLOBAL_ACTIONS_PER_MINUTE)) {
+            triggerBan(user, MAX_GLOBAL_ACTIONS_PER_MINUTE, "1分鐘內全局頻繁操作");
+            setBanRedis(username);
+            throw new RuntimeException("1分鐘內全局操作達到 " + MAX_GLOBAL_ACTIONS_PER_MINUTE + " 次，已被限制操作 " + BAN_DURATION_MINUTES + " 分鐘。");
         }
+    }
+
+    /**
+     * 核心滑動窗口邏輯：清理過期數據 -> 加入新數據 -> 檢查總數
+     */
+    private boolean isLimitExceeded(String key, long now, long windowStart, String member, int maxLimit) {
+        // 3.1 移除 60 秒窗口之外的舊記錄
+        redisTemplate.opsForZSet().removeRangeByScore(key, 0, windowStart);
+        // 3.2 將當前操作加入 ZSet
+        redisTemplate.opsForZSet().add(key, member, (double) now);
+        // 3.3 設置 ZSet 的過期時間 (比窗口時間稍長 5 秒，防止內存洩漏)
+        redisTemplate.expire(key, WINDOW_SECONDS + 5, TimeUnit.SECONDS);
+        // 3.4 統計當前 60 秒窗口內的實際操作次數
+        Long currentCount = redisTemplate.opsForZSet().zCard(key);
+
+        return currentCount != null && currentCount >= maxLimit;
+    }
+
+    /**
+     * 在 Redis 中設置封禁標記
+     */
+    private void setBanRedis(String username) {
+        String banKey = REDIS_BAN_KEY_PREFIX + username;
+        redisTemplate.opsForValue().set(banKey, "1", BAN_DURATION_MINUTES, TimeUnit.MINUTES);
     }
 
     /**
      * 觸發封禁邏輯 (僅在達到閾值時調用，極大減少數據庫寫入)
      */
     @Transactional
-    public void triggerBan(User user, int triggerTimes) {
+    public void triggerBan(User user, int triggerTimes, String banReason) {
         Optional<RateLimitLog> existingLog = rateLimitLogRepository.findTopByUserOrderByActionTimeDesc(user);
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime bannedUntil = now.plusMinutes(BAN_DURATION_MINUTES);
@@ -92,6 +125,7 @@ public class RateLimitService {
             log.setBannedUntil(bannedUntil);
             log.setTimes(triggerTimes);
             log.setUpdatedAt(now);
+            log.setBanReason(banReason); // 更新原因
             rateLimitLogRepository.save(log);
         } else {
             // 創建新的封禁記錄
@@ -102,7 +136,7 @@ public class RateLimitService {
             newLog.setUpdatedAt(now);
             newLog.setBannedUntil(bannedUntil);
             newLog.setBannedBy("SYSTEM");
-            newLog.setBanReason("1分鐘內頻繁操作達到 " + triggerTimes + " 次");
+            newLog.setBanReason(banReason);
             newLog.setStatus(RateLimitLog.LimitStatus.BANNED);
             rateLimitLogRepository.save(newLog);
         }
@@ -113,7 +147,6 @@ public class RateLimitService {
      */
     @Transactional
     public void updateExpiredBans() {
-        // 傳入枚舉值，讓 Hibernate 安全地處理類型轉換
         rateLimitLogRepository.updateExpiredBans(
                 RateLimitLog.LimitStatus.EXPIRED,
                 RateLimitLog.LimitStatus.BANNED

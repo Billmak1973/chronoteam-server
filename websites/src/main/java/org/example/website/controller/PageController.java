@@ -219,6 +219,10 @@ public class PageController {
         model.addAttribute("returnDays", systemConfigService.getReturnDays());
         model.addAttribute("exchangeDays", systemConfigService.getExchangeDays());
 
+        // 注入線下付款保留天數和網絡訂單保留天數
+        model.addAttribute("offlinePaymentDays", systemConfigService.getOfflinePaymentDays());
+        model.addAttribute("onlineOrderRetentionDays", systemConfigService.getOnlineOrderRetentionDays());
+
         return "orders";
     }
 

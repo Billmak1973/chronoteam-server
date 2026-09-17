@@ -1875,7 +1875,7 @@
             </div>
         </div>
     </div>
-
+    <div th:replace="~{fragments/common :: modals}"></div>
     <script src="/js/common.js"></script>
     <script th:inline="javascript">
         const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
@@ -1942,6 +1942,15 @@
                     if (response.ok && result.success) {
                         // 1. 移除 DOM 元素
                         card.remove();
+
+                        // 【新增】如果已選擇店鋪，重新驗證庫存
+                        const storeSelect = document.getElementById('storeSelect');
+                        if (storeSelect && storeSelect.value) {
+                            const validation = validateStoreStock(storeSelect.value);
+                            if (!validation.valid) {
+                                showStoreStockWarning(validation);
+                            }
+                        }
 
                         // 【核心修復】如果後端返回了最新總價和運費，直接覆蓋 DOM，絕不依賴前端計算
                         if (result.data && result.data.newTotalAmount !== undefined) {
@@ -2253,12 +2262,34 @@
                 return;
             }
 
+            // 保存當前數量，用於可能的回滾
+            const currentQty = parseInt(card.getAttribute('data-quantity'));
+
             try {
                 const response = await fetch(`/checkout/api/update-item/${orderItemId}?quantity=${newQty}`, {method: 'PUT'});
                 const result = await response.json();
 
                 if (response.ok && result.success) {
                     const data = result.data;
+
+                    // 如果已選擇店鋪，重新驗證庫存
+                    const storeSelect = document.getElementById('storeSelect');
+                    if (storeSelect && storeSelect.value) {
+                        const validation = validateStoreStock(storeSelect.value);
+                        if (!validation.valid) {
+                            showStoreStockWarning(validation);
+                            showNotification('⚠️ 該店鋪庫存不足，已為您恢復原數量', true);
+
+                            // 前端恢復原數量
+                            qtyElement.textContent = currentQty;
+                            card.setAttribute('data-quantity', currentQty);
+
+                            // 可選：發起後端回滾請求，防止前後端數據不一致
+                            // fetch(`/checkout/api/update-item/${orderItemId}?quantity=${currentQty}`, {method: 'PUT'});
+
+                            return; // 終止後續的總價更新
+                        }
+                    }
 
                     // 1. 更新數量和小計
                     qtyElement.textContent = data.quantity;
@@ -2522,6 +2553,12 @@
                 '<i class="fas fa-store"></i> 選擇店鋪後，訂單將被保留 7 天。請在期限內前往店鋪完成支付。';
 
             updateTotal();
+
+            // 如果店鋪信息面板當前是顯示的，重新呼叫 updateStoreInfo() 刷新注意事項
+            const storeInfo = document.getElementById('storeInfo');
+            if (storeInfo && storeInfo.style.display === 'block') {
+                updateStoreInfo();
+            }
         }
 
         // 切換配送方式 (快遞/門店自取) — 修改版
@@ -2540,6 +2577,69 @@
             updateTotal();
         }
 
+        // 显示店铺库存不足警告
+        function showStoreStockWarning(validation) {
+            const alertHtml = `
+        <div class="store-stock-alert" style="
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            color: #856404;
+        ">
+            <i class="fas fa-exclamation-triangle" style="color: #ffc107; margin-right: 0.5rem;"></i>
+            <strong>店铺库存不足</strong><br>
+            商品「${validation.productName}」<br>
+            需要：${validation.requiredQty}件 | 店铺库存：${validation.availableStock}件<br>
+            <small>请选择其他店铺或调整数量</small>
+        </div>
+    `;
+
+            const storeSelection = document.getElementById('storeSelection');
+            const existingAlert = storeSelection.querySelector('.store-stock-alert');
+            if (existingAlert) existingAlert.remove();
+
+            storeSelection.insertAdjacentHTML('afterbegin', alertHtml);
+
+            // 3秒后自动消失
+            setTimeout(() => {
+                const alert = storeSelection.querySelector('.store-stock-alert');
+                if (alert) {
+                    alert.style.transition = 'opacity 0.3s ease';
+                    alert.style.opacity = '0';
+                    setTimeout(() => alert.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        // 验证当前订单商品在指定店铺是否有足够库存
+        function validateStoreStock(storeId) {
+            const storeStockMap = /*[[${storeStockMap}]]*/ {};
+            const cards = document.querySelectorAll('.cart-item-card');
+
+            for (let card of cards) {
+                const productId = parseInt(card.getAttribute('data-product-id'));
+                const quantity = parseInt(card.getAttribute('data-quantity'));
+
+                // 获取该店铺该商品的库存
+                const storeStock = storeStockMap[storeId] || {};
+                const availableStock = storeStock[productId] || 0;
+
+                // 如果库存不足，返回 false
+                if (quantity > availableStock) {
+                    return {
+                        valid: false,
+                        productName: card.querySelector('.item-name').textContent,
+                        requiredQty: quantity,
+                        availableStock: availableStock
+                    };
+                }
+            }
+
+            return { valid: true };
+        }
+
         // 重寫：從 <option> 的 data-* 屬性動態讀取店鋪信息，並智能解析營業時間
         function updateStoreInfo() {
             const select = document.getElementById('storeSelect');
@@ -2551,6 +2651,19 @@
             if (!selectedOption || !selectedOption.value) {
                 storeInfo.style.display = 'none';
                 return;
+            }
+
+            const storeId = selectedOption.value;
+
+            // 【新增】驗證店鋪庫存
+            const validation = validateStoreStock(storeId);
+
+            if (!validation.valid) {
+                // 庫存不足，顯示警告並重置選擇
+                showStoreStockWarning(validation);
+                select.value = ''; // 清空選擇
+                storeInfo.style.display = 'none';
+                return; // 終止後續渲染
             }
 
             // 從 data-* 屬性讀取數據
@@ -2642,11 +2755,14 @@
             `;
                 }
             }
+            // 檢查當前是否選擇了「線下店鋪支付」
+            const isOfflinePayment = document.getElementById('pay-offline')?.checked;
 
             // 通用注意事項（所有店鋪共用）
             const tips = [
                 '訂單確認後，請前往選定店鋪支付',
-                `店鋪保留訂單 <span style="color: #007bff; font-weight: bold;">${offlinePaymentDays}</span> 天，逾期自動取消`,
+                ...(isOfflinePayment ? [`店鋪保留綫下付款的訂單 <span style="color: #007bff; font-weight: bold;">${offlinePaymentDays}</span> 天，逾期自動取消`] : []),
+                // `店鋪保留綫下付款的訂單 <span style="color: #007bff; font-weight: bold;">${offlinePaymentDays}</span> 天，逾期自動取消`,
                 '支付完成後，店員會即時更新訂單狀態',
                 '請出示訂單編號給店員'
             ];

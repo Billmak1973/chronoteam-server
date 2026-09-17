@@ -22,7 +22,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Controller
+@Controller//標記為 Spring MVC 控制器，通常配合 @ResponseBody 返回數據，或返回視圖（View）。就是返回頁面：參考admin/admin-customers.html
+//返回頁面的方法不加 @ResponseBody，返回數據的方法加上 @ResponseBody
 @RequestMapping("/admin")
 @Tag(name = "後台用戶管理", description = "管理員專屬的用戶列表查詢、賬號創建與權限修改接口")
 public class AdminCustomerController {

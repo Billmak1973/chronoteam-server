@@ -16,7 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-@RestController
+@RestController//等價於 @Controller + @ResponseBody。專門用於寫 RESTful API，方法返回值會直接序列化為 JSON/XML，而不會去渲染視圖。(不需要返回頁面）
+//最簡潔，不用每個方法都加 @ResponseBody。
 @RequestMapping("/api/admin/appeal")
 @Tag(name = "管理員申訴管理", description = "管理員處理用戶針對處罰(禁言/拉黑/刪除評論)所提交申訴的相關接口")
 public class AdminAppealController {

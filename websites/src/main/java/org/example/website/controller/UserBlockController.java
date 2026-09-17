@@ -47,8 +47,10 @@ public class UserBlockController {
     public ResponseEntity<Result> toggleBlock(
             @Parameter(description = "目標用戶名", example = "bad_user", required = true)
             @PathVariable String targetUsername,
+            //@PathVariable：用於接收 URL 路徑中的變量（如 /users/{id} 中的 id），常用於 RESTful 風格的資源定位。
 
             @Parameter(description = "封禁時長（分鐘），僅管理員必填", example = "1440")
+            //@RequestParam：用於接收 URL 查詢參數（Query String，如 ?id=1&name=abc）或表單數據（application/x-www-form-urlencoded）。
             @RequestParam(required = false) Integer durationMinutes,
 
             @Parameter(description = "封禁原因，僅管理員必填", example = "嚴重違反社區規範")
@@ -61,6 +63,7 @@ public class UserBlockController {
             @RequestParam(required = false) String reviewContent,
 
             @Parameter(hidden = true)
+                    // 這個參數就是 Spring Security 從 Request 的 Cookie/Session 中解析出當前登入用戶的身份
             Authentication authentication) {
 
         String currentUsername = authentication.getName();

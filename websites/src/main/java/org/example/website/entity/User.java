@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users", indexes = {
+       // MySQL 會為 username 建立一棵獨立的 B+ 樹（非聚簇索引）。這棵樹的葉子節點不會存儲用戶的完整資料，而是存儲 (username, user_id)。
         @Index(name = "uk_user_email", columnList = "email", unique = true),
         @Index(name = "uk_user_username", columnList = "username", unique = true),
         @Index(name = "uk_user_uid", columnList = "uid", unique = true)
@@ -21,7 +22,7 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
-    private Long id;
+    private Long id;// 這就是聚簇索引
 
     // UID (唯一標識符)
     @Column(name = "uid", unique = true, length = 50, updatable = false)

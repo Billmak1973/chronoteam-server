@@ -152,48 +152,20 @@ public class SystemConfigService {
                 .orElse("GROUP");
     }
 
-    // ==========================================
-    // 【新增】通知文字設置相關獲取方法 (供前端或其它模塊調用)
-    // ==========================================
-    public String getNotificationText() {
-        return repository.findById("NOTIFICATION_TEXT")
-                .map(SystemConfig::getConfigValue)
-                .orElse("这里是通知文字预览");
+    /**
+     * 獲取網絡訂單(待付款)保留天數
+     * @return 若無配置，則默認返回 1 天 (24小時)
+     */
+    public Integer getOnlineOrderRetentionDays() {
+        return repository.findById("ONLINE_ORDER_RETENTION_DAYS")
+                .map(c -> {
+                    try {
+                        return Integer.parseInt(c.getConfigValue());
+                    } catch (NumberFormatException e) {
+                        return 1;
+                    }
+                })
+                .orElse(1); // 默認 1 天
     }
 
-    public String getNotificationTextColor() {
-        return repository.findById("NOTIFICATION_TEXT_COLOR")
-                .map(SystemConfig::getConfigValue)
-                .orElse("#FFFFFF");
-    }
-
-    public String getNotificationFontWeight() {
-        return repository.findById("NOTIFICATION_FONT_WEIGHT")
-                .map(SystemConfig::getConfigValue)
-                .orElse("normal");
-    }
-
-    public String getNotificationFontSize() {
-        return repository.findById("NOTIFICATION_FONT_SIZE")
-                .map(SystemConfig::getConfigValue)
-                .orElse("14");
-    }
-
-    public String getNotificationFontItalic() {
-        return repository.findById("NOTIFICATION_FONT_ITALIC")
-                .map(SystemConfig::getConfigValue)
-                .orElse("false");
-    }
-
-    public String getScrollDirection() {
-        return repository.findById("SCROLL_DIRECTION")
-                .map(SystemConfig::getConfigValue)
-                .orElse("rtl"); // 默認從右向左
-    }
-
-    public String getScrollSpeed() {
-        return repository.findById("SCROLL_SPEED")
-                .map(SystemConfig::getConfigValue)
-                .orElse("normal"); // 默認中速
-    }
 }

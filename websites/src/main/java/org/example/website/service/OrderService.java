@@ -114,7 +114,7 @@ public class OrderService {
             Integer productId = item.getProduct().getProductId();
             int qty = item.getQuantity();
 
-            // 使用原子更新語句扣減，如果返回 0 說明庫存不足
+            // 使用原子更新語句扣減，如果返回 0 說明庫存不足(执行乐观锁更新，获取受影响的行数)
             int updatedRows = storeInventoryRepository.deductStoreStock(store.getStoreId(), productId, qty);
 
             if (updatedRows == 0) {

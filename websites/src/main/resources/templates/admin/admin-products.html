@@ -42,7 +42,23 @@
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            min-width: 1400px;
+            min-width: 1640px;
+        }
+        /* 【新增】：配合 fixed 佈局，防止長文本撐破單元格或溢出 */
+        .data-table th,
+        .data-table td {
+            overflow: hidden;
+            text-overflow: ellipsis; /* 超出寬度顯示省略號 */
+            white-space: nowrap;     /* 強制不換行 */
+            box-sizing: border-box;  /* 確保 padding 不會增加你設定的 width */
+        }
+
+        /* 【特殊處理】：「商品資訊」(第3列) 內容較多，允許其自動換行 */
+        .data-table th:nth-child(3),
+        .data-table td:nth-child(3) {
+            white-space: normal;
+            word-wrap: break-word;
+            overflow: visible;
         }
 
         .data-table thead {
@@ -809,15 +825,11 @@
                 </div>
 
                 <div class="filter-group">
-                    <label><i class="fas fa-crown"
-                              style="color: var(--gold); margin-right: 0.3rem;"></i>品牌篩選</label>
+                    <label><i class="fas fa-crown" style="color: var(--gold); margin-right: 0.3rem;"></i>品牌篩選</label>
                     <select id="brandFilter">
                         <option value="">全部品牌</option>
-                        <option value="rolex">rolex</option>
-                        <option value="omega">omega</option>
-                        <option value="patek">patek</option>
-                        <option value="ap">ap</option>
-                        <option value="cartier">cartier</option>
+                        <!-- 動態遍歷後端傳來的 allBrands 集合 -->
+                        <option th:each="brand : ${allBrands}" th:value="${brand}" th:text="${brand}">品牌名稱</option>
                     </select>
                 </div>
 
@@ -953,12 +965,14 @@
                 </div>
 
                 <!-- 應用篩選按鈕 -->
-                <button class="btn-apply-filters" onclick="applyFilters()">
-                    <i class="fas fa-filter"></i> 應用篩選
-                </button>
-                <button class="btn-reset-filters" onclick="resetFilters()">
-                    <i class="fas fa-undo"></i> 重置
-                </button>
+                <div style="display: flex; gap: 0.8rem; align-items: flex-end;">
+                    <button class="btn-apply-filters" onclick="applyStoreFilters()">
+                        <i class="fas fa-filter"></i> 應用篩選
+                    </button>
+                    <button class="btn-reset-filters" onclick="resetStoreFilters()">
+                        <i class="fas fa-undo"></i> 重置
+                    </button>
+                </div>
             </div>
 
             <!-- 1. 網購倉庫庫存表格容器 (默認顯示) -->
@@ -969,8 +983,8 @@
                         <th style="width: 60px;">ID</th>
                         <th style="width: 70px;">圖片</th>
                         <th style="min-width: 220px;">商品資訊</th>
-                        <th style="width: 100px;">分類</th>
-                        <th style="width: 100px;">成色</th>
+                        <th style="width: 150px;">分類</th>
+                        <th style="width: 200px;">成色</th>
                         <th style="width: 110px;">價格</th>
                         <th style="width: 80px;">庫存</th>
                         <th style="width: 100px;">評價</th>
@@ -990,6 +1004,56 @@
             <!-- 網購倉庫分頁容器 -->
             <div id="products-pagination" style="margin-top: 2rem;"></div>
 
+            <!-- 線下門店庫存篩選區域 (默認隱藏，切換Tab時顯示) -->
+            <div id="storeFilterBar" class="filter-sort-bar" style="display: none;">
+                <div class="filter-group">
+                    <label><i class="fas fa-store" style="color: var(--gold); margin-right: 0.3rem;"></i>門店篩選</label>
+                    <select id="storeFilter">
+                        <option value="">全部門店</option>
+                        <!-- JS 動態填充 -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-crown" style="color: var(--gold); margin-right: 0.3rem;"></i>品牌篩選</label>
+                    <select id="storeBrandFilter">
+                        <option value="">全部品牌</option>
+                        <!-- 直接複用後端傳來的 allBrands -->
+                        <option th:each="brand : ${allBrands}" th:value="${brand}" th:text="${brand}">品牌名稱</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-th-large" style="color: var(--gold); margin-right: 0.3rem;"></i>分類篩選</label>
+                    <select id="storeCategoryFilter">
+                        <option value="">全部類型</option>
+                        <option value="pilot">飞行表</option>
+                        <option value="dive">潜水表</option>
+                        <option value="dress">正装表</option>
+                        <option value="chronograph">计时码表</option>
+                        <option value="vintage">古董表</option>
+                        <option value="others">其它类型手表</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-gem" style="color: var(--gold); margin-right: 0.3rem;"></i>成色篩選</label>
+                    <select id="storeConditionFilter">
+                        <option value="">全部成色</option>
+                        <option value="NEAR_MINT">近全新 (NEAR_MINT 98-100%)</option>
+                        <option value="EXCELLENT">極佳 (EXCELLENT 95-97%)</option>
+                        <option value="GOOD">良好 (GOOD 90-94%)</option>
+                        <option value="FAIR">正常使用痕跡 (FAIR 85-89%)</option>
+                        <option value="HEAVILY_USED">重度使用痕跡(HEAVILY_USED 80%+)</option>
+                    </select>
+                </div>
+                <!-- 在 storeFilterBar 的末尾部分 -->
+                <div style="display: flex; gap: 0.8rem; align-items: flex-end;">
+                    <button class="btn-apply-filters" onclick="applyStoreFilters()">
+                        <i class="fas fa-filter"></i> 應用篩選
+                    </button>
+                    <button class="btn-reset-filters" onclick="resetStoreFilters()">
+                        <i class="fas fa-undo"></i> 重置
+                    </button>
+                </div>
+            </div>
             <!-- 2. 線下門店庫存表格容器 (默認隱藏) -->
             <div id="storeTableContainer" class="table-container" style="display: none;">
                 <table class="data-table">
@@ -997,7 +1061,7 @@
                     <tr>
                         <th style="width: 80px;">庫存ID</th>
                         <th style="width: 70px;">圖片</th>
-                        <th style="min-width: 220px;">商品資訊</th>
+                        <th style="width: 150px; max-width: 150px;">商品資訊</th>  <!-- 修改這裡 -->
                         <th style="width: 100px;">當前庫存</th>
                         <th style="width: 150px;">門店名稱</th>
                         <th style="width: 150px;">最後更新時間</th>
@@ -1436,6 +1500,68 @@
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- 門店庫存調撥轉移 Modal -->
+<!-- ========================================== -->
+<div id="storeTransferModal" class="edit-modal-overlay" style="display: none;">
+    <div class="edit-modal-box" style="max-width: 550px;">
+        <div class="edit-modal-header">
+            <h3><i class="fas fa-exchange-alt"></i> 門店庫存調撥轉移</h3>
+            <button class="modal-close-btn" onclick="closeStoreTransferModal()">&times;</button>
+        </div>
+        <form id="storeTransferForm" onsubmit="executeStoreTransfer(event)">
+            <!-- 隱藏字段 -->
+            <input type="hidden" id="st_inventoryId">
+            <input type="hidden" id="st_productId">
+            <input type="hidden" id="st_sourceStoreId">
+
+            <div class="form-group">
+                <label><i class="fas fa-tag"></i> 商品名稱</label>
+                <input type="text" id="st_productName" disabled style="background: #f1f3f5; cursor: not-allowed;">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-store"></i> 當前門店與庫存</label>
+                <input type="text" id="st_currentStoreInfo" disabled style="background: #f1f3f5; cursor: not-allowed;">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-arrow-right"></i> 目標倉庫類型 <span style="color:var(--accent)">*</span></label>
+                <select id="st_targetType" class="form-input" onchange="toggleTargetStoreSelect()" required>
+                    <option value="ONLINE">線上總倉 (Online)</option>
+                    <option value="OFFLINE">其他線下門店 (Offline)</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="st_targetStoreGroup" style="display: none;">
+                <label><i class="fas fa-map-marker-alt"></i> 選擇目標門店 <span style="color:var(--accent)">*</span></label>
+                <select id="st_targetStoreId" class="form-input">
+                    <option value="">請先選擇目標倉庫類型</option>
+                    <!-- JS 動態填充 -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-boxes"></i> 調撥數量 <span style="color:var(--accent)">*</span></label>
+                <input type="number" id="st_quantity" min="1" required placeholder="請輸入轉移數量">
+                <small style="color: var(--gray);">最大可調撥數量為當前門店庫存</small>
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-comment-dots"></i> 調撥原因 <span style="color:var(--accent)">*</span></label>
+                <textarea id="st_reason" rows="3" required placeholder="請說明調撥原因 (例如：門店A庫存積壓，調撥至門店B)"></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeStoreTransferModal()">取消</button>
+                <button type="submit" class="btn-modal-save" id="st_submitBtn">
+                    <i class="fas fa-check"></i> 確認調撥
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 
 <div th:replace="~{fragments/common :: modals}"></div>
 
@@ -1481,6 +1607,7 @@
     // ==========================================
     let currentInventoryTab = 'warehouse'; // 'warehouse' 或 'store'
 
+
     function switchInventoryTab(tabType, btnElement) {
         currentInventoryTab = tabType;
 
@@ -1490,6 +1617,7 @@
 
         // 獲取篩選欄元素
         const warehouseFilterBar = document.getElementById('warehouseFilterBar');
+        const storeFilterBar = document.getElementById('storeFilterBar'); // 【新增】獲取門店篩選欄
 
         // 切換表格容器與分頁器顯示/隱藏
         const warehouseTable = document.getElementById('warehouseTableContainer');
@@ -1503,22 +1631,33 @@
             storeTable.style.display = 'none';
             storePagination.style.display = 'none';
 
-            // 【新增】顯示篩選欄 (使用 flex 保持原有的響應式佈局)
+            // 顯示網購倉庫篩選欄
             if (warehouseFilterBar) {
                 warehouseFilterBar.style.display = 'flex';
+            }
+            // 隱藏門店篩選欄
+            if (storeFilterBar) {
+                storeFilterBar.style.display = 'none';
             }
 
             // 加載網購倉庫數據
             AdminTable.loadData(tableConfig);
+
         } else {
             warehouseTable.style.display = 'none';
             warehousePagination.style.display = 'none';
             storeTable.style.display = 'block';
             storePagination.style.display = 'block';
 
-            // 【新增】隱藏篩選欄
+            // 隱藏網購倉庫篩選欄
             if (warehouseFilterBar) {
                 warehouseFilterBar.style.display = 'none';
+            }
+
+            // 【核心修改】顯示門店篩選欄並加載門店列表
+            if (storeFilterBar) {
+                storeFilterBar.style.display = 'flex';
+                loadStoreFilterOptions(); // 觸發加載門店下拉框選項
             }
 
             // 加載門店庫存數據
@@ -1529,14 +1668,94 @@
     // 門店庫存表格配置
     const storeInventoryConfig = {
         apiUrl: '/admin/api/store-inventory/list',
-        params: { page: 1, size: 30 },
+        params: {
+            page: 1,
+            size: 30
+            // 【核心修復】：移除 null 初始值！防止 URLSearchParams 將其序列化為字串 "null"
+        },
         tbodySelector: '#storeInventoryTableBody',
         paginationId: 'store-inventory-pagination',
         renderRow: renderStoreInventoryRow
     };
 
+
+
     // 加載門店庫存數據
     function loadStoreInventoryData() {
+        AdminTable.loadData(storeInventoryConfig);
+    }
+    // ==========================================
+    // 門店庫存篩選相關邏輯
+    // ==========================================
+    // 1. 動態加載門店列表到篩選下拉框
+    async function loadStoreFilterOptions() {
+        const storeSelect = document.getElementById('storeFilter');
+        if (storeSelect.options.length > 1) return; // 已經加載過，避免重複請求
+
+        try {
+            const res = await fetch('/admin/stores/api/list?page=1&size=100');
+            const data = await res.json();
+            if (data.content) {
+                data.content.forEach(store => {
+                    if (store.isActive) {
+                        const option = document.createElement('option');
+                        option.value = store.storeId;
+                        option.textContent = `${store.name} (${store.storeCode})`;
+                        storeSelect.appendChild(option);
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('加載門店列表失敗:', e);
+        }
+    }
+
+    // 2. 應用門店篩選
+    function applyStoreFilters() {
+        const storeIdVal = document.getElementById('storeFilter').value;
+        const brandVal = document.getElementById('storeBrandFilter').value;
+        const categoryVal = document.getElementById('storeCategoryFilter').value;
+        const conditionVal = document.getElementById('storeConditionFilter').value;
+
+        // 【核心修复】：彻底重建 params 对象，只包含有效的筛选条件
+        const newParams = {
+            page: 1,  // 重置到第一页
+            size: storeInventoryConfig.params.size || 30  // 保持原有的 size
+        };
+
+        // 只添加非空的筛选条件
+        if (storeIdVal && storeIdVal.trim() !== '') {
+            newParams.storeId = storeIdVal;
+        }
+        if (brandVal && brandVal.trim() !== '') {
+            newParams.brand = brandVal;
+        }
+        if (categoryVal && categoryVal.trim() !== '') {
+            newParams.category = categoryVal;
+        }
+        if (conditionVal && conditionVal.trim() !== '') {
+            newParams.condition = conditionVal;
+        }
+
+        // 完全替换 params 对象
+        storeInventoryConfig.params = newParams;
+
+        AdminTable.loadData(storeInventoryConfig);
+    }
+
+    // 3. 重置門店篩選
+    function resetStoreFilters() {
+        document.getElementById('storeFilter').value = '';
+        document.getElementById('storeBrandFilter').value = '';
+        document.getElementById('storeCategoryFilter').value = '';
+        document.getElementById('storeConditionFilter').value = '';
+
+        // 【核心修復】：重置時只保留 page 和 size，徹底刪除其他過濾條件
+        storeInventoryConfig.params = {
+            page: 1,
+            size: 30
+        };
+
         AdminTable.loadData(storeInventoryConfig);
     }
 
@@ -1551,59 +1770,92 @@
 
         const brand = item.product?.brand || 'ChronoTeam';
         const description = item.product?.description || '未知商品';
-        const groupCode = item.product?.groupCode || '無';
+        const groupCode = item.product?.groupCode || '无';
 
-        // 【新增】：只有當庫存大於 0 時，才生成轉移按鈕
+        // 【新增】获取分类和成色的中文显示
+        const categoryMap = {
+            'pilot': '飞行表',
+            'dive': '潜水表',
+            'dress': '正装表',
+            'chronograph': '计时码表',
+            'vintage': '古董表',
+            'others': '其它类型手表'
+        };
+
+        const conditionMap = {
+            'NEAR_MINT': '近全新',
+            'EXCELLENT': '极佳',
+            'GOOD': '良好',
+            'FAIR': '正常使用痕迹',
+            'HEAVILY_USED': '重度使用痕迹'
+        };
+
+        const categoryText = categoryMap[item.product?.category] || item.product?.category || '未分类';
+        const conditionText = conditionMap[item.product?.condition] || item.product?.condition || '未设定';
+
+        // 【新增】：只有当库存大于 0 时，才生成转移按钮
         const transferBtnHtml = (item.quantity > 0)
-            ? `<button class="btn-edit-product" onclick="openTransferInventoryModal(${item.inventoryId}, ${item.store.storeId}, ${item.product.productId}, '${description.replace(/'/g, "\\'")}', ${item.quantity}, '${item.store.name}')"
-            style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 5px rgba(23, 162, 184, 0.3); transition: all 0.3s; margin-top: 0.5rem;">
-            <i class="fas fa-exchange-alt"></i> 調撥轉移
-           </button>`
+            ? `<button class="btn-edit-product"
+        onclick="openStoreTransferModal(${item.inventoryId}, ${item.store.storeId}, ${item.product.productId}, '${description.replace(/'/g, "\\'")}', ${item.quantity}, '${item.store.name}')"
+        style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 5px rgba(23, 162, 184, 0.3); transition: all 0.3s; margin-top: 0.5rem;">
+        <i class="fas fa-exchange-alt"></i> 调拨转移
+       </button>`
             : '';
 
         return `
-    <tr>
-        <td style="color: var(--gray); font-family: monospace;">${item.inventoryId}</td>
-        <td>
-            <img src="${imageUrl}"
-                 alt="${description}"
-                 class="product-thumb"
-                 onerror="this.onerror=null; this.src='/images/placeholder.png';">
-        </td>
-        <td>
-            <span class="product-brand">${brand}</span>
-            <div class="product-name-wrapper">
-                <span class="product-name" title="${description}">${description}</span>
+<tr>
+    <td style="color: var(--gray); font-family: monospace;">${item.inventoryId}</td>
+    <td>
+        <img src="${imageUrl}"
+             alt="${description}"
+             class="product-thumb"
+             onerror="this.onerror=null; this.src='/images/placeholder.png';">
+    </td>
+    <td>
+        <span class="product-brand">${brand}</span>
+        <div class="product-name-wrapper">
+            <span class="product-name" title="${description}">${description}</span>
+        </div>
+        <div class="product-meta">
+            <!-- 【新增】分类和成色字段，放在描述和分组码之间 -->
+            <div style="display: flex; gap: 0.8rem; margin-top: 0.3rem; font-size: 0.8rem;">
+                <span style="color: #6c757d;">
+                    <i class="fas fa-th-large" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                    ${categoryText}
+                </span>
+                <span style="color: #6c757d;">
+                    <i class="fas fa-gem" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                    ${conditionText}
+                </span>
             </div>
-            <div class="product-meta">
-                <div style="color: #6c757d; font-size: 0.8rem; line-height: 1.4; margin-top: 0.2rem;">
-                    同款分組碼: <span style="color: var(--gold); font-weight: 600;">${groupCode}</span>
-                </div>
+            <div style="color: #6c757d; font-size: 0.8rem; line-height: 1.4; margin-top: 0.2rem;">
+                同款分组码: <span style="color: var(--gold); font-weight: 600;">${groupCode}</span>
             </div>
-        </td>
-        <td>
-            <span style="${item.quantity <= 5 ? 'color: var(--accent); font-weight: 700;' : ''}">
-                ${item.quantity}
-            </span>
-        </td>
-        <td>
-            <strong>${item.store.name}</strong><br>
-            <small style="color:var(--gray)">${item.store.storeCode}</small>
-        </td>
-        <td style="color: var(--gray); font-size: 0.85rem;">
-            ${item.updatedAt ? new Date(item.updatedAt).toISOString().split('T')[0] : '-'}
-        </td>
-        <td style="text-align: center;">
-            <!-- 【修改處】：使用 flex 容器讓按鈕垂直排列，間距美觀 -->
-            <div class="action-buttons" style="display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
-                <button class="btn-edit-product" onclick="openStoreInventoryModal(${item.inventoryId}, ${item.store.storeId}, ${item.product.productId}, '${description.replace(/'/g, "\\'")}', ${item.quantity})">
-                    <i class="fas fa-edit"></i> 調整庫存
-                </button>
-                ${transferBtnHtml} <!-- 👈 新增在這裡 -->
-            </div>
-        </td>
-    </tr>
-    `;
+        </div>
+    </td>
+    <td>
+        <span style="${item.quantity <= 5 ? 'color: var(--accent); font-weight: 700;' : ''}">
+            ${item.quantity}
+        </span>
+    </td>
+    <td>
+        <strong>${item.store.name}</strong><br>
+        <small style="color:var(--gray)">${item.store.storeCode}</small>
+    </td>
+    <td style="color: var(--gray); font-size: 0.85rem;">
+        ${item.updatedAt ? new Date(item.updatedAt).toISOString().split('T')[0] : '-'}
+    </td>
+    <td style="text-align: center;">
+        <!-- 【修改处】：使用 flex 容器让按钮垂直排列，间距美观 -->
+        <div class="action-buttons" style="display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
+            <button class="btn-edit-product" onclick="openStoreInventoryModal(${item.inventoryId}, ${item.store.storeId}, ${item.product.productId}, '${description.replace(/'/g, "\\'")}', ${item.quantity})">
+                <i class="fas fa-edit"></i> 调整库存
+            </button>
+            ${transferBtnHtml} <!--  新增在这里 -->
+        </div>
+    </td>
+</tr>
+`;
     }
 
 
@@ -1729,7 +1981,29 @@
     // ==========================================
     // 渲染單行商品數據
     // ==========================================
+    // ==========================================
+    // 渲染單行商品數據
+    // ==========================================
     function renderProductRow(product) {
+        // 分类中文映射
+        const categoryMap = {
+            'pilot': '飞行表',
+            'dive': '潜水表',
+            'dress': '正装表',
+            'chronograph': '计时码表',
+            'vintage': '古董表',
+            'others': '其它类型手表'
+        };
+
+        // 成色中文映射
+        const conditionMap = {
+            'NEAR_MINT': '近全新',
+            'EXCELLENT': '极佳',
+            'GOOD': '良好',
+            'FAIR': '正常使用痕迹',
+            'HEAVILY_USED': '重度使用痕迹'
+        };
+
         const homeOrderHtml = (product.homeDisplayOrder && product.homeDisplayOrder > 0)
             ? `<div style="display: flex; align-items: center; justify-content: center; gap: 0.2rem; font-size: 0.75rem;"><i class="fas fa-crown" style="color: var(--gold);"></i><span style="font-weight: 600; color: var(--gold);">${product.homeDisplayOrder}</span></div>`
             : '';
@@ -1761,10 +2035,14 @@
         // 【新增】轉移門店按鈕的 HTML 生成邏輯 (僅當庫存 > 0 時顯示)
         const transferBtnHtml = (product.stock > 0)
             ? `<button class="btn-transfer-store" onclick="openTransferModal(${product.productId}, '${product.description.replace(/'/g, "\\'")}', ${product.stock})"
-            style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 5px rgba(23, 162, 184, 0.3); transition: all 0.3s; margin-top: 0.5rem;">
-            <i class="fas fa-exchange-alt"></i> 轉移門店
-           </button>`
+        style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; padding: 0.6rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem; box-shadow: 0 2px 5px rgba(23, 162, 184, 0.3); transition: all 0.3s; margin-top: 0.5rem;">
+        <i class="fas fa-exchange-alt"></i> 轉移門店
+       </button>`
             : '';
+
+        // 获取中文分类和成色
+        const categoryText = categoryMap[product.category] || product.category || '未分類';
+        const conditionText = conditionMap[product.condition] || product.condition || '未設定';
 
         return `
         <tr>
@@ -1786,8 +2064,8 @@
                     <div style="color: #6c757d; font-size: 0.8rem; line-height: 1.4; margin-top: 0.2rem;">${detailsHtml}</div>
                 </div>
             </td>
-            <td><span style="background: #f1f3f5; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${product.category}</span></td>
-            <td><span class="condition-badge">${product.condition || '未設定'}</span></td>
+            <td><span style="background: #f1f3f5; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">${categoryText}</span></td>
+            <td><span class="condition-badge">${conditionText}</span></td>
             <td style="font-weight: 700; color: var(--accent);">HK$ ${new Intl.NumberFormat('zh-HK').format(product.price)}</td>
             <td><span style="${product.stock <= 10 ? 'color: var(--accent); font-weight: 700;' : ''}">${product.stock}</span></td>
             <td>${ratingHtml}</td>
@@ -1809,7 +2087,7 @@
                         <i class="fas fa-edit"></i> 修改
                     </button>
                     ${notifyBtnHtml}
-                    ${transferBtnHtml} <!-- 👈 新增的轉移門店按鈕 -->
+                    ${transferBtnHtml} <!--  新增的轉移門店按鈕 -->
                 </div>
             </td>
         </tr>
@@ -2442,6 +2720,123 @@
         } catch (error) {
             console.error('轉移失敗:', error);
             if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
+            btn.innerHTML = originalText;
+        }
+    }
+
+    // 1. 打開調撥轉移 Modal
+    async function openStoreTransferModal(inventoryId, sourceStoreId, productId, description, currentQuantity, storeName) {
+        document.getElementById('st_inventoryId').value = inventoryId;
+        document.getElementById('st_productId').value = productId;
+        document.getElementById('st_sourceStoreId').value = sourceStoreId;
+        document.getElementById('st_productName').value = description;
+        document.getElementById('st_currentStoreInfo').value = `${storeName} (當前庫存: ${currentQuantity})`;
+
+        const qtyInput = document.getElementById('st_quantity');
+        qtyInput.value = '';
+        qtyInput.max = currentQuantity; // 限制最大輸入值
+        qtyInput.placeholder = `最多可調撥 ${currentQuantity} 件`;
+
+        document.getElementById('st_reason').value = '';
+
+        // 重置目標類型並隱藏目標門店選擇
+        document.getElementById('st_targetType').value = 'ONLINE';
+        toggleTargetStoreSelect();
+
+        // 動態加載可用門店列表 (排除當前門店)
+        await loadAvailableStoresForTransfer(sourceStoreId);
+
+        document.getElementById('storeTransferModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    // 2. 關閉 Modal
+    function closeStoreTransferModal() {
+        document.getElementById('storeTransferModal').style.display = 'none';
+        document.body.style.overflow = '';
+        document.getElementById('storeTransferForm').reset();
+    }
+
+    // 3. 切換目標倉庫類型時，顯示/隱藏門店下拉框
+    async function toggleTargetStoreSelect() {
+        const targetType = document.getElementById('st_targetType').value;
+        const targetStoreGroup = document.getElementById('st_targetStoreGroup');
+        if (targetType === 'OFFLINE') {
+            targetStoreGroup.style.display = 'block';
+        } else {
+            targetStoreGroup.style.display = 'none';
+        }
+    }
+
+    // 4. 加載可用門店列表
+    async function loadAvailableStoresForTransfer(currentStoreId) {
+        const select = document.getElementById('st_targetStoreId');
+        select.innerHTML = '<option value="">加載中...</option>';
+        try {
+            const res = await fetch('/admin/stores/api/list?page=1&size=100'); // 使用現有的獲取門店接口
+            const data = await res.json();
+            select.innerHTML = '<option value="">請選擇目標門店</option>';
+            if (data.content) {
+                data.content.forEach(store => {
+                    if (store.storeId !== currentStoreId && store.isActive) { // 排除當前門店且只顯示啟用中的門店
+                        const option = document.createElement('option');
+                        option.value = store.storeId;
+                        option.textContent = `${store.name} (${store.storeCode})`;
+                        select.appendChild(option);
+                    }
+                });
+            }
+        } catch (e) {
+            select.innerHTML = '<option value="">加載失敗</option>';
+            console.error(e);
+        }
+    }
+
+    // 5. 執行調撥轉移
+    async function executeStoreTransfer(event) {
+        event.preventDefault();
+        const btn = document.getElementById('st_submitBtn');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
+        const payload = {
+            inventoryId: document.getElementById('st_inventoryId').value,
+            productId: document.getElementById('st_productId').value,
+            sourceStoreId: document.getElementById('st_sourceStoreId').value,
+            targetType: document.getElementById('st_targetType').value,
+            targetStoreId: document.getElementById('st_targetStoreId').value || null,
+            quantity: parseInt(document.getElementById('st_quantity').value),
+            reason: document.getElementById('st_reason').value.trim()
+        };
+
+        // 前端二次校驗
+        if (payload.targetType === 'OFFLINE' && !payload.targetStoreId) {
+            showNotification('❌ 請選擇目標門店', true);
+            btn.disabled = false; btn.innerHTML = originalText;
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/admin/inventory/transfer-from-store', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            if (res.ok && result.success) {
+                showNotification('✅ ' + result.message);
+                closeStoreTransferModal();
+                // 刷新門店庫存表格
+                loadStoreInventoryData();
+            } else {
+                showNotification('❌ ' + (result.message || '調撥失敗'), true);
+            }
+        } catch (error) {
+            console.error('調撥錯誤:', error);
+            showNotification('❌ 網絡錯誤，請稍後重試', true);
+        } finally {
+            btn.disabled = false;
             btn.innerHTML = originalText;
         }
     }

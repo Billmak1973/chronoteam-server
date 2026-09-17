@@ -10,15 +10,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.website.dto.Result;
-import org.example.website.entity.OfflineStore;
-import org.example.website.entity.Order;
-import org.example.website.entity.OrderItem;
-import org.example.website.repository.OfflineStoreRepository;
-import org.example.website.repository.OrderItemRepository;
-import org.example.website.repository.OrderRepository;
+import org.example.website.entity.*;
+import org.example.website.repository.*;
 import org.example.website.service.OrderService;
-import org.example.website.entity.User;
-import org.example.website.repository.UserRepository;
 import org.example.website.service.SiteSettingService;
 import org.example.website.service.SystemConfigService;
 import org.springframework.http.ResponseEntity;
@@ -49,7 +43,7 @@ public class CheckoutController {
     private final OfflineStoreRepository offlineStoreRepository;
     private final OrderRepository orderRepository;
     private final SiteSettingService siteSettingService;
-
+    private final StoreInventoryRepository storeInventoryRepository;
     /**
      * 渲染結賬頁面：查詢 OrderItem，而不是 Cart
      */
@@ -73,13 +67,29 @@ public class CheckoutController {
         model.addAttribute("activeStores", activeStores);
         model.addAttribute("hasStores", !activeStores.isEmpty());
 
+        if (!activeStores.isEmpty()) {
+            Map<Long, Map<Integer, Integer>> storeStockMap = new HashMap<>();
+            for (OfflineStore store : activeStores) {
+                Map<Integer, Integer> productStockMap = new HashMap<>();
+                for (OrderItem item : orderItems) {
+                    // 查询该店铺该商品的库存
+                    Optional<StoreInventory> storeInv = storeInventoryRepository
+                            .findByStore_StoreIdAndProduct_ProductId(store.getStoreId(), item.getProduct().getProductId());
+                    int stock = storeInv.map(StoreInventory::getQuantity).orElse(0);
+                    productStockMap.put(item.getProduct().getProductId(), stock);
+                }
+                storeStockMap.put(store.getStoreId(), productStockMap);
+            }
+            model.addAttribute("storeStockMap", storeStockMap);
+        }
+
         // ==========================================
         // 【核心重構】計算配送截止時間與預計送貨日
         // ==========================================
         String deliveryMode = systemConfigService.getDeliveryMode();
         int cutoffDayOffset = systemConfigService.getCutoffDayOffset();
 
-        // 【新增】獲取連續日子處理模式 (GROUP 或 INDEPENDENT)
+        // 獲取連續日子處理模式 (GROUP 或 INDEPENDENT)
         String continuousMode = systemConfigService.getContinuousDaysMode();
 
         // 獲取配置參數
@@ -92,7 +102,7 @@ public class CheckoutController {
         LocalDateTime cutoffDateTime;
         LocalDate estimatedDeliveryDate = now.toLocalDate(); // 給予默認值，防止未初始化錯誤
 
-        // 【新增】用於前端下拉選單的日期列表
+        // 用於前端下拉選單的日期列表
         List<Map<String, Object>> availableDeliveryDates = new ArrayList<>();
 
         if ("SPECIFIC_DAYS".equals(deliveryMode)) {

@@ -10,10 +10,6 @@
     <link rel="stylesheet" href="/css/admin.css">
     <!-- 保留原有的頁面專屬樣式 (篩選欄、表格、角色徽章、彈窗等 CSS 不變) -->
     <style>
-        /* ==========================================
-       頁面專屬樣式：現代化用戶管理表格 (整合橫向滾動版)
-       ========================================== */
-
         /* 1. 篩選工具欄美化 */
         .filter-bar {
             display: flex;
@@ -27,7 +23,6 @@
             flex-wrap: wrap;
             border: 1px solid rgba(0, 0, 0, 0.02);
         }
-
         .filter-item {
             display: flex;
             flex-direction: column;
@@ -119,10 +114,9 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
         }
-
         /* ==========================================
-       2. 表格容器與基礎樣式 (已整合橫向滾動優化)
-       ========================================== */
+2. 表格容器與基礎樣式 (已整合橫向滾動優化)
+========================================== */
         .table-container {
             background: white;
             border-radius: 16px;
@@ -199,8 +193,8 @@
         }
 
         /* ==========================================
-       3. 角色徽章系統 (適配新 Role + 可點擊樣式)
-       ========================================== */
+3. 角色徽章系統 (適配新 Role + 可點擊樣式)
+========================================== */
         .role-badge {
             padding: 0.35rem 0.8rem;
             border-radius: 50px;
@@ -252,10 +246,9 @@
             background: linear-gradient(135deg, #a18cd1, #fbc2eb);
             color: #4a148c;
         }
-
         /* ==========================================
-       4. 其他細節優化
-       ========================================== */
+4. 其他細節優化
+========================================== */
         .uid-text {
             font-family: 'Courier New', monospace;
             font-weight: 600;
@@ -297,158 +290,9 @@
             color: #e2e8f0;
             margin-bottom: 1rem;
         }
-
         /* ==========================================
-       彈窗通用樣式
-       ========================================== */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            z-index: 9999;
-            display: none;
-            /* 默認隱藏 */
-            justify-content: center;
-            align-items: center;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal-box {
-            background: white;
-            padding: 2rem;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 450px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border-top: 5px solid var(--gold);
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 1rem;
-        }
-
-        .modal-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .modal-title i {
-            color: var(--gold);
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: #999;
-            cursor: pointer;
-        }
-
-        .close-modal:hover {
-            color: var(--accent);
-        }
-
-        .form-group {
-            margin-bottom: 1.2rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: #475569;
-            font-size: 0.9rem;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-        }
-
-        .form-control:focus {
-            border-color: var(--gold);
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
-        }
-
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .btn-modal {
-            padding: 0.6rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-        }
-
-        .btn-cancel {
-            background: #f1f5f9;
-            color: #475569;
-        }
-
-        .btn-cancel:hover {
-            background: #e2e8f0;
-        }
-
-        .btn-confirm {
-            background: var(--gold);
-            color: white;
-        }
-
-        .btn-confirm:hover {
-            background: #b8972b;
-            transform: translateY(-1px);
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* ==========================================
-       新增：操作按鈕 2x2 網格樣式
-       ========================================== */
+      新增：操作按鈕 2x2 網格樣式
+      ========================================== */
         .action-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -507,215 +351,354 @@
             color: #7c2d12;
         }
 
-        /* 舉報 - 橙黃 (文字深色) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid var(--gold);
+            text-align: center;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1rem;
+        }
+
+        .modal-title i {
+            color: var(--gold);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #999;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: var(--accent);
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--gold);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn-modal {
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.95rem;
+        }
+
+        .btn-cancel {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-cancel:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-confirm:hover {
+            background: linear-gradient(135deg, #b8972b 0%, #9f7b1e 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
     </style>
 </head>
 
 <body>
-    <!-- 引入公共導航欄 -->
-    <div th:replace="~{fragments/common :: navbar}"></div>
+<!-- 引入公共導航欄 -->
+<div th:replace="~{fragments/common :: navbar}"></div>
 
-    <div class="admin-layout">
-        <!-- 引入左側邊欄 -->
-        <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='customers')}"></div>
+<div class="admin-layout">
+    <!-- 引入左側邊欄 -->
+    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='customers')}"></div>
 
-        <main class="admin-main">
-            <div class="content-header">
-                <h2><i class="fas fa-users-cog"></i> <span id="pageTitle">用戶權限管理</span></h2>
-                <div class="breadcrumb">
-                    <a href="/admin/dashboard">管理中心</a> / <span id="pageBreadcrumb">用戶列表</span>
+    <main class="admin-main">
+        <div class="content-header">
+            <h2><i class="fas fa-users-cog"></i> <span id="pageTitle">用戶權限管理</span></h2>
+            <div class="breadcrumb">
+                <a href="/admin/dashboard">管理中心</a> / <span id="pageBreadcrumb">用戶列表</span>
+            </div>
+        </div>
+
+        <div class="content-body">
+            <!-- 篩選工具欄 (HTML結構保持不變) -->
+            <div class="filter-bar">
+                <div class="filter-item">
+                    <label class="filter-label"><i class="fas fa-search"></i> 關鍵字搜索</label>
+                    <input type="text" id="keywordInput" class="filter-input" placeholder="用戶名 / 姓名 / 郵箱 / 手機...">
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label"><i class="fas fa-user-shield"></i> 角色篩選</label>
+                    <select id="roleFilter" class="filter-select">
+                        <option value="">全部角色</option>
+                        <option value="ADMIN">👑 管理員 (ADMIN)</option>
+                        <option value="CUSTOMER">👤 顧客 (CUSTOMER)</option>
+                        <option value="SALES">💼 銷售人員 (SALES)</option>
+                        <option value="COURIER">🚚 快遞人員 (COURIER)</option>
+                        <option value="APPRAISER">🔍 鑑定師 (APPRAISER)</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 0.8rem; align-items: flex-end;">
+                    <button class="btn-filter btn-search" onclick="searchCustomers()">
+                        <i class="fas fa-search"></i> 查詢
+                    </button>
+                    <button class="btn-filter btn-reset" onclick="resetFilters()">
+                        <i class="fas fa-redo-alt"></i> 重置
+                    </button>
+                    <button class="btn-filter btn-create" onclick="openCreateUserModal()">
+                        <i class="fas fa-user-plus"></i> 創建賬號
+                    </button>
                 </div>
             </div>
 
-            <div class="content-body">
-                <!-- 篩選工具欄 (HTML結構保持不變) -->
-                <div class="filter-bar">
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-search"></i> 關鍵字搜索</label>
-                        <input type="text" id="keywordInput" class="filter-input" placeholder="用戶名 / 姓名 / 郵箱 / 手機...">
-                    </div>
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-user-shield"></i> 角色篩選</label>
-                        <select id="roleFilter" class="filter-select">
-                            <option value="">全部角色</option>
-                            <option value="ADMIN">👑 管理員 (ADMIN)</option>
-                            <option value="CUSTOMER">👤 顧客 (CUSTOMER)</option>
-                            <option value="SALES">💼 銷售人員 (SALES)</option>
-                            <option value="COURIER">🚚 快遞人員 (COURIER)</option>
-                            <option value="APPRAISER">🔍 鑑定師 (APPRAISER)</option>
-                        </select>
-                    </div>
-                    <div style="display: flex; gap: 0.8rem; align-items: flex-end;">
-                        <button class="btn-filter btn-search" onclick="searchCustomers()">
-                            <i class="fas fa-search"></i> 查詢
-                        </button>
-                        <button class="btn-filter btn-reset" onclick="resetFilters()">
-                            <i class="fas fa-redo-alt"></i> 重置
-                        </button>
-                        <button class="btn-filter btn-create" onclick="openCreateUserModal()">
-                            <i class="fas fa-user-plus"></i> 創建賬號
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 數據表格 -->
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 60px;">ID</th>
-                                <th style="width: 120px;">UID</th>
-                                <th style="min-width: 200px;">用戶信息</th>
-                                <th style="width: 120px;">聯繫方式</th>
-                                <th style="width: 140px;">角色權限</th>
-                                <th>地址信息</th>
-                                <th style="width: 160px;">註冊時間</th>
-                                <th style="width: 180px; text-align: center;">操作管理</th>
-                            </tr>
-                        </thead>
-                        <tbody id="customersTableBody">
-                            <!-- AdminTable 會自動接管這裡的渲染 -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- 智能分頁容器 -->
-                <div id="customers-pagination" style="margin-top: 2rem;"></div>
+            <!-- 數據表格 -->
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th style="width: 60px;">ID</th>
+                        <th style="width: 120px;">UID</th>
+                        <th style="min-width: 200px;">用戶信息</th>
+                        <th style="width: 120px;">聯繫方式</th>
+                        <th style="width: 140px;">角色權限</th>
+                        <th>地址信息</th>
+                        <th style="width: 160px;">註冊時間</th>
+                        <th style="width: 180px; text-align: center;">操作管理</th>
+                    </tr>
+                    </thead>
+                    <tbody id="customersTableBody">
+                    <!-- AdminTable 會自動接管這裡的渲染 -->
+                    </tbody>
+                </table>
             </div>
 
-            <!-- 頁腳 -->
-            <footer class="admin-footer"
+            <!-- 智能分頁容器 -->
+            <div id="customers-pagination" style="margin-top: 2rem;"></div>
+        </div>
+
+        <!-- 頁腳 -->
+        <footer class="admin-footer"
                 style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 12px; text-align: center; color: rgba(255,255,255,0.7);">
-                <p style="margin: 0; font-size: 0.9rem;">
-                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
-                    ChronoTeam Admin Panel. All Rights Reserved.
-                </p>
-            </footer>
-        </main>
-    </div>
+            <p style="margin: 0; font-size: 0.9rem;">
+                <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span>
+                ChronoTeam Admin Panel. All Rights Reserved.
+            </p>
+        </footer>
+    </main>
+</div>
 
-    <!-- ========================================== -->
-    <!-- 彈窗 HTML (保持不變) -->
-    <!-- ========================================== -->
-    <div id="createUserModal" class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-header">
-                <div class="modal-title"><i class="fas fa-user-plus"></i> 創建新賬號</div>
-                <button class="close-modal" onclick="closeCreateUserModal()">&times;</button>
-            </div>
-            <div class="form-group">
-                <label>用戶名 (Username)</label>
-                <input type="text" id="newUsername" class="form-control" placeholder="請輸入登錄用戶名">
-            </div>
-            <div class="form-group">
-                <label>初始角色 (Role)</label>
-                <select id="newRole" class="form-control">
-                    <option value="CUSTOMER">顧客 (CUSTOMER)</option>
-                    <option value="SALES">銷售人員 (SALES)</option>
-                    <option value="COURIER">快遞人員 (COURIER)</option>
-                    <option value="APPRAISER">鑑定師 (APPRAISER)</option>
-                    <option value="ADMIN">管理員 (ADMIN)</option>
-                </select>
-            </div>
-            <div>
-                <div
+<!-- ========================================== -->
+<!-- 彈窗 HTML (保持不變) -->
+<!-- ========================================== -->
+<div id="createUserModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fas fa-user-plus"></i> 創建新賬號</div>
+            <button class="close-modal" onclick="closeCreateUserModal()">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>用戶名 (Username)</label>
+            <input type="text" id="newUsername" class="form-control" placeholder="請輸入登錄用戶名">
+        </div>
+        <div class="form-group">
+            <label>初始角色 (Role)</label>
+            <select id="newRole" class="form-control">
+                <option value="CUSTOMER">顧客 (CUSTOMER)</option>
+                <option value="SALES">銷售人員 (SALES)</option>
+                <option value="COURIER">快遞人員 (COURIER)</option>
+                <option value="APPRAISER">鑑定師 (APPRAISER)</option>
+                <option value="ADMIN">管理員 (ADMIN)</option>
+            </select>
+        </div>
+        <div>
+            <div
                     style="background: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 0.8rem 1rem; border-radius: 6px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
-                    <i class="fas fa-lock" style="font-size: 1.1rem;"></i>
-                    <span>系統默認初始密碼為：<strong
-                            style="color: #d39e00; font-family: monospace; font-size: 1rem;">123456</strong>
+                <i class="fas fa-lock" style="font-size: 1.1rem;"></i>
+                <span>系統默認初始密碼為：<strong
+                        style="color: #d39e00; font-family: monospace; font-size: 1rem;">123456</strong>
                         (請通知用戶首次登錄後修改)</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-modal btn-cancel" onclick="closeCreateUserModal()">取消</button>
-                <button class="btn-modal btn-confirm" onclick="submitCreateUser()">確認創建</button>
             </div>
         </div>
-    </div>
-
-    <div id="updateRoleModal" class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-header">
-                <div class="modal-title"><i class="fas fa-user-shield"></i> 修改用戶權限</div>
-                <button class="close-modal" onclick="closeUpdateRoleModal()">&times;</button>
-            </div>
-            <div style="margin-bottom: 1rem; color: #64748b; font-size: 0.9rem;">
-                正在修改用戶: <strong id="roleTargetUsername" style="color: var(--primary);"></strong>
-            </div>
-            <input type="hidden" id="roleTargetId">
-            <div class="form-group">
-                <label>選擇新角色</label>
-                <select id="updateRoleSelect" class="form-control">
-                    <option value="CUSTOMER">顧客 (CUSTOMER)</option>
-                    <option value="SALES">銷售人員 (SALES)</option>
-                    <option value="COURIER">快遞人員 (COURIER)</option>
-                    <option value="APPRAISER">鑑定師 (APPRAISER)</option>
-                    <option value="ADMIN">管理員 (ADMIN)</option>
-                </select>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-modal btn-cancel" onclick="closeUpdateRoleModal()">取消</button>
-                <button class="btn-modal btn-confirm" onclick="submitUpdateRole()">保存修改</button>
-            </div>
+        <div class="modal-footer">
+            <button class="btn-modal btn-cancel" onclick="closeCreateUserModal()">取消</button>
+            <button class="btn-modal btn-confirm" onclick="submitCreateUser()">確認創建</button>
         </div>
     </div>
+</div>
 
-    <!-- 引入公共 JS -->
-    <script src="/js/common.js"></script>
-    <script src="/js/admin.js"></script>
-    <!-- 🚀 引入通用表格管理器 -->
-    <script src="/js/admin-table.js"></script>
+<div id="updateRoleModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fas fa-user-shield"></i> 修改用戶權限</div>
+            <button class="close-modal" onclick="closeUpdateRoleModal()">&times;</button>
+        </div>
+        <div style="margin-bottom: 1rem; color: #64748b; font-size: 0.9rem;">
+            正在修改用戶: <strong id="roleTargetUsername" style="color: var(--primary);"></strong>
+        </div>
+        <input type="hidden" id="roleTargetId">
+        <div class="form-group">
+            <label>選擇新角色</label>
+            <select id="updateRoleSelect" class="form-control">
+                <option value="CUSTOMER">顧客 (CUSTOMER)</option>
+                <option value="SALES">銷售人員 (SALES)</option>
+                <option value="COURIER">快遞人員 (COURIER)</option>
+                <option value="APPRAISER">鑑定師 (APPRAISER)</option>
+                <option value="ADMIN">管理員 (ADMIN)</option>
+            </select>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-modal btn-cancel" onclick="closeUpdateRoleModal()">取消</button>
+            <button class="btn-modal btn-confirm" onclick="submitUpdateRole()">保存修改</button>
+        </div>
+    </div>
+</div>
 
-    <script>
-        // ==========================================
-        // 🚀 核心重構：使用 AdminTable 統一管理
-        // ==========================================
+<div th:replace="~{fragments/common :: modals}"></div>
 
-        // 定義全局配置對象
-        const tableConfig = {
-            apiUrl: '/admin/api/customers/list',
-            params: {page: 1, size: 25, keyword: '', role: ''},
-            tbodySelector: '#customersTableBody',
-            paginationId: 'customers-pagination',
-            emptyText: '暫無用戶數據，嘗試調整篩選條件',
-            renderRow: renderCustomerRow // 指向自定義的行渲染函數
-        };
+<!-- 引入公共 JS -->
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+<!--  引入通用表格管理器 -->
+<script src="/js/admin-table.js"></script>
 
-        // 搜索按鈕觸發
-        function searchCustomers() {
-            tableConfig.params.keyword = document.getElementById('keywordInput').value.trim();
-            tableConfig.params.role = document.getElementById('roleFilter').value;
-            tableConfig.params.page = 1; // 搜索時重置到第一頁
-            AdminTable.loadData(tableConfig);
+<script>
+    // ==========================================
+    // 🚀 核心重構：使用 AdminTable 統一管理
+    // ==========================================
+
+    // 定義全局配置對象
+    const tableConfig = {
+        apiUrl: '/admin/api/customers/list',
+        params: {page: 1, size: 25, keyword: '', role: ''},
+        tbodySelector: '#customersTableBody',
+        paginationId: 'customers-pagination',
+        emptyText: '暫無用戶數據，嘗試調整篩選條件',
+        renderRow: renderCustomerRow // 指向自定義的行渲染函數
+    };
+
+    // 搜索按鈕觸發
+    function searchCustomers() {
+        tableConfig.params.keyword = document.getElementById('keywordInput').value.trim();
+        tableConfig.params.role = document.getElementById('roleFilter').value;
+        tableConfig.params.page = 1; // 搜索時重置到第一頁
+        AdminTable.loadData(tableConfig);
+    }
+
+    // 重置按鈕觸發
+    function resetFilters() {
+        document.getElementById('keywordInput').value = '';
+        document.getElementById('roleFilter').value = '';
+        tableConfig.params.keyword = '';
+        tableConfig.params.role = '';
+        tableConfig.params.page = 1;
+        AdminTable.loadData(tableConfig);
+    }
+
+    // ==========================================
+    // 自定義行渲染函數 (從原 renderTable 中提取單行邏輯)
+    // ==========================================
+    function renderCustomerRow(u) {
+        let roleClass = 'role-CUSTOMER';
+        let roleLabel = '顧客';
+        let roleIcon = 'fa-user';
+
+        switch (u.role) {
+            case 'ADMIN': roleClass = 'role-ADMIN'; roleLabel = '管理員'; roleIcon = 'fa-crown'; break;
+            case 'SALES': roleClass = 'role-SALES'; roleLabel = '銷售人員'; roleIcon = 'fa-briefcase'; break;
+            case 'COURIER': roleClass = 'role-COURIER'; roleLabel = '快遞人員'; roleIcon = 'fa-truck-fast'; break;
+            case 'APPRAISER': roleClass = 'role-APPRAISER'; roleLabel = '鑑定師'; roleIcon = 'fa-magnifying-glass'; break;
         }
 
-        // 重置按鈕觸發
-        function resetFilters() {
-            document.getElementById('keywordInput').value = '';
-            document.getElementById('roleFilter').value = '';
-            tableConfig.params.keyword = '';
-            tableConfig.params.role = '';
-            tableConfig.params.page = 1;
-            AdminTable.loadData(tableConfig);
-        }
-
-        // ==========================================
-        // 自定義行渲染函數 (從原 renderTable 中提取單行邏輯)
-        // ==========================================
-        function renderCustomerRow(u) {
-            let roleClass = 'role-CUSTOMER';
-            let roleLabel = '顧客';
-            let roleIcon = 'fa-user';
-
-            switch (u.role) {
-                case 'ADMIN': roleClass = 'role-ADMIN'; roleLabel = '管理員'; roleIcon = 'fa-crown'; break;
-                case 'SALES': roleClass = 'role-SALES'; roleLabel = '銷售人員'; roleIcon = 'fa-briefcase'; break;
-                case 'COURIER': roleClass = 'role-COURIER'; roleLabel = '快遞人員'; roleIcon = 'fa-truck-fast'; break;
-                case 'APPRAISER': roleClass = 'role-APPRAISER'; roleLabel = '鑑定師'; roleIcon = 'fa-magnifying-glass'; break;
-            }
-
-            return `
+        return `
                 <tr>
                     <td style="color: #94a3b8; font-weight: 600;">#${u.id}</td>
                     <td><span class="uid-text">${u.uid || '-'}</span></td>
@@ -773,89 +756,89 @@
                         </div>
                     </td>
                 </tr>`;
-        }
+    }
 
-        // ==========================================
-        // 輔助函數 (保持不變)
-        // ==========================================
-        function formatDate(dateStr) {
-            if (!dateStr) return '-';
-            const d = new Date(dateStr);
-            return d.toLocaleString('zh-TW', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
-        }
+    // ==========================================
+    // 輔助函數 (保持不變)
+    // ==========================================
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        return d.toLocaleString('zh-TW', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
+    }
 
-        // ==========================================
-        // 彈窗與業務邏輯 (保持不變)
-        // ==========================================
-        function openCreateUserModal() {
-            document.getElementById('newUsername').value = '';
-            document.getElementById('newRole').value = 'CUSTOMER';
-            document.getElementById('createUserModal').style.display = 'flex';
-        }
-        function closeCreateUserModal() {document.getElementById('createUserModal').style.display = 'none';}
+    // ==========================================
+    // 彈窗與業務邏輯 (保持不變)
+    // ==========================================
+    function openCreateUserModal() {
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newRole').value = 'CUSTOMER';
+        document.getElementById('createUserModal').style.display = 'flex';
+    }
+    function closeCreateUserModal() {document.getElementById('createUserModal').style.display = 'none';}
 
-        async function submitCreateUser() {
-            const username = document.getElementById('newUsername').value.trim();
-            const role = document.getElementById('newRole').value;
-            if (!username) {showNotification('❌ 請輸入用戶名', true); return;}
-            try {
-                const res = await fetch('/admin/api/customers/create', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, role})});
-                const result = await res.json();
-                if (result.success) {
-                    showNotification('✅ 賬號創建成功！默認密碼為 123456');
-                    closeCreateUserModal();
-                    AdminTable.loadData(tableConfig); // 使用 AdminTable 刷新
-                } else {showNotification('❌ ' + result.message, true);}
-            } catch (e) {showNotification('❌ 網絡錯誤', true);}
-        }
+    async function submitCreateUser() {
+        const username = document.getElementById('newUsername').value.trim();
+        const role = document.getElementById('newRole').value;
+        if (!username) {showNotification('❌ 請輸入用戶名', true); return;}
+        try {
+            const res = await fetch('/admin/api/customers/create', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, role})});
+            const result = await res.json();
+            if (result.success) {
+                showNotification('✅ 賬號創建成功！默認密碼為 123456');
+                closeCreateUserModal();
+                AdminTable.loadData(tableConfig); // 使用 AdminTable 刷新
+            } else {showNotification('❌ ' + result.message, true);}
+        } catch (e) {showNotification('❌ 網絡錯誤', true);}
+    }
 
-        function openUpdateRoleModal(id, username, currentRole) {
-            document.getElementById('roleTargetId').value = id;
-            document.getElementById('roleTargetUsername').textContent = username;
-            document.getElementById('updateRoleSelect').value = currentRole;
-            document.getElementById('updateRoleModal').style.display = 'flex';
-        }
-        function closeUpdateRoleModal() {document.getElementById('updateRoleModal').style.display = 'none';}
+    function openUpdateRoleModal(id, username, currentRole) {
+        document.getElementById('roleTargetId').value = id;
+        document.getElementById('roleTargetUsername').textContent = username;
+        document.getElementById('updateRoleSelect').value = currentRole;
+        document.getElementById('updateRoleModal').style.display = 'flex';
+    }
+    function closeUpdateRoleModal() {document.getElementById('updateRoleModal').style.display = 'none';}
 
-        async function submitUpdateRole() {
-            const id = document.getElementById('roleTargetId').value;
-            const newRole = document.getElementById('updateRoleSelect').value;
-            try {
-                const res = await fetch(`/admin/api/customers/${id}/role`, {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({role: newRole})});
-                const result = await res.json();
-                if (result.success) {
-                    showNotification('✅ 權限更新成功');
-                    closeUpdateRoleModal();
-                    AdminTable.loadData(tableConfig); //  使用 AdminTable 刷新
-                } else {showNotification('❌ ' + result.message, true);}
-            } catch (e) {showNotification('❌ 網絡錯誤', true);}
-        }
+    async function submitUpdateRole() {
+        const id = document.getElementById('roleTargetId').value;
+        const newRole = document.getElementById('updateRoleSelect').value;
+        try {
+            const res = await fetch(`/admin/api/customers/${id}/role`, {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({role: newRole})});
+            const result = await res.json();
+            if (result.success) {
+                showNotification('✅ 權限更新成功');
+                closeUpdateRoleModal();
+                AdminTable.loadData(tableConfig); //  使用 AdminTable 刷新
+            } else {showNotification('❌ ' + result.message, true);}
+        } catch (e) {showNotification('❌ 網絡錯誤', true);}
+    }
 
-        // 操作按鈕跳轉邏輯 (保持不變)
-        function viewUserReviews(username) {window.open(`/admin/reviews?username=${encodeURIComponent(username)}`, '_blank');}
-        function viewUserOrders(username) {showNotification(`📦 正在查詢 ${username} 的訂單記錄... (開發中)`);}
-        function viewUserPenalties(username) {
-            // 打開到处罚管理页面，并传递用户名参数
-            //window.location.href = `/admin/penalties?username=${encodeURIComponent(username)}`;
-            window.open(`/admin/penalties?username=${encodeURIComponent(username)}`, '_blank');
-        }
+    // 操作按鈕跳轉邏輯 (保持不變)
+    function viewUserReviews(username) {window.open(`/admin/reviews?username=${encodeURIComponent(username)}`, '_blank');}
+    function viewUserOrders(username) {showNotification(`📦 正在查詢 ${username} 的訂單記錄... (開發中)`);}
+    function viewUserPenalties(username) {
+        // 打開到处罚管理页面，并传递用户名参数
+        //window.location.href = `/admin/penalties?username=${encodeURIComponent(username)}`;
+        window.open(`/admin/penalties?username=${encodeURIComponent(username)}`, '_blank');
+    }
 
-        function viewUserReports(username) {
-            // 1. 构建 URL，带上 tab=reports 参数以及用户名过滤参数
-            // 注意：这里假设您想查看该用户作为“举报人”的记录。如果是查看“被举报”记录，请改为 reportedUsername
-            const url = `/admin/reviews?tab=reports&reporterUsername=${encodeURIComponent(username)}`;
+    function viewUserReports(username) {
+        // 1. 构建 URL，带上 tab=reports 参数以及用户名过滤参数
+        // 注意：这里假设您想查看该用户作为“举报人”的记录。如果是查看“被举报”记录，请改为 reportedUsername
+        const url = `/admin/reviews?tab=reports&reporterUsername=${encodeURIComponent(username)}`;
 
-            // 2. 使用 window.open 在新标签页打开 (_blank)
-            window.open(url, '_blank');
-        }
+        // 2. 使用 window.open 在新标签页打开 (_blank)
+        window.open(url, '_blank');
+    }
 
-        // ==========================================
-        //  頁面初始化：一行代碼啟動表格
-        // ==========================================
-        document.addEventListener('DOMContentLoaded', () => {
-            AdminTable.loadData(tableConfig);
-        });
-    </script>
+    // ==========================================
+    //  頁面初始化：一行代碼啟動表格
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', () => {
+        AdminTable.loadData(tableConfig);
+    });
+</script>
 </body>
 
 </html>

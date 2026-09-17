@@ -52,6 +52,7 @@ public class ApiController {
     @PostMapping("/register")
     public ResponseEntity<Result> register(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "註冊資訊", required = true)
+            //  這個註解告訴 Spring：請把前端發來的 JSON Body 自動解析成 RegisterRequest 對象
             @RequestBody @Valid RegisterRequest request) {
         try {
             // 調用 UserService，返回 User 實體

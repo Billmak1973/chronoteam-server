@@ -15,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 @Slf4j
-@Component
+//有 @Component：Spring 啟動時，會自動執行 initializeSiteSettings() 和 initializeAdmin()，幫你建立預設的管理員帳號和系統設定。
+//沒有 @Component：這只是一個普通的 Java 類，Spring 根本不知道它的存在，run() 方法永遠不會被調用，你的系統啟動後將沒有預設管理員，也沒有基礎設定。
+@Component//通用註解，標記一個類為 Spring Bean，交由 IoC 容器自動掃描和管理。
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;

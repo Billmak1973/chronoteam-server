@@ -547,6 +547,18 @@
                                            class="form-input" placeholder="例如：3">
                                     <small class="form-hint"><i class="fas fa-info-circle"></i> 顧客選擇「線下付款/門店自取」後，訂單保留的最長天數。逾期系統將自動取消訂單並恢復庫存。</small>
                                 </div>
+
+                                <!-- 新增：網絡訂單保留天數 -->
+                                <div class="form-group">
+                                    <label for="onlineOrderRetentionDays"><i class="fas fa-clock"></i> 網絡訂單保留天數 (待付款)</label>
+                                    <input type="number" id="onlineOrderRetentionDays" step="1" min="1" max="30" required
+                                           class="form-input" placeholder="例如：1 (即24小時)">
+                                    <small class="form-hint">
+                                        <i class="fas fa-info-circle"></i>
+                                        顧客下單後未付款，系統保留訂單的最長天數。逾期系統將自動取消訂單並釋放庫存。(例如填寫 1，即保留 24 小時)
+                                    </small>
+                                </div>
+
                                 <button type="submit" class="btn-save-config" id="saveReturnBtn"><i
                                         class="fas fa-save"></i> 保存退换货设置</button>
                             </form>
@@ -932,7 +944,8 @@
 
                     if (configs.RETURN_DAYS !== undefined) document.getElementById('returnDays').value = configs.RETURN_DAYS;
                     if (configs.EXCHANGE_DAYS !== undefined) document.getElementById('exchangeDays').value = configs.EXCHANGE_DAYS;
-                    if (configs.OFFLINE_PAYMENT_DAYS !== undefined) document.getElementById('offlinePaymentDays').value = configs.OFFLINE_PAYMENT_DAYS; // 【新增】
+                    if (configs.OFFLINE_PAYMENT_DAYS !== undefined) document.getElementById('offlinePaymentDays').value = configs.OFFLINE_PAYMENT_DAYS;
+                    if (configs.ONLINE_ORDER_RETENTION_DAYS !== undefined) document.getElementById('onlineOrderRetentionDays').value = configs.ONLINE_ORDER_RETENTION_DAYS;
                 }
             } catch (error) {console.warn('加載當前配置失敗:', error);}
         }
@@ -1040,9 +1053,12 @@
 
         async function saveReturnConfig(e) {
             e.preventDefault();
-            const data = {"RETURN_DAYS": document.getElementById('returnDays').value,
-                "EXCHANGE_DAYS": document.getElementById('exchangeDays').value,
-                "OFFLINE_PAYMENT_DAYS": document.getElementById('offlinePaymentDays').value};
+            const data = {
+                    "RETURN_DAYS": document.getElementById('returnDays').value,
+                    "EXCHANGE_DAYS": document.getElementById('exchangeDays').value,
+                    "OFFLINE_PAYMENT_DAYS": document.getElementById('offlinePaymentDays').value,
+                "ONLINE_ORDER_RETENTION_DAYS": document.getElementById('onlineOrderRetentionDays').value
+            };
             await saveConfig('/api/admin/config/update-return-policy', data, 'saveReturnBtn', '退换货政策已成功保存！');
         }
 

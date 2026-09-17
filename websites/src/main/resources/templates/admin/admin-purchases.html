@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>採購管理 - ChronoTeam 管理中心</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <style>
+        /* 頁面專屬樣式補充 */
+        .tabs-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .tab-btn {
+            padding: 0.8rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: -2px;
+        }
+        .tab-btn:hover { color: var(--primary); }
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--gold);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* 狀態徽章顏色補充 */
+        .status-pending { background: rgba(255, 193, 7, 0.15); color: #856404; }
+        .status-completed { background: rgba(40, 167, 69, 0.15); color: #155724; }
+        .status-cancelled { background: rgba(108, 117, 125, 0.15); color: #383d41; }
+
+        .badge-purchase-in { background: rgba(40, 167, 69, 0.15); color: #155724; }
+        .badge-transfer { background: rgba(23, 162, 184, 0.15); color: #0c5460; }
+        .badge-damage { background: rgba(220, 53, 69, 0.15); color: #721c24; }
+        .badge-manual { background: rgba(108, 117, 125, 0.15); color: #383d41; }
+        .badge-return { background: rgba(255, 193, 7, 0.15); color: #856404; }
+        .badge-sale-out { background: rgba(220, 53, 69, 0.15); color: #721c24; }
+
+        .text-success { color: #28a745; font-weight: 600; }
+        .text-danger { color: #dc3545; font-weight: 600; }
+
+        .table-responsive {
+            overflow-x: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        .data-table {
+            width: 100%;
+            min-width: 1000px;
+            border-collapse: collapse;
+        }
+        .data-table th, .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9rem;
+        }
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            white-space: nowrap;
+        }
+        .data-table tbody tr:hover { background-color: #fcfcfc; }
+
+        /* 分頁容器間距 */
+        .pagination-container {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+<!-- 1. 引入公共導航欄 -->
+<div th:replace="~{fragments/common :: navbar}"></div>
+
+<div class="admin-layout">
+    <!-- 2. 引入左側邊欄，高亮 'purchases' -->
+    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='purchases')}"></div>
+
+    <!-- 3. 右側主內容區 -->
+    <main class="admin-main">
+        <div class="content-header">
+            <h2><i class="fas fa-dolly"></i> <span>採購與庫存管理</span></h2>
+            <div class="breadcrumb">
+                <a href="/admin/dashboard">管理中心</a> / <span>核心業務管理 / 採購管理</span>
+            </div>
+        </div>
+
+        <div class="content-body">
+            <!-- Tab 切換按鈕 -->
+            <div class="tabs-container">
+                <button class="tab-btn active" onclick="switchPurchaseTab('orders', this)">
+                    <i class="fas fa-file-invoice"></i> 採購訂單記錄
+                </button>
+                <button class="tab-btn" onclick="switchPurchaseTab('logs', this)">
+                    <i class="fas fa-history"></i> 庫存調整日誌
+                </button>
+            </div>
+
+            <!-- ================= Tab 1: 採購訂單 ================= -->
+            <div id="tab-orders" class="tab-content active">
+                <!-- 篩選工具欄 -->
+                <div class="filter-bar" style="margin-bottom: 1.5rem;">
+                    <div class="filter-item">
+                        <label class="filter-label"><i class="fas fa-search"></i> 供應商</label>
+                        <input type="text" class="filter-input" placeholder="輸入供應商名稱...">
+                    </div>
+                    <div class="filter-item">
+                        <label class="filter-label"><i class="fas fa-filter"></i> 狀態</label>
+                        <select class="filter-select">
+                            <option value="">全部狀態</option>
+                            <option value="PENDING">待入庫 (PENDING)</option>
+                            <option value="COMPLETED">已完成 (COMPLETED)</option>
+                            <option value="CANCELLED">已取消 (CANCELLED)</option>
+                        </select>
+                    </div>
+                    <div class="filter-item" style="flex: 0 0 auto; display: flex; gap: 0.5rem; align-items: flex-end;">
+                        <button class="btn-filter btn-search"><i class="fas fa-check"></i> 確定</button>
+                        <button class="btn-filter btn-reset"><i class="fas fa-undo"></i> 重置</button>
+                    </div>
+                </div>
+
+                <!-- 數據表格 -->
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>訂單ID</th>
+                            <th>商品名稱</th>
+                            <th>數量</th>
+                            <th>總成本</th>
+                            <th>供應商</th>
+                            <th>入庫目標</th>
+                            <th>狀態</th>
+                            <th>進貨日期</th>
+                            <th>操作員</th>
+                        </tr>
+                        </thead>
+                        <tbody id="orders-tbody">
+                        <!-- JS 動態渲染 -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 【修改】：替換為 JS 分頁掛載容器 -->
+                <div id="orders-pagination" class="pagination-container"></div>
+            </div>
+
+            <!-- ================= Tab 2: 庫存調整日誌 ================= -->
+            <div id="tab-logs" class="tab-content">
+                <!-- 篩選工具欄 -->
+                <div class="filter-bar" style="margin-bottom: 1.5rem;">
+                    <div class="filter-item">
+                        <label class="filter-label"><i class="fas fa-filter"></i> 調整類型</label>
+                        <select class="filter-select">
+                            <option value="">全部類型</option>
+                            <option value="PURCHASE_IN">採購進貨</option>
+                            <option value="MANUAL_ADJUST">手動盤點</option>
+                            <option value="TRANSFER_OUT">調撥出庫</option>
+                            <option value="TRANSFER_IN">調撥入庫</option>
+                            <option value="DAMAGE">破損報廢</option>
+                            <option value="RETURN">客戶退貨</option>
+                            <option value="SALE_OUT">銷售出庫</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label class="filter-label"><i class="fas fa-warehouse"></i> 倉庫類型</label>
+                        <select class="filter-select">
+                            <option value="">全部</option>
+                            <option value="ONLINE">線上總倉</option>
+                            <option value="OFFLINE">線下門店</option>
+                        </select>
+                    </div>
+                    <div class="filter-item" style="flex: 0 0 auto; display: flex; gap: 0.5rem; align-items: flex-end;">
+                        <button class="btn-filter btn-search"><i class="fas fa-check"></i> 確定</button>
+                        <button class="btn-filter btn-reset"><i class="fas fa-undo"></i> 重置</button>
+                    </div>
+                </div>
+
+                <!-- 數據表格 -->
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>日誌ID</th>
+                            <th>商品名稱</th>
+                            <th>調整類型</th>
+                            <th>倉庫/門店</th>
+                            <!-- 修改開始：拆分數量欄位 -->
+                            <th>舊數量</th>
+                            <th>新數量</th>
+                            <th>變化量</th>
+                            <!-- 修改結束 -->
+                            <th>原因備註</th>
+                            <th>調撥批次號</th>
+                            <th>操作時間</th>
+                            <th>操作員</th>
+                        </tr>
+                        </thead>
+                        <tbody id="logs-tbody">
+                        <!-- JS 動態渲染 -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 【修改】：替換為 JS 分頁掛載容器 -->
+                <div id="logs-pagination" class="pagination-container"></div>
+            </div>
+
+        </div>
+
+        <footer class="admin-footer" style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 12px; text-align: center; color: rgba(255,255,255,0.7);">
+            <p style="margin: 0; font-size: 0.9rem;">
+                <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam Admin Panel. All Rights Reserved.
+            </p>
+        </footer>
+    </main>
+</div>
+
+<!-- 4. 引入公共 JS -->
+<script th:inline="javascript">
+    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+</script>
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+
+<!-- 5. 頁面專屬 JS 邏輯 (包含分頁渲染) -->
+<script>
+    // ==========================================
+    // 核心：JS 版智能分頁渲染 (與 Fragment 結構完全一致)
+    // ==========================================
+    function renderPagination(containerId, currentPage, totalPages, smartPages, callbackName) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        // 如果沒有數據，隱藏分頁
+        if (totalPages === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+
+        // 1. 上一頁按鈕
+        html += `<button type="button" class="page-btn ${currentPage == 1 ? 'disabled' : ''}"
+                        ${currentPage == 1 ? 'disabled' : ''}
+                        onclick="${currentPage > 1 ? callbackName + '(' + (currentPage - 1) + ')' : 'return false;'}">
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                </button>`;
+
+        // 2. 智能頁碼遍歷
+        smartPages.forEach(item => {
+            if (item.isEllipsis) {
+                html += `<span class="page-ellipsis">...</span>`;
+            } else {
+                html += `<button type="button" class="page-btn ${item.pageNumber == currentPage ? 'active' : ''}"
+                                onclick="${callbackName}(${item.pageNumber})">
+                                ${item.pageNumber}
+                            </button>`;
+            }
+        });
+
+        // 3. 下一頁按鈕
+        html += `<button type="button" class="page-btn ${currentPage >= totalPages ? 'disabled' : ''}"
+                        ${currentPage >= totalPages ? 'disabled' : ''}
+                        onclick="${currentPage < totalPages ? callbackName + '(' + (currentPage + 1) + ')' : 'return false;'}">
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                </button>`;
+
+        container.innerHTML = html;
+    }
+
+    // ==========================================
+    // 數據加載與渲染邏輯
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function() {
+        loadPurchaseOrders(1);
+        // 日誌默認不加載，等切換 Tab 時再加載，節省請求
+    });
+
+    async function loadPurchaseOrders(page) {
+        try {
+            const response = await fetch(`/admin/api/admin/purchases/orders?page=${page}&size=25`);
+            const data = await response.json();
+            renderPurchaseOrdersTable(data.content);
+            // 【關鍵】：渲染分頁組件
+            renderPagination('orders-pagination', data.currentPage, data.totalPages, data.smartPages, 'loadPurchaseOrders');
+        } catch (error) {
+            console.error('加載採購訂單失敗:', error);
+        }
+    }
+
+    async function loadAdjustmentLogs(page) {
+        try {
+            const response = await fetch(`/admin/api/admin/purchases/logs?page=${page}&size=25`);
+            const data = await response.json();
+            renderAdjustmentLogsTable(data.content);
+            // 【關鍵】：渲染分頁組件
+            renderPagination('logs-pagination', data.currentPage, data.totalPages, data.smartPages, 'loadAdjustmentLogs');
+        } catch (error) {
+            console.error('加載庫存日誌失敗:', error);
+        }
+    }
+
+    function renderPurchaseOrdersTable(orders) {
+        const tbody = document.getElementById('orders-tbody');
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 3rem; color: var(--gray);">
+                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                    暫無採購訂單記錄
+                </td>
+            </tr>`;
+            return;
+        }
+
+        let html = orders.map(order => `
+        <tr>
+            <td style="font-family: monospace; color: var(--gray);">#${order.purchaseId}</td>
+            <td>
+                <div style="font-weight: 600;">${order.productName}</div>
+                <div style="font-size: 0.8rem; color: var(--gray);">${order.brand}</div>
+            </td>
+            <td style="font-weight: 600;">${order.quantity}</td>
+            <td style="color: var(--accent); font-weight: 700;">HK$ ${order.totalCost.toLocaleString()}</td>
+            <td>${order.supplier || '無'}</td>
+            <td>${order.warehouseType === 'ONLINE' ? '<i class="fas fa-warehouse"></i> 線上總倉' : '🏪 ' + (order.storeName || '')}</td>
+            <td><span class="status-badge status-${order.status.toLowerCase()}">${order.status}</span></td>
+            <td>${new Date(order.purchaseDate).toISOString().split('T')[0]}</td>
+            <td>${order.operatorName}</td>
+        </tr>
+    `).join('');
+
+        tbody.innerHTML = html;
+    }
+
+    function renderAdjustmentLogsTable(logs) {
+        const tbody = document.getElementById('logs-tbody');
+        if (!logs || logs.length === 0) {
+            tbody.innerHTML = `
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 3rem; color: var(--gray);">
+                    <i class="fas fa-clipboard-list" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                    暫無庫存調整日誌
+                </td>
+            </tr>`;
+            return;
+        }
+
+        let html = logs.map(log => {
+            const changeClass = log.changeQuantity > 0 ? 'text-success' : 'text-danger';
+            const changeSign = log.changeQuantity > 0 ? '+' : '';
+            // 處理調整類型的 CSS 類名映射
+            let badgeClass = 'badge-manual';
+            if (log.adjustmentType === 'PURCHASE_IN') badgeClass = 'badge-purchase-in';
+            else if (log.adjustmentType === 'TRANSFER_IN' || log.adjustmentType === 'TRANSFER_OUT') badgeClass = 'badge-transfer';
+            else if (log.adjustmentType === 'DAMAGE' || log.adjustmentType === 'SALE_OUT') badgeClass = 'badge-damage';
+
+            return `
+        <tr>
+            <td style="font-family: monospace; color: var(--gray);">#${log.logId}</td>
+            <td><div style="font-weight: 600;">${log.productName}</div></td>
+            <td><span class="status-badge ${badgeClass}">${log.adjustmentType}</span></td>
+            <td>${log.warehouseType === 'ONLINE' ? '<i class="fas fa-warehouse"></i> 線上總倉' : '🏪 ' + (log.storeName || '')}</td>
+            <!-- 【修改處】：將數量拆分為三列顯示 -->
+            <td style="font-weight: 600; color: var(--gray);">${log.previousQuantity}</td>
+            <td style="font-weight: 600;">${log.newQuantity}</td>
+            <td class="${changeClass}" style="font-weight: 700;">${changeSign}${log.changeQuantity}</td>
+            <!-- 【修改結束】 -->
+            <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${log.reason || ''}">${log.reason || '-'}</td>
+            <td style="font-family: monospace; font-size: 0.8rem; color: var(--gray);">${log.transferBatchId || '-'}</td>
+            <td>${new Date(log.createdAt).toLocaleString('zh-TW', {hour12: false})}</td>
+            <td>${log.operatorName}</td>
+        </tr>
+        `;
+        }).join('');
+
+        tbody.innerHTML = html;
+    }
+
+    // Tab 切換時重新加載數據
+    function switchPurchaseTab(tabName, btnElement) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        btnElement.classList.add('active');
+
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.getElementById('tab-' + tabName).classList.add('active');
+
+        // 切換時加載對應的數據（如果還沒加載過）
+        if (tabName === 'orders') {
+            // 檢查是否已加載，這裡簡單處理，每次都重新加載第一頁
+            loadPurchaseOrders(1);
+        } else if (tabName === 'logs') {
+            loadAdjustmentLogs(1);
+        }
+    }
+</script>
+</body>
+</html>

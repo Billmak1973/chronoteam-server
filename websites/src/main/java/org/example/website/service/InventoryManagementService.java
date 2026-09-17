@@ -6,6 +6,8 @@ import org.example.website.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class InventoryManagementService {
@@ -186,4 +188,121 @@ public class InventoryManagementService {
         inLog.setTransferBatchId(batchId);
         adjustmentLogRepository.save(inLog);
     }
+
+    /**
+     * 門店庫存調撥轉移 (門店 -> 其他門店 或 門店 -> 線上總倉)
+     */
+    @Transactional
+    public void transferFromStore(Long sourceInventoryId, Integer productId, Long sourceStoreId,
+                                  String targetType, Long targetStoreId, Integer quantity, String reason, String operatorUsername) {
+        if (quantity == null || quantity <= 0) {
+            throw new RuntimeException("調撥數量必須大於 0");
+        }
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("商品不存在"));
+        OfflineStore sourceStore = offlineStoreRepository.findById(sourceStoreId)
+                .orElseThrow(() -> new RuntimeException("源門店不存在"));
+        User operator = userRepository.findByUsername(operatorUsername)
+                .orElseThrow(() -> new RuntimeException("操作人不存在"));
+
+        // 1. 獲取並校驗源門店庫存
+        StoreInventory sourceInv = storeInventoryRepository.findById(sourceInventoryId)
+                .orElseThrow(() -> new RuntimeException("源門店庫存記錄不存在"));
+
+        if (sourceInv.getQuantity() < quantity) {
+            throw new RuntimeException("源門店庫存不足，當前庫存: " + sourceInv.getQuantity());
+        }
+
+        // 2. 生成唯一的調撥批次號 (用於關聯出庫與入庫日誌)
+        String batchId = UUID.randomUUID().toString();
+        String finalReason = (reason != null && !reason.trim().isEmpty()) ? reason : "門店庫存調撥";
+
+        Integer previousSourceQty = sourceInv.getQuantity();
+        Integer newSourceQty = previousSourceQty - quantity;
+
+        // 3. 扣減源門店庫存並記錄 TRANSFER_OUT 日誌
+        sourceInv.setQuantity(newSourceQty);
+        storeInventoryRepository.save(sourceInv);
+
+        InventoryAdjustmentLog outLog = new InventoryAdjustmentLog();
+        outLog.setProduct(product);
+        outLog.setOperator(operator);
+        outLog.setWarehouseType(InventoryAdjustmentLog.WarehouseType.OFFLINE);
+        outLog.setStore(sourceStore);
+        outLog.setPreviousQuantity(previousSourceQty);
+        outLog.setNewQuantity(newSourceQty);
+        outLog.setChangeQuantity(-quantity); // 負數表示出庫
+        outLog.setReason(finalReason + " (門店調撥出庫)");
+        outLog.setAdjustmentType(InventoryAdjustmentLog.AdjustmentType.TRANSFER_OUT);
+        outLog.setTransferBatchId(batchId);
+        adjustmentLogRepository.save(outLog);
+
+        // 4. 根據目標類型，增加目標倉庫庫存並記錄 TRANSFER_IN 日誌
+        if ("ONLINE".equals(targetType)) {
+            // 目標為線上總倉
+            Integer previousOnlineQty = product.getStock() != null ? product.getStock() : 0;
+            Integer newOnlineQty = previousOnlineQty + quantity;
+
+            product.setStock(newOnlineQty);
+            productRepository.save(product);
+
+            InventoryAdjustmentLog inLog = new InventoryAdjustmentLog();
+            inLog.setProduct(product);
+            inLog.setOperator(operator);
+            inLog.setWarehouseType(InventoryAdjustmentLog.WarehouseType.ONLINE);
+            inLog.setStore(null); // 線上總倉無門店關聯
+            inLog.setPreviousQuantity(previousOnlineQty);
+            inLog.setNewQuantity(newOnlineQty);
+            inLog.setChangeQuantity(quantity); // 正數表示入庫
+            inLog.setReason(finalReason + " (調撥入庫至線上總倉)");
+            inLog.setAdjustmentType(InventoryAdjustmentLog.AdjustmentType.TRANSFER_IN);
+            inLog.setTransferBatchId(batchId);
+            adjustmentLogRepository.save(inLog);
+
+        } else if ("OFFLINE".equals(targetType)) {
+            // 目標為其他線下門店
+            if (targetStoreId == null) {
+                throw new RuntimeException("目標倉庫為線下門店時，必須指定目標門店ID");
+            }
+            if (targetStoreId.equals(sourceStoreId)) {
+                throw new RuntimeException("不能將庫存調撥至同一個門店");
+            }
+
+            OfflineStore targetStore = offlineStoreRepository.findById(targetStoreId)
+                    .orElseThrow(() -> new RuntimeException("目標門店不存在"));
+
+            // 查找或創建目標門店的庫存記錄
+            StoreInventory targetInv = storeInventoryRepository.findByStoreAndProduct(targetStore, product)
+                    .orElseGet(() -> {
+                        StoreInventory newInv = new StoreInventory();
+                        newInv.setStore(targetStore);
+                        newInv.setProduct(product);
+                        newInv.setQuantity(0);
+                        return newInv;
+                    });
+
+            Integer previousTargetQty = targetInv.getQuantity();
+            Integer newTargetQty = previousTargetQty + quantity;
+
+            targetInv.setQuantity(newTargetQty);
+            storeInventoryRepository.save(targetInv);
+
+            InventoryAdjustmentLog inLog = new InventoryAdjustmentLog();
+            inLog.setProduct(product);
+            inLog.setOperator(operator);
+            inLog.setWarehouseType(InventoryAdjustmentLog.WarehouseType.OFFLINE);
+            inLog.setStore(targetStore);
+            inLog.setPreviousQuantity(previousTargetQty);
+            inLog.setNewQuantity(newTargetQty);
+            inLog.setChangeQuantity(quantity); // 正數表示入庫
+            inLog.setReason(finalReason + " (調撥入庫至門店: " + targetStore.getName() + ")");
+            inLog.setAdjustmentType(InventoryAdjustmentLog.AdjustmentType.TRANSFER_IN);
+            inLog.setTransferBatchId(batchId);
+            adjustmentLogRepository.save(inLog);
+
+        } else {
+            throw new RuntimeException("無效的目標倉庫類型: " + targetType);
+        }
+}
 }

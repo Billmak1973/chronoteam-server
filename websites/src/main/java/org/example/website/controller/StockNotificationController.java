@@ -319,11 +319,11 @@ public class StockNotificationController {
      * 用戶點擊查看商品詳情時，自動清除該商品的到貨通知訂閱記錄
      */
     @Operation(
-            summary = "查看商品時自動清除訂閱",
-            description = "用戶點擊查看商品詳情時，後端自動清除該商品的到貨通知訂閱記錄並原子減少計數，不阻塞用戶跳轉。"
+            summary = "查看商品時自動清除【已通知】的訂閱",
+            description = "用戶點擊查看商品詳情時，後端自動清除該商品【已通知 (notified=true)】的到貨通知訂閱記錄並原子減少計數，不阻塞用戶跳轉。若尚未通知，則保留訂閱。"
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "清除成功", content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "200", description = "處理成功", content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Result.class))),
             @ApiResponse(responseCode = "401", description = "未登入")
     })
     @DeleteMapping("/clear-on-view/{productId}")
@@ -343,14 +343,20 @@ public class StockNotificationController {
         Optional<StockNotification> existing = stockNotificationRepository.findByProduct_ProductIdAndUser_Username(productId, username);
 
         if (existing.isPresent()) {
-            // 2. 刪除記錄
-            stockNotificationRepository.delete(existing.get());
+            StockNotification notification = existing.get();
 
-            // 3. 原子減少商品的訂閱人數 (Repository 中已做防護，不會減到負數)
-            productRepository.decrementStockNotificationCount(productId);
+            // 【新增前提條件】：只有當已經被通知過 (notified == true) 時，才刪除記錄並減少計數
+            // 使用 Boolean.TRUE.equals 防止 notified 為 null 時引發 NullPointerException
+            if (Boolean.TRUE.equals(notification.getNotified())) {
+                // 2. 刪除記錄
+                stockNotificationRepository.delete(notification);
+
+                // 3. 原子減少商品的訂閱人數 (Repository 中已做防護，不會減到負數)
+                productRepository.decrementStockNotificationCount(productId);
+            }
         }
 
-        // 無論是否存在，都返回成功，不阻塞用戶跳轉
-        return ResponseEntity.ok(Result.ok("已清除通知記錄"));
+        // 無論是否存在或是否符合刪除條件，都返回成功，不阻塞用戶跳轉
+        return ResponseEntity.ok(Result.ok("處理成功"));
     }
 }
