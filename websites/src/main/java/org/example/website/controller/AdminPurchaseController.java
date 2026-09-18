@@ -9,9 +9,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.entity.InventoryAdjustmentLog;
+import org.example.website.entity.Product;
 import org.example.website.entity.PurchaseOrder;
 import org.example.website.repository.InventoryAdjustmentLogRepository;
 import org.example.website.repository.PurchaseOrderRepository;
+import org.example.website.service.ProductService;
 import org.example.website.util.PaginationUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,8 +24,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -33,11 +34,13 @@ public class AdminPurchaseController {
 
     private final PurchaseOrderRepository purchaseOrderRepository;
     private final InventoryAdjustmentLogRepository adjustmentLogRepository;
+    private final ProductService productService;
 
     public AdminPurchaseController(PurchaseOrderRepository purchaseOrderRepository,
-                                   InventoryAdjustmentLogRepository adjustmentLogRepository) {
+                                   InventoryAdjustmentLogRepository adjustmentLogRepository, ProductService productService) {
         this.purchaseOrderRepository = purchaseOrderRepository;
         this.adjustmentLogRepository = adjustmentLogRepository;
+        this.productService = productService;
     }
 
     // ==========================================
@@ -46,6 +49,17 @@ public class AdminPurchaseController {
     @Hidden // 隱藏純頁面渲染接口，保持 Swagger UI 專注於 REST API
     @GetMapping("/purchases")
     public String managePurchasesPage(Model model) {
+
+        // 1.獲取系統中所有產品
+        List<Product> allProducts = productService.getAllProducts();
+
+        // 2. 提取所有不重复的品牌名称，并使用 TreeSet 自动按字母排序
+        Set<String>allBrands=allProducts.stream()
+                .map(Product::getBrand)
+                .filter(brand -> brand != null && !brand.isEmpty())
+                .collect(Collectors.toCollection(TreeSet::new));
+
+        model.addAttribute("allBrands", allBrands);
         return "admin/admin-purchases";
     }
 
@@ -62,8 +76,8 @@ public class AdminPurchaseController {
     public ResponseEntity<?> getPurchaseOrders(
             @Parameter(description = "當前頁碼 (1-based)", example = "1")
             @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每頁顯示數量", example = "25") // 【已修改】示例值改為 25
-            @RequestParam(defaultValue = "25") int size) {          // 【已修改】默認值改為 25
+            @Parameter(description = "每頁顯示數量", example = "25")
+            @RequestParam(defaultValue = "25") int size) {
 
         // 1. 將 1-based 頁碼轉換為 0-based 供 Spring Data JPA 使用
         int pageIndex = Math.max(0, page - 1);
@@ -86,6 +100,9 @@ public class AdminPurchaseController {
             map.put("purchaseDate", order.getPurchaseDate());
             map.put("operatorName", order.getOperator() != null ? order.getOperator().getUsername() : "System");
             map.put("status", order.getStatus() != null ? order.getStatus().name() : "PENDING");
+            map.put("remark", order.getRemark());
+            map.put("createdAt", order.getCreatedAt());
+            map.put("updatedAt", order.getUpdatedAt());
             return map;
         }).collect(Collectors.toList());
 

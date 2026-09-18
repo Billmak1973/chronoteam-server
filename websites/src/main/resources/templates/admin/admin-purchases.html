@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/admin.css">
     <style>
-        /* 頁面專屬樣式補充 */
+        /* ================= 頁面專屬樣式 ================= */
         .tabs-container {
             display: flex;
             gap: 1rem;
@@ -83,11 +83,491 @@
         }
         .data-table tbody tr:hover { background-color: #fcfcfc; }
 
-        /* 分頁容器間距 */
         .pagination-container {
             margin-top: 1.5rem;
             display: flex;
             justify-content: center;
+        }
+
+        /* ========================================== */
+        /* 【核心美化】：緊湊型內聯篩選欄 (Input Group) */
+        /* ========================================== */
+        .filter-bar-compact {
+            display: flex;
+            flex-wrap: nowrap; /* 強制不換行，保持緊湊 */
+            align-items: center; /* 垂直居中對齊 */
+            gap: 1rem;
+            background: white;
+            padding: 0.8rem 1.2rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            margin-bottom: 1.5rem;
+        }
+
+        /* 篩選組合框 (標籤+輸入框融合) */
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: #f8f9fa;
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        /* 當輸入框獲得焦點時，整個組合框亮起金色邊框 */
+        .filter-group:focus-within {
+            border-color: var(--gold);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        .filter-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--gray);
+            white-space: nowrap;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .filter-group label i {
+            color: var(--gold);
+            font-size: 0.9rem;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            border: none;
+            background: transparent;
+            padding: 0.3rem 0;
+            font-size: 0.9rem;
+            color: var(--primary);
+            font-weight: 500;
+            outline: none;
+            min-width: 120px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+        }
+
+        /* 按鈕區域自動推到最右側 */
+        .filter-actions {
+            display: flex;
+            gap: 0.6rem;
+            margin-left: auto;
+        }
+
+        .btn-filter-sm {
+            padding: 0.5rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 34px; /* 與輸入框高度完美匹配 */
+        }
+
+        .btn-filter-sm.btn-search {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-filter-sm.btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-filter-sm.btn-reset {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-filter-sm.btn-reset:hover {
+            background: #dee2e6;
+            color: var(--primary);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            border-radius: 8px;  /* 添加圆角效果 */
+            padding: 8px 16px;   /* 确保有足够的内边距 */
+            border: none;        /* 移除默认边框 */
+            cursor: pointer;
+            transition: all 0.3s ease;  /* 平滑过渡效果 */
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        /* 響應式：極小屏幕下允許換行 */
+        @media (max-width: 768px) {
+            .filter-bar-compact {
+                flex-wrap: wrap;
+            }
+            .filter-actions {
+                width: 100%;
+                justify-content: flex-end;
+                margin-left: 0;
+                margin-top: 0.5rem;
+                padding-top: 1rem;
+                border-top: 1px solid #e9ecef;
+            }
+        }
+
+        /* 模态框基础样式 */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .custom-modal-box {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        /* 模态框头部 */
+        .modal-header {
+            padding: 2rem 2rem 1.5rem;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--primary, #1a1a2e);
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modal-header h3 i {
+            color: var(--gold, #d4af37);
+            font-size: 1.6rem;
+        }
+
+        .modal-close-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: #6c757d;
+            background: transparent;
+            border: 2px solid transparent;
+        }
+
+        .modal-close-btn:hover {
+            background: #f8f9fa;
+            color: var(--accent, #e94560);
+            border-color: #e9ecef;
+            transform: rotate(90deg);
+        }
+
+        /* 表单内容区域 */
+        #purchaseOrderForm {
+            padding: 2rem;
+        }
+
+        /* 表单组样式 */
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.6rem;
+            font-weight: 600;
+            color: var(--primary, #1a1a2e);
+            font-size: 0.95rem;
+        }
+
+        .form-group label i {
+            color: var(--gold, #d4af37);
+            font-size: 1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* 表单控件样式 */
+        .form-control {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #fafafa;
+            color: var(--primary, #1a1a2e);
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--gold, #d4af37);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .form-control:disabled {
+            background: #f1f3f5;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* Select 下拉框特殊样式 */
+        select.form-control {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23d4af37' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            padding-right: 3rem;
+        }
+
+        /* 输入框提示文字 */
+        .form-control::placeholder {
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+        /* 小字提示 */
+        .form-group small {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+            color: var(--gray, #6c757d);
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        .form-group small i {
+            color: var(--gold, #d4af37);
+        }
+
+        /* 文本域样式 */
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+
+        /* 模态框底部按钮区 */
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2.5rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        /* 按钮基础样式 */
+        .modal-actions button {
+            padding: 0.9rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border: none;
+            font-family: inherit;
+        }
+
+        /* 取消按钮 */
+        .btn-modal-cancel {
+            background: #e9ecef;
+            color: var(--primary, #1a1a2e);
+        }
+
+        .btn-modal-cancel:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 保存按钮 */
+        .btn-modal-save {
+            background: linear-gradient(135deg, var(--gold, #d4af37) 0%, #b8972b 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-modal-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .btn-modal-save:active {
+            transform: translateY(0);
+        }
+
+        /* 滚动条美化 */
+        .custom-modal-box::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-modal-box::-webkit-scrollbar-track {
+            background: #f1f3f5;
+            border-radius: 10px;
+        }
+
+        .custom-modal-box::-webkit-scrollbar-thumb {
+            background: var(--gold, #d4af37);
+            border-radius: 10px;
+        }
+
+        .custom-modal-box::-webkit-scrollbar-thumb:hover {
+            background: #b8972b;
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .custom-modal-box {
+                width: 95%;
+                max-height: 95vh;
+                border-radius: 16px;
+            }
+
+            .modal-header {
+                padding: 1.5rem 1.5rem 1rem;
+            }
+
+            .modal-header h3 {
+                font-size: 1.25rem;
+            }
+
+            #purchaseOrderForm {
+                padding: 1.5rem;
+            }
+
+            .form-group {
+                margin-bottom: 1.2rem;
+            }
+
+            .modal-actions {
+                flex-direction: column;
+                gap: 0.8rem;
+            }
+
+            .modal-actions button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* 必填标记动画 */
+        .form-group label span[style*="color: var(--accent)"] {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* 输入框焦点图标效果 */
+        .form-group:focus-within label i {
+            color: var(--accent, #e94560);
+            transform: scale(1.1);
+            transition: all 0.3s ease;
+        }
+
+        /* 错误状态样式（可选） */
+        .form-control.error {
+            border-color: var(--accent, #e94560);
+            background: #fff5f5;
+        }
+
+        .form-control.error:focus {
+            box-shadow: 0 0 0 4px rgba(233, 69, 96, 0.15);
+        }
+
+        /* 成功状态样式（可选） */
+        .form-control.success {
+            border-color: #28a745;
+            background: #f0fff4;
         }
     </style>
 </head>
@@ -121,24 +601,31 @@
 
             <!-- ================= Tab 1: 採購訂單 ================= -->
             <div id="tab-orders" class="tab-content active">
-                <!-- 篩選工具欄 -->
-                <div class="filter-bar" style="margin-bottom: 1.5rem;">
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-search"></i> 供應商</label>
-                        <input type="text" class="filter-input" placeholder="輸入供應商名稱...">
+
+                <!-- 【美化後】篩選工具欄 -->
+                <div class="filter-bar-compact">
+                    <div class="filter-group">
+                        <label for="filter-supplier"><i class="fas fa-search"></i> 供應商</label>
+                        <input type="text" id="filter-supplier" placeholder="輸入名稱...">
                     </div>
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-filter"></i> 狀態</label>
-                        <select class="filter-select">
+                    <div class="filter-group">
+                        <label for="filter-status"><i class="fas fa-filter"></i> 狀態</label>
+                        <select id="filter-status">
                             <option value="">全部狀態</option>
-                            <option value="PENDING">待入庫 (PENDING)</option>
-                            <option value="COMPLETED">已完成 (COMPLETED)</option>
-                            <option value="CANCELLED">已取消 (CANCELLED)</option>
+                            <option value="PENDING">待入庫</option>
+                            <option value="COMPLETED">已完成</option>
+                            <option value="CANCELLED">已取消</option>
                         </select>
                     </div>
-                    <div class="filter-item" style="flex: 0 0 auto; display: flex; gap: 0.5rem; align-items: flex-end;">
-                        <button class="btn-filter btn-search"><i class="fas fa-check"></i> 確定</button>
-                        <button class="btn-filter btn-reset"><i class="fas fa-undo"></i> 重置</button>
+                    <div class="filter-actions">
+                        <button class="btn-filter-sm btn-search"><i class="fas fa-check"></i> 確定</button>
+                        <button class="btn-filter-sm btn-reset"><i class="fas fa-undo"></i> 重置</button>
+                        <button class="btn-filter btn-primary" onclick="openAddPurchaseModal()"
+                                style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                   color: white;
+                   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                            <i class="fas fa-plus-circle"></i> 新增采购订单
+                        </button>
                     </div>
                 </div>
 
@@ -154,8 +641,13 @@
                             <th>供應商</th>
                             <th>入庫目標</th>
                             <th>狀態</th>
-                            <th>進貨日期</th>
+                            <th>是否已入庫</th>
+                            <th>庫存記錄ID</th>
+                            <th>備註</th>
                             <th>操作員</th>
+                            <th>創建時間</th>
+                            <th>更新時間</th>
+                            <th>操作</th>
                         </tr>
                         </thead>
                         <tbody id="orders-tbody">
@@ -163,17 +655,17 @@
                         </tbody>
                     </table>
                 </div>
-                <!-- 【修改】：替換為 JS 分頁掛載容器 -->
                 <div id="orders-pagination" class="pagination-container"></div>
             </div>
 
             <!-- ================= Tab 2: 庫存調整日誌 ================= -->
             <div id="tab-logs" class="tab-content">
-                <!-- 篩選工具欄 -->
-                <div class="filter-bar" style="margin-bottom: 1.5rem;">
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-filter"></i> 調整類型</label>
-                        <select class="filter-select">
+
+                <!-- 【美化後】篩選工具欄 -->
+                <div class="filter-bar-compact">
+                    <div class="filter-group">
+                        <label for="filter-type"><i class="fas fa-filter"></i> 調整類型</label>
+                        <select id="filter-type">
                             <option value="">全部類型</option>
                             <option value="PURCHASE_IN">採購進貨</option>
                             <option value="MANUAL_ADJUST">手動盤點</option>
@@ -184,17 +676,17 @@
                             <option value="SALE_OUT">銷售出庫</option>
                         </select>
                     </div>
-                    <div class="filter-item">
-                        <label class="filter-label"><i class="fas fa-warehouse"></i> 倉庫類型</label>
-                        <select class="filter-select">
+                    <div class="filter-group">
+                        <label for="filter-warehouse"><i class="fas fa-warehouse"></i> 倉庫類型</label>
+                        <select id="filter-warehouse">
                             <option value="">全部</option>
                             <option value="ONLINE">線上總倉</option>
                             <option value="OFFLINE">線下門店</option>
                         </select>
                     </div>
-                    <div class="filter-item" style="flex: 0 0 auto; display: flex; gap: 0.5rem; align-items: flex-end;">
-                        <button class="btn-filter btn-search"><i class="fas fa-check"></i> 確定</button>
-                        <button class="btn-filter btn-reset"><i class="fas fa-undo"></i> 重置</button>
+                    <div class="filter-actions">
+                        <button class="btn-filter-sm btn-search"><i class="fas fa-check"></i> 確定</button>
+                        <button class="btn-filter-sm btn-reset"><i class="fas fa-undo"></i> 重置</button>
                     </div>
                 </div>
 
@@ -207,11 +699,9 @@
                             <th>商品名稱</th>
                             <th>調整類型</th>
                             <th>倉庫/門店</th>
-                            <!-- 修改開始：拆分數量欄位 -->
                             <th>舊數量</th>
                             <th>新數量</th>
                             <th>變化量</th>
-                            <!-- 修改結束 -->
                             <th>原因備註</th>
                             <th>調撥批次號</th>
                             <th>操作時間</th>
@@ -223,7 +713,6 @@
                         </tbody>
                     </table>
                 </div>
-                <!-- 【修改】：替換為 JS 分頁掛載容器 -->
                 <div id="logs-pagination" class="pagination-container"></div>
             </div>
 
@@ -236,6 +725,107 @@
             </p>
         </footer>
     </main>
+</div>
+
+<!-- 新增采购订单 Modal -->
+<div id="addPurchaseModal" class="custom-modal-overlay" style="display: none;">
+    <div class="custom-modal-box" style="max-width: 600px;">
+        <div class="modal-header">
+            <!-- 加上 id 方便 JS 動態修改標題 -->
+            <h3 id="purchaseModalTitle">
+                <i class="fas fa-plus-circle" style="color: var(--gold);"></i> 新增采购订单
+            </h3>
+            <button class="modal-close-btn" onclick="closePurchaseModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        </div>
+
+        <form id="purchaseOrderForm" onsubmit="submitPurchaseOrder(event)">
+            <!-- 【新增】隱藏欄位：用於判斷當前是新增還是編輯 -->
+            <input type="hidden" id="editPurchaseId" value="">
+
+            <!-- 品牌选择 -->
+            <div class="form-group">
+                <label><i class="fas fa-crown"></i> 品牌 <span style="color: var(--accent);">*</span></label>
+                <select id="brandSelect" class="form-control" onchange="loadProductsByBrand()" required>
+                    <option value="">请选择品牌</option>
+                    <option th:each="brand : ${allBrands}" th:value="${brand}" th:text="${brand}">品牌名稱</option>
+                </select>
+            </div>
+
+            <!-- 商品选择 -->
+            <div class="form-group">
+                <label><i class="fas fa-box"></i> 商品 <span style="color: var(--accent);">*</span></label>
+                <select id="productSelect" class="form-control" required>
+                    <option value="">请先选择品牌</option>
+                </select>
+                <small style="color: var(--gray);">
+                    <i class="fas fa-info-circle"></i> 选择品牌后自动加载商品列表
+                </small>
+            </div>
+
+            <!-- 数量 -->
+            <div class="form-group">
+                <label><i class="fas fa-hashtag"></i> 采购数量 <span style="color: var(--accent);">*</span></label>
+                <input type="number" id="quantity" class="form-control" min="1" required placeholder="请输入采购数量">
+            </div>
+
+            <!-- 总成本 -->
+            <div class="form-group">
+                <label><i class="fas fa-coins"></i> 总成本 (HKD) <span style="color: var(--accent);">*</span></label>
+                <input type="number" id="totalCost" class="form-control" step="0.01" min="0" required placeholder="请输入总成本"
+                       style="-moz-appearance: textfield;">
+            </div>
+
+            <!-- 供应商 -->
+            <div class="form-group">
+                <label><i class="fas fa-truck"></i> 供应商</label>
+                <input type="text" id="supplier" class="form-control" placeholder="例如：XX拍卖行、同行调货">
+            </div>
+
+            <!-- 仓库类型 -->
+            <div class="form-group">
+                <label><i class="fas fa-warehouse"></i> 仓库类型 <span style="color: var(--accent);">*</span></label>
+                <select id="warehouseType" class="form-control" onchange="toggleStoreSelect()" required>
+                    <option value="ONLINE">线上总仓</option>
+                    <option value="OFFLINE">线下门店</option>
+                </select>
+            </div>
+
+            <!-- 门店选择（线下仓库时显示） -->
+            <div class="form-group" id="storeSelectGroup" style="display: none;">
+                <label><i class="fas fa-store"></i> 选择门店 <span style="color: var(--accent);">*</span></label>
+                <select id="storeId" class="form-control">
+                    <option value="">请选择门店</option>
+                    <!-- JS 動態填充 -->
+                </select>
+            </div>
+
+            <!-- 进货日期 (注意：創建時間由後端自動生成，前端只負責修改進貨日期) -->
+            <div class="form-group">
+                <label><i class="fas fa-calendar"></i> 进货日期</label>
+                <input type="date" id="purchaseDate" class="form-control">
+                <small style="color: var(--gray);">
+                    <i class="fas fa-info-circle"></i> 默認為今天
+                </small>
+            </div>
+
+            <!-- 备注 -->
+            <div class="form-group">
+                <label><i class="fas fa-comment"></i> 备注</label>
+                <textarea id="remark" class="form-control" rows="3" placeholder="请输入备注信息..."></textarea>
+            </div>
+
+            <!-- 按钮 -->
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closePurchaseModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <!-- 加上 id 方便 JS 動態修改按鈕文字 -->
+                <button type="submit" class="btn-modal-save" id="savePurchaseBtn">
+                    <i class="fas fa-save"></i> 确认创建
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- 4. 引入公共 JS -->
@@ -254,7 +844,6 @@
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        // 如果沒有數據，隱藏分頁
         if (totalPages === 0) {
             container.innerHTML = '';
             return;
@@ -262,14 +851,12 @@
 
         let html = '';
 
-        // 1. 上一頁按鈕
         html += `<button type="button" class="page-btn ${currentPage == 1 ? 'disabled' : ''}"
                         ${currentPage == 1 ? 'disabled' : ''}
                         onclick="${currentPage > 1 ? callbackName + '(' + (currentPage - 1) + ')' : 'return false;'}">
                     <i class="fas fa-chevron-left"></i> 上一頁
                 </button>`;
 
-        // 2. 智能頁碼遍歷
         smartPages.forEach(item => {
             if (item.isEllipsis) {
                 html += `<span class="page-ellipsis">...</span>`;
@@ -281,7 +868,6 @@
             }
         });
 
-        // 3. 下一頁按鈕
         html += `<button type="button" class="page-btn ${currentPage >= totalPages ? 'disabled' : ''}"
                         ${currentPage >= totalPages ? 'disabled' : ''}
                         onclick="${currentPage < totalPages ? callbackName + '(' + (currentPage + 1) + ')' : 'return false;'}">
@@ -296,7 +882,6 @@
     // ==========================================
     document.addEventListener('DOMContentLoaded', function() {
         loadPurchaseOrders(1);
-        // 日誌默認不加載，等切換 Tab 時再加載，節省請求
     });
 
     async function loadPurchaseOrders(page) {
@@ -304,7 +889,6 @@
             const response = await fetch(`/admin/api/admin/purchases/orders?page=${page}&size=25`);
             const data = await response.json();
             renderPurchaseOrdersTable(data.content);
-            // 【關鍵】：渲染分頁組件
             renderPagination('orders-pagination', data.currentPage, data.totalPages, data.smartPages, 'loadPurchaseOrders');
         } catch (error) {
             console.error('加載採購訂單失敗:', error);
@@ -316,44 +900,237 @@
             const response = await fetch(`/admin/api/admin/purchases/logs?page=${page}&size=25`);
             const data = await response.json();
             renderAdjustmentLogsTable(data.content);
-            // 【關鍵】：渲染分頁組件
             renderPagination('logs-pagination', data.currentPage, data.totalPages, data.smartPages, 'loadAdjustmentLogs');
         } catch (error) {
             console.error('加載庫存日誌失敗:', error);
         }
     }
 
+    // 全局變量：暫存當前渲染的訂單數據，方便編輯時讀取
+    window.currentPurchaseOrders = [];
+
     function renderPurchaseOrdersTable(orders) {
         const tbody = document.getElementById('orders-tbody');
+        // 暫存數據供編輯使用
+        window.currentPurchaseOrders = orders;
+
         if (!orders || orders.length === 0) {
             tbody.innerHTML = `
-            <tr>
-                <td colspan="9" style="text-align: center; padding: 3rem; color: var(--gray);">
-                    <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
-                    暫無採購訂單記錄
-                </td>
-            </tr>`;
+        <tr>
+            <td colspan="14" style="text-align: center; padding: 3rem; color: var(--gray);">
+                <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                暫無採購訂單記錄
+            </td>
+        </tr>`;
             return;
         }
 
-        let html = orders.map(order => `
+        const formatDateTime = (dateStr) => {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleString('zh-TW', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', hour12: false
+            });
+        };
+
+        let html = orders.map(order => {
+            const stockedInBadge = order.isStockedIn
+                ? '<span class="status-badge" style="background: rgba(40, 167, 69, 0.15); color: #155724;"><i class="fas fa-check-circle"></i> 已入庫</span>'
+                : '<span class="status-badge" style="background: rgba(255, 193, 7, 0.15); color: #856404;"><i class="fas fa-clock"></i> 待入庫</span>';
+
+            const remarkText = order.remark
+                ? (order.remark.length > 20 ? order.remark.substring(0, 20) + '...' : order.remark)
+                : '-';
+
+            // 【核心邏輯】：只有當未入庫 (isStockedIn 為 false 或 0) 時，才顯示操作按鈕
+            const actionButtons = !order.isStockedIn ? `
+            <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                <button class="btn-sm btn-edit" onclick="openEditPurchaseModal(${order.purchaseId})" style="background: var(--gold); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                    <i class="fas fa-edit"></i> 更改信息
+                </button>
+                <button class="btn-sm" onclick="handleStockIn(${order.purchaseId})" style="background: #17a2b8; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                    <i class="fas fa-box-open"></i> 入庫
+                </button
+            </div>
+        ` : `<span style="color: #28a745; font-weight: 600; font-size: 0.9rem;"><i class="fas fa-check-circle"></i> 已完成</span>`;
+
+            return `
         <tr>
             <td style="font-family: monospace; color: var(--gray);">#${order.purchaseId}</td>
             <td>
-                <div style="font-weight: 600;">${order.productName}</div>
-                <div style="font-size: 0.8rem; color: var(--gray);">${order.brand}</div>
+                <div style="font-weight: 600;">${order.productName || '未知商品'}</div>
+                <div style="font-size: 0.8rem; color: var(--gray);">${order.brand || '-'}</div>
             </td>
             <td style="font-weight: 600;">${order.quantity}</td>
-            <td style="color: var(--accent); font-weight: 700;">HK$ ${order.totalCost.toLocaleString()}</td>
+            <td style="color: var(--accent); font-weight: 700;">HK$ ${Number(order.totalCost).toLocaleString()}</td>
             <td>${order.supplier || '無'}</td>
-            <td>${order.warehouseType === 'ONLINE' ? '<i class="fas fa-warehouse"></i> 線上總倉' : '🏪 ' + (order.storeName || '')}</td>
-            <td><span class="status-badge status-${order.status.toLowerCase()}">${order.status}</span></td>
-            <td>${new Date(order.purchaseDate).toISOString().split('T')[0]}</td>
-            <td>${order.operatorName}</td>
+            <td>
+                ${order.warehouseType === 'ONLINE'
+                ? '<i class="fas fa-warehouse"></i> 線上總倉'
+                : '<i class="fas fa-store"></i> ' + (order.storeName || '未知門店')}
+            </td>
+            <td><span class="status-badge status-${(order.status || 'PENDING').toLowerCase()}">${order.status || 'PENDING'}</span></td>
+            <td>${stockedInBadge}</td>
+            <td style="font-family: monospace; font-size: 0.85rem; color: var(--gray);">${order.inventoryRecordId || '-'}</td>
+            <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${order.remark || ''}">${remarkText}</td>
+            <td>${order.operatorName || 'System'}</td>
+            <td style="font-size: 0.85rem; color: var(--gray); white-space: nowrap;">${formatDateTime(order.createdAt)}</td>
+            <td style="font-size: 0.85rem; color: var(--gray); white-space: nowrap;">${formatDateTime(order.updatedAt)}</td>
+            <td>${actionButtons}</td>
         </tr>
-    `).join('');
+        `;
+        }).join('');
 
         tbody.innerHTML = html;
+    }
+
+    // ==========================================
+    // 新增：打開編輯 Modal 並加載數據
+    // ==========================================
+    function openEditPurchaseModal(purchaseId) {
+        const order = window.currentPurchaseOrders.find(o => o.purchaseId === purchaseId);
+        if (!order) return;
+
+        // 1. 設置為編輯模式
+        document.getElementById('editPurchaseId').value = order.purchaseId;
+        document.getElementById('purchaseModalTitle').innerHTML = '<i class="fas fa-edit" style="color: var(--gold);"></i> 编辑采购订单';
+        document.getElementById('savePurchaseBtn').innerHTML = '<i class="fas fa-save"></i> 保存修改';
+
+        // 2. 填充表單數據
+        document.getElementById('brandSelect').value = order.brand || '';
+
+        // 觸發商品加載，然後設置選中的商品
+        loadProductsByBrand().then(() => {
+            if (order.productId) {
+                document.getElementById('productSelect').value = order.productId;
+            }
+        });
+
+        document.getElementById('quantity').value = order.quantity;
+        document.getElementById('totalCost').value = order.totalCost;
+        document.getElementById('supplier').value = order.supplier || '';
+        document.getElementById('warehouseType').value = order.warehouseType || 'ONLINE';
+
+        // 處理日期格式 (YYYY-MM-DD)
+        if (order.purchaseDate) {
+            document.getElementById('purchaseDate').value = order.purchaseDate.split('T')[0];
+        }
+
+        document.getElementById('remark').value = order.remark || '';
+
+        // 3. 處理門店顯示邏輯
+        toggleStoreSelect();
+        if (order.warehouseType === 'OFFLINE' && order.storeId) {
+            // 確保 storeSelect 裡有這個 option，然後設值
+            document.getElementById('storeId').value = order.storeId;
+        }
+
+        // 4. 顯示 Modal
+        document.getElementById('addPurchaseModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+
+    // ==========================================
+    // 修改：關閉 Modal (重置為新增模式)
+    // ==========================================
+    function closePurchaseModal() {
+        document.getElementById('addPurchaseModal').style.display = 'none';
+        document.body.style.overflow = '';
+
+        // 重置表單
+        document.getElementById('purchaseOrderForm').reset();
+
+        // 重置為新增模式狀態
+        document.getElementById('editPurchaseId').value = '';
+        document.getElementById('purchaseModalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color: var(--gold);"></i> 新增采购订单';
+        document.getElementById('savePurchaseBtn').innerHTML = '<i class="fas fa-save"></i> 确认创建';
+        document.getElementById('storeSelectGroup').style.display = 'none';
+    }
+
+    // ==========================================
+    // 修改：提交表單 (自動判斷是新增還是編輯)
+    // ==========================================
+    async function submitPurchaseOrder(event) {
+        event.preventDefault();
+
+        const editId = document.getElementById('editPurchaseId').value;
+        const saveBtn = document.getElementById('savePurchaseBtn');
+        const originalBtnText = saveBtn.innerHTML;
+
+        // 禁用按鈕防止重複提交
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
+        const formData = {
+            brand: document.getElementById('brandSelect').value,
+            productId: document.getElementById('productSelect').value,
+            quantity: parseInt(document.getElementById('quantity').value),
+            totalCost: parseFloat(document.getElementById('totalCost').value),
+            supplier: document.getElementById('supplier').value,
+            warehouseType: document.getElementById('warehouseType').value,
+            purchaseDate: document.getElementById('purchaseDate').value,
+            remark: document.getElementById('remark').value
+        };
+
+        if (formData.warehouseType === 'OFFLINE') {
+            formData.storeId = document.getElementById('storeId').value;
+        }
+
+        try {
+            // 【注意】：請根據你後端實際的 API 路徑修改這裡的 URL
+            let url = '/api/admin/purchases';
+            let method = 'POST';
+
+            if (editId) {
+                // 編輯模式：發送 PUT 請求
+                url = `/api/admin/purchases/${editId}`;
+                method = 'PUT';
+            }
+
+            const response = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                if (typeof showNotification === 'function') {
+                    showNotification(editId ? '✅ 采购订单修改成功！' : '✅ 采购订单创建成功！');
+                }
+                closePurchaseModal();
+                loadPurchaseOrders(1); // 刷新列表
+            } else {
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ ' + (result.message || '操作失敗'), true);
+                }
+            }
+        } catch (error) {
+            console.error('操作失败:', error);
+            if (typeof showNotification === 'function') {
+                showNotification('❌ 網絡錯誤，請稍後重試', true);
+            }
+        } finally {
+            // 恢復按鈕狀態
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnText;
+        }
+    }
+
+    // ==========================================
+    // 新增：入庫按鈕 (暫無功能)
+    // ==========================================
+    function handleStockIn(purchaseId) {
+        // 暫時只有按鈕，可以加個提示
+        if (typeof showNotification === 'function') {
+            showNotification('⚠️ 入庫功能開發中，敬請期待！');
+        } else {
+            alert('入庫功能開發中，敬請期待！');
+        }
+        // 未來可以在這裡調用 API:
+        // fetch(`/api/admin/purchases/${purchaseId}/stock-in`, { method: 'POST' })
     }
 
     function renderAdjustmentLogsTable(logs) {
@@ -361,7 +1138,7 @@
         if (!logs || logs.length === 0) {
             tbody.innerHTML = `
             <tr>
-                <td colspan="9" style="text-align: center; padding: 3rem; color: var(--gray);">
+                <td colspan="11" style="text-align: center; padding: 3rem; color: var(--gray);">
                     <i class="fas fa-clipboard-list" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
                     暫無庫存調整日誌
                 </td>
@@ -372,7 +1149,6 @@
         let html = logs.map(log => {
             const changeClass = log.changeQuantity > 0 ? 'text-success' : 'text-danger';
             const changeSign = log.changeQuantity > 0 ? '+' : '';
-            // 處理調整類型的 CSS 類名映射
             let badgeClass = 'badge-manual';
             if (log.adjustmentType === 'PURCHASE_IN') badgeClass = 'badge-purchase-in';
             else if (log.adjustmentType === 'TRANSFER_IN' || log.adjustmentType === 'TRANSFER_OUT') badgeClass = 'badge-transfer';
@@ -384,11 +1160,9 @@
             <td><div style="font-weight: 600;">${log.productName}</div></td>
             <td><span class="status-badge ${badgeClass}">${log.adjustmentType}</span></td>
             <td>${log.warehouseType === 'ONLINE' ? '<i class="fas fa-warehouse"></i> 線上總倉' : '🏪 ' + (log.storeName || '')}</td>
-            <!-- 【修改處】：將數量拆分為三列顯示 -->
             <td style="font-weight: 600; color: var(--gray);">${log.previousQuantity}</td>
             <td style="font-weight: 600;">${log.newQuantity}</td>
             <td class="${changeClass}" style="font-weight: 700;">${changeSign}${log.changeQuantity}</td>
-            <!-- 【修改結束】 -->
             <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${log.reason || ''}">${log.reason || '-'}</td>
             <td style="font-family: monospace; font-size: 0.8rem; color: var(--gray);">${log.transferBatchId || '-'}</td>
             <td>${new Date(log.createdAt).toLocaleString('zh-TW', {hour12: false})}</td>
@@ -400,7 +1174,6 @@
         tbody.innerHTML = html;
     }
 
-    // Tab 切換時重新加載數據
     function switchPurchaseTab(tabName, btnElement) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         btnElement.classList.add('active');
@@ -408,14 +1181,204 @@
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         document.getElementById('tab-' + tabName).classList.add('active');
 
-        // 切換時加載對應的數據（如果還沒加載過）
         if (tabName === 'orders') {
-            // 檢查是否已加載，這裡簡單處理，每次都重新加載第一頁
             loadPurchaseOrders(1);
         } else if (tabName === 'logs') {
             loadAdjustmentLogs(1);
         }
     }
+
+    // 全局变量存储商品列表
+    let productsCache = [];
+
+    // 【修正】：函數名改為 openAddPurchaseModal，與按鈕 onclick 一致
+    function openAddPurchaseModal() {
+        document.getElementById('addPurchaseModal').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        // 重置表单
+        document.getElementById('purchaseOrderForm').reset();
+        document.getElementById('brandSelect').value = '';
+        document.getElementById('productSelect').innerHTML = '<option value="">请先选择品牌</option>';
+        document.getElementById('purchaseDate').valueAsDate = new Date();
+
+        // 加载门店列表
+        loadStores();
+    }
+
+    // 关闭采购订单 Modal
+    function closePurchaseModal() {
+        document.getElementById('addPurchaseModal').style.display = 'none';
+        document.body.style.overflow = '';
+        productsCache = [];
+    }
+
+    // 根据品牌加载商品列表
+    async function loadProductsByBrand() {
+        const brandSelect = document.getElementById('brandSelect');
+        const productSelect = document.getElementById('productSelect');
+        const brand = brandSelect.value;
+
+        if (!brand) {
+            productSelect.innerHTML = '<option value="">请先选择品牌</option>';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/brands/${encodeURIComponent(brand)}`);
+            const result = await response.json();
+
+            if (result.success && result.data) {
+                productsCache = result.data;
+
+                if (productsCache.length === 0) {
+                    productSelect.innerHTML = '<option value="">该品牌下暂无商品</option>';
+                    if (typeof showNotification === 'function') {
+                        showNotification('⚠️ 该品牌下暂无商品，请先在商品管理中添加', true);
+                    }
+                } else {
+                    let options = '<option value="">请选择商品</option>';
+                    productsCache.forEach(product => {
+                        options += `<option value="${product.productId}">` +
+                            `${product.description} (HK$ ${product.price})` +
+                            `</option>`;
+                    });
+                    productSelect.innerHTML = options;
+                }
+            } else {
+                productSelect.innerHTML = '<option value="">加载失败</option>';
+                if (typeof showNotification === 'function') showNotification('❌ 加载商品列表失败', true);
+            }
+        } catch (error) {
+            console.error('加载商品列表失败:', error);
+            productSelect.innerHTML = '<option value="">加载失败</option>';
+            if (typeof showNotification === 'function') showNotification('❌ 网络错误，请稍后重试', true);
+        }
+    }
+
+    // 切换仓库类型时显示/隐藏门店选择
+    function toggleStoreSelect() {
+        const warehouseType = document.getElementById('warehouseType').value;
+        const storeSelectGroup = document.getElementById('storeSelectGroup');
+        const storeIdSelect = document.getElementById('storeId');
+
+        if (warehouseType === 'OFFLINE') {
+            storeSelectGroup.style.display = 'block';
+            storeIdSelect.setAttribute('required', 'required');
+        } else {
+            storeSelectGroup.style.display = 'none';
+            storeIdSelect.removeAttribute('required');
+            storeIdSelect.value = '';
+        }
+    }
+
+    // 加载门店列表
+    async function loadStores() {
+        try {
+            const response = await fetch('/admin/stores/api/active-list');
+            const result = await response.json();
+
+            const storeIdSelect = document.getElementById('storeId');
+
+            if (result.success && result.data) {
+                let options = '<option value="">請選擇門店</option>';
+                result.data.forEach(store => {
+                    // 【修改處】：只使用 store.name，不再拼接 storeCode
+                    options += `<option value="${store.storeId}">${store.name}</option>`;
+                });
+                storeIdSelect.innerHTML = options;
+            }
+        } catch (error) {
+            console.error('加載門店列表失敗:', error);
+        }
+    }
+
+    // 提交采购订单
+    async function submitPurchaseOrder(event) {
+        event.preventDefault();
+
+        const saveBtn = document.getElementById('savePurchaseBtn');
+        const originalBtnText = saveBtn.innerHTML;
+
+        // 收集表单数据
+        const formData = {
+            productId: parseInt(document.getElementById('productSelect').value),
+            quantity: parseInt(document.getElementById('quantity').value),
+            totalCost: parseFloat(document.getElementById('totalCost').value),
+            supplier: document.getElementById('supplier').value.trim(),
+            warehouseType: document.getElementById('warehouseType').value,
+            purchaseDate: document.getElementById('purchaseDate').value,
+            remark: document.getElementById('remark').value.trim()
+        };
+
+        if (formData.warehouseType === 'OFFLINE') {
+            const storeId = document.getElementById('storeId').value;
+            if (!storeId) {
+                if (typeof showNotification === 'function') showNotification('❌ 请选择门店', true);
+                saveBtn.innerHTML = originalBtnText;
+                return;
+            }
+            formData.storeId = parseInt(storeId);
+        }
+
+        try {
+            const response = await fetch('/api/admin/purchases/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                if (typeof showNotification === 'function') showNotification('✅ 采购订单创建成功！');
+                closePurchaseModal();
+
+                if (typeof loadPurchaseOrders === 'function') {
+                    loadPurchaseOrders(1);
+                }
+            } else {
+                if (typeof showNotification === 'function') showNotification(' ' + (result.message || '创建失败'), true);
+                saveBtn.innerHTML = originalBtnText;
+            }
+        } catch (error) {
+            console.error('创建采购订单失败:', error);
+            if (typeof showNotification === 'function') showNotification('❌ 网络错误，请稍后重试', true);
+            saveBtn.innerHTML = originalBtnText;
+        }
+    }
+
+    // 点击 Modal 外部关闭
+    document.getElementById('addPurchaseModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closePurchaseModal();
+        }
+    });
+
+    // ESC 键关闭 Modal
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('addPurchaseModal');
+            if (modal && modal.style.display === 'flex') {
+                closePurchaseModal();
+            }
+        }
+    });
+
+    // ==========================================
+    // 防止鼠標滾輪意外改變數字輸入框的值
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function() {
+        // 獲取頁面上所有的 number 類型輸入框
+        const numberInputs = document.querySelectorAll('input[type="number"]');
+
+        numberInputs.forEach(input => {
+            input.addEventListener('wheel', function(e) {
+                // 阻止鼠標滾輪的默認行為（即改變數值）
+                e.preventDefault();
+            }, { passive: false }); // passive: false 確保 preventDefault 能被正確執行
+        });
+    });
 </script>
 </body>
 </html>

@@ -74,10 +74,22 @@ public class PurchaseOrder {
      * 【業務邏輯】：
      * 1. 若為「線下門店」入庫：此處將記錄 StoreInventory 表的 inventoryId。
      * 2. 若為「線上總倉」入庫：此處可為 null (因為直接更新 Product 表的 stock 字段，無獨立庫存記錄表)。
-     * 3. 當 status 變更為 COMPLETED 時，此字段會被寫入，代表「已實際入庫並匹配到具體庫存記錄」。
+     * 3. 當 status 變更為 COMPLETED 且庫存實際更新成功後，此字段會被寫入。
      */
     @Column(name = "inventory_record_id")
     private Long inventoryRecordId;
+
+    // ================= 【新增字段】 =================
+    /**
+     * 是否已經實際進入庫存 (入庫完成標誌)
+     * 【業務邏輯】：
+     * 默認為 false。當管理員執行「確認入庫」操作，且後端成功更新 Product.stock 或 StoreInventory.quantity
+     * 並寫入 InventoryAdjustmentLog 後，將此字段設為 true。
+     * 這可以防止重複入庫或訂單狀態為 COMPLETED 但庫存實際未更新的異常情況。
+     */
+    @Column(name = "is_stocked_in", nullable = false)
+    private Boolean isStockedIn = false;
+    // ================================================
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

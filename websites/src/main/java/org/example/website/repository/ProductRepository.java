@@ -229,4 +229,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
     @Transactional
     @Query(value = "UPDATE product SET stock_notification_count = CASE WHEN COALESCE(stock_notification_count, 0) > 0 THEN stock_notification_count - 1 ELSE 0 END WHERE prod_id = :productId", nativeQuery = true)
     int decrementStockNotificationCount(@Param("productId") Integer productId);
+
+    @Query("SELECT p FROM Product p WHERE p.brand = :brand ORDER BY p.description ASC")
+    List<Product> findByBrand(@Param("brand") String brand);
 }

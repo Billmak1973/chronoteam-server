@@ -384,52 +384,62 @@ public class AdminProductController {
             @Parameter(description = "篩選分類 (可選)", example = "dive")
             @RequestParam(required = false) String category,
 
-            @Parameter(description = "篩選成色 (可選)", example = "EXCELLENT")
-            @RequestParam(required = false) String conditionStr
+            // 【修复】参数名改为 condition，与前端一致
+            @Parameter(description = "篩選成色 (可選)", example = "NEAR_MINT")
+            @RequestParam(required = false) String condition
     ) {
         // 1. 權限校驗
         if (!SecurityUtils.isAdmin()) {
             return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員 (Role: ADMIN)"));
         }
 
-        // 【核心修復】：將空字符串轉換為 null，防止 JPQL 查詢匹配空字符串
+        // 【核心修復】：將空字符串轉換為 null
         if (brand != null && brand.trim().isEmpty()) {
             brand = null;
         }
         if (category != null && category.trim().isEmpty()) {
             category = null;
         }
-        if (conditionStr != null && conditionStr.trim().isEmpty()) {
-            conditionStr = null;
+        // 【核心修复】：将空字符串转换为 null
+        if (condition != null && condition.trim().isEmpty()) {
+            condition = null;
         }
 
-        // 2. 將 1-based 頁碼轉換為 0-based 供 Spring Data 使用
+        // 2. 將 1-based 頁碼轉換為 0-based
         int pageIndex = Math.max(0, page - 1);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "quantity"));
 
-        // 3. 將 String 類型的 condition 轉換為 Enum (如果為空則為 null)
+        // 3. 將 String 類型的 condition 轉換為 Enum
         org.example.website.entity.WatchCondition conditionEnum = null;
-        if (conditionStr != null && !conditionStr.trim().isEmpty()) {
+        if (condition != null && !condition.trim().isEmpty()) {
             try {
-                conditionEnum = org.example.website.entity.WatchCondition.valueOf(conditionStr.trim());
+                // 【关键】使用 trim() 确保去除空格
+                conditionEnum = org.example.website.entity.WatchCondition.valueOf(condition.trim().toUpperCase());
+                //System.out.println(" 成色筛选条件转换成功: " + condition + " -> " + conditionEnum);
             } catch (IllegalArgumentException e) {
-                // 忽略無效的枚舉值，保持為 null
+//System.err.println(" 成色转换失败: " + condition);
+                e.printStackTrace();
+                // 如果转换失败，返回错误而不是返回所有数据
+                return ResponseEntity.badRequest()
+                        .body(Result.error("无效的成色值: " + condition));
             }
         }
 
-        // 4. 執行分頁查詢 (使用新的帶過濾條件的方法)
+        // 4. 执行分页查询
+//        System.out.println(" 查询参数: storeId=" + storeId + ", brand=" + brand +
+//                ", category=" + category + ", condition=" + conditionEnum);
+
         Page<StoreInventory> inventoryPage = storeInventoryRepository.findWithFilters(
                 storeId, brand, category, conditionEnum, pageable
         );
 
-        // 5. 數據清洗：手動提取需要的字段，避免 Hibernate 懶加載異常和 JSON 循環引用
+        // 5. 数据清洗
         List<Map<String, Object>> cleanData = inventoryPage.getContent().stream().map(inv -> {
             Map<String, Object> map = new HashMap<>();
             map.put("inventoryId", inv.getInventoryId());
             map.put("quantity", inv.getQuantity());
             map.put("updatedAt", inv.getUpdatedAt());
 
-            // 提取門店信息
             if (inv.getStore() != null) {
                 Map<String, Object> storeMap = new HashMap<>();
                 storeMap.put("storeId", inv.getStore().getStoreId());
@@ -438,7 +448,6 @@ public class AdminProductController {
                 map.put("store", storeMap);
             }
 
-            // 提取商品信息
             if (inv.getProduct() != null) {
                 Map<String, Object> productMap = new HashMap<>();
                 productMap.put("productId", inv.getProduct().getProductId());
@@ -458,13 +467,10 @@ public class AdminProductController {
             return map;
         }).collect(Collectors.toList());
 
-        // 6. 使用 PaginationUtils 構建標準響應 (包含 smartPages)
+        // 6. 构建响应
         Map<String, Object> response = PaginationUtils.buildPageResponse(inventoryPage, cleanData);
-
-        // 7. 【關鍵修復】：覆蓋 currentPage 為 1-based，以便前端直接使用
         response.put("currentPage", page);
 
-        // 確保 totalPages 至少為 1 (防止前端分頁組件報錯)
         if ((int) response.get("totalPages") == 0) {
             response.put("totalPages", 1);
         }

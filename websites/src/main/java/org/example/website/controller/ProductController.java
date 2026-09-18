@@ -403,4 +403,36 @@ public class ProductController {
             return ResponseEntity.ok(0);
         }
     }
+
+    @Operation(
+            summary = "根据品牌获取商品列表",
+            description = "获取指定品牌下的所有商品，返回商品ID和描述信息"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "获取成功"),
+            @ApiResponse(responseCode = "404", description = "品牌不存在")
+    })
+    @GetMapping("/brands/{brand}")
+    public ResponseEntity<?> getProductsByBrand(
+            @Parameter(description = "品牌名称", example = "Rolex", required = true)
+            @PathVariable String brand
+    ) {
+        List<Product> products = productRepository.findByBrand(brand);
+
+        if (products.isEmpty()) {
+            return ResponseEntity.ok(Result.okWithData("该品牌下暂无商品", List.of()));
+        }
+
+        // 【修复点】：显式指定 Map 的泛型类型为 <String, Object>
+        List<Map<String, Object>> productList = products.stream()
+                .map(p -> Map.<String, Object>of(
+                        "productId", p.getProductId(),
+                        "description", p.getDescription(),
+                        "brand", p.getBrand(),
+                        "price", p.getPrice()
+                ))
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(Result.okWithData("获取成功", productList));
+    }
 }

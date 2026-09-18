@@ -263,4 +263,36 @@ public class AdminStoreController {
         storeRepository.deleteById(id);
         return ResponseEntity.ok(Result.ok("店鋪已徹底刪除"));
     }
+
+    // ==========================================
+    // 【新增補充】：獲取所有活躍門店列表 (不分頁，專用於下拉框選擇)
+    // ==========================================
+    @Operation(
+            summary = "獲取所有活躍門店列表",
+            description = "獲取所有處於顯示狀態 (isActive=true) 的門店，不分頁，專用於前端下拉框選擇（如採購入庫、庫存調撥等）。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員")
+    })
+    @GetMapping("/api/active-list")
+    @ResponseBody
+    public ResponseEntity<?> getActiveStores(Authentication authentication) {
+        if (!isAdmin(authentication)) {
+            return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員"));
+        }
+
+        // 調用 Repository 獲取所有 isActive=true 的門店
+        List<OfflineStore> stores = storeRepository.findByIsActiveTrue();
+
+        // 數據清洗：只返回下拉框需要的核心字段，減少網絡傳輸
+        List<Map<String, Object>> storeList = stores.stream().map(store -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("storeId", store.getStoreId());
+            map.put("name", store.getName());
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(Result.okWithData("獲取成功", storeList));
+    }
 }
