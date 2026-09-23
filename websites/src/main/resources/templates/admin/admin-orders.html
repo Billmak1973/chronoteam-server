@@ -174,7 +174,6 @@
             color: #6c757d;
         }
 
-        /* 取貨彈窗樣式保持不變 */
         .pickup-modal-overlay {
             position: fixed;
             top: 0;
@@ -390,6 +389,136 @@
                 transform: translateY(0) scale(1);
             }
         }
+
+        /* ========================================== */
+        /* 取消過期訂單並通知用戶的專屬彈窗樣式 */
+        /* ========================================== */
+        .cancel-expired-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 10002;
+            /* 高於普通彈窗 */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .cancel-expired-modal-box {
+            background: white;
+            width: 90%;
+            max-width: 550px;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid var(--accent);
+            /* 紅色頂部表示操作需謹慎 */
+        }
+
+        .cancel-expired-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .cancel-expired-header i {
+            font-size: 1.8rem;
+            color: var(--accent);
+        }
+
+        .cancel-expired-header h3 {
+            margin: 0;
+            color: var(--primary);
+            font-size: 1.3rem;
+        }
+
+        .cancel-expired-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .cancel-expired-body label {
+            display: block;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .cancel-expired-body textarea {
+            width: 100%;
+            min-height: 140px;
+            padding: 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s;
+            line-height: 1.6;
+            background: #fdfdfd;
+        }
+
+        .cancel-expired-body textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+            background: white;
+        }
+
+        .cancel-expired-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn-cancel-expired {
+            padding: 0.8rem 1.5rem;
+            background: #e9ecef;
+            color: var(--primary);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-cancel-expired:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirm-cancel-expired {
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
+        }
+
+        .btn-confirm-cancel-expired:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn-confirm-cancel-expired:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none !important;
+        }
     </style>
 </head>
 
@@ -400,7 +529,7 @@
         <main class="admin-main">
             <div class="content-header">
                 <h2><i class="fas fa-shopping-bag" style="color: var(--gold);"></i> 訂單管理 (全字段視圖)</h2>
-                <div class="breadcrumb">後台管理 / 訂單列表 (共 17 個數據字段)</div>
+                <div class="breadcrumb">後台管理 / 訂單列表</div>
             </div>
             <div class="content-body">
                 <div class="table-responsive">
@@ -424,14 +553,14 @@
                                 <th>15. 收貨時間</th>
                                 <th>16. 發貨截止</th>
                                 <th>17. 用戶可見</th>
-                                <th style="text-align: center;">操作</th>
+                                <!--  核心新增：是否已過期列 -->
+                                <th>18. 是否已過期</th>
+                                <th style="text-align: center;">19. 操作</th>
                             </tr>
                         </thead>
-                        <!-- ✅ 核心：tbody 留空，由 AdminTable 動態填充 -->
                         <tbody id="ordersTableBody"></tbody>
                     </table>
                 </div>
-                <!-- ✅ 核心：分頁容器改為 div，由 AdminTable 動態渲染 -->
                 <div id="orders-pagination"></div>
             </div>
 
@@ -466,14 +595,45 @@
             </div>
         </div>
     </div>
+    <!-- 取消過期訂單並通知用戶的彈窗 -->
+    <div id="cancelExpiredModal" class="cancel-expired-modal-overlay">
+        <div class="cancel-expired-modal-box">
+            <div class="cancel-expired-header">
+                <i class="fas fa-clock"></i>
+                <h3>取消過期訂單並通知用戶</h3>
+            </div>
+            <div class="cancel-expired-body">
+                <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: 1rem;">
+                    訂單編號：<strong id="cancelExpiredOrderNoDisplay"
+                        style="color: var(--primary); font-family: monospace;"></strong>
+                </p>
+                <label for="cancelExpiredMessage">給用戶的通知訊息 (可編輯)：</label>
+                <textarea id="cancelExpiredMessage" placeholder="請輸入給用戶的委婉通知訊息..."></textarea>
+                <small style="color: var(--gray); font-size: 0.8rem; margin-top: 0.3rem; display: block;">
+                    <i class="fas fa-info-circle"></i> 此訊息將作為系統通知發送給該訂單的買家。
+                </small>
+            </div>
+            <div class="cancel-expired-actions">
+                <button class="btn-cancel-expired" onclick="closeCancelExpiredModal()">取消</button>
+                <button class="btn-confirm-cancel-expired" onclick="confirmCancelExpiredOrder()">
+                    <i class="fas fa-check"></i> 確認取消並發送通知
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>
-    <!--  引入通用表格管理器 -->
     <script src="/js/admin-table.js"></script>
     <div th:replace="~{fragments/common :: modals}"></div>
 
     <script>
+        // ==========================================
+        // ✅ 核心新增：全局變量存儲後端返回的配置天數
+        // ==========================================
+        let onlineOrderRetentionDays = 1; // 默認 1 天
+        let offlinePaymentDays = 3;       // 默認 3 天
+
         // ==========================================
         // 格式化輔助函數
         // ==========================================
@@ -508,13 +668,49 @@
         };
 
         // ==========================================
-        //  核心：行渲染回調函數 (翻譯原 Thymeleaf 模板)
+        // ✅ 核心新增：計算是否已過期的函數
+        // ==========================================
+        function getExpirationStatus(order) {
+            if (!order.createdAt) return '<span class="text-muted">-</span>';
+
+            const now = new Date();
+            const createdAt = new Date(order.createdAt);
+            const diffMs = now - createdAt;
+            const diffHours = diffMs / (1000 * 60 * 60); // 轉換為小時
+
+            // 1. 線上支付 (PAYPAL_SIM) 且 待付款 (UNPAID)
+            if (order.paymentMethod === 'PAYPAL_SIM' && order.paymentStatus === 'UNPAID') {
+                const maxHours = onlineOrderRetentionDays * 24;
+                if (diffHours >= maxHours) {
+                    return '<span class="status-badge status-cancelled"><i class="fas fa-exclamation-circle"></i> 已過期</span>';
+                } else {
+                    const remainHours = Math.max(0, Math.ceil(maxHours - diffHours));
+                    return `<span class="status-badge status-pending"><i class="fas fa-hourglass-half"></i> 剩餘 ${remainHours} 小時</span>`;
+                }
+            }
+
+            // 2. 線下店鋪支付 (OFFLINE_STORE) 且 待線下付款 (PENDING_OFFLINE)
+            if (order.paymentMethod === 'OFFLINE_STORE' && order.paymentStatus === 'PENDING_OFFLINE') {
+                const maxHours = offlinePaymentDays * 24;
+                if (diffHours >= maxHours) {
+                    return '<span class="status-badge status-cancelled"><i class="fas fa-exclamation-circle"></i> 已過期</span>';
+                } else {
+                    const remainHours = Math.max(0, Math.ceil(maxHours - diffHours));
+                    return `<span class="status-badge status-pending"><i class="fas fa-hourglass-half"></i> 剩餘 ${remainHours} 小時</span>`;
+                }
+            }
+
+            // 3. 其他情況（已付款、已取消、已發貨等），顯示 "-"
+            return '<span class="text-muted">-</span>';
+        }
+
+        // ==========================================
+        // 核心：行渲染回調函數
         // ==========================================
         function renderOrderRow(order) {
             const ps = paymentStatusMap[order.paymentStatus] || {label: '未知', cls: ''};
             const os = orderStatusMap[order.orderStatus] || {label: '未知', cls: ''};
 
-            // 配送方式
             let deliveryHtml = '';
             if (order.deliveryMethod === 'EXPRESS') {
                 deliveryHtml = '<span style="color:#004085;"><i class="fas fa-truck"></i> 快遞</span>';
@@ -524,13 +720,21 @@
                 deliveryHtml = `<span class="text-muted">${order.deliveryMethod || '-'}</span>`;
             }
 
-            // 快遞員
             let courierHtml = '';
-            if (order.deliveryMethod !== 'STORE_PICKUP') {
-                courierHtml = order.courierUsername
-                    ? `<span style="color:#004085;">${order.courierUsername}</span>`
-                    : '<span class="text-muted">未分配</span>';
+            // 【核心修改】：只有当“需快递”为 true 时，才显示快递员状态
+            if (order.delivery === true) {
+                if (order.courierUsername) {
+                    // 已分配快递员
+                    courierHtml = `<span style="color:#004085;">${order.courierUsername}</span>`;
+                } else {
+                    // 需快递但未分配
+                    courierHtml = '<span class="text-muted">未分配</span>';
+                }
+            } else {
+                // 不需要快递（门店自取等），显示横杠
+                courierHtml = '<span class="text-muted">-</span>';
             }
+
 
             let paymentMethodHtml = '';
             if (order.paymentMethod === 'OFFLINE_STORE') {
@@ -541,101 +745,131 @@
                 paymentMethodHtml = `<span class="text-muted">${order.paymentMethod || '-'}</span>`;
             }
 
-            // 需快遞
             const needDeliveryHtml = order.delivery
                 ? '<span class="bool-yes"><i class="fas fa-check-circle"></i> 是</span>'
                 : '<span class="bool-no"><i class="fas fa-times-circle"></i> 否</span>';
 
-            // 用戶可見
             const visibleHtml = order.isVisible
                 ? '<span class="bool-yes"><i class="fas fa-eye"></i> 可見</span>'
                 : '<span class="bool-no"><i class="fas fa-eye-slash"></i> 隱藏</span>';
 
-            // 取貨按鈕 (僅 STORE_PICKUP 且 PENDING/PAID 時顯示)
+            //  核心新增 1：計算是否已過期
+            const now = new Date();
+            const createdAt = new Date(order.createdAt);
+            const diffHours = (now - createdAt) / (1000 * 60 * 60);
+
+            let isExpired = false;
+            if (order.paymentMethod === 'PAYPAL_SIM' && order.paymentStatus === 'UNPAID') {
+                const maxHours = (typeof onlineOrderRetentionDaysConfig !== 'undefined' && onlineOrderRetentionDaysConfig !== null) ? onlineOrderRetentionDaysConfig * 24 : 24;
+                isExpired = diffHours >= maxHours;
+            } else if (order.paymentMethod === 'OFFLINE_STORE' && order.paymentStatus === 'PENDING_OFFLINE') {
+                const maxHours = (typeof offlinePaymentDaysConfig !== 'undefined' && offlinePaymentDaysConfig !== null) ? offlinePaymentDaysConfig * 24 : 72;
+                isExpired = diffHours >= maxHours;
+            }
+
+            const expirationHtml = getExpirationStatus(order);
+
             let pickupBtnHtml = '';
             if (order.deliveryMethod === 'STORE_PICKUP' &&
                 (order.orderStatus === 'PENDING' || order.orderStatus === 'PAID')) {
                 pickupBtnHtml = `<button class="btn-pickup"
-                    data-order-no="${order.orderNo}"
-                    data-amount="${order.totalAmount}"
-                    data-payment-status="${order.paymentStatus}"
-                    onclick="openPickupModal(this)">
-                    <i class="fas fa-box-open"></i> 取貨</button>`;
+            data-order-no="${order.orderNo}"
+            data-amount="${order.totalAmount}"
+            data-payment-status="${order.paymentStatus}"
+            onclick="openPickupModal(this)">
+            <i class="fas fa-box-open"></i> 取貨</button>`;
             }
 
-            // 構建明細行 HTML (嵌入在訂單行下方)
+            //  核心新增 2：隱藏 CANCELLED 狀態的取消按鈕
+            let cancelExpiredBtnHtml = '';
+            if (isExpired &&
+                (order.paymentStatus === 'UNPAID' || order.paymentStatus === 'PENDING_OFFLINE') &&
+                order.orderStatus !== 'CANCELLED') {
+
+                // 注意：這裡增加了 buyerUsername 參數傳遞
+                cancelExpiredBtnHtml = `
+        <button class="btn-sm"
+                style="background:#dc3545; color:white; border:none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display:inline-flex; align-items:center; justify-content:center; gap:0.3rem;"
+                onclick="openCancelExpiredModal('${order.orderNo}', '${order.buyerUsername}')">
+            <i class="fas fa-times"></i> 取消訂單
+        </button>`;
+            }
+
             let detailsRowsHtml = '';
             if (order.items && order.items.length > 0) {
                 const itemsHtml = order.items.map(it => `
-                    <div class="item-card" style="margin-bottom:0;">
-                        <img class="item-img" src="/images/products/${it.productImage || 'placeholder.png'}"
-                             onerror="this.src='/images/placeholder.png'" alt="Product">
-                        <div class="item-info">
-                            <div class="item-name">${it.productName || '未知商品'}</div>
-                            <div class="item-meta">
-                                數量: ${it.quantity} | 單價: HK$ ${formatMoney(it.price)} | 分類: ${it.productCategory || '-'}
-                            </div>
-                        </div>
-                        <div class="item-price">HK$ ${formatMoney(it.subtotal)}</div>
+            <div class="item-card" style="margin-bottom:0;">
+                <img class="item-img" src="/images/products/${it.productImage || 'placeholder.png'}"
+                     onerror="this.src='/images/placeholder.png'" alt="Product">
+                <div class="item-info">
+                    <div class="item-name">${it.productName || '未知商品'}</div>
+                    <div class="item-meta">
+                        數量: ${it.quantity} | 單價: HK$ ${formatMoney(it.price)} | 分類: ${it.productCategory || '-'}
                     </div>
-                `).join('');
+                </div>
+                <div class="item-price">HK$ ${formatMoney(it.subtotal)}</div>
+            </div>
+        `).join('');
                 detailsRowsHtml = `<tr class="order-details-row" style="display:none;" data-parent-order="${order.orderId}">
-                    <td colspan="18">
-                        <div class="order-details-content">
-                            <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
-                                <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細
-                                <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
-                            </h4>
-                            <div style="display:flex; flex-direction:column; gap:0.8rem;">${itemsHtml}</div>
-                        </div>
-                    </td>
-                </tr>`;
+            <td colspan="19">
+                <div class="order-details-content">
+                    <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
+                        <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細
+                        <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
+                    </h4>
+                    <div style="display:flex; flex-direction:column; gap:0.8rem;">${itemsHtml}</div>
+                </div>
+            </td>
+        </tr>`;
             } else {
                 detailsRowsHtml = `<tr class="order-details-row" style="display:none;" data-parent-order="${order.orderId}">
-                    <td colspan="18">
-                        <div class="order-details-content">
-                            <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
-                                <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細
-                                <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
-                            </h4>
-                            <p style="text-align:center; color:#6c757d; padding:1rem; margin:0;">
-                                <i class="fas fa-inbox"></i> 該訂單沒有商品
-                            </p>
-                        </div>
-                    </td>
-                </tr>`;
+            <td colspan="19">
+                <div class="order-details-content">
+                    <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
+                        <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細
+                        <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
+                    </h4>
+                    <p style="text-align:center; color:#6c757d; padding:1rem; margin:0;">
+                        <i class="fas fa-inbox"></i> 該訂單沒有商品
+                    </p>
+                </div>
+            </td>
+        </tr>`;
             }
 
-            // 返回訂單行 + 明細行 (兩行作為一個整體)
             return `<tr data-order-id="${order.orderId}">
-                <td class="text-muted">${order.orderId}</td>
-                <td><strong style="font-family:monospace; color:var(--primary);">${order.orderNo}</strong></td>
-                <td><i class="fas fa-user" style="color:var(--gold); margin-right:5px;"></i> ${order.buyerUsername}</td>
-                <td>${courierHtml}</td>
-                <td style="color:var(--accent); font-weight:700;">HK$ ${formatMoney(order.totalAmount)}</td>
-                <td>HK$ ${formatMoney(order.shippingFee)}</td>
-                <td>${deliveryHtml}</td>
-                <td>${needDeliveryHtml}</td>
-                <td>${paymentMethodHtml}</td>
-                <td><span class="status-badge ${ps.cls}">${ps.label}</span></td>
-                <td><span class="status-badge ${os.cls}">${os.label}</span></td>
-                <td class="text-muted">${order.offlineStoreName || '-'}</td>
-                <td>${formatDateTime(order.createdAt)}</td>
-                <td>${formatDateTime(order.paidAt)}</td>
-                <td>${formatDateTime(order.receivedAt)}</td>
-                <td>${order.deadlineAt ? `<span style="color:#856404;">${formatDateTime(order.deadlineAt)}</span>` : '<span class="text-muted">-</span>'}</td>
-                <td>${visibleHtml}</td>
-                <td style="text-align:center;">
-                    <button class="btn-toggle" onclick="toggleOrderDetails(this)">
-                        <i class="fas fa-eye"></i> <span>明細</span>
-                    </button>
-                    ${pickupBtnHtml}
-                </td>
-            </tr>${detailsRowsHtml}`;
+        <td class="text-muted">${order.orderId}</td>
+        <td><strong style="font-family:monospace; color:var(--primary);">${order.orderNo}</strong></td>
+        <td><i class="fas fa-user" style="color:var(--gold); margin-right:5px;"></i> ${order.buyerUsername}</td>
+        <td>${courierHtml}</td>
+        <td style="color:var(--accent); font-weight:700;">HK$ ${formatMoney(order.totalAmount)}</td>
+        <td>HK$ ${formatMoney(order.shippingFee)}</td>
+        <td>${deliveryHtml}</td>
+        <td>${needDeliveryHtml}</td>
+        <td>${paymentMethodHtml}</td>
+        <td><span class="status-badge ${ps.cls}">${ps.label}</span></td>
+        <td><span class="status-badge ${os.cls}">${os.label}</span></td>
+        <td class="text-muted">${order.offlineStoreName || '-'}</td>
+        <td>${formatDateTime(order.createdAt)}</td>
+        <td>${formatDateTime(order.paidAt)}</td>
+        <td>${formatDateTime(order.receivedAt)}</td>
+        <td>${order.deadlineAt ? `<span style="color:#856404;">${formatDateTime(order.deadlineAt)}</span>` : '<span class="text-muted">-</span>'}</td>
+        <td>${visibleHtml}</td>
+        <td>${expirationHtml}</td>
+
+        <!--  核心修復：使用 CSS Grid 強制恢復 2列 (Y * 2) 佈局，移除按鈕的 width: 100% -->
+        <td style="text-align:center; vertical-align:middle; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; min-width: 180px;">
+            <button class="btn-toggle" onclick="toggleOrderDetails(this)">
+                <i class="fas fa-eye"></i> <span>明細</span>
+            </button>
+            ${pickupBtnHtml}
+            ${cancelExpiredBtnHtml}
+        </td>
+    </tr>${detailsRowsHtml}`;
         }
 
         // ==========================================
-        // ✅初始化：使用 AdminTable 加載數據
+        // 初始化：使用 AdminTable 加載數據
         // ==========================================
         const tableConfig = {
             apiUrl: '/admin/api/orders/list',
@@ -643,7 +877,16 @@
             tbodySelector: '#ordersTableBody',
             paginationId: 'orders-pagination',
             renderRow: renderOrderRow,
-            emptyText: '暫無訂單數據'
+            emptyText: '暫無訂單數據',
+            //  核心新增：在數據加載成功後，提取並保存配置天數
+            onSuccess: function (data) {
+                if (data.onlineOrderRetentionDays !== undefined) {
+                    onlineOrderRetentionDays = data.onlineOrderRetentionDays;
+                }
+                if (data.offlinePaymentDays !== undefined) {
+                    offlinePaymentDays = data.offlinePaymentDays;
+                }
+            }
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -726,7 +969,6 @@
                 if (response.ok && result.success) {
                     closePickupModal();
                     showNotification('✅ ' + result.message);
-                    // ✅ 改為刷新表格而非整頁刷新
                     setTimeout(() => AdminTable.loadData(tableConfig), 1000);
                 } else {
                     showNotification('❌ ' + (result.message || '取貨確認失敗'), true);
@@ -734,6 +976,76 @@
             } catch (error) {
                 console.error('取貨確認錯誤:', error);
                 showNotification('❌ 網絡錯誤，請稍後重試', true);
+            }
+        }
+
+
+        // 全局變量，暫存當前要取消的訂單號和買家用戶名
+        let pendingCancelOrderNo = null;
+        let pendingCancelBuyerUsername = null;
+
+        // 1. 點擊表格中的「取消訂單」按鈕時觸發
+        function openCancelExpiredModal(orderNo, buyerUsername) {
+            pendingCancelOrderNo = orderNo;
+            pendingCancelBuyerUsername = buyerUsername;
+
+            // 更新彈窗中的訂單號顯示
+            document.getElementById('cancelExpiredOrderNoDisplay').textContent = orderNo;
+
+            // 生成委婉的預設文案 (管理員可在此基礎上直接修改)
+            const defaultMessage = `尊敬的 ${buyerUsername}，您好！\n\n非常抱歉地通知您，您的訂單（編號：${orderNo}）因超過保留期限尚未完成交易，系統已自動為您結束此訂單。\n\n感謝您對 ChronoTeam 的支持與理解，期待下次能為您提供優質的服務。如有任何疑問，歡迎隨時聯繫我們的客服團隊。`;
+
+            document.getElementById('cancelExpiredMessage').value = defaultMessage;
+
+            // 顯示彈窗
+            document.getElementById('cancelExpiredModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 2. 關閉彈窗
+        function closeCancelExpiredModal() {
+            document.getElementById('cancelExpiredModal').style.display = 'none';
+            document.body.style.overflow = '';
+            pendingCancelOrderNo = null;
+            pendingCancelBuyerUsername = null;
+        }
+
+        // 3. 確認取消並發送通知
+        async function confirmCancelExpiredOrder() {
+            if (!pendingCancelOrderNo) return;
+
+            const customMessage = document.getElementById('cancelExpiredMessage').value.trim();
+            if (!customMessage) {
+                showNotification('❌ 通知訊息不能為空', true);
+                return;
+            }
+
+            const btn = document.querySelector('.btn-confirm-cancel-expired');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
+            try {
+                const res = await fetch(`/admin/api/order/${pendingCancelOrderNo}/cancel-expired`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({customMessage: customMessage}) // 將自定義訊息傳給後端
+                });
+                const result = await res.json();
+
+                if (result.success) {
+                    closeCancelExpiredModal();
+                    showNotification('✅ 訂單已取消，通知已發送');
+                    AdminTable.loadData(tableConfig);
+                } else {
+                    showNotification('❌ ' + (result.message || '取消失敗'), true);
+                }
+            } catch (error) {
+                console.error(error);
+                showNotification('❌ 網絡錯誤，請稍後重試', true);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         }
 

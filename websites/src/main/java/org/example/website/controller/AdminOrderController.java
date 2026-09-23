@@ -13,6 +13,8 @@ import org.example.website.entity.Order;
 import org.example.website.entity.OrderItem;
 import org.example.website.repository.OrderItemRepository;
 import org.example.website.repository.OrderRepository;
+import org.example.website.service.OrderService;
+import org.example.website.service.SystemConfigService;
 import org.example.website.util.PaginationUtils;
 import org.example.website.util.SecurityUtils;
 import org.springframework.data.domain.Page;
@@ -20,6 +22,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -29,15 +32,19 @@ import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/admin")
-@Tag(name = "後台訂單管理", description = "管理員專屬的訂單查詢與明細獲取接口") // <--- 1. 新增：分類標籤
+@Tag(name = "後台訂單管理", description = "管理員專屬的訂單查詢與明細獲取接口")
 public class AdminOrderController {
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final SystemConfigService systemConfigService; // 新增注入
+    private final OrderService orderService;
 
-    public AdminOrderController(OrderRepository orderRepository, OrderItemRepository orderItemRepository) {
+    public AdminOrderController(OrderRepository orderRepository, OrderItemRepository orderItemRepository, SystemConfigService systemConfigService, OrderService orderService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
+        this.systemConfigService = systemConfigService;
+        this.orderService = orderService;
     }
 
     /**
@@ -135,6 +142,8 @@ public class AdminOrderController {
         // 關鍵！覆蓋 currentPage，將 0-based 轉回 1-based 返回給前端
         response.put("currentPage", page);
 
+        response.put("onlineOrderRetentionDays", systemConfigService.getOnlineOrderRetentionDays());
+        response.put("offlinePaymentDays", systemConfigService.getOfflinePaymentDays());
         return ResponseEntity.ok(response);
     }
 
@@ -179,6 +188,26 @@ public class AdminOrderController {
             return ResponseEntity.ok(Result.okWithData("成功", resultList));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
+        }
+    }
+
+    @PostMapping("/api/order/{orderNo}/cancel-expired")
+    @ResponseBody
+    public ResponseEntity<?> cancelExpiredOrder(
+            @PathVariable String orderNo,
+            @RequestBody Map<String, String> request, // 接收前端傳來的 customMessage
+            Authentication authentication) {
+        try {
+            // 獲取自定義訊息，若前端沒傳則給個預設值
+            String customMessage = request.getOrDefault("customMessage", "您的訂單已因超時取消。");
+
+            // 調用 Service，傳入自定義訊息
+            orderService.cancelExpiredOrder(orderNo, customMessage);
+            return ResponseEntity.ok(Result.ok("訂單已取消並通知用戶"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Result.error("系統錯誤"));
         }
     }
 }

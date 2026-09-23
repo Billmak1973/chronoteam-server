@@ -882,6 +882,7 @@
             const cutoffOffsetGroup = document.getElementById('cutoffOffsetGroup');
             const specificDaysGroup = document.getElementById('specificDaysGroup');
             const customDaysGroup = document.getElementById('customDaysGroup');
+            const continuousDaysModeGroup = document.getElementById('continuousDaysModeGroup'); // 新增
             const cutoffDayOffsetInput = document.getElementById('cutoffDayOffset');
             const shippingFeeInput = document.getElementById("shippingFee");
             const freeShippingThresholdInput = document.getElementById('freeShippingThreshold');
@@ -890,6 +891,7 @@
             cutoffOffsetGroup.style.display = 'none';
             specificDaysGroup.style.display = 'none';
             customDaysGroup.style.display = 'none';
+            continuousDaysModeGroup.style.display = 'none'; // 新增：默認隱藏
 
             if (mode === 'NONE') {
                 if (shippingFeeInput) {shippingFeeInput.value = '0'; shippingFeeInput.disabled = true;}
@@ -906,7 +908,13 @@
                     if (cutoffDayOffsetInput) cutoffDayOffsetInput.disabled = false;
                 }
 
-                if (mode === 'SPECIFIC_DAYS') specificDaysGroup.style.display = 'block';
+                if (mode === 'SPECIFIC_DAYS') {
+                    specificDaysGroup.style.display = 'block';
+                    // 新增：只在指定星期配送時才檢查是否顯示連續配送日處理模式
+                    setTimeout(() => {
+                        updateContinuousDaysModeVisibility();
+                    }, 100);
+                }
                 else if (mode === 'CUSTOM') customDaysGroup.style.display = 'block';
             }
         }

@@ -53,6 +53,7 @@ public class PageController {
     private final ReviewRepository reviewRepository;
     private final NotificationService notificationService;
     private final ReviewReactionRepository reviewReactionRepository;
+    private final OfflineStoreRepository offlineStoreRepository;
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
@@ -68,7 +69,7 @@ public class PageController {
                           AdminPenaltyRepository adminPenaltyRepository,
                           AdminPenaltyService adminPenaltyService, SystemConfigService systemConfigService,
                           CartService cartService, ProductService productService, AnnouncementReceiptRepository announcementReceiptRepository,
-                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository, NotificationService notificationService, ReviewReactionRepository reviewReactionRepository) {
+                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository, NotificationService notificationService, ReviewReactionRepository reviewReactionRepository, OfflineStoreRepository offlineStoreRepository) {
         this.userService = userService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -92,6 +93,7 @@ public class PageController {
         this.reviewRepository = reviewRepository;
         this.notificationService = notificationService;
         this.reviewReactionRepository = reviewReactionRepository;
+        this.offlineStoreRepository = offlineStoreRepository;
     }
 
     @GetMapping("/")
@@ -110,6 +112,8 @@ public class PageController {
         String cardTheme = siteSettingService.getCardBorderTheme();
         model.addAttribute("cardTheme", cardTheme);
 
+        boolean hasStores=!offlineStoreRepository.findByIsActiveTrue().isEmpty();
+        model.addAttribute("hasStores", hasStores);
         return "home";
     }
 
@@ -374,7 +378,9 @@ public class PageController {
     }
 
     @GetMapping("/faq")
-    public String faq() {
+    public String faq(Model model) {
+        String cardTheme = siteSettingService.getCardBorderTheme();
+        model.addAttribute("cardTheme", cardTheme);
         return "faq";
     }
 

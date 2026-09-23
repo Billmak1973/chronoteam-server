@@ -22,6 +22,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -278,9 +279,6 @@ public class AdminStoreController {
     @GetMapping("/api/active-list")
     @ResponseBody
     public ResponseEntity<?> getActiveStores(Authentication authentication) {
-        if (!isAdmin(authentication)) {
-            return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員"));
-        }
 
         // 調用 Repository 獲取所有 isActive=true 的門店
         List<OfflineStore> stores = storeRepository.findByIsActiveTrue();
@@ -290,6 +288,47 @@ public class AdminStoreController {
             Map<String, Object> map = new HashMap<>();
             map.put("storeId", store.getStoreId());
             map.put("name", store.getName());
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(Result.okWithData("獲取成功", storeList));
+    }
+
+    /**
+     * API: 獲取所有可用門店列表（公開端點，專用於前端顧客下拉框選擇，如退貨預約、線下結帳）
+     */
+    @Operation(
+            summary = "獲取可用門店列表 (公開)",
+            description = "獲取所有處於顯示狀態 (isActive=true) 的門店，不分頁。專用於前端顧客端下拉框選擇。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功"),
+            @ApiResponse(responseCode = "500", description = "服務器內部錯誤")
+    })
+    @GetMapping("/api/stores/available")
+    @ResponseBody
+    public ResponseEntity<?> getAvailableStoresForPublic() {
+        // 獲取所有 isActive=true 的門店
+        List<OfflineStore> stores = storeRepository.findByIsActiveTrue();
+
+        // 數據清洗：只返回前端下拉框及退貨預約邏輯需要的核心字段，減少網絡傳輸
+        List<Map<String, Object>> storeList = stores.stream().map(store -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("storeId", store.getStoreId());
+            map.put("name", store.getName());
+            map.put("address", store.getAddress());
+            map.put("phone", store.getPhone());
+            // 營業時間與退貨規則相關字段 (前端退貨預約邏輯需要)
+            map.put("scheduleMode", store.getScheduleMode());
+            map.put("hours", store.getHours());
+            map.put("dailyHours", store.getDailyHours());
+            map.put("returnAdvanceDays", store.getReturnAdvanceDays());
+            map.put("returnClosedDaysOfWeek", store.getReturnClosedDaysOfWeek());
+
+            // === 【核心修復】新增暫停退貨日期範圍 ===
+            map.put("returnBlackoutStartDate", store.getReturnBlackoutStartDate());
+            map.put("returnBlackoutEndDate", store.getReturnBlackoutEndDate());
+            map.put("returnBlackoutReason", store.getReturnBlackoutReason());
             return map;
         }).collect(Collectors.toList());
 

@@ -1,5 +1,5 @@
-<!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +15,7 @@
             margin-bottom: 1.5rem;
             border-bottom: 2px solid #e9ecef;
         }
+
         .tab-btn {
             padding: 0.8rem 1.5rem;
             background: none;
@@ -30,33 +31,92 @@
             gap: 0.5rem;
             margin-bottom: -2px;
         }
-        .tab-btn:hover { color: var(--primary); }
+
+        .tab-btn:hover {
+            color: var(--primary);
+        }
+
         .tab-btn.active {
             color: var(--primary);
             border-bottom-color: var(--gold);
         }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* 狀態徽章顏色補充 */
-        .status-pending { background: rgba(255, 193, 7, 0.15); color: #856404; }
-        .status-completed { background: rgba(40, 167, 69, 0.15); color: #155724; }
-        .status-cancelled { background: rgba(108, 117, 125, 0.15); color: #383d41; }
+        .status-pending {
+            background: rgba(255, 193, 7, 0.15);
+            color: #856404;
+        }
 
-        .badge-purchase-in { background: rgba(40, 167, 69, 0.15); color: #155724; }
-        .badge-transfer { background: rgba(23, 162, 184, 0.15); color: #0c5460; }
-        .badge-damage { background: rgba(220, 53, 69, 0.15); color: #721c24; }
-        .badge-manual { background: rgba(108, 117, 125, 0.15); color: #383d41; }
-        .badge-return { background: rgba(255, 193, 7, 0.15); color: #856404; }
-        .badge-sale-out { background: rgba(220, 53, 69, 0.15); color: #721c24; }
+        .status-completed {
+            background: rgba(40, 167, 69, 0.15);
+            color: #155724;
+        }
 
-        .text-success { color: #28a745; font-weight: 600; }
-        .text-danger { color: #dc3545; font-weight: 600; }
+        .status-cancelled {
+            background: rgba(108, 117, 125, 0.15);
+            color: #383d41;
+        }
+
+        .badge-purchase-in {
+            background: rgba(40, 167, 69, 0.15);
+            color: #155724;
+        }
+
+        .badge-transfer {
+            background: rgba(23, 162, 184, 0.15);
+            color: #0c5460;
+        }
+
+        .badge-damage {
+            background: rgba(220, 53, 69, 0.15);
+            color: #721c24;
+        }
+
+        .badge-manual {
+            background: rgba(108, 117, 125, 0.15);
+            color: #383d41;
+        }
+
+        .badge-return {
+            background: rgba(255, 193, 7, 0.15);
+            color: #856404;
+        }
+
+        .badge-sale-out {
+            background: rgba(220, 53, 69, 0.15);
+            color: #721c24;
+        }
+
+        .text-success {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .text-danger {
+            color: #dc3545;
+            font-weight: 600;
+        }
 
         .table-responsive {
             overflow-x: auto;
@@ -64,24 +124,31 @@
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
+
         .data-table {
             width: 100%;
             min-width: 1000px;
             border-collapse: collapse;
         }
-        .data-table th, .data-table td {
+
+        .data-table th,
+        .data-table td {
             padding: 1rem;
             text-align: left;
             border-bottom: 1px solid #f0f0f0;
             font-size: 0.9rem;
         }
+
         .data-table th {
             background: #f8f9fa;
             font-weight: 600;
             color: #495057;
             white-space: nowrap;
         }
-        .data-table tbody tr:hover { background-color: #fcfcfc; }
+
+        .data-table tbody tr:hover {
+            background-color: #fcfcfc;
+        }
 
         .pagination-container {
             margin-top: 1.5rem;
@@ -94,8 +161,10 @@
         /* ========================================== */
         .filter-bar-compact {
             display: flex;
-            flex-wrap: nowrap; /* 強制不換行，保持緊湊 */
-            align-items: center; /* 垂直居中對齊 */
+            flex-wrap: wrap;
+            /* 改为允许换行 */
+            align-items: center;
+            /* 垂直居中對齊 */
             gap: 1rem;
             background: white;
             padding: 0.8rem 1.2rem;
@@ -178,7 +247,8 @@
             align-items: center;
             gap: 0.4rem;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            height: 34px; /* 與輸入框高度完美匹配 */
+            height: 34px;
+            /* 與輸入框高度完美匹配 */
         }
 
         .btn-filter-sm.btn-search {
@@ -208,11 +278,15 @@
             color: white;
             font-weight: bold;
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-            border-radius: 8px;  /* 添加圆角效果 */
-            padding: 8px 16px;   /* 确保有足够的内边距 */
-            border: none;        /* 移除默认边框 */
+            border-radius: 8px;
+            /* 添加圆角效果 */
+            padding: 8px 16px;
+            /* 确保有足够的内边距 */
+            border: none;
+            /* 移除默认边框 */
             cursor: pointer;
-            transition: all 0.3s ease;  /* 平滑过渡效果 */
+            transition: all 0.3s ease;
+            /* 平滑过渡效果 */
         }
 
         .btn-primary:hover {
@@ -225,6 +299,7 @@
             .filter-bar-compact {
                 flex-wrap: wrap;
             }
+
             .filter-actions {
                 width: 100%;
                 justify-content: flex-end;
@@ -482,6 +557,7 @@
             from {
                 opacity: 0;
             }
+
             to {
                 opacity: 1;
             }
@@ -492,6 +568,7 @@
                 opacity: 0;
                 transform: translateY(50px) scale(0.95);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
@@ -539,9 +616,12 @@
         }
 
         @keyframes pulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 opacity: 1;
             }
+
             50% {
                 opacity: 0.7;
             }
@@ -569,816 +649,1476 @@
             border-color: #28a745;
             background: #f0fff4;
         }
-    </style>
-</head>
-<body>
-<!-- 1. 引入公共導航欄 -->
-<div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="admin-layout">
-    <!-- 2. 引入左側邊欄，高亮 'purchases' -->
-    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='purchases')}"></div>
-
-    <!-- 3. 右側主內容區 -->
-    <main class="admin-main">
-        <div class="content-header">
-            <h2><i class="fas fa-dolly"></i> <span>採購與庫存管理</span></h2>
-            <div class="breadcrumb">
-                <a href="/admin/dashboard">管理中心</a> / <span>核心業務管理 / 採購管理</span>
-            </div>
-        </div>
-
-        <div class="content-body">
-            <!-- Tab 切換按鈕 -->
-            <div class="tabs-container">
-                <button class="tab-btn active" onclick="switchPurchaseTab('orders', this)">
-                    <i class="fas fa-file-invoice"></i> 採購訂單記錄
-                </button>
-                <button class="tab-btn" onclick="switchPurchaseTab('logs', this)">
-                    <i class="fas fa-history"></i> 庫存調整日誌
-                </button>
-            </div>
-
-            <!-- ================= Tab 1: 採購訂單 ================= -->
-            <div id="tab-orders" class="tab-content active">
-
-                <!-- 【美化後】篩選工具欄 -->
-                <div class="filter-bar-compact">
-                    <div class="filter-group">
-                        <label for="filter-supplier"><i class="fas fa-search"></i> 供應商</label>
-                        <input type="text" id="filter-supplier" placeholder="輸入名稱...">
-                    </div>
-                    <div class="filter-group">
-                        <label for="filter-status"><i class="fas fa-filter"></i> 狀態</label>
-                        <select id="filter-status">
-                            <option value="">全部狀態</option>
-                            <option value="PENDING">待入庫</option>
-                            <option value="COMPLETED">已完成</option>
-                            <option value="CANCELLED">已取消</option>
-                        </select>
-                    </div>
-                    <div class="filter-actions">
-                        <button class="btn-filter-sm btn-search"><i class="fas fa-check"></i> 確定</button>
-                        <button class="btn-filter-sm btn-reset"><i class="fas fa-undo"></i> 重置</button>
-                        <button class="btn-filter btn-primary" onclick="openAddPurchaseModal()"
-                                style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                   color: white;
-                   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-                            <i class="fas fa-plus-circle"></i> 新增采购订单
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 數據表格 -->
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                        <tr>
-                            <th>訂單ID</th>
-                            <th>商品名稱</th>
-                            <th>數量</th>
-                            <th>總成本</th>
-                            <th>供應商</th>
-                            <th>入庫目標</th>
-                            <th>狀態</th>
-                            <th>是否已入庫</th>
-                            <th>庫存記錄ID</th>
-                            <th>備註</th>
-                            <th>操作員</th>
-                            <th>創建時間</th>
-                            <th>更新時間</th>
-                            <th>操作</th>
-                        </tr>
-                        </thead>
-                        <tbody id="orders-tbody">
-                        <!-- JS 動態渲染 -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="orders-pagination" class="pagination-container"></div>
-            </div>
-
-            <!-- ================= Tab 2: 庫存調整日誌 ================= -->
-            <div id="tab-logs" class="tab-content">
-
-                <!-- 【美化後】篩選工具欄 -->
-                <div class="filter-bar-compact">
-                    <div class="filter-group">
-                        <label for="filter-type"><i class="fas fa-filter"></i> 調整類型</label>
-                        <select id="filter-type">
-                            <option value="">全部類型</option>
-                            <option value="PURCHASE_IN">採購進貨</option>
-                            <option value="MANUAL_ADJUST">手動盤點</option>
-                            <option value="TRANSFER_OUT">調撥出庫</option>
-                            <option value="TRANSFER_IN">調撥入庫</option>
-                            <option value="DAMAGE">破損報廢</option>
-                            <option value="RETURN">客戶退貨</option>
-                            <option value="SALE_OUT">銷售出庫</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="filter-warehouse"><i class="fas fa-warehouse"></i> 倉庫類型</label>
-                        <select id="filter-warehouse">
-                            <option value="">全部</option>
-                            <option value="ONLINE">線上總倉</option>
-                            <option value="OFFLINE">線下門店</option>
-                        </select>
-                    </div>
-                    <div class="filter-actions">
-                        <button class="btn-filter-sm btn-search"><i class="fas fa-check"></i> 確定</button>
-                        <button class="btn-filter-sm btn-reset"><i class="fas fa-undo"></i> 重置</button>
-                    </div>
-                </div>
-
-                <!-- 數據表格 -->
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                        <tr>
-                            <th>日誌ID</th>
-                            <th>商品名稱</th>
-                            <th>調整類型</th>
-                            <th>倉庫/門店</th>
-                            <th>舊數量</th>
-                            <th>新數量</th>
-                            <th>變化量</th>
-                            <th>原因備註</th>
-                            <th>調撥批次號</th>
-                            <th>操作時間</th>
-                            <th>操作員</th>
-                        </tr>
-                        </thead>
-                        <tbody id="logs-tbody">
-                        <!-- JS 動態渲染 -->
-                        </tbody>
-                    </table>
-                </div>
-                <div id="logs-pagination" class="pagination-container"></div>
-            </div>
-
-        </div>
-
-        <footer class="admin-footer" style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 12px; text-align: center; color: rgba(255,255,255,0.7);">
-            <p style="margin: 0; font-size: 0.9rem;">
-                <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam Admin Panel. All Rights Reserved.
-            </p>
-        </footer>
-    </main>
-</div>
-
-<!-- 新增采购订单 Modal -->
-<div id="addPurchaseModal" class="custom-modal-overlay" style="display: none;">
-    <div class="custom-modal-box" style="max-width: 600px;">
-        <div class="modal-header">
-            <!-- 加上 id 方便 JS 動態修改標題 -->
-            <h3 id="purchaseModalTitle">
-                <i class="fas fa-plus-circle" style="color: var(--gold);"></i> 新增采购订单
-            </h3>
-            <button class="modal-close-btn" onclick="closePurchaseModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
-        </div>
-
-        <form id="purchaseOrderForm" onsubmit="submitPurchaseOrder(event)">
-            <!-- 【新增】隱藏欄位：用於判斷當前是新增還是編輯 -->
-            <input type="hidden" id="editPurchaseId" value="">
-
-            <!-- 品牌选择 -->
-            <div class="form-group">
-                <label><i class="fas fa-crown"></i> 品牌 <span style="color: var(--accent);">*</span></label>
-                <select id="brandSelect" class="form-control" onchange="loadProductsByBrand()" required>
-                    <option value="">请选择品牌</option>
-                    <option th:each="brand : ${allBrands}" th:value="${brand}" th:text="${brand}">品牌名稱</option>
-                </select>
-            </div>
-
-            <!-- 商品选择 -->
-            <div class="form-group">
-                <label><i class="fas fa-box"></i> 商品 <span style="color: var(--accent);">*</span></label>
-                <select id="productSelect" class="form-control" required>
-                    <option value="">请先选择品牌</option>
-                </select>
-                <small style="color: var(--gray);">
-                    <i class="fas fa-info-circle"></i> 选择品牌后自动加载商品列表
-                </small>
-            </div>
-
-            <!-- 数量 -->
-            <div class="form-group">
-                <label><i class="fas fa-hashtag"></i> 采购数量 <span style="color: var(--accent);">*</span></label>
-                <input type="number" id="quantity" class="form-control" min="1" required placeholder="请输入采购数量">
-            </div>
-
-            <!-- 总成本 -->
-            <div class="form-group">
-                <label><i class="fas fa-coins"></i> 总成本 (HKD) <span style="color: var(--accent);">*</span></label>
-                <input type="number" id="totalCost" class="form-control" step="0.01" min="0" required placeholder="请输入总成本"
-                       style="-moz-appearance: textfield;">
-            </div>
-
-            <!-- 供应商 -->
-            <div class="form-group">
-                <label><i class="fas fa-truck"></i> 供应商</label>
-                <input type="text" id="supplier" class="form-control" placeholder="例如：XX拍卖行、同行调货">
-            </div>
-
-            <!-- 仓库类型 -->
-            <div class="form-group">
-                <label><i class="fas fa-warehouse"></i> 仓库类型 <span style="color: var(--accent);">*</span></label>
-                <select id="warehouseType" class="form-control" onchange="toggleStoreSelect()" required>
-                    <option value="ONLINE">线上总仓</option>
-                    <option value="OFFLINE">线下门店</option>
-                </select>
-            </div>
-
-            <!-- 门店选择（线下仓库时显示） -->
-            <div class="form-group" id="storeSelectGroup" style="display: none;">
-                <label><i class="fas fa-store"></i> 选择门店 <span style="color: var(--accent);">*</span></label>
-                <select id="storeId" class="form-control">
-                    <option value="">请选择门店</option>
-                    <!-- JS 動態填充 -->
-                </select>
-            </div>
-
-            <!-- 进货日期 (注意：創建時間由後端自動生成，前端只負責修改進貨日期) -->
-            <div class="form-group">
-                <label><i class="fas fa-calendar"></i> 进货日期</label>
-                <input type="date" id="purchaseDate" class="form-control">
-                <small style="color: var(--gray);">
-                    <i class="fas fa-info-circle"></i> 默認為今天
-                </small>
-            </div>
-
-            <!-- 备注 -->
-            <div class="form-group">
-                <label><i class="fas fa-comment"></i> 备注</label>
-                <textarea id="remark" class="form-control" rows="3" placeholder="请输入备注信息..."></textarea>
-            </div>
-
-            <!-- 按钮 -->
-            <div class="modal-actions">
-                <button type="button" class="btn-modal-cancel" onclick="closePurchaseModal()">
-                    <i class="fas fa-times"></i> 取消
-                </button>
-                <!-- 加上 id 方便 JS 動態修改按鈕文字 -->
-                <button type="submit" class="btn-modal-save" id="savePurchaseBtn">
-                    <i class="fas fa-save"></i> 确认创建
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- 4. 引入公共 JS -->
-<script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-</script>
-<script src="/js/common.js"></script>
-<script src="/js/admin.js"></script>
-
-<!-- 5. 頁面專屬 JS 邏輯 (包含分頁渲染) -->
-<script>
-    // ==========================================
-    // 核心：JS 版智能分頁渲染 (與 Fragment 結構完全一致)
-    // ==========================================
-    function renderPagination(containerId, currentPage, totalPages, smartPages, callbackName) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-
-        if (totalPages === 0) {
-            container.innerHTML = '';
-            return;
+        /* 遮罩層 */
+        .stock-in-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
         }
 
-        let html = '';
+        /* 彈窗主體 */
+        .stock-in-modal-box {
+            background: white;
+            width: 90%;
+            max-width: 450px;
+            border-radius: 20px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid var(--gold, #d4af37);
+        }
 
-        html += `<button type="button" class="page-btn ${currentPage == 1 ? 'disabled' : ''}"
+        /* 圖標區域 */
+        .stock-in-modal-icon {
+            width: 80px;
+            height: 80px;
+            margin: 2rem auto 1rem;
+            background: linear-gradient(135deg, var(--gold, #d4af37) 0%, #b8972b 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.35);
+        }
+
+        .stock-in-modal-icon i {
+            font-size: 2.2rem;
+            color: white;
+        }
+
+        /* 標題 */
+        .stock-in-modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary, #1a1a2e);
+            text-align: center;
+            margin: 0 0 1.5rem;
+            padding: 0 1.5rem;
+        }
+
+        /* 內容區域 */
+        .stock-in-modal-body {
+            padding: 0 2rem 1.5rem;
+            text-align: center;
+        }
+
+        .stock-in-modal-message {
+            font-size: 1.05rem;
+            color: var(--primary, #1a1a2e);
+            margin: 0 0 1rem;
+            line-height: 1.6;
+        }
+
+        .stock-in-modal-info {
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.05) 100%);
+            border: 1px dashed var(--gold, #d4af37);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+            color: #856404;
+        }
+
+        .stock-in-modal-info i {
+            color: var(--gold, #d4af37);
+            font-size: 1.1rem;
+        }
+
+        /* 按鈕區域 */
+        .stock-in-modal-actions {
+            display: flex;
+            gap: 1rem;
+            padding: 1.5rem 2rem;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .stock-in-modal-actions button {
+            flex: 1;
+            padding: 0.9rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        /* 取消按鈕 */
+        .btn-stock-in-cancel {
+            background: #e9ecef;
+            color: var(--primary, #1a1a2e);
+        }
+
+        .btn-stock-in-cancel:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 確認按鈕 */
+        .btn-stock-in-confirm {
+            background: linear-gradient(135deg, var(--gold, #d4af37) 0%, #b8972b 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35);
+        }
+
+        .btn-stock-in-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+        }
+
+        .btn-stock-in-confirm:active {
+            transform: translateY(0);
+        }
+
+        /* 按鈕禁用狀態 */
+        .btn-stock-in-confirm:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* 動畫 */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 576px) {
+            .stock-in-modal-box {
+                width: 95%;
+                border-radius: 16px;
+            }
+
+            .stock-in-modal-icon {
+                width: 65px;
+                height: 65px;
+                margin: 1.5rem auto 1rem;
+            }
+
+            .stock-in-modal-icon i {
+                font-size: 1.8rem;
+            }
+
+            .stock-in-modal-title {
+                font-size: 1.25rem;
+            }
+
+            .stock-in-modal-actions {
+                flex-direction: column;
+                gap: 0.8rem;
+                padding: 1.2rem 1.5rem;
+            }
+
+            .stock-in-modal-actions button {
+                width: 100%;
+            }
+        }
+
+        /* 下拉列表容器样式 */
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            /* 紧贴输入框底部 */
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 1050;
+            /* 确保在 Modal 之上 */
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 5px;
+        }
+
+        /* 下拉选项样式 */
+        .autocomplete-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--primary);
+            font-size: 0.95rem;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background: #f8f9fa;
+            color: var(--gold);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 1. 引入公共導航欄 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
+
+    <div class="admin-layout">
+        <!-- 2. 引入左側邊欄，高亮 'purchases' -->
+        <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='purchases')}"></div>
+
+        <!-- 3. 右側主內容區 -->
+        <main class="admin-main">
+            <div class="content-header">
+                <h2><i class="fas fa-dolly"></i> <span>採購與庫存管理</span></h2>
+                <div class="breadcrumb">
+                    <a href="/admin/dashboard">管理中心</a> / <span>核心業務管理 / 採購管理</span>
+                </div>
+            </div>
+
+            <div class="content-body">
+                <!-- Tab 切換按鈕 -->
+                <div class="tabs-container">
+                    <button class="tab-btn active" onclick="switchPurchaseTab('orders', this)">
+                        <i class="fas fa-file-invoice"></i> 採購訂單記錄
+                    </button>
+                    <button class="tab-btn" onclick="switchPurchaseTab('logs', this)">
+                        <i class="fas fa-history"></i> 庫存調整日誌
+                    </button>
+                </div>
+
+                <!-- ================= Tab 1: 採購訂單 ================= -->
+                <div id="tab-orders" class="tab-content active">
+
+                    <!-- 【美化後】篩選工具欄 (支持換行與多條件) -->
+                    <div class="filter-bar-compact">
+                        <!-- 供应商 -->
+                        <div class="filter-group" style="position: relative;">
+                            <label><i class="fas fa-search"></i> 供應商</label>
+                            <input type="text" id="filter-supplier" class="form-control" placeholder="輸入名稱..."
+                                autocomplete="off" style="min-width: 150px;">
+                            <!-- 專屬下拉容器 -->
+                            <div id="filter-supplier-dropdown" class="autocomplete-dropdown"
+                                style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e9ecef; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 9999; max-height: 200px; overflow-y: auto; margin-top: 5px;">
+                                <!-- JS 動態填充內容 -->
+                            </div>
+                        </div>
+
+
+                        <!-- 2. 狀態 -->
+                        <div class="filter-group">
+                            <label><i class="fas fa-filter"></i> 狀態</label>
+                            <select id="filter-status">
+                                <option value="">全部狀態</option>
+                                <option value="PENDING">等待中</option>
+                                <option value="COMPLETED">已完成</option>
+                                <option value="CANCELLED">已取消</option>
+                            </select>
+                        </div>
+
+                        <!-- 3. 入庫目標 -->
+                        <div class="filter-group">
+                            <label><i class="fas fa-warehouse"></i> 入庫目標</label>
+                            <select id="filter-warehouseType" onchange="toggleStoreFilter()">
+                                <option value="">全部</option>
+                                <option value="ONLINE">線上總倉</option>
+                                <option value="OFFLINE">線下門店</option>
+                            </select>
+                        </div>
+
+                        <!-- 4. 門店 (僅當選擇線下門店時顯示 完全錯誤，選擇綫下門店的時候根本沒有顯示) -->
+                        <div class="filter-group" id="filter-store-group" style="display: none;">
+                            <label><i class="fas fa-store"></i> 門店</label>
+                            <select id="filter-storeId">
+                                <option value="">全部門店</option>
+                                <!-- JS 動態填充 -->
+                            </select>
+                        </div>
+
+                        <!-- 5. 是否已入庫 -->
+                        <div class="filter-group">
+                            <label><i class="fas fa-box-open"></i> 是否已入庫</label>
+                            <select id="filter-isStockedIn">
+                                <option value="">全部</option>
+                                <option value="true">已入庫</option>
+                                <option value="false">待入庫</option>
+                            </select>
+                        </div>
+
+                        <!-- 6. 操作員 -->
+                        <div class="filter-group">
+                            <label><i class="fas fa-user-cog"></i> 操作員</label>
+                            <select id="filter-operator">
+                                <option value="">全部操作員</option>
+                                <!-- JS 動態填充 -->
+                            </select>
+                        </div>
+
+                        <!-- 7. 創建時間範圍 (修正版：包含全部時間選項) -->
+                        <div class="date-range-group">
+                            <label><i class="fas fa-calendar-plus"></i> 創建時間</label>
+                            <div class="date-range-selector">
+                                <select id="filter-createMode" onchange="toggleDateRange('create')" style="flex: 1;">
+                                    <option value="all">全部時間</option>
+                                    <option value="custom">自定義範圍</option>
+                                </select>
+                            </div>
+                            <div class="date-range-inputs" id="createDateInputs" style="display: none;">
+                                <input type="date" id="filter-createStart" title="開始時間">
+                                <span style="color: var(--gray); font-size: 0.85rem;">至</span>
+                                <input type="date" id="filter-createEnd" title="結束時間">
+                            </div>
+                        </div>
+
+                        <!-- 8. 更新時間範圍 (修正版：包含全部時間選項) -->
+                        <div class="date-range-group">
+                            <label><i class="fas fa-calendar-check"></i> 更新時間</label>
+                            <div class="date-range-selector">
+                                <select id="filter-updateMode" onchange="toggleDateRange('update')" style="flex: 1;">
+                                    <option value="all">全部時間</option>
+                                    <option value="custom">自定義範圍</option>
+                                </select>
+                            </div>
+                            <div class="date-range-inputs" id="updateDateInputs" style="display: none;">
+                                <input type="date" id="filter-updateStart" title="開始時間">
+                                <span style="color: var(--gray); font-size: 0.85rem;">至</span>
+                                <input type="date" id="filter-updateEnd" title="結束時間">
+                            </div>
+                        </div>
+
+                        <!-- 9. 操作按鈕 -->
+                        <div class="filter-actions">
+                            <button class="btn-filter-sm btn-search" onclick="applyPurchaseFilters()"><i
+                                    class="fas fa-check"></i> 確定</button>
+                            <button class="btn-filter-sm btn-reset" onclick="resetPurchaseFilters()"><i
+                                    class="fas fa-undo"></i> 重置</button>
+                            <button class="btn-filter btn-primary" onclick="openAddPurchaseModal()"
+                                style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                <i class="fas fa-plus-circle"></i> 新增
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 數據表格 -->
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>訂單ID</th>
+                                    <th>商品名稱</th>
+                                    <th>數量</th>
+                                    <th>總成本</th>
+                                    <th>供應商</th>
+                                    <th>入庫目標</th>
+                                    <th>狀態</th>
+                                    <th>是否已入庫</th>
+                                    <th>庫存記錄ID</th>
+                                    <th>備註</th>
+                                    <th>操作員</th>
+                                    <th>創建時間</th>
+                                    <th>更新時間</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orders-tbody">
+                                <!-- JS 動態渲染 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="orders-pagination" class="pagination-container"></div>
+                </div>
+
+                <!-- ================= Tab 2: 庫存調整日誌 ================= -->
+
+                <!-- 【美化後】篩選工具欄 -->
+                <div id="tab-logs" class="tab-content">
+                    <!-- 【美化後】篩選工具欄 -->
+                    <div class="filter-bar-compact">
+                        <!-- 1. 調整類型 -->
+                        <div class="filter-group">
+                            <label for="filter-type"><i class="fas fa-filter"></i> 調整類型</label>
+                            <select id="filter-type">
+                                <option value="">全部類型</option>
+                                <option value="PURCHASE_IN">採購進貨</option>
+                                <option value="MANUAL_ADJUST">手動盤點</option>
+                                <!-- 核心修改：合併為一個選項，值為 TRANSFER -->
+                                <option value="TRANSFER">調撥 (出庫/入庫)</option>
+                                <option value="DAMAGE">破損報廢</option>
+                                <option value="RETURN">客戶退貨</option>
+                                <option value="SALE_OUT">銷售出庫</option>
+                            </select>
+                        </div>
+
+                        <!-- 2. 倉庫類型 (觸發門店顯示) -->
+                        <div class="filter-group">
+                            <label for="log-warehouse"><i class="fas fa-warehouse"></i> 倉庫類型</label>
+                            <select id="log-warehouse" onchange="toggleLogStoreFilter()">
+                                <option value="">全部</option>
+                                <option value="ONLINE">線上總倉</option>
+                                <option value="OFFLINE">線下門店</option>
+                            </select>
+                        </div>
+
+                        <!-- 3. 門店 (僅當選擇線下門店時顯示) -->
+                        <div class="filter-group" id="log-store-group" style="display: none;">
+                            <label for="log-store-id"><i class="fas fa-store"></i> 門店</label>
+                            <select id="log-store-id">
+                                <option value="">全部門店</option>
+                                <!-- JS 動態填充 -->
+                            </select>
+                        </div>
+
+                        <!-- 4. 操作員 -->
+                        <div class="filter-group">
+                            <label for="log-operator"><i class="fas fa-user-cog"></i> 操作員</label>
+                            <select id="log-operator">
+                                <option value="">全部操作員</option>
+                                <!-- JS 動態填充 -->
+                            </select>
+                        </div>
+
+                        <!-- 5. 操作時間範圍 -->
+                        <div class="date-range-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label><i class="fas fa-calendar-plus"></i> 操作時間</label>
+                            <select id="log-date-mode" onchange="toggleLogDateRange()"
+                                style="padding: 0.3rem; border: 1px solid #e9ecef; border-radius: 4px;">
+                                <option value="all">全部時間</option>
+                                <option value="custom">自定義範圍</option>
+                            </select>
+                            <div class="date-range-inputs" id="log-date-inputs"
+                                style="display: none; align-items: center; gap: 0.3rem;">
+                                <input type="date" id="log-date-start"
+                                    style="padding: 0.3rem; border: 1px solid #e9ecef; border-radius: 4px;">
+                                <span style="color: var(--gray); font-size: 0.85rem;">至</span>
+                                <input type="date" id="log-date-end"
+                                    style="padding: 0.3rem; border: 1px solid #e9ecef; border-radius: 4px;">
+                            </div>
+                        </div>
+
+                        <!-- 6. 操作按鈕 -->
+                        <div class="filter-actions">
+                            <button class="btn-filter-sm btn-search" onclick="applyLogFilters()"><i
+                                    class="fas fa-check"></i> 確定</button>
+                            <button class="btn-filter-sm btn-reset" onclick="resetLogFilters()"><i
+                                    class="fas fa-undo"></i> 重置</button>
+                        </div>
+                    </div>
+
+                    <!-- 數據表格 -->
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>日誌ID</th>
+                                    <th>商品名稱</th>
+                                    <th>調整類型</th>
+                                    <th>倉庫/門店</th>
+                                    <th>舊數量</th>
+                                    <th>新數量</th>
+                                    <th>變化量</th>
+                                    <th>原因備註</th>
+                                    <th>調撥批次號</th>
+                                    <th>操作時間</th>
+                                    <th>操作員</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-tbody">
+                                <!-- JS 動態渲染 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="logs-pagination" class="pagination-container"></div>
+                </div>
+
+            </div>
+
+            <footer class="admin-footer"
+                style="margin-top: 3rem; padding: 2rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); border-radius: 12px; text-align: center; color: rgba(255,255,255,0.7);">
+                <p style="margin: 0; font-size: 0.9rem;">
+                    <i class="fas fa-shield-alt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    &copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam
+                    Admin Panel. All Rights Reserved.
+                </p>
+            </footer>
+        </main>
+    </div>
+
+    <!-- 新增采购订单 Modal -->
+    <div id="addPurchaseModal" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal-box" style="max-width: 600px;">
+            <div class="modal-header">
+                <!-- 加上 id 方便 JS 動態修改標題 -->
+                <h3 id="purchaseModalTitle">
+                    <i class="fas fa-plus-circle" style="color: var(--gold);"></i> 新增采购订单
+                </h3>
+                <button class="modal-close-btn" onclick="closePurchaseModal()"
+                    style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+            </div>
+
+            <form id="purchaseOrderForm" onsubmit="submitPurchaseOrder(event)">
+                <!-- 【新增】隱藏欄位：用於判斷當前是新增還是編輯 -->
+                <input type="hidden" id="editPurchaseId" value="">
+
+                <!-- 品牌选择 -->
+                <div class="form-group">
+                    <label><i class="fas fa-crown"></i> 品牌 <span style="color: var(--accent);">*</span></label>
+                    <select id="brandSelect" class="form-control" onchange="loadProductsByBrand()" required>
+                        <option value="">请选择品牌</option>
+                        <option th:each="brand : ${allBrands}" th:value="${brand}" th:text="${brand}">品牌名稱</option>
+                    </select>
+                </div>
+
+                <!-- 商品选择 -->
+                <div class="form-group">
+                    <label><i class="fas fa-box"></i> 商品 <span style="color: var(--accent);">*</span></label>
+                    <select id="productSelect" class="form-control" required>
+                        <option value="">请先选择品牌</option>
+                    </select>
+                    <small style="color: var(--gray);">
+                        <i class="fas fa-info-circle"></i> 选择品牌后自动加载商品列表
+                    </small>
+                </div>
+
+                <!-- 数量 -->
+                <div class="form-group">
+                    <label><i class="fas fa-hashtag"></i> 采购数量 <span style="color: var(--accent);">*</span></label>
+                    <input type="number" id="quantity" class="form-control" min="1" required placeholder="请输入采购数量">
+                </div>
+
+                <!-- 总成本 -->
+                <div class="form-group">
+                    <label><i class="fas fa-coins"></i> 总成本 (HKD) <span style="color: var(--accent);">*</span></label>
+                    <input type="number" id="totalCost" class="form-control" step="0.01" min="0" required
+                        placeholder="请输入总成本" style="-moz-appearance: textfield;">
+                </div>
+
+                <!-- 供应商 -->
+                <div class="form-group" style="position: relative;">
+                    <label><i class="fas fa-truck"></i> 供应商</label>
+
+                    <!-- 输入框 (保持 id="supplier" 以便提交表单时获取值) -->
+                    <input type="text" id="supplier" class="form-control" placeholder="输入供应商名称..." autocomplete="off">
+
+                    <!-- 下拉列表容器 (绝对定位，默认隐藏) -->
+                    <div id="supplierDropdown" class="autocomplete-dropdown" style="display: none;">
+                        <!-- JS 动态填充内容 -->
+                    </div>
+
+                    <small style="color: var(--gray);">
+                        <i class="fas fa-info-circle"></i> 输入关键字自动匹配历史供应商
+                    </small>
+                </div>
+
+                <!-- 仓库类型 -->
+                <div class="form-group">
+                    <label><i class="fas fa-warehouse"></i> 仓库类型 <span style="color: var(--accent);">*</span></label>
+                    <select id="warehouseType" class="form-control" onchange="toggleStoreSelect()" required>
+                        <option value="ONLINE">线上总仓</option>
+                        <option value="OFFLINE">线下门店</option>
+                    </select>
+                </div>
+
+                <!-- 门店选择（线下仓库时显示） -->
+                <div class="form-group" id="storeSelectGroup" style="display: none;">
+                    <label><i class="fas fa-store"></i> 选择门店 <span style="color: var(--accent);">*</span></label>
+                    <select id="storeId" class="form-control">
+                        <option value="">请选择门店</option>
+                        <!-- JS 動態填充 -->
+                    </select>
+                </div>
+
+                <!-- 进货日期 (注意：創建時間由後端自動生成，前端只負責修改進貨日期) -->
+                <div class="form-group">
+                    <label><i class="fas fa-calendar"></i> 进货日期</label>
+                    <input type="date" id="purchaseDate" class="form-control">
+                    <small style="color: var(--gray);">
+                        <i class="fas fa-info-circle"></i> 默認為今天
+                    </small>
+                </div>
+
+                <!-- 备注 -->
+                <div class="form-group">
+                    <label><i class="fas fa-comment"></i> 备注</label>
+                    <textarea id="remark" class="form-control" rows="3" placeholder="请输入备注信息..."></textarea>
+                </div>
+
+                <div class="form-group" id="statusSelectGroup" style="display: none;">
+                    <label><i class="fas fa-info-circle"></i> 訂單狀態 <span style="color: var(--accent);">*</span></label>
+                    <select id="orderStatus" class="form-control">
+                        <option value="PENDING">待入庫 (PENDING)</option>
+                        <option value="COMPLETED">已完成 (COMPLETED)</option>
+                        <option value="CANCELLED">已取消 (CANCELLED)</option>
+                    </select>
+                    <small style="color: var(--gray);">
+                        <i class="fas fa-info-circle"></i> 僅在編輯模式下可修改訂單狀態。
+                    </small>
+                </div>
+
+                <!-- 按钮 -->
+                <div class="modal-actions">
+                    <button type="button" class="btn-modal-cancel" onclick="closePurchaseModal()">
+                        <i class="fas fa-times"></i> 取消
+                    </button>
+                    <!-- 加上 id 方便 JS 動態修改按鈕文字 -->
+                    <button type="submit" class="btn-modal-save" id="savePurchaseBtn">
+                        <i class="fas fa-save"></i> 确认创建
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="stockInConfirmModal" class="stock-in-modal-overlay" style="display: none;">
+        <div class="stock-in-modal-box">
+            <div class="stock-in-modal-icon">
+                <i class="fas fa-box-open"></i>
+            </div>
+            <h3 class="stock-in-modal-title">確認入庫</h3>
+            <div class="stock-in-modal-body">
+                <p class="stock-in-modal-message">
+                    是否確定該產品已成功進入倉庫？
+                </p>
+                <div class="stock-in-modal-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>確認後系統將自動更新庫存並標記為已入庫</span>
+                </div>
+            </div>
+            <div class="stock-in-modal-actions">
+                <button class="btn-stock-in-cancel" onclick="closeStockInModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-stock-in-confirm" id="confirmStockInBtn" onclick="executeStockIn()">
+                    <i class="fas fa-check-circle"></i> 確認入庫
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/common :: modals}"></div>
+
+    <!-- 4. 引入公共 JS -->
+    <script th:inline="javascript">
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+    </script>
+    <script src="/js/common.js"></script>
+    <script src="/js/admin.js"></script>
+
+    <!-- 5. 頁面專屬 JS 邏輯 (包含分頁渲染) -->
+    <script>
+        // ==========================================
+        // 全局變量
+        // ==========================================
+        let productsCache = [];
+        let currentStockInPurchaseId = null;
+        let supplierSearchTimeout = null;
+        let isSelectingSupplier = false;
+
+        /**
+         * 核心：JS 版智能分頁渲染函數
+         *
+         * 【設計理念】：
+         * 專為 AJAX 局部刷新架構設計，與後端返回的 JSON 分頁數據完美對接。
+         * 避免了傳統 Thymeleaf 分頁帶來的整頁刷新問題，並解耦了 URL 參數。
+         *
+         * @param {string} containerId - 分頁容器 DOM 元素的 ID (例如: 'orders-pagination')
+         * @param {number} currentPage - 當前頁碼 (注意：此處必須是 1-based，即 1, 2, 3...)
+         * @param {number} totalPages - 總頁數
+         * @param {Array<Object>} smartPages - 後端 PaginationUtils 生成的智能頁碼數組
+         *                                     (結構示例: [{isEllipsis: false, pageNumber: 1}, {isEllipsis: true, pageNumber: null}, ...])
+         * @param {string} callbackName - 點擊頁碼時要執行的全局 JS 函數名稱 (例如: 'loadPurchaseOrdersWithFilters') (不許修改）
+         */
+        function renderPagination(containerId, currentPage, totalPages, smartPages, callbackName) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            if (totalPages === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            html += `<button type="button" class="page-btn ${currentPage == 1 ? 'disabled' : ''}"
                         ${currentPage == 1 ? 'disabled' : ''}
                         onclick="${currentPage > 1 ? callbackName + '(' + (currentPage - 1) + ')' : 'return false;'}">
                     <i class="fas fa-chevron-left"></i> 上一頁
                 </button>`;
 
-        smartPages.forEach(item => {
-            if (item.isEllipsis) {
-                html += `<span class="page-ellipsis">...</span>`;
-            } else {
-                html += `<button type="button" class="page-btn ${item.pageNumber == currentPage ? 'active' : ''}"
+            smartPages.forEach(item => {
+                if (item.isEllipsis) {
+                    html += `<span class="page-ellipsis">...</span>`;
+                } else {
+                    html += `<button type="button" class="page-btn ${item.pageNumber == currentPage ? 'active' : ''}"
                                 onclick="${callbackName}(${item.pageNumber})">
                                 ${item.pageNumber}
                             </button>`;
-            }
-        });
+                }
+            });
 
-        html += `<button type="button" class="page-btn ${currentPage >= totalPages ? 'disabled' : ''}"
+            html += `<button type="button" class="page-btn ${currentPage >= totalPages ? 'disabled' : ''}"
                         ${currentPage >= totalPages ? 'disabled' : ''}
                         onclick="${currentPage < totalPages ? callbackName + '(' + (currentPage + 1) + ')' : 'return false;'}">
                     下一頁 <i class="fas fa-chevron-right"></i>
                 </button>`;
 
-        container.innerHTML = html;
-    }
-
-    // ==========================================
-    // 數據加載與渲染邏輯
-    // ==========================================
-    document.addEventListener('DOMContentLoaded', function() {
-        loadPurchaseOrders(1);
-    });
-
-    async function loadPurchaseOrders(page) {
-        try {
-            const response = await fetch(`/admin/api/admin/purchases/orders?page=${page}&size=25`);
-            const data = await response.json();
-            renderPurchaseOrdersTable(data.content);
-            renderPagination('orders-pagination', data.currentPage, data.totalPages, data.smartPages, 'loadPurchaseOrders');
-        } catch (error) {
-            console.error('加載採購訂單失敗:', error);
-        }
-    }
-
-    async function loadAdjustmentLogs(page) {
-        try {
-            const response = await fetch(`/admin/api/admin/purchases/logs?page=${page}&size=25`);
-            const data = await response.json();
-            renderAdjustmentLogsTable(data.content);
-            renderPagination('logs-pagination', data.currentPage, data.totalPages, data.smartPages, 'loadAdjustmentLogs');
-        } catch (error) {
-            console.error('加載庫存日誌失敗:', error);
-        }
-    }
-
-    // 全局變量：暫存當前渲染的訂單數據，方便編輯時讀取
-    window.currentPurchaseOrders = [];
-
-    function renderPurchaseOrdersTable(orders) {
-        const tbody = document.getElementById('orders-tbody');
-        // 暫存數據供編輯使用
-        window.currentPurchaseOrders = orders;
-
-        if (!orders || orders.length === 0) {
-            tbody.innerHTML = `
-        <tr>
-            <td colspan="14" style="text-align: center; padding: 3rem; color: var(--gray);">
-                <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
-                暫無採購訂單記錄
-            </td>
-        </tr>`;
-            return;
+            container.innerHTML = html;
         }
 
-        const formatDateTime = (dateStr) => {
-            if (!dateStr) return '-';
-            const d = new Date(dateStr);
-            return d.toLocaleString('zh-TW', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', hour12: false
-            });
-        };
-
-        let html = orders.map(order => {
-            const stockedInBadge = order.isStockedIn
-                ? '<span class="status-badge" style="background: rgba(40, 167, 69, 0.15); color: #155724;"><i class="fas fa-check-circle"></i> 已入庫</span>'
-                : '<span class="status-badge" style="background: rgba(255, 193, 7, 0.15); color: #856404;"><i class="fas fa-clock"></i> 待入庫</span>';
-
-            const remarkText = order.remark
-                ? (order.remark.length > 20 ? order.remark.substring(0, 20) + '...' : order.remark)
-                : '-';
-
-            // 【核心邏輯】：只有當未入庫 (isStockedIn 為 false 或 0) 時，才顯示操作按鈕
-            const actionButtons = !order.isStockedIn ? `
-            <div style="display: flex; gap: 0.5rem; flex-direction: column;">
-                <button class="btn-sm btn-edit" onclick="openEditPurchaseModal(${order.purchaseId})" style="background: var(--gold); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
-                    <i class="fas fa-edit"></i> 更改信息
-                </button>
-                <button class="btn-sm" onclick="handleStockIn(${order.purchaseId})" style="background: #17a2b8; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
-                    <i class="fas fa-box-open"></i> 入庫
-                </button
-            </div>
-        ` : `<span style="color: #28a745; font-weight: 600; font-size: 0.9rem;"><i class="fas fa-check-circle"></i> 已完成</span>`;
-
-            return `
-        <tr>
-            <td style="font-family: monospace; color: var(--gray);">#${order.purchaseId}</td>
-            <td>
-                <div style="font-weight: 600;">${order.productName || '未知商品'}</div>
-                <div style="font-size: 0.8rem; color: var(--gray);">${order.brand || '-'}</div>
-            </td>
-            <td style="font-weight: 600;">${order.quantity}</td>
-            <td style="color: var(--accent); font-weight: 700;">HK$ ${Number(order.totalCost).toLocaleString()}</td>
-            <td>${order.supplier || '無'}</td>
-            <td>
-                ${order.warehouseType === 'ONLINE'
-                ? '<i class="fas fa-warehouse"></i> 線上總倉'
-                : '<i class="fas fa-store"></i> ' + (order.storeName || '未知門店')}
-            </td>
-            <td><span class="status-badge status-${(order.status || 'PENDING').toLowerCase()}">${order.status || 'PENDING'}</span></td>
-            <td>${stockedInBadge}</td>
-            <td style="font-family: monospace; font-size: 0.85rem; color: var(--gray);">${order.inventoryRecordId || '-'}</td>
-            <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${order.remark || ''}">${remarkText}</td>
-            <td>${order.operatorName || 'System'}</td>
-            <td style="font-size: 0.85rem; color: var(--gray); white-space: nowrap;">${formatDateTime(order.createdAt)}</td>
-            <td style="font-size: 0.85rem; color: var(--gray); white-space: nowrap;">${formatDateTime(order.updatedAt)}</td>
-            <td>${actionButtons}</td>
-        </tr>
-        `;
-        }).join('');
-
-        tbody.innerHTML = html;
-    }
-
-    // ==========================================
-    // 新增：打開編輯 Modal 並加載數據
-    // ==========================================
-    function openEditPurchaseModal(purchaseId) {
-        const order = window.currentPurchaseOrders.find(o => o.purchaseId === purchaseId);
-        if (!order) return;
-
-        // 1. 設置為編輯模式
-        document.getElementById('editPurchaseId').value = order.purchaseId;
-        document.getElementById('purchaseModalTitle').innerHTML = '<i class="fas fa-edit" style="color: var(--gold);"></i> 编辑采购订单';
-        document.getElementById('savePurchaseBtn').innerHTML = '<i class="fas fa-save"></i> 保存修改';
-
-        // 2. 填充表單數據
-        document.getElementById('brandSelect').value = order.brand || '';
-
-        // 觸發商品加載，然後設置選中的商品
-        loadProductsByBrand().then(() => {
-            if (order.productId) {
-                document.getElementById('productSelect').value = order.productId;
-            }
-        });
-
-        document.getElementById('quantity').value = order.quantity;
-        document.getElementById('totalCost').value = order.totalCost;
-        document.getElementById('supplier').value = order.supplier || '';
-        document.getElementById('warehouseType').value = order.warehouseType || 'ONLINE';
-
-        // 處理日期格式 (YYYY-MM-DD)
-        if (order.purchaseDate) {
-            document.getElementById('purchaseDate').value = order.purchaseDate.split('T')[0];
-        }
-
-        document.getElementById('remark').value = order.remark || '';
-
-        // 3. 處理門店顯示邏輯
-        toggleStoreSelect();
-        if (order.warehouseType === 'OFFLINE' && order.storeId) {
-            // 確保 storeSelect 裡有這個 option，然後設值
-            document.getElementById('storeId').value = order.storeId;
-        }
-
-        // 4. 顯示 Modal
-        document.getElementById('addPurchaseModal').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
-
-    // ==========================================
-    // 修改：關閉 Modal (重置為新增模式)
-    // ==========================================
-    function closePurchaseModal() {
-        document.getElementById('addPurchaseModal').style.display = 'none';
-        document.body.style.overflow = '';
-
-        // 重置表單
-        document.getElementById('purchaseOrderForm').reset();
-
-        // 重置為新增模式狀態
-        document.getElementById('editPurchaseId').value = '';
-        document.getElementById('purchaseModalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color: var(--gold);"></i> 新增采购订单';
-        document.getElementById('savePurchaseBtn').innerHTML = '<i class="fas fa-save"></i> 确认创建';
-        document.getElementById('storeSelectGroup').style.display = 'none';
-    }
-
-    // ==========================================
-    // 修改：提交表單 (自動判斷是新增還是編輯)
-    // ==========================================
-    async function submitPurchaseOrder(event) {
-        event.preventDefault();
-
-        const editId = document.getElementById('editPurchaseId').value;
-        const saveBtn = document.getElementById('savePurchaseBtn');
-        const originalBtnText = saveBtn.innerHTML;
-
-        // 禁用按鈕防止重複提交
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-
-        const formData = {
-            brand: document.getElementById('brandSelect').value,
-            productId: document.getElementById('productSelect').value,
-            quantity: parseInt(document.getElementById('quantity').value),
-            totalCost: parseFloat(document.getElementById('totalCost').value),
-            supplier: document.getElementById('supplier').value,
-            warehouseType: document.getElementById('warehouseType').value,
-            purchaseDate: document.getElementById('purchaseDate').value,
-            remark: document.getElementById('remark').value
-        };
-
-        if (formData.warehouseType === 'OFFLINE') {
-            formData.storeId = document.getElementById('storeId').value;
-        }
-
-        try {
-            // 【注意】：請根據你後端實際的 API 路徑修改這裡的 URL
-            let url = '/api/admin/purchases';
-            let method = 'POST';
-
-            if (editId) {
-                // 編輯模式：發送 PUT 請求
-                url = `/api/admin/purchases/${editId}`;
-                method = 'PUT';
-            }
-
-            const response = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                if (typeof showNotification === 'function') {
-                    showNotification(editId ? '✅ 采购订单修改成功！' : '✅ 采购订单创建成功！');
-                }
-                closePurchaseModal();
-                loadPurchaseOrders(1); // 刷新列表
+        // ==========================================
+        // 2. 日期範圍切換 (Tab 1: 採購訂單)
+        // ==========================================
+        function toggleDateRange(type) {
+            const mode = document.getElementById(`filter-${type}Mode`).value;
+            const inputsDiv = document.getElementById(`${type}DateInputs`);
+            if (mode === 'custom') {
+                inputsDiv.style.display = 'flex';
+                inputsDiv.style.alignItems = 'center';
+                inputsDiv.style.gap = '0.5rem';
             } else {
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ ' + (result.message || '操作失敗'), true);
+                inputsDiv.style.display = 'none';
+                document.getElementById(`filter-${type}Start`).value = '';
+                document.getElementById(`filter-${type}End`).value = '';
+            }
+        }
+
+        // ==========================================
+        // 3. 獲取篩選參數 (Tab 1: 採購訂單)
+        // ==========================================
+        function getFilterParams(page) {
+            const params = new URLSearchParams();
+            params.append('page', page);
+            params.append('size', 25);
+
+            const supplier = document.getElementById('filter-supplier').value.trim();
+            if (supplier && supplier.length > 0) params.append('supplier', supplier);
+
+            const status = document.getElementById('filter-status').value;
+            if (status) params.append('status', status);
+
+            const warehouseType = document.getElementById('filter-warehouseType').value;
+            if (warehouseType) params.append('warehouseType', warehouseType);
+
+            const storeId = document.getElementById('filter-storeId').value;
+            if (storeId) params.append('storeId', storeId);
+
+            const isStockedIn = document.getElementById('filter-isStockedIn').value;
+            if (isStockedIn) params.append('isStockedIn', isStockedIn === 'true');
+
+            const operator = document.getElementById('filter-operator').value;
+            if (operator) params.append('operator', operator);
+
+            if (document.getElementById('filter-createMode').value === 'custom') {
+                const createStart = document.getElementById('filter-createStart').value;
+                const createEnd = document.getElementById('filter-createEnd').value;
+                if (createStart) params.append('createStart', createStart);
+                if (createEnd) params.append('createEnd', createEnd);
+            }
+
+            if (document.getElementById('filter-updateMode').value === 'custom') {
+                const updateStart = document.getElementById('filter-updateStart').value;
+                const updateEnd = document.getElementById('filter-updateEnd').value;
+                if (updateStart) params.append('updateStart', updateStart);
+                if (updateEnd) params.append('updateEnd', updateEnd);
+            }
+
+            return params;
+        }
+
+        // ==========================================
+        // 4. 加載採購訂單（帶篩選）
+        // ==========================================
+        async function loadPurchaseOrdersWithFilters(page) {
+            try {
+                const params = getFilterParams(page);
+                const url = `/admin/api/admin/purchases/orders?${params.toString()}`;
+                const response = await fetch(url);
+
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                const data = await response.json();
+                renderPurchaseOrdersTable(data.content);
+                renderPagination('orders-pagination', data.currentPage, data.totalPages, data.smartPages, 'loadPurchaseOrdersWithFilters');
+            } catch (error) {
+                console.error('❌ 加載採購訂單失敗:', error);
+                const tbody = document.getElementById('orders-tbody');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="14" style="text-align: center; padding: 3rem; color: #dc3545;">加載失敗: ${error.message}</td></tr>`;
                 }
             }
-        } catch (error) {
-            console.error('操作失败:', error);
-            if (typeof showNotification === 'function') {
-                showNotification('❌ 網絡錯誤，請稍後重試', true);
-            }
-        } finally {
-            // 恢復按鈕狀態
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = originalBtnText;
-        }
-    }
-
-    // ==========================================
-    // 新增：入庫按鈕 (暫無功能)
-    // ==========================================
-    function handleStockIn(purchaseId) {
-        // 暫時只有按鈕，可以加個提示
-        if (typeof showNotification === 'function') {
-            showNotification('⚠️ 入庫功能開發中，敬請期待！');
-        } else {
-            alert('入庫功能開發中，敬請期待！');
-        }
-        // 未來可以在這裡調用 API:
-        // fetch(`/api/admin/purchases/${purchaseId}/stock-in`, { method: 'POST' })
-    }
-
-    function renderAdjustmentLogsTable(logs) {
-        const tbody = document.getElementById('logs-tbody');
-        if (!logs || logs.length === 0) {
-            tbody.innerHTML = `
-            <tr>
-                <td colspan="11" style="text-align: center; padding: 3rem; color: var(--gray);">
-                    <i class="fas fa-clipboard-list" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
-                    暫無庫存調整日誌
-                </td>
-            </tr>`;
-            return;
         }
 
-        let html = logs.map(log => {
-            const changeClass = log.changeQuantity > 0 ? 'text-success' : 'text-danger';
-            const changeSign = log.changeQuantity > 0 ? '+' : '';
-            let badgeClass = 'badge-manual';
-            if (log.adjustmentType === 'PURCHASE_IN') badgeClass = 'badge-purchase-in';
-            else if (log.adjustmentType === 'TRANSFER_IN' || log.adjustmentType === 'TRANSFER_OUT') badgeClass = 'badge-transfer';
-            else if (log.adjustmentType === 'DAMAGE' || log.adjustmentType === 'SALE_OUT') badgeClass = 'badge-damage';
+        // ==========================================
+        // 5. 渲染採購訂單表格
+        // ==========================================
+        window.currentPurchaseOrders = [];
+        const purchaseStatusMap = {'PENDING': '等待中', 'COMPLETED': '已完成', 'CANCELLED': '已取消'};
 
-            return `
-        <tr>
-            <td style="font-family: monospace; color: var(--gray);">#${log.logId}</td>
-            <td><div style="font-weight: 600;">${log.productName}</div></td>
-            <td><span class="status-badge ${badgeClass}">${log.adjustmentType}</span></td>
-            <td>${log.warehouseType === 'ONLINE' ? '<i class="fas fa-warehouse"></i> 線上總倉' : '🏪 ' + (log.storeName || '')}</td>
-            <td style="font-weight: 600; color: var(--gray);">${log.previousQuantity}</td>
-            <td style="font-weight: 600;">${log.newQuantity}</td>
-            <td class="${changeClass}" style="font-weight: 700;">${changeSign}${log.changeQuantity}</td>
-            <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${log.reason || ''}">${log.reason || '-'}</td>
-            <td style="font-family: monospace; font-size: 0.8rem; color: var(--gray);">${log.transferBatchId || '-'}</td>
-            <td>${new Date(log.createdAt).toLocaleString('zh-TW', {hour12: false})}</td>
-            <td>${log.operatorName}</td>
-        </tr>
-        `;
-        }).join('');
+        function renderPurchaseOrdersTable(orders) {
+            const tbody = document.getElementById('orders-tbody');
+            window.currentPurchaseOrders = orders || [];
 
-        tbody.innerHTML = html;
-    }
-
-    function switchPurchaseTab(tabName, btnElement) {
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        btnElement.classList.add('active');
-
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        document.getElementById('tab-' + tabName).classList.add('active');
-
-        if (tabName === 'orders') {
-            loadPurchaseOrders(1);
-        } else if (tabName === 'logs') {
-            loadAdjustmentLogs(1);
-        }
-    }
-
-    // 全局变量存储商品列表
-    let productsCache = [];
-
-    // 【修正】：函數名改為 openAddPurchaseModal，與按鈕 onclick 一致
-    function openAddPurchaseModal() {
-        document.getElementById('addPurchaseModal').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-
-        // 重置表单
-        document.getElementById('purchaseOrderForm').reset();
-        document.getElementById('brandSelect').value = '';
-        document.getElementById('productSelect').innerHTML = '<option value="">请先选择品牌</option>';
-        document.getElementById('purchaseDate').valueAsDate = new Date();
-
-        // 加载门店列表
-        loadStores();
-    }
-
-    // 关闭采购订单 Modal
-    function closePurchaseModal() {
-        document.getElementById('addPurchaseModal').style.display = 'none';
-        document.body.style.overflow = '';
-        productsCache = [];
-    }
-
-    // 根据品牌加载商品列表
-    async function loadProductsByBrand() {
-        const brandSelect = document.getElementById('brandSelect');
-        const productSelect = document.getElementById('productSelect');
-        const brand = brandSelect.value;
-
-        if (!brand) {
-            productSelect.innerHTML = '<option value="">请先选择品牌</option>';
-            return;
-        }
-
-        try {
-            const response = await fetch(`/brands/${encodeURIComponent(brand)}`);
-            const result = await response.json();
-
-            if (result.success && result.data) {
-                productsCache = result.data;
-
-                if (productsCache.length === 0) {
-                    productSelect.innerHTML = '<option value="">该品牌下暂无商品</option>';
-                    if (typeof showNotification === 'function') {
-                        showNotification('⚠️ 该品牌下暂无商品，请先在商品管理中添加', true);
-                    }
-                } else {
-                    let options = '<option value="">请选择商品</option>';
-                    productsCache.forEach(product => {
-                        options += `<option value="${product.productId}">` +
-                            `${product.description} (HK$ ${product.price})` +
-                            `</option>`;
-                    });
-                    productSelect.innerHTML = options;
-                }
-            } else {
-                productSelect.innerHTML = '<option value="">加载失败</option>';
-                if (typeof showNotification === 'function') showNotification('❌ 加载商品列表失败', true);
-            }
-        } catch (error) {
-            console.error('加载商品列表失败:', error);
-            productSelect.innerHTML = '<option value="">加载失败</option>';
-            if (typeof showNotification === 'function') showNotification('❌ 网络错误，请稍后重试', true);
-        }
-    }
-
-    // 切换仓库类型时显示/隐藏门店选择
-    function toggleStoreSelect() {
-        const warehouseType = document.getElementById('warehouseType').value;
-        const storeSelectGroup = document.getElementById('storeSelectGroup');
-        const storeIdSelect = document.getElementById('storeId');
-
-        if (warehouseType === 'OFFLINE') {
-            storeSelectGroup.style.display = 'block';
-            storeIdSelect.setAttribute('required', 'required');
-        } else {
-            storeSelectGroup.style.display = 'none';
-            storeIdSelect.removeAttribute('required');
-            storeIdSelect.value = '';
-        }
-    }
-
-    // 加载门店列表
-    async function loadStores() {
-        try {
-            const response = await fetch('/admin/stores/api/active-list');
-            const result = await response.json();
-
-            const storeIdSelect = document.getElementById('storeId');
-
-            if (result.success && result.data) {
-                let options = '<option value="">請選擇門店</option>';
-                result.data.forEach(store => {
-                    // 【修改處】：只使用 store.name，不再拼接 storeCode
-                    options += `<option value="${store.storeId}">${store.name}</option>`;
-                });
-                storeIdSelect.innerHTML = options;
-            }
-        } catch (error) {
-            console.error('加載門店列表失敗:', error);
-        }
-    }
-
-    // 提交采购订单
-    async function submitPurchaseOrder(event) {
-        event.preventDefault();
-
-        const saveBtn = document.getElementById('savePurchaseBtn');
-        const originalBtnText = saveBtn.innerHTML;
-
-        // 收集表单数据
-        const formData = {
-            productId: parseInt(document.getElementById('productSelect').value),
-            quantity: parseInt(document.getElementById('quantity').value),
-            totalCost: parseFloat(document.getElementById('totalCost').value),
-            supplier: document.getElementById('supplier').value.trim(),
-            warehouseType: document.getElementById('warehouseType').value,
-            purchaseDate: document.getElementById('purchaseDate').value,
-            remark: document.getElementById('remark').value.trim()
-        };
-
-        if (formData.warehouseType === 'OFFLINE') {
-            const storeId = document.getElementById('storeId').value;
-            if (!storeId) {
-                if (typeof showNotification === 'function') showNotification('❌ 请选择门店', true);
-                saveBtn.innerHTML = originalBtnText;
+            if (!orders || orders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="14" style="text-align: center; padding: 3rem; color: var(--gray);"><i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>暫無採購訂單記錄</td></tr>`;
                 return;
             }
-            formData.storeId = parseInt(storeId);
+
+            const formatDateTime = (dateStr) => {
+                if (!dateStr) return '-';
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return '-';
+                return d.toLocaleString('zh-TW', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
+            };
+
+            let html = orders.map(order => {
+                const isStocked = (order.isStockedIn === true || order.isStockedIn === 1 || order.isStockedIn === "1");
+                let stockedInBadge = '';
+                if (order.status === 'CANCELLED') {
+                    stockedInBadge = '';
+                } else if (isStocked) {
+                    stockedInBadge = '<span class="status-badge" style="background: rgba(40, 167, 69, 0.15); color: #155724;"><i class="fas fa-check-circle"></i> 已入庫</span>';
+                } else {
+                    stockedInBadge = '<span class="status-badge" style="background: rgba(255, 193, 7, 0.15); color: #856404;"><i class="fas fa-clock"></i> 待入庫</span>';
+                }
+
+                const remarkText = order.remark ? (order.remark.length > 20 ? order.remark.substring(0, 20) + '...' : order.remark) : '-';
+                let actionButtons = '';
+
+                if (order.status === 'CANCELLED') {
+                    actionButtons = `<button class="btn-sm btn-edit" onclick="openEditPurchaseModal(${order.purchaseId})" style="background: var(--gold); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; white-space: nowrap;"><i class="fas fa-edit"></i> 更改信息</button>`;
+                } else if (!isStocked) {
+                    actionButtons = `<div style="display: flex; gap: 0.5rem; flex-direction: row;">
+                    <button class="btn-sm btn-edit" onclick="openEditPurchaseModal(${order.purchaseId})" style="background: var(--gold); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; white-space: nowrap;"><i class="fas fa-edit"></i> 更改信息</button>
+                    <button class="btn-sm" onclick="handleStockIn(${order.purchaseId})" style="background: #17a2b8; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; white-space: nowrap;"><i class="fas fa-box-open"></i> 入庫</button>
+                </div>`;
+                } else {
+                    actionButtons = `<span style="color: #28a745; font-weight: 600; font-size: 0.9rem; white-space: nowrap;"><i class="fas fa-check-circle"></i> 已完成</span>`;
+                }
+
+                const statusText = purchaseStatusMap[order.status] || order.status || '未知狀態';
+                const statusClass = (order.status || 'PENDING').toLowerCase();
+
+                return `<tr>
+                <td style="font-family: monospace; color: var(--gray);">#${order.purchaseId}</td>
+                <td><div style="font-weight: 600; white-space: nowrap;">${order.productName || '未知商品'}</div><div style="font-size: 0.8rem; color: var(--gray); white-space: nowrap;">${order.brand || '-'}</div></td>
+                <td style="font-weight: 600; white-space: nowrap;">${order.quantity}</td>
+                <td style="color: var(--accent); font-weight: 700; white-space: nowrap;">HK$ ${Number(order.totalCost || 0).toLocaleString()}</td>
+                <td style="white-space: nowrap;">${order.supplier || '無'}</td>
+                <td style="white-space: nowrap;">${order.warehouseType === 'ONLINE' ? '<i class="fas fa-warehouse"></i> 線上總倉' : '<i class="fas fa-store"></i> ' + (order.storeName || '未知門店')}</td>
+                <td style="white-space: nowrap;"><span class="status-badge status-${statusClass}">${statusText}</span></td>
+                <td style="white-space: nowrap;">${stockedInBadge}</td>
+                <td style="font-family: monospace; font-size: 0.85rem; color: var(--gray); white-space: nowrap;">${order.inventoryRecordId || '-'}</td>
+                <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${order.remark || ''}">${remarkText}</td>
+                <td style="white-space: nowrap;">${order.operatorName || 'System'}</td>
+                <td style="font-size: 0.85rem; color: var(--gray); white-space: nowrap;">${formatDateTime(order.createdAt)}</td>
+                <td style="font-size: 0.85rem; color: var(--gray); white-space: nowrap;">${formatDateTime(order.updatedAt)}</td>
+                <td style="white-space: nowrap;">${actionButtons}</td>
+            </tr>`;
+            }).join('');
+
+            tbody.innerHTML = html;
         }
 
-        try {
-            const response = await fetch('/api/admin/purchases/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+        // ==========================================
+        // 6. 應用篩選 & 重置 (Tab 1)
+        // ==========================================
+        function applyPurchaseFilters() {
+            loadPurchaseOrdersWithFilters(1);
+        }
+
+        function resetPurchaseFilters() {
+            document.getElementById('filter-supplier').value = '';
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-warehouseType').value = '';
+            document.getElementById('filter-store-group').style.display = 'none';
+            document.getElementById('filter-storeId').value = '';
+            document.getElementById('filter-isStockedIn').value = '';
+            document.getElementById('filter-operator').value = '';
+            document.getElementById('filter-createMode').value = 'all';
+            toggleDateRange('create');
+            document.getElementById('filter-updateMode').value = 'all';
+            toggleDateRange('update');
+            loadPurchaseOrdersWithFilters(1);
+        }
+
+        // ==========================================
+        // 7. 加載篩選選項 (Tab 1 & Tab 2 共用)
+        // ==========================================
+        async function loadFilterOptions() {
+            try {
+                const response = await fetch('/admin/api/admin/purchases/filter-options');
+                const result = await response.json();
+                if (result.success && result.data) {
+                    const options = result.data;
+
+                    // Tab 1: 操作員與門店
+                    const opSelect1 = document.getElementById('filter-operator');
+                    if (opSelect1 && options.operators) {
+                        options.operators.forEach(op => {
+                            const opt = document.createElement('option');
+                            opt.value = op; opt.textContent = op;
+                            opSelect1.appendChild(opt);
+                        });
+                    }
+                    const stSelect1 = document.getElementById('filter-storeId');
+                    if (stSelect1 && options.stores) {
+                        options.stores.forEach(store => {
+                            const opt = document.createElement('option');
+                            opt.value = store.storeId; opt.textContent = store.name;
+                            stSelect1.appendChild(opt);
+                        });
+                    }
+
+                    // Tab 2: 操作員與門店 (使用新 ID)
+                    const opSelect2 = document.getElementById('log-operator');
+                    if (opSelect2 && options.operators) {
+                        options.operators.forEach(op => {
+                            const opt = document.createElement('option');
+                            opt.value = op; opt.textContent = op;
+                            opSelect2.appendChild(opt);
+                        });
+                    }
+                    const stSelect2 = document.getElementById('log-store-id');
+                    if (stSelect2 && options.stores) {
+                        options.stores.forEach(store => {
+                            const opt = document.createElement('option');
+                            opt.value = store.storeId; opt.textContent = store.name;
+                            stSelect2.appendChild(opt);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('加載篩選選項失敗:', error);
+            }
+        }
+
+        // ==========================================
+        // 8. 切換門店篩選框顯示 (Tab 1)
+        // ==========================================
+        function toggleStoreFilter() {
+            const warehouseType = document.getElementById('filter-warehouseType').value;
+            const storeGroup = document.getElementById('filter-store-group');
+            const storeSelect = document.getElementById('filter-storeId');
+            if (warehouseType === 'OFFLINE') {
+                storeGroup.style.display = 'flex';
+            } else {
+                storeGroup.style.display = 'none';
+                storeSelect.value = '';
+            }
+        }
+
+        // ==========================================
+        // 9. 供應商自動完成功能 (Tab 1)
+        // ==========================================
+        function initSupplierAutocomplete() {
+            const supplierInput = document.getElementById('filter-supplier');
+            const dropdown = document.getElementById('filter-supplier-dropdown');
+            if (!supplierInput || !dropdown) return;
+
+            supplierInput.addEventListener('input', function (e) {
+                const keyword = e.target.value.trim();
+                if (supplierSearchTimeout) clearTimeout(supplierSearchTimeout);
+                if (keyword.length === 0) {dropdown.style.display = 'none'; return;}
+                supplierSearchTimeout = setTimeout(() => searchSuppliers(keyword), 300);
             });
 
-            const result = await response.json();
+            supplierInput.addEventListener('blur', function () {
+                setTimeout(() => {
+                    if (!isSelectingSupplier) dropdown.style.display = 'none';
+                    isSelectingSupplier = false;
+                }, 200);
+            });
 
-            if (response.ok && result.success) {
-                if (typeof showNotification === 'function') showNotification('✅ 采购订单创建成功！');
-                closePurchaseModal();
-
-                if (typeof loadPurchaseOrders === 'function') {
-                    loadPurchaseOrders(1);
+            document.addEventListener('click', function (e) {
+                if (!supplierInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
                 }
+            });
+        }
+
+        async function searchSuppliers(keyword) {
+            const dropdown = document.getElementById('filter-supplier-dropdown');
+            try {
+                const url = `/admin/api/admin/purchases/suppliers/search?keyword=${encodeURIComponent(keyword)}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                if (result.success && result.data && result.data.length > 0) {
+                    renderSupplierDropdown(result.data, keyword);
+                    dropdown.style.display = 'block';
+                } else {
+                    dropdown.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('搜索供應商失敗:', error);
+                dropdown.style.display = 'none';
+            }
+        }
+
+        function renderSupplierDropdown(suppliers, keyword) {
+            const dropdown = document.getElementById('filter-supplier-dropdown');
+            const highlightKeyword = (text, keyword) => {
+                const regex = new RegExp(`(${keyword})`, 'gi');
+                return text.replace(regex, '<span style="color: var(--gold); font-weight: 600;">$1</span>');
+            };
+            let html = '';
+            suppliers.forEach(supplier => {
+                html += `<div class="autocomplete-item" style="padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f8f9fa;"
+                     onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'"
+                     onclick="selectSupplier('${supplier.replace(/'/g, "\\'")}')">
+                    ${highlightKeyword(supplier, keyword)}</div>`;
+            });
+            dropdown.innerHTML = html;
+        }
+
+        function selectSupplier(supplierName) {
+            isSelectingSupplier = true;
+            const supplierInput = document.getElementById('filter-supplier');
+            const dropdown = document.getElementById('filter-supplier-dropdown');
+            if (supplierInput) supplierInput.value = supplierName;
+            dropdown.style.display = 'none';
+            setTimeout(() => {isSelectingSupplier = false;}, 300);
+        }
+
+        // ==========================================
+        // 10. Tab 切換邏輯
+        // ==========================================
+        function switchPurchaseTab(tabName, btnElement) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById('tab-' + tabName).classList.add('active');
+
+            if (tabName === 'orders') {
+                loadPurchaseOrdersWithFilters(1);
+            } else if (tabName === 'logs') {
+                loadAdjustmentLogsWithFilters(1);
+            }
+        }
+
+        // ==========================================
+        // 11. 庫存調整日誌篩選邏輯 (Tab 2 - 使用全新 ID)
+        // ==========================================
+
+        // 11.1 切換門店篩選框顯示
+        function toggleLogStoreFilter() {
+            const warehouseType = document.getElementById('log-warehouse').value;
+            const storeGroup = document.getElementById('log-store-group');
+            const storeSelect = document.getElementById('log-store-id');
+            if (warehouseType === 'OFFLINE') {
+                storeGroup.style.display = 'flex';
             } else {
-                if (typeof showNotification === 'function') showNotification(' ' + (result.message || '创建失败'), true);
-                saveBtn.innerHTML = originalBtnText;
-            }
-        } catch (error) {
-            console.error('创建采购订单失败:', error);
-            if (typeof showNotification === 'function') showNotification('❌ 网络错误，请稍后重试', true);
-            saveBtn.innerHTML = originalBtnText;
-        }
-    }
-
-    // 点击 Modal 外部关闭
-    document.getElementById('addPurchaseModal')?.addEventListener('click', function(e) {
-        if (e.target === this) {
-            closePurchaseModal();
-        }
-    });
-
-    // ESC 键关闭 Modal
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            const modal = document.getElementById('addPurchaseModal');
-            if (modal && modal.style.display === 'flex') {
-                closePurchaseModal();
+                storeGroup.style.display = 'none';
+                storeSelect.value = '';
             }
         }
-    });
 
-    // ==========================================
-    // 防止鼠標滾輪意外改變數字輸入框的值
-    // ==========================================
-    document.addEventListener('DOMContentLoaded', function() {
-        // 獲取頁面上所有的 number 類型輸入框
-        const numberInputs = document.querySelectorAll('input[type="number"]');
+        // 11.2 切換日期範圍輸入框顯示
+        function toggleLogDateRange() {
+            const mode = document.getElementById('log-date-mode').value;
+            const inputsDiv = document.getElementById('log-date-inputs');
+            if (mode === 'custom') {
+                inputsDiv.style.display = 'flex';
+            } else {
+                inputsDiv.style.display = 'none';
+                document.getElementById('log-date-start').value = '';
+                document.getElementById('log-date-end').value = '';
+            }
+        }
 
-        numberInputs.forEach(input => {
-            input.addEventListener('wheel', function(e) {
-                // 阻止鼠標滾輪的默認行為（即改變數值）
-                e.preventDefault();
-            }, { passive: false }); // passive: false 確保 preventDefault 能被正確執行
+        // 11.3 應用篩選條件
+        function applyLogFilters() {
+            loadAdjustmentLogsWithFilters(1);
+        }
+
+        // 11.4 重置篩選條件
+        function resetLogFilters() {
+            document.getElementById('filter-type').value = '';
+            document.getElementById('log-warehouse').value = '';
+            document.getElementById('log-store-group').style.display = 'none';
+            document.getElementById('log-store-id').value = '';
+            document.getElementById('log-operator').value = '';
+            document.getElementById('log-date-mode').value = 'all';
+            toggleLogDateRange();
+            loadAdjustmentLogsWithFilters(1);
+        }
+
+        // 11.5 帶篩選條件加載日誌數據
+        async function loadAdjustmentLogsWithFilters(page) {
+            try {
+                const params = new URLSearchParams();
+                params.append('page', page);
+                params.append('size', 25);
+
+                const type = document.getElementById('filter-type').value;
+                if (type) params.append('type', type);
+
+                const warehouse = document.getElementById('log-warehouse').value;
+                if (warehouse) params.append('warehouse', warehouse);
+
+                const storeId = document.getElementById('log-store-id').value;
+                if (storeId) params.append('storeId', storeId);
+
+                const operator = document.getElementById('log-operator').value;
+                if (operator) params.append('operator', operator);
+
+                if (document.getElementById('log-date-mode').value === 'custom') {
+                    const createStart = document.getElementById('log-date-start').value;
+                    const createEnd = document.getElementById('log-date-end').value;
+                    if (createStart) params.append('createStart', createStart);
+                    if (createEnd) params.append('createEnd', createEnd);
+                }
+
+                const response = await fetch(`/admin/api/admin/purchases/logs?${params.toString()}`);
+                const data = await response.json();
+
+                renderAdjustmentLogsTable(data.content);
+                renderPagination('logs-pagination', data.currentPage, data.totalPages, data.smartPages, 'loadAdjustmentLogsWithFilters');
+            } catch (error) {
+                console.error('加載庫存日誌失敗:', error);
+                const tbody = document.getElementById('logs-tbody');
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 3rem; color: #dc3545;">加載失敗: ${error.message}</td></tr>`;
+                }
+            }
+        }
+
+        // 11.6 渲染庫存調整日誌表格
+        function renderAdjustmentLogsTable(logs) {
+            const tbody = document.getElementById('logs-tbody');
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 3rem; color: var(--gray);"><i class="fas fa-clipboard-list" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>暫無庫存調整日誌</td></tr>`;
+                return;
+            }
+
+            let html = logs.map(log => {
+                const changeClass = log.changeQuantity > 0 ? 'text-success' : 'text-danger';
+                const changeSign = log.changeQuantity > 0 ? '+' : '';
+                let badgeClass = 'badge-manual';
+                if (log.adjustmentType === 'PURCHASE_IN') badgeClass = 'badge-purchase-in';
+                else if (log.adjustmentType === 'TRANSFER_IN' || log.adjustmentType === 'TRANSFER_OUT') badgeClass = 'badge-transfer';
+                else if (log.adjustmentType === 'DAMAGE' || log.adjustmentType === 'SALE_OUT') badgeClass = 'badge-damage';
+
+                return `<tr>
+                <td style="font-family: monospace; color: var(--gray);">#${log.logId}</td>
+                <td><div style="font-weight: 600;">${log.productName}</div></td>
+                <td><span class="status-badge ${badgeClass}">${log.adjustmentType}</span></td>
+                <td>${log.warehouseType === 'ONLINE' ? '<i class="fas fa-warehouse"></i> 線上總倉' : '🏪 ' + (log.storeName || '')}</td>
+                <td style="font-weight: 600; color: var(--gray);">${log.previousQuantity}</td>
+                <td style="font-weight: 600;">${log.newQuantity}</td>
+                <td class="${changeClass}" style="font-weight: 700;">${changeSign}${log.changeQuantity}</td>
+                <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${log.reason || ''}">${log.reason || '-'}</td>
+                <td style="font-family: monospace; font-size: 0.8rem; color: var(--gray);">${log.transferBatchId || '-'}</td>
+                <td>${new Date(log.createdAt).toLocaleString('zh-TW', {hour12: false})}</td>
+                <td>${log.operatorName}</td>
+            </tr>`;
+            }).join('');
+
+            tbody.innerHTML = html;
+        }
+
+        // ==========================================
+        // 12. Modal 相關函數 (新增/編輯採購訂單)
+        // ==========================================
+        async function loadProductsByBrand() {
+            const brandSelect = document.getElementById('brandSelect');
+            const productSelect = document.getElementById('productSelect');
+            const brand = brandSelect.value;
+            if (!brand) {
+                productSelect.innerHTML = '<option value="">請先選擇品牌</option>';
+                return Promise.resolve();
+            }
+            try {
+                const response = await fetch(`/brands/${encodeURIComponent(brand)}`);
+                const result = await response.json();
+                if (result.success && result.data) {
+                    productsCache = result.data;
+                    if (productsCache.length === 0) {
+                        productSelect.innerHTML = '<option value="">該品牌下暫無商品</option>';
+                    } else {
+                        let options = '<option value="">請選擇商品</option>';
+                        productsCache.forEach(product => {
+                            options += `<option value="${product.productId}">${product.description} (HK$ ${product.price})</option>`;
+                        });
+                        productSelect.innerHTML = options;
+                    }
+                }
+            } catch (error) {
+                console.error('加載商品列表失敗:', error);
+            }
+            return Promise.resolve();
+        }
+
+        async function openEditPurchaseModal(purchaseId) {
+            const order = window.currentPurchaseOrders.find(o => o.purchaseId === purchaseId);
+            if (!order) return;
+
+            document.getElementById('editPurchaseId').value = order.purchaseId;
+            document.getElementById('purchaseModalTitle').innerHTML = '<i class="fas fa-edit" style="color: var(--gold);"></i> 編輯採購訂單';
+            document.getElementById('savePurchaseBtn').innerHTML = '<i class="fas fa-save"></i> 保存修改';
+            document.getElementById('statusSelectGroup').style.display = 'block';
+            document.getElementById('orderStatus').value = order.status || 'PENDING';
+
+            document.getElementById('brandSelect').value = order.brand || '';
+            await loadProductsByBrand();
+            if (order.productId) {
+                document.getElementById('productSelect').value = String(order.productId);
+            }
+
+            document.getElementById('quantity').value = order.quantity;
+            document.getElementById('totalCost').value = order.totalCost;
+            document.getElementById('supplier').value = order.supplier || '';
+            document.getElementById('warehouseType').value = order.warehouseType || 'ONLINE';
+
+            if (order.purchaseDate) {
+                const dateStr = order.purchaseDate instanceof Date ? order.purchaseDate.toISOString().split('T')[0] : String(order.purchaseDate).split('T')[0];
+                document.getElementById('purchaseDate').value = dateStr;
+            }
+            document.getElementById('remark').value = order.remark || '';
+
+            toggleStoreSelect();
+            await loadStores();
+            if (order.warehouseType === 'OFFLINE' && order.storeId) {
+                document.getElementById('storeId').value = String(order.storeId);
+            }
+
+            document.getElementById('addPurchaseModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePurchaseModal() {
+            document.getElementById('addPurchaseModal').style.display = 'none';
+            document.body.style.overflow = '';
+            document.getElementById('purchaseOrderForm').reset();
+            document.getElementById('editPurchaseId').value = '';
+            document.getElementById('purchaseModalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color: var(--gold);"></i> 新增采购订单';
+            document.getElementById('savePurchaseBtn').innerHTML = '<i class="fas fa-save"></i> 确认创建';
+            document.getElementById('storeSelectGroup').style.display = 'none';
+            document.getElementById('statusSelectGroup').style.display = 'none';
+            productsCache = [];
+        }
+
+        async function submitPurchaseOrder(event) {
+            event.preventDefault();
+            const editId = document.getElementById('editPurchaseId').value;
+            const formData = {
+                productId: parseInt(document.getElementById('productSelect').value),
+                quantity: parseInt(document.getElementById('quantity').value),
+                totalCost: parseFloat(document.getElementById('totalCost').value),
+                supplier: document.getElementById('supplier').value.trim(),
+                warehouseType: document.getElementById('warehouseType').value,
+                purchaseDate: document.getElementById('purchaseDate').value,
+                remark: document.getElementById('remark').value.trim()
+            };
+
+            if (editId) {
+                formData.status = document.getElementById('orderStatus').value;
+            }
+
+            if (formData.warehouseType === 'OFFLINE') {
+                const storeId = document.getElementById('storeId').value;
+                if (!storeId) {
+                    if (typeof showNotification === 'function') showNotification('❌ 請選擇門店', true);
+                    return;
+                }
+                formData.storeId = parseInt(storeId);
+            }
+
+            try {
+                let url = '/admin/api/admin/purchases/orders';
+                let method = 'POST';
+                let successMsg = '✅ 採購訂單創建成功！';
+                if (editId) {
+                    url = `/admin/api/admin/purchases/orders/${editId}`;
+                    method = 'PUT';
+                    successMsg = '✅ 採購訂單修改成功！';
+                }
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(formData)
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (typeof showNotification === 'function') showNotification(successMsg);
+                    closePurchaseModal();
+                    // 根據當前激活的 Tab 決定刷新哪個列表
+                    const activeTab = document.querySelector('.tab-btn.active').textContent.includes('訂單') ? 'orders' : 'logs';
+                    if (activeTab === 'orders') loadPurchaseOrdersWithFilters(1);
+                    else loadAdjustmentLogsWithFilters(1);
+                } else {
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '操作失敗'), true);
+                }
+            } catch (error) {
+                console.error('操作失敗:', error);
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤', true);
+            }
+        }
+
+        function openAddPurchaseModal() {
+            document.getElementById('addPurchaseModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            document.getElementById('purchaseOrderForm').reset();
+            document.getElementById('editPurchaseId').value = '';
+            document.getElementById('purchaseModalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color: var(--gold);"></i> 新增采购订单';
+            document.getElementById('savePurchaseBtn').innerHTML = '<i class="fas fa-save"></i> 确认创建';
+            document.getElementById('brandSelect').value = '';
+            document.getElementById('productSelect').innerHTML = '<option value="">请先选择品牌</option>';
+            document.getElementById('purchaseDate').valueAsDate = new Date();
+            document.getElementById('statusSelectGroup').style.display = 'none';
+            document.getElementById('orderStatus').value = 'PENDING';
+            loadStores();
+        }
+
+        function toggleStoreSelect() {
+            const warehouseType = document.getElementById('warehouseType').value;
+            const storeSelectGroup = document.getElementById('storeSelectGroup');
+            const storeIdSelect = document.getElementById('storeId');
+            if (warehouseType === 'OFFLINE') {
+                storeSelectGroup.style.display = 'block';
+                storeIdSelect.setAttribute('required', 'required');
+            } else {
+                storeSelectGroup.style.display = 'none';
+                storeIdSelect.removeAttribute('required');
+                storeIdSelect.value = '';
+            }
+        }
+
+        async function loadStores() {
+            try {
+                const response = await fetch('/admin/stores/api/active-list');
+                const result = await response.json();
+                const storeIdSelect = document.getElementById('storeId');
+                if (result.success && result.data) {
+                    let options = '<option value="">請選擇門店</option>';
+                    result.data.forEach(store => {
+                        options += `<option value="${store.storeId}">${store.name}</option>`;
+                    });
+                    storeIdSelect.innerHTML = options;
+                }
+            } catch (error) {
+                console.error('加載門店列表失敗:', error);
+            }
+        }
+
+        // ==========================================
+        // 13. 入庫操作邏輯
+        // ==========================================
+        function handleStockIn(purchaseId) {
+            const order = window.currentPurchaseOrders.find(o => o.purchaseId === purchaseId);
+            if (!order) return;
+            if (order.status !== 'COMPLETED') {
+                if (typeof showNotification === 'function') showNotification('⚠️ 只有狀態為「已完成」的訂單才能執行入庫操作！', true);
+                return;
+            }
+            currentStockInPurchaseId = purchaseId;
+            openStockInModal();
+        }
+
+        function openStockInModal() {
+            const modal = document.getElementById('stockInConfirmModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeStockInModal() {
+            const modal = document.getElementById('stockInConfirmModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            currentStockInPurchaseId = null;
+        }
+
+        function executeStockIn() {
+            if (!currentStockInPurchaseId) return;
+            fetch(`/admin/api/admin/purchases/${currentStockInPurchaseId}/stock-in`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            }).then(async response => {
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    if (typeof showNotification === 'function') showNotification('✅ 入庫成功！庫存已更新。');
+                    closeStockInModal();
+                    loadPurchaseOrdersWithFilters(1);
+                } else {
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '入庫失敗'), true);
+                }
+            }).catch(error => {
+                console.error('入庫請求失敗:', error);
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤', true);
+            });
+        }
+
+        // ==========================================
+        // 14. 頁面初始化與全局事件監聽
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('✅ DOM 加載完成，開始初始化...');
+            loadFilterOptions();
+            initSupplierAutocomplete();
+            loadPurchaseOrdersWithFilters(1); // 默認加載 Tab 1
         });
-    });
-</script>
+
+        // 防止鼠標滾輪改變數字輸入框的值
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('input[type="number"]').forEach(input => {
+                input.addEventListener('wheel', function (e) {e.preventDefault();}, {passive: false});
+            });
+        });
+
+        // 點擊外部關閉 Modal
+        document.getElementById('addPurchaseModal')?.addEventListener('click', function (e) {
+            if (e.target === this) closePurchaseModal();
+        });
+        document.getElementById('stockInConfirmModal')?.addEventListener('click', function (e) {
+            if (e.target === this) closeStockInModal();
+        });
+
+        // ESC 鍵關閉 Modal
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal1 = document.getElementById('addPurchaseModal');
+                if (modal1 && modal1.style.display === 'flex') closePurchaseModal();
+                const modal2 = document.getElementById('stockInConfirmModal');
+                if (modal2 && modal2.style.display === 'flex') closeStockInModal();
+            }
+        });
+    </script>
 </body>
+
 </html>

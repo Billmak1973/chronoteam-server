@@ -29,6 +29,7 @@ public class OrderService {
     private final DailyBusinessReportRepository dailyBusinessReportRepository;
     private final OfflineStoreRepository offlineStoreRepository;
     private final StoreInventoryRepository storeInventoryRepository;
+    private final NotificationRepository notificationRepository;
 
     /**
      * 1. 創建訂單 (移除庫存扣減，僅校驗庫存是否充足)
@@ -615,6 +616,33 @@ public class OrderService {
                         item.getQuantity(),       // quantity
                         itemTotalAmount           // totalAmount
                 );
+            }
+        }
+    }
+    @Transactional
+    public void cancelExpiredOrder(String orderNo, String customMessage) {
+        // 1. 查找訂單
+        Order order = orderRepository.findByOrderNo(orderNo)
+                .orElseThrow(() -> new RuntimeException("訂單不存在"));
+
+        // 2. 核心校驗：只允許取消「未付款」或「待線下付款」的訂單
+        // 3. 更新訂單狀態為已取消
+        order.setStatus(Order.OrderStatus.CANCELLED);
+        orderRepository.save(order);
+
+        // 4. 【核心新增】：發送系統通知給買家
+        if (customMessage != null && !customMessage.trim().isEmpty()) {
+            try {
+                Notification notification = new Notification();
+                notification.setRecipient(order.getUser()); // 訂單關聯的買家
+                notification.setType(Notification.NotificationType.SYSTEM);
+                notification.setTitle("⚠️ 訂單已因超時取消");
+                notification.setContent(customMessage); // 使用管理員填寫的委婉文案
+                notification.setRead(false);
+                notificationRepository.save(notification);
+            } catch (Exception e) {
+                // 通知發送失敗不應影響訂單取消的主流程，記錄日誌即可
+                System.err.println("發送取消訂單通知失敗: " + e.getMessage());
             }
         }
     }

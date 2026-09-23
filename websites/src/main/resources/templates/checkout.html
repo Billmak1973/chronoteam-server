@@ -3590,9 +3590,7 @@
                 const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
                 const weekDay = weekDays[pickupDate.getDay()];
 
-                const displayText = daysLater === 1 ? '明天' :
-                    daysLater === 2 ? '後天' :
-                        `${weekDay}（${month}/${day}）`;
+                const displayText = `${weekDay}（${month}/${day}）`;
 
                 const option = document.createElement('option');
                 option.value = dateString;

@@ -1616,6 +1616,7 @@
       };
 
       try {
+        // 2. 【核心區別】：根據 id 是否有值，決定 URL 和 HTTP 方法
         const url = id ? `/admin/stores/api/update/${id}` : '/admin/stores/api/add';
         const res = await fetch(url, {
           method: id ? 'PUT' : 'POST',

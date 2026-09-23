@@ -305,4 +305,91 @@ public class InventoryManagementService {
             throw new RuntimeException("無效的目標倉庫類型: " + targetType);
         }
 }
+
+    /**
+     * 【新增】採購訂單入庫 (新增庫存)
+     * 專門處理採購訂單的入庫邏輯，使用 PURCHASE_IN 類型
+     *
+     * @return 返回生成的 InventoryAdjustmentLog 的 logId
+     */
+    @Transactional
+    public Long purchaseInStock(PurchaseOrder purchaseOrder, String operatorUsername) {
+        if (purchaseOrder == null || purchaseOrder.getQuantity() == null || purchaseOrder.getQuantity() <= 0) {
+            throw new RuntimeException("採購訂單或數量無效");
+        }
+
+        Product product = purchaseOrder.getProduct();
+        Integer quantity = purchaseOrder.getQuantity();
+        User operator = userRepository.findByUsername(operatorUsername)
+                .orElseThrow(() -> new RuntimeException("操作人不存在"));
+
+        String reason = "採購訂單入庫 (訂單ID: " + purchaseOrder.getPurchaseId() + ")";
+
+        // 用於保存最終的 logId
+        Long generatedLogId = null;
+
+        if (purchaseOrder.getWarehouseType() == PurchaseOrder.WarehouseType.ONLINE) {
+            // ================= 1. 線上總倉入庫 =================
+            Integer previousQuantity = product.getStock() != null ? product.getStock() : 0;
+            Integer newQuantity = previousQuantity + quantity;
+
+            product.setStock(newQuantity);
+            productRepository.save(product);
+
+            InventoryAdjustmentLog log = new InventoryAdjustmentLog();
+            log.setProduct(product);
+            log.setOperator(operator);
+            log.setWarehouseType(InventoryAdjustmentLog.WarehouseType.ONLINE);
+            log.setStore(null);
+            log.setPreviousQuantity(previousQuantity);
+            log.setNewQuantity(newQuantity);
+            log.setChangeQuantity(quantity);
+            log.setReason(reason);
+            log.setAdjustmentType(InventoryAdjustmentLog.AdjustmentType.PURCHASE_IN);
+
+            // 【核心修改】：保存並獲取生成的 logId
+            InventoryAdjustmentLog savedLog = adjustmentLogRepository.save(log);
+            generatedLogId = savedLog.getLogId();
+
+        } else if (purchaseOrder.getWarehouseType() == PurchaseOrder.WarehouseType.OFFLINE && purchaseOrder.getStore() != null) {
+            // ================= 2. 線下門店入庫 =================
+            OfflineStore store = purchaseOrder.getStore();
+
+            StoreInventory storeInv = storeInventoryRepository.findByStoreAndProduct(store, product)
+                    .orElseGet(() -> {
+                        StoreInventory newInv = new StoreInventory();
+                        newInv.setStore(store);
+                        newInv.setProduct(product);
+                        newInv.setQuantity(0);
+                        return newInv;
+                    });
+
+            Integer previousQuantity = storeInv.getQuantity() != null ? storeInv.getQuantity() : 0;
+            Integer newQuantity = previousQuantity + quantity;
+
+            storeInv.setQuantity(newQuantity);
+            storeInventoryRepository.save(storeInv);
+
+            InventoryAdjustmentLog log = new InventoryAdjustmentLog();
+            log.setProduct(product);
+            log.setOperator(operator);
+            log.setWarehouseType(InventoryAdjustmentLog.WarehouseType.OFFLINE);
+            log.setStore(store);
+            log.setPreviousQuantity(previousQuantity);
+            log.setNewQuantity(newQuantity);
+            log.setChangeQuantity(quantity);
+            log.setReason(reason);
+            log.setAdjustmentType(InventoryAdjustmentLog.AdjustmentType.PURCHASE_IN);
+
+            // 【核心修改】：保存並獲取生成的 logId
+            InventoryAdjustmentLog savedLog = adjustmentLogRepository.save(log);
+            generatedLogId = savedLog.getLogId();
+
+        } else {
+            throw new RuntimeException("無效的倉庫類型或缺失門店信息");
+        }
+
+        // 返回生成的 logId
+        return generatedLogId;
+    }
 }

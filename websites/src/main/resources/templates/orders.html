@@ -945,6 +945,35 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
         }
+
+        .return-order-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+            z-index: 10001; display: flex; justify-content: center; align-items: center;
+            animation: overlayFadeIn 0.3s ease;
+        }
+        .return-order-modal-box {
+            background: white; width: 90%; max-width: 550px; border-radius: 16px;
+            padding: 2rem; position: relative; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-top: 4px solid #fd7e14; animation: modalSlideUp 0.4s ease; max-height: 90vh; overflow-y: auto;
+        }
+        .return-store-info {
+            background: linear-gradient(135deg, #fff9f0 0%, #fff3cd 100%);
+            border: 1px solid #ffeeba; border-radius: 8px; padding: 1rem;
+            margin: 1rem 0; font-size: 0.9rem; color: #856404;
+        }
+        .return-store-info strong { color: #664d03; display: block; margin-bottom: 0.3rem; }
+        .return-store-info ul { margin: 0.5rem 0 0 1.2rem; padding: 0; }
+        .return-store-info li { margin-bottom: 0.3rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.4rem; color: var(--primary); font-size: 0.9rem; }
+        .form-control {
+            width: 100%; padding: 0.7rem; border: 2px solid #e9ecef; border-radius: 8px;
+            font-size: 0.95rem; transition: all 0.3s;
+        }
+        .form-control:focus { outline: none; border-color: #fd7e14; box-shadow: 0 0 0 3px rgba(253, 126, 20, 0.15); }
+        .form-control:disabled { background: #f8f9fa; cursor: not-allowed; }
+
     </style>
 </head>
 
@@ -1045,6 +1074,62 @@
         </div>
     </div>
 
+    <div id="returnOrderModal" class="return-order-overlay" style="display: none;">
+        <div class="return-order-modal-box">
+            <h3 class="modal-title" style="text-align: center; margin-bottom: 1.5rem;">
+                <i class="fas fa-undo-alt" style="color: #fd7e14; margin-right: 0.5rem;"></i> 申請退貨
+            </h3>
+
+            <div class="order-no-display" style="text-align: center; margin-bottom: 1.5rem;">
+                訂單編號：<span id="returnOrderNoDisplay" class="order-no-highlight"></span>
+            </div>
+
+            <form id="returnOrderForm" onsubmit="event.preventDefault(); confirmReturnOrder();">
+                <!-- 店鋪選擇 (由 JS 動態填充) -->
+                <div class="form-group">
+                    <label><i class="fas fa-store"></i> 選擇退貨店鋪 <span style="color: #dc3545;">*</span></label>
+                    <select id="returnStoreSelect" class="form-control" onchange="updateReturnStoreInfo(this.value)" required>
+                        <option value="">請先加載或選擇店鋪...</option>
+                    </select>
+                </div>
+
+                <!-- 營業時間與退貨規則提醒 (由 JS 動態生成) -->
+                <div id="returnStoreInfo" class="return-store-info" style="display: none;">
+                    <strong><i class="fas fa-info-circle"></i> 店鋪資訊與退貨須知：</strong>
+                    <ul id="returnStoreInfoList"></ul>
+                </div>
+
+                <!-- 預約日期 -->
+                <div class="form-group">
+                    <label><i class="fas fa-calendar-alt"></i> 預約到店日期 <span style="color: #dc3545;">*</span></label>
+                    <input type="date" id="returnDate" class="form-control" onchange="updateReturnTimeSlots()" required>
+                </div>
+
+                <!-- 預約時間 (改為手動輸入 time) -->
+                <div class="form-group">
+                    <label><i class="fas fa-clock"></i> 預約時間 <span style="color: #dc3545;">*</span></label>
+                    <input type="time" id="returnTimeSlot" class="form-control" required disabled>
+                    <small id="returnTimeHint" class="form-text" style="display: none; color: #6c757d; margin-top: 0.3rem;">
+                        <i class="fas fa-info-circle"></i> <span id="returnTimeHintText"></span>
+                    </small>
+                </div>
+
+                <!-- 退貨原因 -->
+                <div class="form-group">
+                    <label><i class="fas fa-comment-dots"></i> 退貨原因 <span style="color: #dc3545;">*</span></label>
+                    <textarea id="returnReason" class="form-control" rows="3" placeholder="請簡述退貨原因（例如：尺寸不合、商品瑕疵等）" required></textarea>
+                </div>
+
+                <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
+                    <button type="button" class="btn-cancel-modal" onclick="closeReturnOrderModal()">取消</button>
+                    <button type="submit" class="btn-confirm-cancel" style="background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%); box-shadow: 0 4px 12px rgba(253, 126, 20, 0.3);">
+                        <i class="fas fa-paper-plane"></i> 確認申請
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div th:replace="~{fragments/common :: modals}"></div>
 
     <!-- ========================================== -->
@@ -1074,6 +1159,10 @@
             pendingDeleteButton: null,
             currentCancelOrderNo: null,
 
+            // 退貨相關狀態
+            currentReturnOrderNo: null,
+            loadedStores: [], // 緩存店鋪數據
+
             // API 路徑映射
             apiMap: {
                 'unpaid': '/api/account/orders/unpaid',
@@ -1086,46 +1175,28 @@
         const CTO = window.ChronoTeamOrders;
 
         // ==========================================
-        // 2. 核心業務函數定義
+        // 2. 核心業務函數定義 (訂單列表)
         // ==========================================
-
-        /**
-         * 切換 Tab
-         */
         function switchTab(tabName) {
             if (CTO.currentTab === tabName) return;
-
-            // UI 切換
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             event.currentTarget.classList.add('active');
-
-            // 重置狀態並加載
             CTO.currentTab = tabName;
             CTO.currentPage = 1;
             loadOrders(tabName, 1);
         }
 
-        /**
-         * AJAX 加載訂單數據
-         */
         async function loadOrders(type, page) {
             const container = document.getElementById('orders-container');
             const paginationContainer = document.getElementById('pagination-container');
-
-            container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--gold);"></i>
-                <p style="margin-top: 1rem;">正在加載訂單...</p>
-            </div>`;
+            container.innerHTML = `<div class="empty-state"><i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--gold);"></i><p style="margin-top: 1rem;">正在加載訂單...</p></div>`;
             paginationContainer.innerHTML = '';
 
             try {
                 const apiUrl = CTO.apiMap[type];
                 if (!apiUrl) throw new Error('無效的訂單類型');
-
                 const response = await fetch(`${apiUrl}?page=${page}`);
                 const result = await response.json();
-
                 if (!response.ok) throw new Error(result.message || '加載失敗');
 
                 if (result.content && result.content.length > 0) {
@@ -1133,25 +1204,13 @@
                 } else {
                     container.innerHTML = renderEmptyState(type);
                 }
-
                 renderSmartPagination(paginationContainer, result.currentPage + 1, result.totalPages, result.smartPages);
-
             } catch (error) {
                 console.error('加載訂單失敗:', error);
-                container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--accent);"></i>
-                    <p style="margin-top: 1rem; color: var(--accent);">${error.message}</p>
-                    <button class="btn-sm btn-view" onclick="ChronoTeamOrders.loadOrders('${type}', ${page})" style="margin-top: 1rem;">
-                        <i class="fas fa-redo"></i> 重試
-                    </button>
-                </div>`;
+                container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: var(--accent);"></i><p style="margin-top: 1rem; color: var(--accent);">${error.message}</p><button class="btn-sm btn-view" onclick="ChronoTeamOrders.loadOrders('${type}', ${page})" style="margin-top: 1rem;"><i class="fas fa-redo"></i> 重試</button></div>`;
             }
         }
 
-        /**
-         * 渲染訂單卡片
-         */
         function renderOrderCards(orders, type) {
             return orders.map(order => {
                 const isUnpaid = type === 'unpaid';
@@ -1163,14 +1222,10 @@
                     statusBadge = `<span class="status-badge status-PENDING"><i class="fas fa-exclamation-circle"></i> ${isUnpaid ? '待付款' : '待线下付款'}</span>`;
                 } else {
                     const statusClass = `status-${order.status}`;
-                    let icon = 'fa-check-circle';
-                    let text = order.status;
+                    let icon = 'fa-check-circle', text = order.status;
                     switch (order.status) {
                         case 'PENDING': icon = 'fa-exclamation-circle'; text = '待付款'; break;
-                        case 'PAID':
-                            icon = order.offlineStore ? 'fa-store' : 'fa-check-circle';
-                            text = order.offlineStore ? '已付款/待取貨' : '已付款/待發貨';
-                            break;
+                        case 'PAID': icon = order.offlineStore ? 'fa-store' : 'fa-check-circle'; text = order.offlineStore ? '已付款/待取貨' : '已付款/待發貨'; break;
                         case 'SHIPPED': icon = 'fa-truck'; text = '已發貨'; break;
                         case 'COMPLETED': icon = 'fa-star'; text = '已完成'; break;
                         case 'CANCELLED': icon = 'fa-times-circle'; text = '已取消'; break;
@@ -1179,9 +1234,8 @@
                 }
 
                 let paymentInfo = '';
-                if (isUnpaid) {
-                    paymentInfo = '<strong>線上支付 (PayPal/信用卡)</strong>';
-                } else if (isPendingOffline || (isPaid && order.paymentMethod === 'OFFLINE_STORE')) {
+                if (isUnpaid) paymentInfo = '<strong>線上支付 (PayPal/信用卡)</strong>';
+                else if (isPendingOffline || (isPaid && order.paymentMethod === 'OFFLINE_STORE')) {
                     const storeName = order.offlineStore ? order.offlineStore.name : '';
                     paymentInfo = `<strong>线下店铺支付</strong> ${storeName ? `<span style="color: var(--gold); font-size: 0.85rem; margin-left: 0.5rem;">(<i class="fas fa-map-marker-alt"></i> ${storeName})</span>` : ''}`;
                 } else {
@@ -1190,46 +1244,29 @@
 
                 let hintHtml = '';
                 if (isUnpaid) {
-                    // 使用網絡訂單保留天數配置，若無則默認 1 天
                     const days = (typeof onlineOrderRetentionDaysConfig !== 'undefined' && onlineOrderRetentionDaysConfig !== null) ? onlineOrderRetentionDaysConfig : 1;
-                    const hours = days * 24;
-                    hintHtml = `<p style="color: #dc3545; font-weight: 600;"><i class="fas fa-info-circle"></i> 請盡快完成付款，訂單將保留 ${hours} 小時</p>`;
+                    hintHtml = `<p style="color: #dc3545; font-weight: 600;"><i class="fas fa-info-circle"></i> 請盡快完成付款，訂單將保留 ${days * 24} 小時</p>`;
                 } else if (isPendingOffline) {
-                    // 使用線下付款保留天數配置，若無則默認 3 天
                     const days = (typeof offlinePaymentDaysConfig !== 'undefined' && offlinePaymentDaysConfig !== null) ? offlinePaymentDaysConfig : 3;
-                    const hours = days * 24;
-                    hintHtml = `<p style="color: #dc3545; font-weight: 600;"><i class="fas fa-info-circle"></i> 請盡快前往店鋪完成付款，訂單將保留 ${hours} 小時</p>`;
+                    hintHtml = `<p style="color: #dc3545; font-weight: 600;"><i class="fas fa-info-circle"></i> 請盡快前往店鋪完成付款，訂單將保留 ${days * 24} 小時</p>`;
                 } else if (isPaid && order.status === 'COMPLETED' && order.receivedAt) {
                     const receivedAt = new Date(order.receivedAt);
-                    const now = new Date();
-                    const diffDays = (now - receivedAt) / (1000 * 60 * 60 * 24);
+                    const diffDays = (new Date() - receivedAt) / (1000 * 60 * 60 * 24);
                     if (typeof returnDaysConfig !== 'undefined' && returnDaysConfig && diffDays <= returnDaysConfig) {
                         const deadline = new Date(receivedAt.getTime() + returnDaysConfig * 86400000);
-                        hintHtml += `<p style="color: #155724; font-weight: 600; font-size: 0.85rem; background: rgba(40, 167, 69, 0.1); border-left: 3px solid #28a745; padding: 0.5rem 0.8rem; border-radius: 6px; margin-bottom: 0.5rem;">
-                        <i class="fas fa-undo"></i> 該物品若無故意損壞的痕跡，可以 ${returnDaysConfig} 天內申請無條件原額退貨！<br>
-                        <small><i class="fas fa-hourglass-half"></i> 退貨期限至：${formatDate(deadline)}</small></p>`;
+                        hintHtml += `<p style="color: #155724; font-weight: 600; font-size: 0.85rem; background: rgba(40, 167, 69, 0.1); border-left: 3px solid #28a745; padding: 0.5rem 0.8rem; border-radius: 6px; margin-bottom: 0.5rem;"><i class="fas fa-undo"></i> 該物品若無故意損壞的痕跡，可以 ${returnDaysConfig} 天內申請無條件原額退貨！<br><small><i class="fas fa-hourglass-half"></i> 退貨期限至：${formatDate(deadline)}</small></p>`;
                     }
                     if (typeof exchangeDaysConfig !== 'undefined' && exchangeDaysConfig && diffDays <= exchangeDaysConfig) {
                         const deadline = new Date(receivedAt.getTime() + exchangeDaysConfig * 86400000);
-                        hintHtml += `<p style="color: #0c5460; font-weight: 600; font-size: 0.85rem; background: rgba(23, 162, 184, 0.1); border-left: 3px solid #17a2b8; padding: 0.5rem 0.8rem; border-radius: 6px;">
-                        <i class="fas fa-exchange-alt"></i> 該物品若無故意損壞的痕跡，可以 ${exchangeDaysConfig} 天內申請無條件換貨！<br>
-                        <small><i class="fas fa-hourglass-half"></i> 換貨期限至：${formatDate(deadline)}</small></p>`;
+                        hintHtml += `<p style="color: #0c5460; font-weight: 600; font-size: 0.85rem; background: rgba(23, 162, 184, 0.1); border-left: 3px solid #17a2b8; padding: 0.5rem 0.8rem; border-radius: 6px;"><i class="fas fa-exchange-alt"></i> 該物品若無故意損壞的痕跡，可以 ${exchangeDaysConfig} 天內申請無條件換貨！<br><small><i class="fas fa-hourglass-half"></i> 換貨期限至：${formatDate(deadline)}</small></p>`;
                     }
                 }
 
                 let actionsHtml = '';
-                if (isUnpaid && order.paymentMethod === 'PAYPAL_SIM') {
-                    actionsHtml += `<a href="/checkout?orderNo=${order.orderNo}" class="btn-sm btn-pay"><i class="fas fa-credit-card"></i> 立即支付</a>`;
-                }
-                if (isPendingOffline) {
-                    actionsHtml += `<button class="btn-sm btn-contact" onclick="showNotification('📞 請前往選擇的店鋪完成付款，或聯繫客服：+852 1234 5678')"><i class="fas fa-phone"></i> 聯繫店鋪</button>`;
-                }
-                if (isPaid && order.status === 'PAID') {
-                    actionsHtml += `<button class="btn-sm btn-cancel-order" onclick="ChronoTeamOrders.openCancelOrderModal('${order.orderNo}')" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none;"><i class="fas fa-times-circle"></i> 取消訂單</button>`;
-                }
-                if (isUnpaid || isPendingOffline) {
-                    actionsHtml += `<button class="btn-sm btn-delete-order" onclick="ChronoTeamOrders.openDeleteOrderModal(this)" data-order-no="${order.orderNo}"><i class="fas fa-trash-alt"></i> 刪除訂單</button>`;
-                }
+                if (isUnpaid && order.paymentMethod === 'PAYPAL_SIM') actionsHtml += `<a href="/checkout?orderNo=${order.orderNo}" class="btn-sm btn-pay"><i class="fas fa-credit-card"></i> 立即支付</a>`;
+                if (isPendingOffline) actionsHtml += `<button class="btn-sm btn-contact" onclick="showNotification('📞 請前往選擇的店鋪完成付款，或聯繫客服：+852 1234 5678')"><i class="fas fa-phone"></i> 聯繫店鋪</button>`;
+                if (isPaid && order.status === 'PAID') actionsHtml += `<button class="btn-sm btn-cancel-order" onclick="ChronoTeamOrders.openCancelOrderModal('${order.orderNo}')" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none;"><i class="fas fa-times-circle"></i> 取消訂單</button>`;
+                if (isUnpaid || isPendingOffline) actionsHtml += `<button class="btn-sm btn-delete-order" onclick="ChronoTeamOrders.openDeleteOrderModal(this)" data-order-no="${order.orderNo}"><i class="fas fa-trash-alt"></i> 刪除訂單</button>`;
                 actionsHtml += `<button class="btn-sm btn-view toggle-details-btn" onclick="ChronoTeamOrders.toggleOrderDetails(this)" data-order-no="${order.orderNo}"><i class="fas fa-eye"></i> 查看詳情</button>`;
 
                 let timeExtra = '';
@@ -1246,8 +1283,7 @@
                     <div class="order-info">
                         <p>訂單狀態：${statusBadge}</p>
                         <p>支付方式：${paymentInfo}</p>
-                        ${hintHtml}
-                        ${timeExtra}
+                        ${hintHtml}${timeExtra}
                     </div>
                     <div class="order-amount">HK$ ${formatPrice(order.totalAmount)}</div>
                     <div class="order-actions">${actionsHtml}</div>
@@ -1281,24 +1317,19 @@
                 return;
             }
             let html = '<div class="pagination-wrapper">';
-            if (currentPage > 1) {
-                html += `<button type="button" class="page-btn" onclick="ChronoTeamOrders.loadOrders('${CTO.currentTab}', ${currentPage - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
-            } else {
-                html += `<button type="button" class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
-            }
+            if (currentPage > 1) html += `<button type="button" class="page-btn" onclick="ChronoTeamOrders.loadOrders('${CTO.currentTab}', ${currentPage - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+            else html += `<button type="button" class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+
             smartPages.forEach(item => {
-                if (item.isEllipsis) {
-                    html += `<span class="page-ellipsis">...</span>`;
-                } else {
+                if (item.isEllipsis) html += `<span class="page-ellipsis">...</span>`;
+                else {
                     const isActive = item.pageNumber === currentPage ? 'active' : '';
                     html += `<button type="button" class="page-btn ${isActive}" onclick="ChronoTeamOrders.loadOrders('${CTO.currentTab}', ${item.pageNumber})">${item.pageNumber}</button>`;
                 }
             });
-            if (currentPage < totalPages) {
-                html += `<button type="button" class="page-btn" onclick="ChronoTeamOrders.loadOrders('${CTO.currentTab}', ${currentPage + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
-            } else {
-                html += `<button type="button" class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
-            }
+
+            if (currentPage < totalPages) html += `<button type="button" class="page-btn" onclick="ChronoTeamOrders.loadOrders('${CTO.currentTab}', ${currentPage + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
+            else html += `<button type="button" class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
             html += '</div>';
             container.innerHTML = html;
         }
@@ -1313,8 +1344,7 @@
             if (isExpanded) {
                 detailsDiv.classList.remove('expanded');
                 icon.className = 'fas fa-eye';
-                if (textSpan.nodeType === 3) textSpan.textContent = ' 查看詳情';
-                else textSpan.textContent = '查看詳情';
+                textSpan.textContent = textSpan.nodeType === 3 ? ' 查看詳情' : '查看詳情';
             } else {
                 const itemsList = detailsDiv.querySelector('.order-items-list');
                 if (itemsList.innerHTML.includes('點擊展開後自動加載') || itemsList.innerHTML.includes('正在加載')) {
@@ -1323,10 +1353,8 @@
                         const response = await fetch(`/api/order/${orderNo}/details`);
                         const result = await response.json();
                         const orderCard = button.closest('.order-card');
-                        const orderStatus = orderCard.getAttribute('data-order-status');
-                        const receivedAtStr = orderCard.getAttribute('data-received-at');
                         if (response.ok && result.success) {
-                            await renderOrderItems(itemsList, result.data, orderNo, orderStatus, receivedAtStr);
+                            await renderOrderItems(itemsList, result.data, orderNo, orderCard.getAttribute('data-order-status'), orderCard.getAttribute('data-received-at'));
                         } else {
                             itemsList.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--accent);"><i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:1rem;"></i><p>加載失敗：${result.message || '請稍後重試'}</p></div>`;
                         }
@@ -1337,8 +1365,7 @@
                 }
                 detailsDiv.classList.add('expanded');
                 icon.className = 'fas fa-chevron-up';
-                if (textSpan.nodeType === 3) textSpan.textContent = ' 收起詳情';
-                else textSpan.textContent = '收起詳情';
+                textSpan.textContent = textSpan.nodeType === 3 ? ' 收起詳情' : '收起詳情';
             }
         }
 
@@ -1365,7 +1392,8 @@
                     const receivedAt = new Date(receivedAtStr);
                     const diffDays = (new Date() - receivedAt) / (1000 * 60 * 60 * 24);
                     if (typeof returnDaysConfig !== 'undefined' && returnDaysConfig != null && diffDays <= returnDaysConfig) {
-                        returnBtnHtml = `<button class="btn-sm btn-return" onclick="showNotification('⚠️ 退貨功能開發中，如需退貨請聯繫客服處理', true)"><i class="fas fa-undo-alt"></i> 申請退貨</button>`;
+                        // 這裡調用全局的 openReturnModal
+                        returnBtnHtml = `<button class="btn-sm btn-return" onclick="openReturnModal('${orderNo}')"><i class="fas fa-undo-alt"></i> 申請退貨</button>`;
                     }
                     if (typeof exchangeDaysConfig !== 'undefined' && exchangeDaysConfig != null && diffDays <= exchangeDaysConfig) {
                         exchangeBtnHtml = `<button class="btn-sm btn-exchange" onclick="showNotification('⚠️ 換貨功能開發中，如需換貨請聯繫客服處理', true)"><i class="fas fa-exchange-alt"></i> 申請換貨</button>`;
@@ -1373,10 +1401,7 @@
                 }
                 let actionBtnHtml = '';
                 if (status.reviewed) {
-                    actionBtnHtml = `<div style="display:flex;flex-direction:column;gap:0.3rem;align-items:center;">
-                    <button class="btn-sm btn-review" onclick="ChronoTeamOrders.viewMyReview(${item.product.id})" style="background:#6c757d;cursor:pointer;width:100%;"><i class="fas fa-check-circle"></i> 已評價</button>
-                    <div style="font-size:0.8rem;color:var(--gold);cursor:pointer;text-align:center;font-weight:600;" onclick="ChronoTeamOrders.viewMyReview(${item.product.id})"><i class="fas fa-eye"></i> 去查看評價！</div>
-                </div>` + returnBtnHtml + exchangeBtnHtml;
+                    actionBtnHtml = `<div style="display:flex;flex-direction:column;gap:0.3rem;align-items:center;"><button class="btn-sm btn-review" onclick="ChronoTeamOrders.viewMyReview(${item.product.id})" style="background:#6c757d;cursor:pointer;width:100%;"><i class="fas fa-check-circle"></i> 已評價</button><div style="font-size:0.8rem;color:var(--gold);cursor:pointer;text-align:center;font-weight:600;" onclick="ChronoTeamOrders.viewMyReview(${item.product.id})"><i class="fas fa-eye"></i> 去查看評價！</div></div>` + returnBtnHtml + exchangeBtnHtml;
                 } else if (status.canReview) {
                     actionBtnHtml = `<button class="btn-sm btn-review" onclick="ChronoTeamOrders.reviewProduct(${item.product.id}, '${orderNo}')"><i class="fas fa-star"></i> 評價商品</button>` + returnBtnHtml + exchangeBtnHtml;
                 } else {
@@ -1399,7 +1424,7 @@
         }
 
         // ==========================================
-        // 3. 輔助函數 & 業務操作
+        // 3. 輔助函數 & 業務操作 (訂單)
         // ==========================================
         function formatPrice(price) {
             return new Intl.NumberFormat('zh-HK', {minimumFractionDigits: 0, maximumFractionDigits: 0}).format(price);
@@ -1443,10 +1468,7 @@
             const orderNoToDelete = CTO.pendingDeleteOrderNo;
             closeDeleteOrderModal();
             try {
-                const res = await fetch(`/api/order/${orderNoToDelete}`, {
-                    method: 'DELETE',
-                    headers: {'Content-Type': 'application/json'}
-                });
+                const res = await fetch(`/api/order/${orderNoToDelete}`, {method: 'DELETE', headers: {'Content-Type': 'application/json'}});
                 const result = await res.json();
                 if (res.ok && result.success) {
                     showNotification('✅ 訂單已成功刪除');
@@ -1491,7 +1513,283 @@
         }
 
         // ==========================================
-        // 4. 暴露全局 API (僅掛載到命名空間)
+        // 4. 【新增】退貨業務邏輯 (配合新的 HTML 結構)
+        // ==========================================
+
+        /**
+         * 打開退貨申請模態框
+         */
+        window.openReturnModal = function(orderNo) {
+            CTO.currentReturnOrderNo = orderNo;
+            document.getElementById('returnOrderNoDisplay').textContent = orderNo;
+            document.getElementById('returnOrderForm').reset();
+            document.getElementById('returnStoreInfo').style.display = 'none';
+            document.getElementById('returnTimeSlot').disabled = true;
+            document.getElementById('returnTimeSlot').value = '';
+            document.getElementById('returnTimeHint').style.display = 'none';
+            document.getElementById('returnOrderModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            // 加載店鋪列表
+            loadReturnStores();
+        };
+
+        /**
+         * 關閉退貨申請模態框
+         */
+        window.closeReturnOrderModal = function() {
+            document.getElementById('returnOrderModal').style.display = 'none';
+            document.body.style.overflow = '';
+            CTO.currentReturnOrderNo = null;
+        };
+
+        /**
+         * 加載活躍店鋪列表
+         */
+        async function loadReturnStores() {
+            const select = document.getElementById('returnStoreSelect');
+            select.innerHTML = '<option value="">加載中...</option>';
+            try {
+                const res = await fetch('/admin/stores/api/stores/available');
+                const data = await res.json();
+
+                select.innerHTML = '<option value="">請選擇退貨店鋪...</option>';
+                if (data.success && data.data) {
+                    CTO.loadedStores = data.data;
+                    CTO.loadedStores.forEach(store => {
+                        const option = document.createElement('option');
+                        option.value = store.storeId;
+                        option.textContent = store.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (e) {
+                console.error('加載店鋪失敗:', e);
+                select.innerHTML = '<option value="">加載失敗，請刷新重試</option>';
+            }
+        }
+
+        /**
+         * 當店鋪選擇改變時，更新營業資訊與日期限制
+         */
+        window.updateReturnStoreInfo = function(storeId) {
+            const store = CTO.loadedStores.find(s => s.storeId == storeId);
+            const infoBox = document.getElementById('returnStoreInfo');
+            const infoList = document.getElementById('returnStoreInfoList');
+            const dateInput = document.getElementById('returnDate');
+            const timeInput = document.getElementById('returnTimeSlot');
+
+            if (!store) {
+                infoBox.style.display = 'none';
+                dateInput.disabled = true;
+                timeInput.disabled = true;
+                return;
+            }
+
+            // 1. 解析營業時間
+            let hoursText = '未設置';
+            if (store.scheduleMode === 'UNIFIED') {
+                hoursText = `統一營業時間：${store.hours || '未設置'}`;
+            } else if (store.scheduleMode === 'DAILY' && store.dailyHours) {
+                try {
+                    const daily = JSON.parse(store.dailyHours);
+                    const today = new Date().getDay();
+                    const dayKey = today === 0 ? 7 : today;
+                    const dayData = daily[dayKey];
+                    if (dayData && !dayData.closed) {
+                        hoursText = `今日營業時間：${dayData.start} - ${dayData.end}`;
+                    } else {
+                        hoursText = `今日店鋪休息`;
+                    }
+                } catch(e) { hoursText = '營業時間解析錯誤'; }
+            }
+
+            // 2. 組裝提示 HTML
+            let rulesHtml = `<li><i class="fas fa-clock"></i> ${hoursText}</li>`;
+            if (store.returnAdvanceDays > 0) {
+                rulesHtml += `<li><i class="fas fa-calendar-check"></i> 需至少提前 <span style="color: #dc3545; font-style: italic; font-weight: 600;">${store.returnAdvanceDays}</span> 天預約</li>`;
+            }
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (store.returnBlackoutStartDate && store.returnBlackoutEndDate) {
+                if (todayStr >= store.returnBlackoutStartDate && todayStr <= store.returnBlackoutEndDate) {
+                    rulesHtml += `<li style="color: #dc3545;"><i class="fas fa-ban"></i> 暫停退貨： ${store.returnBlackoutStartDate} 至 ${store.returnBlackoutEndDate} (${store.returnBlackoutReason || '店鋪盤點/假期'})</li>`;
+                }
+            }
+
+            infoList.innerHTML = rulesHtml;
+            infoBox.style.display = 'block';
+
+            // 3. 設置日期輸入限制
+            dateInput.disabled = false;
+            timeInput.disabled = true; // 必須先選日期
+            dateInput.value = '';
+
+            const minDate = new Date();
+            minDate.setDate(minDate.getDate() + (store.returnAdvanceDays || 0));
+            dateInput.min = minDate.toISOString().split('T')[0];
+        };
+
+        /**
+         * 當預約日期改變時，驗證並限制時間輸入範圍
+         */
+        window.updateReturnTimeSlots = function() {
+            const storeId = document.getElementById('returnStoreSelect').value;
+            const selectedDateStr = document.getElementById('returnDate').value;
+            const timeInput = document.getElementById('returnTimeSlot');
+            const hintBox = document.getElementById('returnTimeHint');
+            const hintText = document.getElementById('returnTimeHintText');
+
+            if (!storeId || !selectedDateStr) {
+                timeInput.disabled = true;
+                timeInput.value = '';
+                hintBox.style.display = 'none';
+                return;
+            }
+
+            const store = CTO.loadedStores.find(s => s.storeId == storeId);
+            const selectedDate = new Date(selectedDateStr);
+            const dayOfWeek = selectedDate.getDay() === 0 ? 7 : selectedDate.getDay(); // 1-7
+
+            // ==========================================
+            // 【新增核心攔截】：檢查是否處於暫停退貨期間
+            // ==========================================
+            if (store.returnBlackoutStartDate && store.returnBlackoutEndDate) {
+                // YYYY-MM-DD 格式的字符串可以直接安全地進行大小比較
+                if (selectedDateStr >= store.returnBlackoutStartDate && selectedDateStr <= store.returnBlackoutEndDate) {
+                    timeInput.disabled = true;
+                    timeInput.value = '';
+                    hintBox.style.display = 'block';
+
+                    // 如果有填寫原因，則一併顯示
+                    const reasonText = store.returnBlackoutReason ? ` (原因: ${store.returnBlackoutReason})` : '';
+                    hintText.innerHTML = `⚠️ 該日期為暫停退貨期間${reasonText}，無法預約。`;
+                    hintText.style.color = '#dc3545';
+                    return; // 直接攔截，不執行後續的營業時間檢查
+                }
+            }
+
+            // 1. 檢查是否為店鋪固定休息日
+            if (store.returnClosedDaysOfWeek) {
+                const closedDays = String(store.returnClosedDaysOfWeek).split(',').map(d => parseInt(d.trim()));
+                if (closedDays.includes(dayOfWeek)) {
+                    timeInput.disabled = true;
+                    timeInput.value = '';
+                    hintBox.style.display = 'block';
+                    hintText.textContent = '該日為店鋪固定休息日，無法預約退貨。';
+                    hintText.style.color = '#dc3545';
+                    return;
+                }
+            }
+
+            // 2. 獲取該日的營業時間並轉換為 24 小時制 (HH:mm)
+            let startTime = '10:00', endTime = '18:00'; // 默認值
+            if (store.scheduleMode === 'UNIFIED' && store.hours) {
+                const times = parseBusinessHours(store.hours);
+                if (times) { startTime = times.start; endTime = times.end; }
+            } else if (store.scheduleMode === 'DAILY' && store.dailyHours) {
+                try {
+                    const daily = JSON.parse(store.dailyHours);
+                    const dayData = daily[dayOfWeek];
+                    if (dayData && !dayData.closed) {
+                        const times = parseBusinessHours(`${dayData.start} - ${dayData.end}`);
+                        if (times) { startTime = times.start; endTime = times.end; }
+                    }
+                } catch(e) {}
+            }
+
+            // 3. 設置 input type="time" 的 min 和 max 屬性，瀏覽器會自動限制輸入
+            timeInput.disabled = false;
+            timeInput.min = startTime;
+            timeInput.max = endTime;
+
+            // 4. 顯示提示文字
+            hintBox.style.display = 'block';
+            hintText.textContent = `請在營業時間內選擇：${startTime} 至 ${endTime}`;
+            hintText.style.color = '#6c757d';
+
+            // 如果當前值不在範圍內，清空它
+            if (timeInput.value && (timeInput.value < startTime || timeInput.value > endTime)) {
+                timeInput.value = '';
+            }
+        };
+
+        /**
+         * 輔助函數：將 "10:00 AM - 06:00 PM" 轉換為 {start: "10:00", end: "18:00"}
+         */
+        function parseBusinessHours(hoursStr) {
+            const parts = hoursStr.split('-');
+            if (parts.length === 2) {
+                return {
+                    start: convertTo24Hour(parts[0].trim()),
+                    end: convertTo24Hour(parts[1].trim())
+                };
+            }
+            return null;
+        }
+
+        function convertTo24Hour(timeStr) {
+            const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+            if (!match) return "10:00";
+            let hours = parseInt(match[1]);
+            const mins = match[2];
+            const period = match[3].toUpperCase();
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            return `${String(hours).padStart(2, '0')}:${mins}`;
+        }
+
+        /**
+         * 確認提交退貨申請
+         */
+        window.confirmReturnOrder = async function() {
+            const orderNo = CTO.currentReturnOrderNo;
+            const storeId = document.getElementById('returnStoreSelect').value;
+            const returnDate = document.getElementById('returnDate').value;
+            const returnTimeSlot = document.getElementById('returnTimeSlot').value;
+            const returnReason = document.getElementById('returnReason').value.trim();
+
+            if (!storeId || !returnDate || !returnTimeSlot || !returnReason) {
+                showNotification('❌ 請填寫完整的退貨資訊', true);
+                return;
+            }
+
+            // 前端二次校驗時間是否在範圍內
+            const timeInput = document.getElementById('returnTimeSlot');
+            if (returnTimeSlot < timeInput.min || returnTimeSlot > timeInput.max) {
+                showNotification('❌ 預約時間不在店鋪營業時間範圍內', true);
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/order/return-request', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        orderNo: orderNo,
+                        storeId: storeId,
+                        returnDate: returnDate,
+                        returnTimeSlot: returnTimeSlot,
+                        reason: returnReason
+                    })
+                });
+                const result = await res.json();
+                if (res.ok && result.success) {
+                    closeReturnOrderModal();
+                    showNotification('✅ ' + result.message);
+                    // 刷新當前訂單列表
+                    loadOrders(CTO.currentTab, CTO.currentPage);
+                } else {
+                    showNotification('❌ ' + (result.message || '申請失敗'), true);
+                }
+            } catch (e) {
+                console.error('退貨申請錯誤:', e);
+                showNotification('❌ 網絡錯誤，請稍後重試', true);
+            }
+        };
+
+        // ==========================================
+        // 5. 暴露全局 API (僅掛載到命名空間)
         // ==========================================
         CTO.switchTab = switchTab;
         CTO.loadOrders = loadOrders;
@@ -1505,11 +1803,8 @@
         CTO.closeCancelOrderModal = closeCancelOrderModal;
         CTO.confirmCancelPaidOrder = confirmCancelPaidOrder;
 
-        // ⚠️ 不再需要 window.xxx = xxx 重複掛載！
-        // 因為下方 HTML 已全部改為 ChronoTeamOrders.xxx 調用
-
         // ==========================================
-        // 5. 初始化 & 全局事件監聽
+        // 6. 初始化 & 全局事件監聽
         // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
             loadOrders('unpaid', 1);
@@ -1518,10 +1813,15 @@
         document.addEventListener('click', function (e) {
             if (e.target === document.getElementById('deleteOrderModal')) closeDeleteOrderModal();
             if (e.target === document.getElementById('cancelOrderModal')) closeCancelOrderModal();
+            if (e.target === document.getElementById('returnOrderModal')) closeReturnOrderModal();
         });
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {closeDeleteOrderModal(); closeCancelOrderModal();}
+            if (e.key === 'Escape') {
+                closeDeleteOrderModal();
+                closeCancelOrderModal();
+                closeReturnOrderModal();
+            }
         });
     </script>
 </body>
