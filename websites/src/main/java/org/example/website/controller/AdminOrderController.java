@@ -9,10 +9,15 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.Result;
+import org.example.website.entity.Notification;
 import org.example.website.entity.Order;
 import org.example.website.entity.OrderItem;
+import org.example.website.entity.User;
+import org.example.website.repository.NotificationRepository;
 import org.example.website.repository.OrderItemRepository;
 import org.example.website.repository.OrderRepository;
+import org.example.website.repository.UserRepository;
+import org.example.website.service.NotificationService;
 import org.example.website.service.OrderService;
 import org.example.website.service.SystemConfigService;
 import org.example.website.util.PaginationUtils;
@@ -24,9 +29,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,12 +46,16 @@ public class AdminOrderController {
     private final OrderItemRepository orderItemRepository;
     private final SystemConfigService systemConfigService; // 新增注入
     private final OrderService orderService;
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
-    public AdminOrderController(OrderRepository orderRepository, OrderItemRepository orderItemRepository, SystemConfigService systemConfigService, OrderService orderService) {
+    public AdminOrderController(OrderRepository orderRepository, OrderItemRepository orderItemRepository, SystemConfigService systemConfigService, OrderService orderService, NotificationRepository notificationRepository, UserRepository userRepository) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.systemConfigService = systemConfigService;
         this.orderService = orderService;
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -116,8 +127,14 @@ public class AdminOrderController {
             item.put("createdAt", order.getCreatedAt());
             item.put("paidAt", order.getPaidAt());
             item.put("receivedAt", order.getReceivedAt());
-            item.put("deadlineAt", order.getDeadlineAt());
+
+            // 【修改處】：移除 deadlineAt，新增預計送達與預約到店日期
+            item.put("estimatedDeliveryDate", order.getEstimatedDeliveryDate());
+            item.put("appointmentDate", order.getAppointmentDate());
+
             item.put("isVisible", order.getIsVisible());
+            // 新增返回提醒次數
+            item.put("pickupReminderCount", order.getPickupReminderCount() != null ? order.getPickupReminderCount() : 0);
 
             // 將明細嵌入訂單對象
             List<OrderItem> items = orderItemsMap.getOrDefault(order.getOrderId(), Collections.emptyList());
@@ -210,4 +227,103 @@ public class AdminOrderController {
             return ResponseEntity.internalServerError().body(Result.error("系統錯誤"));
         }
     }
+
+    @PostMapping("/api/order/{orderNo}/remind-pickup")
+    @ResponseBody
+    public ResponseEntity<?> remindPickup(@PathVariable String orderNo,
+                                          @RequestBody Map<String, String> payload,
+                                          Authentication authentication) {
+        String customMessage = payload.get("customMessage");
+        Order order = orderRepository.findByOrderNo(orderNo)
+                .orElseThrow(() -> new RuntimeException("訂單不存在"));
+
+        // 1. 更新訂單的提醒次數與最後提醒時間
+        order.setPickupReminderCount(order.getPickupReminderCount() == null ? 1 : order.getPickupReminderCount() + 1);
+        order.setLastPickupReminderAt(LocalDateTime.now());
+        orderRepository.save(order);
+
+        // 2. 創建並發送系統通知給買家 (站內信)
+        Notification notification = new Notification();
+        notification.setRecipient(order.getUser()); // 接收者為訂單的買家
+        notification.setSender(null); // null 代表系統自動發送 (若需顯示管理員名稱，可改為 authentication.getName() 對應的 User)
+        notification.setType(Notification.NotificationType.SYSTEM);
+
+        notification.setTitle("🔔 門店取貨提醒");
+        // 如果管理員沒填寫自定義訊息，則使用預設溫馨提示
+        notification.setContent(customMessage != null && !customMessage.trim().isEmpty()
+                ? customMessage
+                : "溫馨提醒：您的訂單已超過預約取貨時間，請盡快前往預約的門店完成取貨，或聯繫客服協助處理。");
+
+        notification.setTargetUrl("/account/orders"); // 引導用戶點擊通知後回到訂單列表
+        notification.setRead(false);
+
+        // 3. 保存通知到數據庫
+        notificationRepository.save(notification);
+
+        return ResponseEntity.ok(Result.ok("提醒已成功發送！累計已提醒 " + order.getPickupReminderCount() + " 次。"));
+    }
+
+    /**
+     * 獲取所有快遞員列表 (供下拉選單使用)
+     */
+    @GetMapping("/api/couriers/list")
+    @ResponseBody
+    public ResponseEntity<?> getCouriersList() {
+        // 查詢 role 為 COURIER 的用戶
+        List<User> couriers = userRepository.findByRole(User.Role.COURIER);
+        List<Map<String, Object>> courierList = couriers.stream().map(user -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", user.getId());
+            map.put("username", user.getUsername());
+            return map;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(Result.okWithData("獲取成功", courierList));
+    }
+
+    /**
+     * 為訂單分配快遞員
+     */
+    @PostMapping("/api/orders/{orderNo}/assign-courier")
+    @ResponseBody
+    @Transactional
+    public ResponseEntity<?> assignCourier(
+            @PathVariable String orderNo,
+            @RequestBody Map<String, Long> request) {
+
+        Long courierId = request.get("courierId");
+        if (courierId == null) {
+            return ResponseEntity.badRequest().body(Result.error("快遞員 ID 不能為空"));
+        }
+
+        // 1. 查找訂單
+        Order order = orderRepository.findByOrderNo(orderNo)
+                .orElseThrow(() -> new RuntimeException("訂單不存在"));
+
+        // 2. 校驗是否為快遞訂單且尚未分配
+        if (order.getDelivery() == null || !order.getDelivery()) {
+            return ResponseEntity.badRequest().body(Result.error("該訂單不需要快遞配送"));
+        }
+        if (order.getCourier() != null) {
+            return ResponseEntity.badRequest().body(Result.error("該訂單已分配快遞員，如需更換請先聯繫系統管理員"));
+        }
+
+        // 3. 查找快遞員並校驗身份
+        User courier = userRepository.findById(courierId)
+                .orElseThrow(() -> new RuntimeException("快遞員不存在"));
+
+        if (courier.getRole() != User.Role.COURIER) {
+            return ResponseEntity.badRequest().body(Result.error("選擇的用戶不是快遞員"));
+        }
+
+        // 4. 分配並保存
+        order.setCourier(courier);
+        // 可選：如果業務邏輯允許，分配快遞員時可自動將訂單狀態改為「已發貨」
+//         if (order.getStatus() == Order.OrderStatus.PAID) {
+//             order.setStatus(Order.OrderStatus.SHIPPED);
+//         }
+        orderRepository.save(order);
+
+        return ResponseEntity.ok(Result.ok("成功分配快遞員: " + courier.getUsername()));
+    }
+
 }

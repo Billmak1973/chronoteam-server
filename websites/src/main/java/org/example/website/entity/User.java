@@ -48,12 +48,8 @@ public class User {
     @Column(name = "phone", length = 20, nullable = false)
     private String phone;
 
-    // 家庭地址 (非必填，允許為 NULL)
-    @Column(name = "address", length = 255)
-    private String address;
-
-    @Column(name = "backup_address", length = 255)
-    private String backupAddress;
+    @Column(name = "work_phone", length = 20)
+    private String workPhone;
 
     // 用戶角色 (默認為顧客)
     @Enumerated(EnumType.STRING)

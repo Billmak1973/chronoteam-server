@@ -54,6 +54,7 @@ public class PageController {
     private final NotificationService notificationService;
     private final ReviewReactionRepository reviewReactionRepository;
     private final OfflineStoreRepository offlineStoreRepository;
+    private final UserAddressRepository userAddressRepository;
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
@@ -69,7 +70,7 @@ public class PageController {
                           AdminPenaltyRepository adminPenaltyRepository,
                           AdminPenaltyService adminPenaltyService, SystemConfigService systemConfigService,
                           CartService cartService, ProductService productService, AnnouncementReceiptRepository announcementReceiptRepository,
-                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository, NotificationService notificationService, ReviewReactionRepository reviewReactionRepository, OfflineStoreRepository offlineStoreRepository) {
+                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository, NotificationService notificationService, ReviewReactionRepository reviewReactionRepository, OfflineStoreRepository offlineStoreRepository, UserAddressRepository userAddressRepository) {
         this.userService = userService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -94,6 +95,7 @@ public class PageController {
         this.notificationService = notificationService;
         this.reviewReactionRepository = reviewReactionRepository;
         this.offlineStoreRepository = offlineStoreRepository;
+        this.userAddressRepository = userAddressRepository;
     }
 
     @GetMapping("/")
@@ -177,16 +179,32 @@ public class PageController {
         return "dashboard";
     }
 
+
+    // 修改 accountProfile 方法
     @GetMapping("/account/profile")
     public String accountProfile(Model model) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
-        // 使用 UserService 獲取 User 實體
         User user = userService.findByUsername(username);
 
-        // 將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
+        // 獲取該用戶的地址列表 (按 ranking 排序)
+        List<UserAddress> addresses = userAddressRepository.findByUserOrderByRankingAsc(user);
+
+        String mainAddress = null;
+        String backupAddress = null;
+
+        if (addresses != null && !addresses.isEmpty()) {
+            mainAddress = addresses.get(0).getFullAddress(); // 第一個作為主地址
+            if (addresses.size() > 1) {
+                backupAddress = addresses.get(1).getFullAddress(); // 第二個作為備用地址
+            }
+        }
+
         model.addAttribute("user", user);
+        model.addAttribute("mainAddress", mainAddress);       // 新增：傳遞主地址
+        model.addAttribute("backupAddress", backupAddress);   // 新增：傳遞備用地址
+
         return "profile";
     }
 
@@ -228,136 +246,6 @@ public class PageController {
         model.addAttribute("onlineOrderRetentionDays", systemConfigService.getOnlineOrderRetentionDays());
 
         return "orders";
-    }
-
-    /**
-     * 【API】獲取待付款訂單（分頁 + 數據清洗）
-     */
-    @GetMapping("/api/account/orders/unpaid")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> getUnpaidOrders(
-            @RequestParam(defaultValue = "1") int page,
-            Authentication authentication) {
-        String username = authentication.getName();
-        int zeroBasedPage = Math.max(0, page - 1);
-        Pageable pageable = PageRequest.of(zeroBasedPage, 25);
-
-        Page<Order> orderPage = orderRepository.findUnpaidOrders(username, pageable);
-
-        // 核心修復：手動清洗數據，避免 LazyInitializationException 和循環引用
-        List<Map<String, Object>> cleanOrders = orderPage.getContent().stream().map(order -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("orderNo", order.getOrderNo());
-            map.put("totalAmount", order.getTotalAmount());
-            map.put("paymentMethod", order.getPaymentMethod());
-            map.put("paymentStatus", order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null);
-            map.put("status", order.getStatus() != null ? order.getStatus().name() : null);
-            map.put("createdAt", order.getCreatedAt());
-            map.put("paidAt", order.getPaidAt());
-            map.put("receivedAt", order.getReceivedAt());
-
-            // 安全提取關聯對象字段（避免 LAZY 代理序列化）
-            if (order.getOfflineStore() != null) {
-                Map<String, Object> storeMap = new HashMap<>();
-                storeMap.put("name", order.getOfflineStore().getName());
-                storeMap.put("address", order.getOfflineStore().getAddress());
-                map.put("offlineStore", storeMap);
-            } else {
-                map.put("offlineStore", null);
-            }
-
-            return map;
-        }).collect(Collectors.toList());
-
-        //  使用清洗後的數據構建響應，而非原始 Entity
-        Map<String, Object> response = PaginationUtils.buildPageResponse(orderPage, cleanOrders);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * 【API】獲取待線下付款訂單（分頁 + 數據清洗）
-     */
-    @GetMapping("/api/account/orders/pending-offline")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> getPendingOfflineOrders(
-            @RequestParam(defaultValue = "1") int page,
-            Authentication authentication) {
-        String username = authentication.getName();
-        int zeroBasedPage = Math.max(0, page - 1);
-        Pageable pageable = PageRequest.of(zeroBasedPage, 25);
-
-        Page<Order> orderPage = orderRepository.findPendingOfflineOrders(username, pageable);
-
-        //  核心修復：手動清洗數據
-        List<Map<String, Object>> cleanOrders = orderPage.getContent().stream().map(order -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("orderNo", order.getOrderNo());
-            map.put("totalAmount", order.getTotalAmount());
-            map.put("paymentMethod", order.getPaymentMethod());
-            map.put("paymentStatus", order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null);
-            map.put("status", order.getStatus() != null ? order.getStatus().name() : null);
-            map.put("createdAt", order.getCreatedAt());
-            map.put("paidAt", order.getPaidAt());
-            map.put("receivedAt", order.getReceivedAt());
-
-            // 待線下付款訂單必然關聯店鋪，但仍做 null 防護
-            if (order.getOfflineStore() != null) {
-                Map<String, Object> storeMap = new HashMap<>();
-                storeMap.put("name", order.getOfflineStore().getName());
-                storeMap.put("address", order.getOfflineStore().getAddress());
-                map.put("offlineStore", storeMap);
-            } else {
-                map.put("offlineStore", null);
-            }
-
-            return map;
-        }).collect(Collectors.toList());
-
-        Map<String, Object> response = PaginationUtils.buildPageResponse(orderPage, cleanOrders);
-        return ResponseEntity.ok(response);
-    }
-
-    /**
-     * 【API】獲取已支付訂單（分頁 + 數據清洗）
-     */
-    @GetMapping("/api/account/orders/paid")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> getPaidOrders(
-            @RequestParam(defaultValue = "1") int page,
-            Authentication authentication) {
-        String username = authentication.getName();
-        int zeroBasedPage = Math.max(0, page - 1);
-        Pageable pageable = PageRequest.of(zeroBasedPage, 25);
-
-        Page<Order> orderPage = orderRepository.findPaidOrders(username, pageable);
-
-        //  核心修復：手動清洗數據
-        List<Map<String, Object>> cleanOrders = orderPage.getContent().stream().map(order -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("orderNo", order.getOrderNo());
-            map.put("totalAmount", order.getTotalAmount());
-            map.put("paymentMethod", order.getPaymentMethod());
-            map.put("paymentStatus", order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null);
-            map.put("status", order.getStatus() != null ? order.getStatus().name() : null);
-            map.put("createdAt", order.getCreatedAt());
-            map.put("paidAt", order.getPaidAt());
-            map.put("receivedAt", order.getReceivedAt());
-
-            // 已支付訂單可能來自線上或線下，安全提取店鋪信息
-            if (order.getOfflineStore() != null) {
-                Map<String, Object> storeMap = new HashMap<>();
-                storeMap.put("name", order.getOfflineStore().getName());
-                storeMap.put("address", order.getOfflineStore().getAddress());
-                map.put("offlineStore", storeMap);
-            } else {
-                map.put("offlineStore", null);
-            }
-
-            return map;
-        }).collect(Collectors.toList());
-
-        Map<String, Object> response = PaginationUtils.buildPageResponse(orderPage, cleanOrders);
-        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/sell-guide")

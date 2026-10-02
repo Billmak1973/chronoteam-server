@@ -854,13 +854,66 @@
                 <!-- 電子郵件 (僅展示，不可改) -->
                 <div class="info-row">
                     <span class="info-label"><i class="fas fa-envelope"></i> 電子郵件</span>
-                    <span class="info-value" th:text="${user.email}">user@example.com</span>
+                    <div class="info-action-group">
+                        <div class="view-mode" id="view-email">
+                            <span class="info-value" th:text="${user.email}">user@example.com</span>
+                            <!-- 僅非 CUSTOMER 角色顯示編輯按鈕 -->
+                            <button class="btn-icon btn-edit" th:if="${user.role.name() != 'CUSTOMER'}" th:attr="data-val=${user.email}"
+                                    onclick="toggleEdit('email', this.dataset.val)" data-tooltip="編輯">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                        </div>
+                        <div class="edit-mode" id="edit-email">
+                            <input type="email" id="input-email" class="form-input" th:value="${user.email}">
+                            <button class="btn-action btn-save" onclick="saveField('email')">保存</button>
+                            <button class="btn-action btn-cancel" onclick="cancelEdit('email')">取消</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- 手機號碼 (僅展示，不可改) -->
+                <!-- 手機號碼 (員工可修改) -->
                 <div class="info-row">
                     <span class="info-label"><i class="fas fa-phone"></i> 手機號碼</span>
-                    <span class="info-value" th:text="${user.phone}">+852 1234 5678</span>
+                    <div class="info-action-group">
+                        <div class="view-mode" id="view-phone">
+                            <span class="info-value" th:text="${user.phone}">+852 1234 5678</span>
+                            <!-- 僅非 CUSTOMER 角色顯示編輯按鈕 -->
+                            <button class="btn-icon btn-edit" th:if="${user.role.name() != 'CUSTOMER'}" th:attr="data-val=${user.phone}"
+                                    onclick="toggleEdit('phone', this.dataset.val)" data-tooltip="編輯">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                        </div>
+                        <div class="edit-mode" id="edit-phone">
+                            <input type="text" id="input-phone" class="form-input" th:value="${user.phone}">
+                            <button class="btn-action btn-save" onclick="saveField('phone')">保存</button>
+                            <button class="btn-action btn-cancel" onclick="cancelEdit('phone')">取消</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 工作電話 (僅員工可見與可編輯) -->
+                <div class="info-row" th:if="${user.role.name() != 'CUSTOMER'}">
+                    <span class="info-label"><i class="fas fa-briefcase"></i> 工作電話</span>
+                    <div class="info-action-group">
+                        <div class="view-mode" id="view-workPhone">
+                            <span class="info-value" th:text="${user.workPhone != null ? user.workPhone : '未設置'}">未設置</span>
+
+                            <button class="btn-icon btn-edit" th:if="${user.workPhone != null}" th:attr="data-val=${user.workPhone}"
+                                    onclick="toggleEdit('workPhone', this.dataset.val)" data-tooltip="編輯">
+                                <i class="fas fa-pen"></i>
+                            </button>
+
+                            <button class="btn-icon btn-add" th:if="${user.workPhone == null}"
+                                    onclick="toggleEdit('workPhone', '')" data-tooltip="增加工作電話">
+                                <i class="fas fa-plus"></i> 增加工作電話
+                            </button>
+                        </div>
+                        <div class="edit-mode" id="edit-workPhone">
+                            <input type="text" id="input-workPhone" class="form-input" th:value="${user.workPhone}" placeholder="請輸入工作電話...">
+                            <button class="btn-action btn-save" onclick="saveField('workPhone')">保存</button>
+                            <button class="btn-action btn-cancel" onclick="cancelEdit('workPhone')">取消</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 地址 (為空顯示增加，不為空顯示編輯) -->
@@ -1268,12 +1321,22 @@
             const input = document.getElementById('input-' + fieldName);
             const newValue = input.value.trim();
 
-            if (fieldName === 'username' && !newValue) {
-                showCenterToast('❌ 用戶名不能為空！', 'error');
+            // 1. 基礎校驗
+            if ((fieldName === 'username' || fieldName === 'email' || fieldName === 'phone') && !newValue) {
+                showCenterToast(`❌ ${getFieldLabel(fieldName)}不能為空！`, 'error');
                 return;
             }
 
-            // 地址校驗邏輯保持不變...
+            // 2. 郵箱格式校驗
+            if (fieldName === 'email' && newValue) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(newValue)) {
+                    showCenterToast('❌ 電子郵件格式不正確！', 'error');
+                    return;
+                }
+            }
+
+            // 3. 地址專屬校驗
             if (fieldName === 'address' || fieldName === 'backupAddress') {
                 const regionSelect = document.getElementById(fieldName + 'RegionSelect');
                 const region = regionSelect ? regionSelect.value : '';
@@ -1285,38 +1348,31 @@
                     input.focus();
                     return;
                 }
-                // 验证1：新地址与现有地址相同
                 if (fieldName === 'address' && newValue === currentAddress) {
                     showCenterToast('💡 新地址和原地址一樣，無需修改', 'info');
                     cancelEdit(fieldName);
                     return;
                 }
-
-                // 验证2：新备用地址与现有备用地址相同
                 if (fieldName === 'backupAddress' && newValue === currentBackupAddress) {
                     showCenterToast('💡 新備用地址和原備用地址一樣，無需修改', 'info');
                     cancelEdit(fieldName);
                     return;
                 }
-
-                // 验证3：主地址和备用地址不能相同
                 if (fieldName === 'address' && newValue === currentBackupAddress && currentBackupAddress !== '未設置') {
                     showCenterToast('❌ 主地址和備用地址不能相同！', 'error');
                     return;
                 }
-
                 if (fieldName === 'backupAddress' && newValue === currentAddress && currentAddress !== '未設置') {
                     showCenterToast('❌ 備用地址和主地址不能相同！', 'error');
                     return;
                 }
             }
 
+            // 4. 構建請求數據
             const data = {};
             data[fieldName] = newValue;
 
-            // 顯示 Loading 狀態 (可選)
-            const btn = input.parentElement.querySelector('.btn-save');
-
+            // 5. 發送 AJAX 請求
             fetch('/api/user/update-profile', {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
@@ -1325,57 +1381,56 @@
                 .then(response => response.json())
                 .then(result => {
                     if (result.success) {
-                        // 1. 更新頁面上的顯示文本
+                        // 更新頁面上的顯示文本
                         const valueSpan = document.querySelector('#view-' + fieldName + ' .info-value');
-                        valueSpan.textContent = newValue || '未設置';
+                        if (valueSpan) {
+                            valueSpan.textContent = newValue || '未設置';
+                        }
 
-                        // 2. 動態切換按鈕顯示狀態
+                        // 動態切換按鈕顯示狀態 (針對有 增加/編輯 按鈕的字段)
                         const editBtn = document.querySelector('#view-' + fieldName + ' .btn-edit');
                         const addBtn = document.querySelector('#view-' + fieldName + ' .btn-add');
 
                         if (newValue) {
-                            if (editBtn) {editBtn.style.display = 'inline-flex'; editBtn.dataset.val = newValue;}
+                            if (editBtn) { editBtn.style.display = 'inline-flex'; editBtn.dataset.val = newValue; }
                             if (addBtn) addBtn.style.display = 'none';
                         } else {
                             if (editBtn) editBtn.style.display = 'none';
                             if (addBtn) addBtn.style.display = 'inline-flex';
                         }
 
+                        // 退出編輯模式
                         cancelEdit(fieldName);
 
-                        //  根據字段顯示不同的成功提示
+                        // 根據字段顯示不同的成功提示與後續操作
                         if (fieldName === 'username') {
-                            // 1. 顯示提示文案，告知需要重新登入
                             showCenterToast('✅ 改名已成功！請使用新用戶名重新登入', 'success');
-
-                            // 2. 延遲 3 秒後強制登出並跳轉回首頁 (與彈窗消失時間同步)
                             setTimeout(() => {
                                 fetch('/logout', {method: 'POST'})
-                                    .then(() => {
-                                        window.location.href = '/'; // 登出成功，跳轉首頁
-                                    })
-                                    .catch(() => {
-                                        window.location.href = '/'; // 即使接口報錯也強制跳轉
-                                    });
+                                    .then(() => { window.location.href = '/'; })
+                                    .catch(() => { window.location.href = '/'; });
                             }, 3000);
                         } else if (fieldName === 'backupAddress') {
-                            //  备用地址保存成功后，延迟刷新页面
                             showCenterToast('✅ 備用地址保存成功！', 'success');
-                            setTimeout(() => {
-                                location.reload();
-                            }, 1000);
+                            setTimeout(() => { location.reload(); }, 1000);
                         } else {
                             showCenterToast('✅ 保存成功！', 'success');
                         }
                     } else {
-                        //  核心修复：失败时关闭编辑模式，恢复查看模式
+                        // 失敗時關閉編輯模式，恢復查看模式
                         cancelEdit(fieldName);
 
-                        //  根據後端返回的特定 message 顯示不同的居中彈窗
+                        // 根據後端返回的特定 message 顯示不同的居中彈窗
                         if (result.message === 'SAME_USERNAME') {
                             showCenterToast('💡 新用戶名和原來一樣，無需修改', 'info');
                         } else if (result.message === 'USERNAME_EXISTS') {
                             showCenterToast('❌ 該用戶名已被註冊，請選擇別的用戶名吧', 'error');
+                        } else if (result.message === 'EMAIL_EXISTS') {
+                            showCenterToast('❌ 該電子郵件已被其他用戶註冊！', 'error');
+                        } else if (result.message === 'PHONE_EXISTS') {
+                            showCenterToast('❌ 該手機號碼已被其他用戶註冊！', 'error');
+                        } else if (result.message.includes('無權修改')) {
+                            showCenterToast('❌ ' + result.message, 'error');
                         } else {
                             showCenterToast('❌ ' + (result.message || '保存失敗'), 'error');
                         }
@@ -1383,11 +1438,23 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    //  网络错误也要关闭编辑模式
                     cancelEdit(fieldName);
                     showCenterToast('❌ 網絡錯誤，請稍後再試！', 'error');
                 });
         }
+
+        /**
+         * 輔助函數：獲取字段中文標籤
+         */
+        function getFieldLabel(fieldName) {
+            const labels = {
+                'username': '用戶名',
+                'email': '電子郵件',
+                'phone': '手機號碼'
+            };
+            return labels[fieldName] || '該字段';
+        }
+
 
         // ==========================================
         //   交換主地址和備用地址

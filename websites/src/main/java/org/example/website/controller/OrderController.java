@@ -8,11 +8,19 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.Result;
+import org.example.website.entity.AfterSalesRequest;
+import org.example.website.entity.AfterSalesRequestItem;
 import org.example.website.entity.Order;
 import org.example.website.entity.OrderItem;
+import org.example.website.repository.AfterSalesRequestRepository;
 import org.example.website.repository.OrderItemRepository;
 import org.example.website.repository.OrderRepository;
 import org.example.website.service.OrderService;
+import org.example.website.service.SystemConfigService;
+import org.example.website.util.PaginationUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/order")
@@ -30,14 +39,216 @@ public class OrderController {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final OrderService orderService;
+    private final AfterSalesRequestRepository afterSalesRequestRepository;
+    private final SystemConfigService systemConfigService;
 
     // 構造函數注入
     public OrderController(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
-                           OrderService orderService) {
+                           OrderService orderService, AfterSalesRequestRepository afterSalesRequestRepository, SystemConfigService systemConfigService) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.orderService = orderService;
+        this.afterSalesRequestRepository = afterSalesRequestRepository;
+        this.systemConfigService = systemConfigService;
     }
+
+
+    @Operation(summary = "獲取待付款訂單", description = "分頁獲取當前用戶的待付款訂單列表")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
+    @GetMapping("/unpaid")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getUnpaidOrders(
+            @RequestParam(defaultValue = "1") int page,
+            Authentication authentication) {
+        String username = authentication.getName();
+        int zeroBasedPage = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(zeroBasedPage, 25);
+
+        Page<Order> orderPage = orderRepository.findUnpaidOrders(username, pageable);
+
+        List<Map<String, Object>> cleanOrders = orderPage.getContent().stream().map(order -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("orderNo", order.getOrderNo());
+            map.put("totalAmount", order.getTotalAmount());
+            map.put("paymentMethod", order.getPaymentMethod());
+            map.put("paymentStatus", order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null);
+            map.put("status", order.getStatus() != null ? order.getStatus().name() : null);
+            map.put("createdAt", order.getCreatedAt());
+            map.put("paidAt", order.getPaidAt());
+            map.put("receivedAt", order.getReceivedAt());
+
+            if (order.getOfflineStore() != null) {
+                Map<String, Object> storeMap = new HashMap<>();
+                storeMap.put("name", order.getOfflineStore().getName());
+                storeMap.put("address", order.getOfflineStore().getAddress());
+                map.put("offlineStore", storeMap);
+            } else {
+                map.put("offlineStore", null);
+            }
+            return map;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> response = PaginationUtils.buildPageResponse(orderPage, cleanOrders);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "獲取待線下付款訂單", description = "分頁獲取當前用戶的待線下付款訂單列表")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
+    @GetMapping("/pending-offline")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getPendingOfflineOrders(
+            @RequestParam(defaultValue = "1") int page,
+            Authentication authentication) {
+        String username = authentication.getName();
+        int zeroBasedPage = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(zeroBasedPage, 25);
+
+        Page<Order> orderPage = orderRepository.findPendingOfflineOrders(username, pageable);
+
+        List<Map<String, Object>> cleanOrders = orderPage.getContent().stream().map(order -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("orderNo", order.getOrderNo());
+            map.put("totalAmount", order.getTotalAmount());
+            map.put("paymentMethod", order.getPaymentMethod());
+            map.put("paymentStatus", order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null);
+            map.put("status", order.getStatus() != null ? order.getStatus().name() : null);
+            map.put("createdAt", order.getCreatedAt());
+            map.put("paidAt", order.getPaidAt());
+            map.put("receivedAt", order.getReceivedAt());
+
+            if (order.getOfflineStore() != null) {
+                Map<String, Object> storeMap = new HashMap<>();
+                storeMap.put("name", order.getOfflineStore().getName());
+                storeMap.put("address", order.getOfflineStore().getAddress());
+                map.put("offlineStore", storeMap);
+            } else {
+                map.put("offlineStore", null);
+            }
+            return map;
+        }).collect(Collectors.toList());
+
+        Map<String, Object> response = PaginationUtils.buildPageResponse(orderPage, cleanOrders);
+        return ResponseEntity.ok(response);
+    }
+
+
+@Operation(summary = "獲取已支付訂單", description = "分頁獲取當前用戶的已支付訂單列表，支持售後狀態篩選")
+@ApiResponses({
+        @ApiResponse(responseCode = "200", description = "獲取成功"),
+        @ApiResponse(responseCode = "401", description = "未登入")
+})
+@GetMapping("/paid")
+@ResponseBody
+public ResponseEntity<Map<String, Object>> getPaidOrders(
+        @RequestParam(defaultValue = "1") int page,
+        @RequestParam(required = false) String requestType,      // 新增：售後類型 (RETURN / EXCHANGE)
+        @RequestParam(required = false) String requestStatus,    // 新增：售後狀態 (PENDING / COMPLETED 等)
+        @RequestParam(required = false) String productName,      // 新增：商品名稱模糊搜尋
+        Authentication authentication) {
+
+    String username = authentication.getName();
+    int zeroBasedPage = Math.max(0, page - 1);
+    Pageable pageable = PageRequest.of(zeroBasedPage, 25);
+
+    Page<Order> orderPage;
+
+    // 判斷是否有售後篩選條件
+    boolean hasFilter = (requestType != null && !requestType.trim().isEmpty()) ||
+            (requestStatus != null && !requestStatus.trim().isEmpty()) ||
+            (productName != null && !productName.trim().isEmpty());
+
+    if (hasFilter) {
+        // 將字符串轉換為枚舉 (如果為空則傳 null，JPQL 會自動忽略該條件)
+        AfterSalesRequest.RequestType reqType = null;
+        if (requestType != null && !requestType.trim().isEmpty()) {
+            reqType = AfterSalesRequest.RequestType.valueOf(requestType.trim().toUpperCase());
+        }
+
+        AfterSalesRequest.RequestStatus reqStatus = null;
+        if (requestStatus != null && !requestStatus.trim().isEmpty()) {
+            reqStatus = AfterSalesRequest.RequestStatus.valueOf(requestStatus.trim().toUpperCase());
+        }
+
+        String cleanProductName = (productName != null && !productName.trim().isEmpty()) ? productName.trim() : null;
+
+        // 調用帶篩選條件的查詢
+        orderPage = orderRepository.findPaidOrdersWithAfterSalesFilter(
+                username, reqType, reqStatus, cleanProductName, pageable
+        );
+    } else {
+        // 無篩選條件，使用原有查詢
+        orderPage = orderRepository.findPaidOrders(username, pageable);
+    }
+
+    List<Map<String, Object>> cleanOrders = orderPage.getContent().stream().map(order -> {
+        Map<String, Object> map = new HashMap<>();
+        map.put("orderNo", order.getOrderNo());
+        map.put("totalAmount", order.getTotalAmount());
+        map.put("paymentMethod", order.getPaymentMethod());
+        map.put("paymentStatus", order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null);
+        map.put("status", order.getStatus() != null ? order.getStatus().name() : null);
+        map.put("createdAt", order.getCreatedAt());
+        map.put("paidAt", order.getPaidAt());
+        map.put("receivedAt", order.getReceivedAt());
+        map.put("deliveryMethod", order.getDeliveryMethod());
+        map.put("estimatedDeliveryDate", order.getEstimatedDeliveryDate() != null ? order.getEstimatedDeliveryDate().toString() : null);
+        map.put("appointmentDate", order.getAppointmentDate() != null ? order.getAppointmentDate().toString() : null);
+
+        if (order.getOfflineStore() != null) {
+            Map<String, Object> storeMap = new HashMap<>();
+            storeMap.put("name", order.getOfflineStore().getName());
+            storeMap.put("address", order.getOfflineStore().getAddress());
+            map.put("offlineStore", storeMap);
+        } else {
+            map.put("offlineStore", null);
+        }
+
+        // ==========================================
+        // 【新增】：提取快遞員資訊 (username 和 workPhone)
+        // ==========================================
+        if (order.getCourier() != null) {
+            Map<String, Object> courierMap = new HashMap<>();
+            courierMap.put("username", order.getCourier().getUsername());
+            // 防止 workPhone 為 null 導致前端顯示 "null"
+            courierMap.put("workPhone", order.getCourier().getWorkPhone() != null ? order.getCourier().getWorkPhone() : "預留電話");
+            map.put("courier", courierMap);
+        } else {
+            map.put("courier", null);
+        }
+
+        // ==========================================
+        // 售後狀態判斷邏輯 (保持不變)
+        // ==========================================
+        List<AfterSalesRequest> requests = afterSalesRequestRepository.findByOriginalOrder_OrderId(order.getOrderId());
+        boolean hasReturn = requests.stream().anyMatch(r -> r.getRequestType() == AfterSalesRequest.RequestType.RETURN && r.getStatus() != AfterSalesRequest.RequestStatus.CANCELLED);
+        boolean hasExchange = requests.stream().anyMatch(r -> r.getRequestType() == AfterSalesRequest.RequestType.EXCHANGE && r.getStatus() != AfterSalesRequest.RequestStatus.CANCELLED);
+
+        if (hasReturn && hasExchange) {
+            map.put("afterSalesHint", "該訂單已有物品已經申請退貨和換貨，請留意時間和地點！");
+        } else if (hasReturn) {
+            map.put("afterSalesHint", "該訂單已有物品已經申請退貨，請留意時間和地點！");
+        } else if (hasExchange) {
+            map.put("afterSalesHint", "該訂單已有物品已經申請換貨，請留意時間和地點！");
+        }
+        // ==========================================
+
+        return map;
+    }).collect(Collectors.toList());
+
+    Map<String, Object> response = PaginationUtils.buildPageResponse(orderPage, cleanOrders);
+    // ==========================================
+    // 【新增】將全局送貨時間配置加入響應，供前端使用
+    // ==========================================
+    response.put("deliveryStartTime", systemConfigService.getDeliveryStartTime());
+    response.put("deliveryEndTime", systemConfigService.getDeliveryEndTime());
+    return ResponseEntity.ok(response);
+}
 
     @Operation(
             summary = "獲取訂單商品明細",
@@ -56,27 +267,26 @@ public class OrderController {
     public ResponseEntity<?> getOrderDetails(
             @Parameter(description = "訂單編號", example = "ORD-1715600000000-ABC123", required = true)
             @PathVariable String orderNo,
-
-            @Parameter(hidden = true) // 隱藏 Authentication，因為它由 Spring Security 自動解析
+            @Parameter(hidden = true)
             Authentication authentication) {
         try {
             String username = authentication.getName();
-
-            // 1. 校驗訂單是否存在且屬於當前用戶（防越權攻擊）
             Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                     .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
 
-            // 2. 獲取訂單商品明細
             List<OrderItem> items = orderItemRepository.findByOrder_OrderNo(orderNo);
 
-            // 3. 關鍵：手動提取需要的數據，避免 Hibernate 關聯導致的 JSON 循環引用 (StackOverflow)
+            // 【新增】獲取該訂單所有 PENDING 狀態的售後申請
+            List<AfterSalesRequest> pendingRequests = afterSalesRequestRepository
+                    .findByOriginalOrder_OrderNoAndStatus(orderNo, AfterSalesRequest.RequestStatus.PENDING);
+
             List<Map<String, Object>> resultList = new ArrayList<>();
             for (OrderItem item : items) {
                 Map<String, Object> map = new HashMap<>();
+                map.put("orderItemId", item.getOrderItemId()); // 用於匹配
                 map.put("quantity", item.getQuantity());
                 map.put("price", item.getPrice());
 
-                // 提取 Product 信息 (與前端 JS 渲染的 item.product.xxx 完全對應)
                 Map<String, Object> productMap = new HashMap<>();
                 productMap.put("id", item.getProduct().getProductId());
                 productMap.put("description", item.getProduct().getDescription());
@@ -84,14 +294,41 @@ public class OrderController {
                 productMap.put("category", item.getProduct().getCategory());
                 map.put("product", productMap);
 
+                // ==========================================
+                // 【核心邏輯】檢查該 OrderItem 是否已經全額申請了售後
+                // ==========================================
+                boolean hideExchangeBtn = false;
+                boolean hideReturnBtn = false;
+
+                for (AfterSalesRequest req : pendingRequests) {
+                    for (AfterSalesRequestItem reqItem : req.getItems()) {
+                        // 1. after_sales_request_item 的 order_item_id 和 order_item 的 order_item_id 匹配
+                        if (reqItem.getOrderItem().getOrderItemId().equals(item.getOrderItemId())) {
+                            // 2. 如果 order_item 的 quantity == after_sales_request_item 的 return_quantity
+                            if (reqItem.getReturnQuantity().equals(item.getQuantity())) {
+                                // 3. 獲取其 request_type
+                                if (req.getRequestType() == AfterSalesRequest.RequestType.RETURN) {
+                                    // 4. 如果 request_type 為 RETURN，那麼申請換貨的按鈕消失
+                                    hideExchangeBtn = true;
+                                } else if (req.getRequestType() == AfterSalesRequest.RequestType.EXCHANGE) {
+                                    // 5. 否則 (即 EXCHANGE)，就是退貨按鈕消失
+                                    hideReturnBtn = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 【新增】將標誌位返回給前端
+                map.put("hideExchangeBtn", hideExchangeBtn);
+                map.put("hideReturnBtn", hideReturnBtn);
+
                 resultList.add(map);
             }
-
-            // 4. 返回訂單商品列表
             return ResponseEntity.ok(Result.okWithData("成功", resultList));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
-        }
+            }
     }
 
     @Operation(

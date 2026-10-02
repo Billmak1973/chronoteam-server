@@ -9,7 +9,6 @@ import lombok.Data;
 @Data
 @Schema(description = "用戶註冊請求參數")
 public class RegisterRequest {
-
     @Schema(description = "用戶名 (3-50位字母數字組合)", example = "newuser123", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "用戶名不能為空")
     @Size(min = 3, max = 50, message = "用戶名長度3-50位")
@@ -34,6 +33,16 @@ public class RegisterRequest {
     @NotBlank(message = "手機號不能為空")
     private String phone;
 
-    @Schema(description = "家庭地址 (選填)", example = "九龍尖沙咀彌敦道")
-    private String address;
+    // ================= 新增：可選的地址字段 =================
+    @Schema(description = "區域 (可選)", example = "九龍")
+    private String region;
+
+    @Schema(description = "行政區 (可選)", example = "油尖旺區")
+    private String district;
+
+    @Schema(description = "詳細地址 (可選)", example = "彌敦道 100 號")
+    private String detailAddress;
+
+    @Schema(description = "完整地址 (可選，前端已組裝好)", example = "九龍 油尖旺區 彌敦道 100 號")
+    private String fullAddress;
 }

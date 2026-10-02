@@ -2,6 +2,8 @@ package org.example.website.service;
 
 import org.example.website.dto.RegisterRequest;
 import org.example.website.entity.User;
+import org.example.website.entity.UserAddress;
+import org.example.website.repository.UserAddressRepository;
 import org.example.website.repository.UserRepository;
 import org.example.website.util.UidGenerator;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,20 +19,21 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
     private final DailyBusinessReportService dailyBusinessReportService;
-
+    private final UserAddressRepository userAddressRepository;
     public UserService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        RedisTemplate<String, Object> redisTemplate,
-                       DailyBusinessReportService dailyBusinessReportService) {
+                       DailyBusinessReportService dailyBusinessReportService, UserAddressRepository userAddressRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.redisTemplate = redisTemplate;
         this.dailyBusinessReportService = dailyBusinessReportService;
+        this.userAddressRepository = userAddressRepository;
     }
 
     @Transactional
     public User register(RegisterRequest request) {
-        // 1. 前置查重 (郵箱、手機號、用戶名)
+        // 1. 前置查重
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("用戶名已存在");
         }
@@ -41,8 +44,7 @@ public class UserService {
             throw new RuntimeException("該手機號碼已被註冊");
         }
 
-        // 2. 【關鍵修復 1】先執行可能失敗的業務邏輯（更新報表）
-        // 如果這裡失敗，事務直接回滾，還沒執行 save()，絕對不會浪費 user_id！
+        // 2. 更新報表
         dailyBusinessReportService.incrementNewUsers();
 
         // 3. 構建 User 實體
@@ -52,30 +54,39 @@ public class UserService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setPhone(request.getPhone());
-        if (request.getAddress() != null && !request.getAddress().isEmpty()) {
-            user.setAddress(request.getAddress());
-        }
         user.setRole(User.Role.CUSTOMER);
 
-        // 4. 【關鍵修復 2】確保 UID 絕對唯一，防止 INSERT 失敗浪費 user_id
+        // 4. 確保 UID 絕對唯一
         String uid;
         int maxRetries = 10;
         do {
             uid = UidGenerator.nextUid(userRepository.count());
             maxRetries--;
-        } while (userRepository.existsByUid(uid) && maxRetries > 0); //  循環校驗直到不重複
+        } while (userRepository.existsByUid(uid) && maxRetries > 0);
 
         if (userRepository.existsByUid(uid)) {
             throw new RuntimeException("系統繁忙，UID生成衝突，請稍後重試");
         }
         user.setUid(uid);
 
-        // 5. 【最後一步】執行 INSERT 插入數據庫
-        // 走到這裡，說明所有前置校驗和邏輯都已成功，INSERT 幾乎 100% 不會失敗
+        // 5. 執行 INSERT 插入用戶數據庫
         User savedUser = userRepository.save(user);
 
-        // 6. 【關鍵修復 3】Redis 緩存容錯
-        // 即使 Redis 抖動失敗，也不應導致整個註冊事務回滾而浪費 user_id
+        // 6. 【核心修改】處理可選的地址信息 (非強制)
+        // 只有當前端傳來了有效的完整地址時，才創建 UserAddress 記錄
+        if (request.getFullAddress() != null && !request.getFullAddress().trim().isEmpty()) {
+            UserAddress address = new UserAddress();
+            address.setUser(savedUser);
+            // 默認使用註冊時的姓名和手機號作為收件信息，提升用戶體驗
+            address.setReceiverName(savedUser.getName());
+            address.setContactPhone(savedUser.getPhone());
+            address.setFullAddress(request.getFullAddress().trim());
+            address.setRanking(1); // 設為 1，作為默認/首選地址
+
+            userAddressRepository.save(address);
+        }
+
+        // 7. Redis 緩存容錯
         try {
             String redisKey = "user:info:" + savedUser.getUsername();
             redisTemplate.opsForValue().set(redisKey, savedUser, 1, TimeUnit.HOURS);

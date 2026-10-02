@@ -1,5 +1,6 @@
 package org.example.website.repository;
 
+import org.example.website.entity.AfterSalesRequest;
 import org.example.website.entity.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -122,7 +123,25 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * @return 已支付訂單的分頁結果
      */
     @Query("SELECT o FROM Order o WHERE o.user.username = :username " +
-            "AND o.paymentStatus IN ('PAID_SIMULATED', 'PAID_REAL', 'PAID_OFFLINE') " +
+            "AND o.paymentStatus IN ('PAID_SIMULATED', 'PAID_REAL', 'PAID_OFFLINE','PARTIALLY_REFUNDED') " +
             "ORDER BY o.createdAt DESC")
     Page<Order> findPaidOrders(@Param("username") String username, Pageable pageable);
+
+    @Query("SELECT DISTINCT o FROM Order o " +
+            "JOIN AfterSalesRequest asr ON o.orderId = asr.originalOrder.orderId " +
+            "JOIN asr.items asri " +
+            "JOIN asri.product p " +
+            "WHERE o.user.username = :username " +
+            "AND o.paymentStatus IN ('PAID_SIMULATED', 'PAID_REAL', 'PAID_OFFLINE','PARTIALLY_REFUNDED') " +
+            "AND (:requestType IS NULL OR asr.requestType = :requestType) " +
+            "AND (:requestStatus IS NULL OR asr.status = :requestStatus) " +
+            "AND (:productName IS NULL OR p.description LIKE %:productName%) " +
+            "ORDER BY o.createdAt DESC")
+    Page<Order> findPaidOrdersWithAfterSalesFilter(
+            @Param("username") String username,
+            @Param("requestType") AfterSalesRequest.RequestType requestType,
+            @Param("requestStatus") AfterSalesRequest.RequestStatus requestStatus,
+            @Param("productName") String productName,
+            Pageable pageable
+    );
 }

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>售後申請管理 - ChronoTeam 管理後台</title>
+    <!-- 引入公共 CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+
+    <style>
+        /* 狀態徽章樣式補充 */
+        .status-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .status-PENDING {
+            background: rgba(255, 193, 7, 0.15);
+            color: #856404;
+        }
+
+        .status-WAITING_PAYMENT {
+            background: rgba(23, 162, 184, 0.15);
+            color: #0c5460;
+        }
+
+        .status-COMPLETED {
+            background: rgba(40, 167, 69, 0.15);
+            color: #155724;
+        }
+
+        .status-REJECTED {
+            background: rgba(220, 53, 69, 0.15);
+            color: #721c24;
+        }
+
+        .status-CANCELLED {
+            background: rgba(108, 117, 125, 0.15);
+            color: #383d41;
+        }
+
+        .type-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .type-RETURN {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .type-EXCHANGE {
+            background: rgba(23, 162, 184, 0.1);
+            color: #17a2b8;
+        }
+
+        .table-responsive {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1000px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #f1f3f5;
+            font-size: 0.9rem;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #6c757d;
+        }
+
+        .data-table tr:hover td {
+            background-color: #fcfcfc;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 引入公共導航欄 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
+
+    <div class="admin-layout">
+        <!-- 引入左側邊欄，高亮 'after-sales' -->
+        <div th:replace="~{fragments/admin-sidebar :: adminSidebar('after-sales')}"></div>
+
+        <main class="admin-main">
+            <div class="content-header">
+                <h2><i class="fas fa-undo-alt" style="color: var(--gold);"></i> 售後申請管理</h2>
+                <div class="breadcrumb">
+                    <a href="/admin/dashboard">管理中心</a> / <span>售後申請管理</span>
+                </div>
+            </div>
+
+            <div class="content-body">
+                <!-- 篩選工具欄 -->
+                <div class="filter-bar" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                    <select class="form-control" name="status" onchange="applyFilter()">
+                        <option value="">全部狀態</option>
+                        <option value="PENDING" th:selected="${filterStatus == 'PENDING'}">待處理</option>
+                        <option value="WAITING_PAYMENT" th:selected="${filterStatus == 'WAITING_PAYMENT'}">待補差價</option>
+                        <option value="COMPLETED" th:selected="${filterStatus == 'COMPLETED'}">已完成</option>
+                        <option value="REJECTED" th:selected="${filterStatus == 'REJECTED'}">已拒絕</option>
+                        <option value="CANCELLED" th:selected="${filterStatus == 'CANCELLED'}">已取消</option>
+                    </select>
+                    <select class="form-control" name="type" onchange="applyFilter()">
+                        <option value="">全部類型</option>
+                        <option value="RETURN" th:selected="${filterType == 'RETURN'}">退貨</option>
+                        <option value="EXCHANGE" th:selected="${filterType == 'EXCHANGE'}">換貨</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="resetFilter()">
+                        <i class="fas fa-redo"></i> 重置
+                    </button>
+                </div>
+
+                <!-- 數據表格 -->
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>申請 ID</th>
+                                <th>用戶</th>
+                                <th>關聯訂單</th>
+                                <th>類型</th>
+                                <th>狀態</th>
+                                <th>申請原因</th>
+                                <th>商品明細</th>
+                                <th>預約時間</th>
+                                <th>創建時間</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${#lists.isEmpty(afterSalesList)}">
+                                <td colspan="9" style="text-align: center; padding: 3rem; color: var(--gray);">
+                                    <i class="fas fa-inbox"
+                                        style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                                    暫無售後申請記錄
+                                </td>
+                            </tr>
+                            <tr th:each="item : ${afterSalesList}">
+                                <td th:text="${item.requestId}">1</td>
+                                <td th:text="${item.username}">user123</td>
+                                <td>
+                                    <a th:href="@{/admin/orders}" th:text="${item.orderNo}"
+                                        style="color: var(--gold); text-decoration: none;">ORD-XXX</a>
+                                </td>
+                                <td>
+                                    <span th:class="'type-badge type-' + ${item.requestType}"
+                                        th:text="${item.requestType == 'RETURN' ? '退貨' : '換貨'}">退貨</span>
+                                </td>
+                                <td>
+                                    <span th:class="'status-badge status-' + ${item.status}"
+                                        th:text="${item.status}">PENDING</span>
+                                </td>
+                                <td th:text="${item.reason}"
+                                    style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                    th:title="${item.reason}">原因...</td>
+                                <td th:text="${item.itemSummary}"
+                                    style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                    th:title="${item.itemSummary}">商品 x 1</td>
+                                <td>
+                                    <span th:if="${item.appointmentDate}"
+                                        th:text="${item.appointmentDate + ' ' + item.appointmentTimeSlot}">2023-10-01
+                                        10:00</span>
+                                    <span th:unless="${item.appointmentDate}" style="color: #adb5bd;">-</span>
+                                </td>
+                                <td th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}">2023-10-01 10:00
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 智能分頁組件 (URL 跳轉模式) -->
+                <div style="margin-top: 2rem; display: flex; justify-content: center;">
+                    <div th:replace="~{fragments/pagination :: pagination(
+                        ${currentPage},
+                        ${totalPages},
+                        ${smartPages},
+                        '/admin/after-sales',
+                        'status=' + ${filterStatus != null ? filterStatus : ''} + '&type=' + ${filterType != null ? filterType : ''}
+                    )}"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 引入公共彈窗 -->
+    <div th:replace="~{fragments/common :: modals}"></div>
+
+    <!-- 引入公共 JS -->
+    <script src="/js/common.js"></script>
+    <script src="/js/admin.js"></script>
+
+    <script>
+        // 簡單的篩選跳轉邏輯
+        function applyFilter() {
+            const status = document.querySelector('select[name="status"]').value;
+            const type = document.querySelector('select[name="type"]').value;
+            let url = '/admin/after-sales?page=1';
+            if (status) url += '&status=' + status;
+            if (type) url += '&type=' + type;
+            window.location.href = url;
+        }
+
+        function resetFilter() {
+            window.location.href = '/admin/after-sales?page=1';
+        }
+    </script>
+</body>
+
+</html>

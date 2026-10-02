@@ -168,4 +168,23 @@ public class SystemConfigService {
                 .orElse(1); // 默認 1 天
     }
 
+    /**
+     * 獲取每日送貨開始時間
+     * @return 默認 "09:00"
+     */
+    public String getDeliveryStartTime() {
+        return repository.findById("DELIVERY_START_TIME")
+                .map(SystemConfig::getConfigValue)
+                .orElse("09:00");
+    }
+
+    /**
+     * 獲取每日送貨結束時間
+     * @return 默認 "18:00"
+     */
+    public String getDeliveryEndTime() {
+        return repository.findById("DELIVERY_END_TIME")
+                .map(SystemConfig::getConfigValue)
+                .orElse("18:00");
+    }
 }

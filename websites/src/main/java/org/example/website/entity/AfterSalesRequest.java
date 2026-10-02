@@ -102,7 +102,6 @@ public class AfterSalesRequest {
 
     public enum RequestStatus {
         PENDING,          // 待到店 / 待審核
-        VERIFIED,         // 已驗收/已鑑定 (店鋪已收到舊物並確認成色)
         WAITING_PAYMENT,  // 待補差價 (僅換貨時，且新商品更貴或舊物降級時觸發)
         COMPLETED,        // 已完成 (退款已發放 或 新貨已發出)
         REJECTED,         // 已拒絕 (如商品人為損壞、超過期限等)

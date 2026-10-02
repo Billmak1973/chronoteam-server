@@ -72,7 +72,17 @@ public class Order {
     @JoinColumn(name = "offline_store_id") // 指定外键列名
     private OfflineStore offlineStore;
 
-    // ================= 6. 時間戳 (Timestamps) =================
+    // ================= 6. 關聯地址信息 (Address) 【新增區段】 =================
+    /**
+     * 關聯的收貨地址 (針對快遞配送)
+     * 使用 @ManyToOne 建立多對一關係，方便直接獲取收件人姓名、電話和完整地址
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_address_id") // 對應 user_addresses 表的主鍵 address_id
+    private UserAddress userAddress;
+
+
+    // ================= 7. 時間戳 (Timestamps) =================
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -80,7 +90,7 @@ public class Order {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
-    // ================= 7. 發貨時效管理 (新增) =================
+    // ================= 8. 發貨時效管理  =================
     @Column(name = "received_at")
     private LocalDateTime receivedAt;
 
@@ -101,13 +111,20 @@ public class Order {
     @Column(name = "appointment_date")
     private java.time.LocalDate appointmentDate;
 
-    // ================= 8. 用戶界面可見性 (新增) =================
+    // ================= 9. 用戶界面可見性  =================
     /**
      * 訂單在用戶端是否可見 (用於取消/退貨訂單的「軟刪除」/隱藏)
      * 默認為 true (可見)，用戶點擊刪除後設為 false (隱藏)
      */
     @Column(name = "is_visible", nullable = false)
     private Boolean isVisible = true;
+
+    // ================= 10. 取貨提醒追蹤 (新增) =================
+    @Column(name = "pickup_reminder_count")
+    private Integer pickupReminderCount = 0;
+
+    @Column(name = "last_pickup_reminder_at")
+    private LocalDateTime lastPickupReminderAt;
 
     // ================= 枚舉定義 =================
     public enum OrderStatus {

@@ -544,18 +544,39 @@
                                 <div class="form-group">
                                     <label for="offlinePaymentDays"><i class="fas fa-store"></i> 線下付款/取貨保留天數</label>
                                     <input type="number" id="offlinePaymentDays" step="1" min="1" max="30" required
-                                           class="form-input" placeholder="例如：3">
-                                    <small class="form-hint"><i class="fas fa-info-circle"></i> 顧客選擇「線下付款/門店自取」後，訂單保留的最長天數。逾期系統將自動取消訂單並恢復庫存。</small>
+                                        class="form-input" placeholder="例如：3">
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i>
+                                        顧客選擇「線下付款/門店自取」後，訂單保留的最長天數。逾期系統將自動取消訂單並恢復庫存。</small>
                                 </div>
 
                                 <!-- 新增：網絡訂單保留天數 -->
                                 <div class="form-group">
-                                    <label for="onlineOrderRetentionDays"><i class="fas fa-clock"></i> 網絡訂單保留天數 (待付款)</label>
-                                    <input type="number" id="onlineOrderRetentionDays" step="1" min="1" max="30" required
-                                           class="form-input" placeholder="例如：1 (即24小時)">
+                                    <label for="onlineOrderRetentionDays"><i class="fas fa-clock"></i> 網絡訂單保留天數
+                                        (待付款)</label>
+                                    <input type="number" id="onlineOrderRetentionDays" step="1" min="1" max="30"
+                                        required class="form-input" placeholder="例如：1 (即24小時)">
                                     <small class="form-hint">
                                         <i class="fas fa-info-circle"></i>
                                         顧客下單後未付款，系統保留訂單的最長天數。逾期系統將自動取消訂單並釋放庫存。(例如填寫 1，即保留 24 小時)
+                                    </small>
+                                </div>
+
+                                <!-- 新增：每日送貨時間段設置 -->
+                                <div class="form-group">
+                                    <label><i class="fas fa-clock"></i> 每日送貨時間段</label>
+                                    <div style="display: flex; gap: 1rem; align-items: center;">
+                                        <div style="flex: 1;">
+                                            <input type="time" id="deliveryStartTime" class="form-input"
+                                                placeholder="例如：09:00">
+                                        </div>
+                                        <span style="color: var(--gray); font-weight: 600; font-size: 1.1rem;">至</span>
+                                        <div style="flex: 1;">
+                                            <input type="time" id="deliveryEndTime" class="form-input"
+                                                placeholder="例如：18:00">
+                                        </div>
+                                    </div>
+                                    <small class="form-hint">
+                                        <i class="fas fa-info-circle"></i> 設定每日允許送貨的時間範圍。超出此範圍的訂單，預計送達時間將自動順延至次日對應時間段。
                                     </small>
                                 </div>
 
@@ -954,6 +975,8 @@
                     if (configs.EXCHANGE_DAYS !== undefined) document.getElementById('exchangeDays').value = configs.EXCHANGE_DAYS;
                     if (configs.OFFLINE_PAYMENT_DAYS !== undefined) document.getElementById('offlinePaymentDays').value = configs.OFFLINE_PAYMENT_DAYS;
                     if (configs.ONLINE_ORDER_RETENTION_DAYS !== undefined) document.getElementById('onlineOrderRetentionDays').value = configs.ONLINE_ORDER_RETENTION_DAYS;
+                    if (configs.DELIVERY_START_TIME) document.getElementById('deliveryStartTime').value = configs.DELIVERY_START_TIME;
+                    if (configs.DELIVERY_END_TIME) document.getElementById('deliveryEndTime').value = configs.DELIVERY_END_TIME;
                 }
             } catch (error) {console.warn('加載當前配置失敗:', error);}
         }
@@ -1062,10 +1085,12 @@
         async function saveReturnConfig(e) {
             e.preventDefault();
             const data = {
-                    "RETURN_DAYS": document.getElementById('returnDays').value,
-                    "EXCHANGE_DAYS": document.getElementById('exchangeDays').value,
-                    "OFFLINE_PAYMENT_DAYS": document.getElementById('offlinePaymentDays').value,
-                "ONLINE_ORDER_RETENTION_DAYS": document.getElementById('onlineOrderRetentionDays').value
+                "RETURN_DAYS": document.getElementById('returnDays').value,
+                "EXCHANGE_DAYS": document.getElementById('exchangeDays').value,
+                "OFFLINE_PAYMENT_DAYS": document.getElementById('offlinePaymentDays').value,
+                "ONLINE_ORDER_RETENTION_DAYS": document.getElementById('onlineOrderRetentionDays').value,
+                "DELIVERY_START_TIME": document.getElementById('deliveryStartTime').value,
+                "DELIVERY_END_TIME": document.getElementById('deliveryEndTime').value
             };
             await saveConfig('/api/admin/config/update-return-policy', data, 'saveReturnBtn', '退换货政策已成功保存！');
         }

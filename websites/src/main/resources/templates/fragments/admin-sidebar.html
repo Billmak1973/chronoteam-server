@@ -45,6 +45,11 @@
                             data-page="orders">
                             <i class="fas fa-shopping-cart"></i> 訂單管理
                         </a></li>
+                    <li>
+                        <a href="/admin/after-sales" th:classappend="${activePage == 'after-sales'} ? 'active' : ''" data-page="after-sales">
+                            <i class="fas fa-undo-alt"></i> 售後申請管理
+                        </a>
+                    </li>
                     <li><a href="/admin/customers" th:classappend="${activePage == 'customers'} ? 'active' : ''"
                             data-page="customers">
                             <i class="fas fa-users"></i> 用戶管理
@@ -91,17 +96,8 @@
                     <i class="fas fa-chevron-right"></i>
                 </div>
                 <ul class="menu-items">
-                    <li><a href="/admin/roles" th:classappend="${activePage == 'roles'} ? 'active' : ''" data-page="roles">
-                        <i class="fas fa-user-shield"></i> 角色與權限
-                    </a></li>
-                    <li><a href="/admin/audit" th:classappend="${activePage == 'audit'} ? 'active' : ''" data-page="audit">
-                        <i class="fas fa-history"></i> 操作審計日誌
-                    </a></li>
                     <li><a href="/admin/penalties" th:classappend="${activePage == 'penalties'} ? 'active' : ''" data-page="penalties">
                         <i class="fas fa-gavel"></i> 處罰與申訴管理
-                    </a></li>
-                    <li><a href="/admin/content" th:classappend="${activePage == 'content'} ? 'active' : ''" data-page="content">
-                        <i class="fas fa-edit"></i> 靜態內容管理
                     </a></li>
                     <li><a href="/admin/settings" th:classappend="${activePage == 'settings'} ? 'active' : ''" data-page="settings">
                         <i class="fas fa-palette"></i> 網站外觀設置

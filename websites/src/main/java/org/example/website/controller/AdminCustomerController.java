@@ -10,10 +10,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.entity.User;
 import org.example.website.repository.UserRepository;
+import org.example.website.security.CustomUserDetails;
 import org.example.website.util.PaginationUtils;
 import org.example.website.util.UidGenerator;
 import org.springframework.data.domain.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -100,8 +102,9 @@ public class AdminCustomerController {
             item.put("username", user.getUsername());
             item.put("email", user.getEmail());
             item.put("phone", user.getPhone());
-            item.put("address", user.getAddress());
-            item.put("backupAddress", user.getBackupAddress());
+            item.put("workPhone", user.getWorkPhone());
+//            item.put("address", user.getAddress());
+//            item.put("backupAddress", user.getBackupAddress());
             item.put("role", user.getRole().name());
             item.put("createdAt", user.getCreatedAt());
             item.put("updatedAt", user.getUpdatedAt());
@@ -117,7 +120,6 @@ public class AdminCustomerController {
 
         return ResponseEntity.ok(response);
     }
-
     /**
      * 創建新手動賬號 (管理員專用)
      */
@@ -128,6 +130,7 @@ public class AdminCustomerController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "創建成功"),
             @ApiResponse(responseCode = "400", description = "參數錯誤、用戶名已存在或觸發安全限制"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員 (Role: ADMIN)"),
             @ApiResponse(responseCode = "500", description = "UID 生成衝突或服務器錯誤")
     })
     @PostMapping("/api/customers/create")
@@ -138,7 +141,16 @@ public class AdminCustomerController {
                     required = true,
                     content = @Content(schema = @Schema(example = "{\"username\": \"new_staff\", \"role\": \"SALES\"}"))
             )
-            @RequestBody Map<String, String> payload) {
+            @RequestBody Map<String, String> payload,
+            Authentication authentication) { // 注入 Authentication 用於權限校驗
+
+        // 核心權限校驗：嚴格檢查 user_type 是否為 ADMIN
+        if (authentication == null || !authentication.isAuthenticated() ||
+                "anonymousUser".equals(authentication.getPrincipal()) ||
+                !(authentication.getPrincipal() instanceof CustomUserDetails userDetails) ||
+                userDetails.getRole() != User.Role.ADMIN) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "無權操作，僅限管理員 (Role: ADMIN)"));
+        }
 
         String username = payload.get("username");
         String roleStr = payload.get("role");
@@ -210,6 +222,7 @@ public class AdminCustomerController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "權限更新成功"),
             @ApiResponse(responseCode = "400", description = "用戶不存在、無效的角色類型或觸發安全限制"),
+            @ApiResponse(responseCode = "403", description = "無權操作，僅限管理員 (Role: ADMIN)"),
             @ApiResponse(responseCode = "500", description = "服務器錯誤")
     })
     @PutMapping("/api/customers/{id}/role")
@@ -222,7 +235,16 @@ public class AdminCustomerController {
                     required = true,
                     content = @Content(schema = @Schema(example = "{\"role\": \"APPRAISER\"}"))
             )
-            @RequestBody Map<String, String> payload) {
+            @RequestBody Map<String, String> payload,
+            Authentication authentication) { // 【新增】注入 Authentication 用於權限校驗
+
+        // 【新增】核心權限校驗：嚴格檢查 user_type 是否為 ADMIN
+        if (authentication == null || !authentication.isAuthenticated() ||
+                "anonymousUser".equals(authentication.getPrincipal()) ||
+                !(authentication.getPrincipal() instanceof CustomUserDetails userDetails) ||
+                userDetails.getRole() != User.Role.ADMIN) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "無權操作，僅限管理員 (Role: ADMIN)"));
+        }
 
         String roleStr = payload.get("role");
 

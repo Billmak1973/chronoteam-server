@@ -27,8 +27,10 @@ public class AdminConfigController {
     private static final String KEY_EXCHANGE_DAYS = "config:exchange:days";
     private static final String KEY_OFFLINE_PAYMENT_DAYS = "config:return:offline_payment_days";
     private static final String KEY_ONLINE_ORDER_RETENTION_DAYS = "config:return:online_order_retention_days";
+    private static final String KEY_DELIVERY_START_TIME = "config:delivery:start_time";
+    private static final String KEY_DELIVERY_END_TIME = "config:delivery:end_time";
 
-    // 【新增】全局截单时间与偏移量
+    // 全局截单时间与偏移量
     private static final String KEY_GLOBAL_CUTOFF_TIME = "config:delivery:global_cutoff_time";
     private static final String KEY_CUTOFF_DAY_OFFSET = "config:delivery:cutoff_day_offset";
     private static final String KEY_CONTINUOUS_DAYS_MODE = "config:delivery:continuous_days_mode";
@@ -68,26 +70,40 @@ public class AdminConfigController {
         // 1. 先準備要保存到數據庫的配置
         Map<String, String> dbConfigs = new HashMap<>();
         if (configs.containsKey("SHIPPING_FEE")) dbConfigs.put("SHIPPING_FEE", configs.get("SHIPPING_FEE"));
-        if (configs.containsKey("FREE_SHIPPING_THRESHOLD")) dbConfigs.put("FREE_SHIPPING_THRESHOLD", configs.get("FREE_SHIPPING_THRESHOLD"));
+        if (configs.containsKey("FREE_SHIPPING_THRESHOLD"))
+            dbConfigs.put("FREE_SHIPPING_THRESHOLD", configs.get("FREE_SHIPPING_THRESHOLD"));
         if (configs.containsKey("DELIVERY_MODE")) dbConfigs.put("DELIVERY_MODE", configs.get("DELIVERY_MODE"));
-        if (configs.containsKey("DELIVERY_SPECIFIC_DAYS")) dbConfigs.put("DELIVERY_SPECIFIC_DAYS", configs.get("DELIVERY_SPECIFIC_DAYS"));
-        if (configs.containsKey("DELIVERY_CUSTOM_DAYS")) dbConfigs.put("DELIVERY_CUSTOM_DAYS", configs.get("DELIVERY_CUSTOM_DAYS"));
-        if (configs.containsKey("GLOBAL_CUTOFF_TIME")) dbConfigs.put("GLOBAL_CUTOFF_TIME", configs.get("GLOBAL_CUTOFF_TIME"));
-        if (configs.containsKey("CUTOFF_DAY_OFFSET")) dbConfigs.put("CUTOFF_DAY_OFFSET", configs.get("CUTOFF_DAY_OFFSET"));
-        if (configs.containsKey("CONTINUOUS_DAYS_MODE")) dbConfigs.put("CONTINUOUS_DAYS_MODE", configs.get("CONTINUOUS_DAYS_MODE"));
+        if (configs.containsKey("DELIVERY_SPECIFIC_DAYS"))
+            dbConfigs.put("DELIVERY_SPECIFIC_DAYS", configs.get("DELIVERY_SPECIFIC_DAYS"));
+        if (configs.containsKey("DELIVERY_CUSTOM_DAYS"))
+            dbConfigs.put("DELIVERY_CUSTOM_DAYS", configs.get("DELIVERY_CUSTOM_DAYS"));
+        if (configs.containsKey("GLOBAL_CUTOFF_TIME"))
+            dbConfigs.put("GLOBAL_CUTOFF_TIME", configs.get("GLOBAL_CUTOFF_TIME"));
+        if (configs.containsKey("CUTOFF_DAY_OFFSET"))
+            dbConfigs.put("CUTOFF_DAY_OFFSET", configs.get("CUTOFF_DAY_OFFSET"));
+        if (configs.containsKey("CONTINUOUS_DAYS_MODE"))
+            dbConfigs.put("CONTINUOUS_DAYS_MODE", configs.get("CONTINUOUS_DAYS_MODE"));
 
         // 2. 【核心修改】先保存到數據庫
         systemConfigService.updateConfigs(dbConfigs);
 
         // 3. 數據庫保存成功後，再更新 Redis
-        if (configs.containsKey("SHIPPING_FEE")) redisTemplate.opsForValue().set(KEY_SHIPPING_FEE, configs.get("SHIPPING_FEE"));
-        if (configs.containsKey("FREE_SHIPPING_THRESHOLD")) redisTemplate.opsForValue().set(KEY_FREE_SHIPPING_THRESHOLD, configs.get("FREE_SHIPPING_THRESHOLD"));
-        if (configs.containsKey("DELIVERY_MODE")) redisTemplate.opsForValue().set(KEY_DELIVERY_MODE, configs.get("DELIVERY_MODE"));
-        if (configs.containsKey("DELIVERY_SPECIFIC_DAYS")) redisTemplate.opsForValue().set(KEY_DELIVERY_SPECIFIC_DAYS, configs.get("DELIVERY_SPECIFIC_DAYS"));
-        if (configs.containsKey("DELIVERY_CUSTOM_DAYS")) redisTemplate.opsForValue().set(KEY_DELIVERY_CUSTOM_DAYS, configs.get("DELIVERY_CUSTOM_DAYS"));
-        if (configs.containsKey("GLOBAL_CUTOFF_TIME")) redisTemplate.opsForValue().set(KEY_GLOBAL_CUTOFF_TIME, configs.get("GLOBAL_CUTOFF_TIME"));
-        if (configs.containsKey("CUTOFF_DAY_OFFSET")) redisTemplate.opsForValue().set(KEY_CUTOFF_DAY_OFFSET, configs.get("CUTOFF_DAY_OFFSET"));
-        if (configs.containsKey("CONTINUOUS_DAYS_MODE")) redisTemplate.opsForValue().set(KEY_CONTINUOUS_DAYS_MODE, configs.get("CONTINUOUS_DAYS_MODE"));
+        if (configs.containsKey("SHIPPING_FEE"))
+            redisTemplate.opsForValue().set(KEY_SHIPPING_FEE, configs.get("SHIPPING_FEE"));
+        if (configs.containsKey("FREE_SHIPPING_THRESHOLD"))
+            redisTemplate.opsForValue().set(KEY_FREE_SHIPPING_THRESHOLD, configs.get("FREE_SHIPPING_THRESHOLD"));
+        if (configs.containsKey("DELIVERY_MODE"))
+            redisTemplate.opsForValue().set(KEY_DELIVERY_MODE, configs.get("DELIVERY_MODE"));
+        if (configs.containsKey("DELIVERY_SPECIFIC_DAYS"))
+            redisTemplate.opsForValue().set(KEY_DELIVERY_SPECIFIC_DAYS, configs.get("DELIVERY_SPECIFIC_DAYS"));
+        if (configs.containsKey("DELIVERY_CUSTOM_DAYS"))
+            redisTemplate.opsForValue().set(KEY_DELIVERY_CUSTOM_DAYS, configs.get("DELIVERY_CUSTOM_DAYS"));
+        if (configs.containsKey("GLOBAL_CUTOFF_TIME"))
+            redisTemplate.opsForValue().set(KEY_GLOBAL_CUTOFF_TIME, configs.get("GLOBAL_CUTOFF_TIME"));
+        if (configs.containsKey("CUTOFF_DAY_OFFSET"))
+            redisTemplate.opsForValue().set(KEY_CUTOFF_DAY_OFFSET, configs.get("CUTOFF_DAY_OFFSET"));
+        if (configs.containsKey("CONTINUOUS_DAYS_MODE"))
+            redisTemplate.opsForValue().set(KEY_CONTINUOUS_DAYS_MODE, configs.get("CONTINUOUS_DAYS_MODE"));
 
         Map<String, Object> successResp = new HashMap<>();
         successResp.put("success", true);
@@ -109,17 +125,31 @@ public class AdminConfigController {
         Map<String, String> dbConfigs = new HashMap<>();
         if (configs.containsKey("RETURN_DAYS")) dbConfigs.put("RETURN_DAYS", configs.get("RETURN_DAYS"));
         if (configs.containsKey("EXCHANGE_DAYS")) dbConfigs.put("EXCHANGE_DAYS", configs.get("EXCHANGE_DAYS"));
-        if (configs.containsKey("OFFLINE_PAYMENT_DAYS")) dbConfigs.put("OFFLINE_PAYMENT_DAYS", configs.get("OFFLINE_PAYMENT_DAYS"));
-        if (configs.containsKey("ONLINE_ORDER_RETENTION_DAYS")) dbConfigs.put("ONLINE_ORDER_RETENTION_DAYS", configs.get("ONLINE_ORDER_RETENTION_DAYS"));
+        if (configs.containsKey("OFFLINE_PAYMENT_DAYS"))
+            dbConfigs.put("OFFLINE_PAYMENT_DAYS", configs.get("OFFLINE_PAYMENT_DAYS"));
+        if (configs.containsKey("ONLINE_ORDER_RETENTION_DAYS"))
+            dbConfigs.put("ONLINE_ORDER_RETENTION_DAYS", configs.get("ONLINE_ORDER_RETENTION_DAYS"));
+        if (configs.containsKey("DELIVERY_START_TIME"))
+            dbConfigs.put("DELIVERY_START_TIME", configs.get("DELIVERY_START_TIME"));
+        if (configs.containsKey("DELIVERY_END_TIME"))
+            dbConfigs.put("DELIVERY_END_TIME", configs.get("DELIVERY_END_TIME"));
 
         // 2. 【核心修改】先保存到數據庫
         systemConfigService.updateConfigs(dbConfigs);
 
         // 3. 數據庫保存成功後，再更新 Redis
-        if (configs.containsKey("RETURN_DAYS")) redisTemplate.opsForValue().set(KEY_RETURN_DAYS, configs.get("RETURN_DAYS"));
-        if (configs.containsKey("EXCHANGE_DAYS")) redisTemplate.opsForValue().set(KEY_EXCHANGE_DAYS, configs.get("EXCHANGE_DAYS"));
-        if (configs.containsKey("OFFLINE_PAYMENT_DAYS")) redisTemplate.opsForValue().set(KEY_OFFLINE_PAYMENT_DAYS, configs.get("OFFLINE_PAYMENT_DAYS"));
-        if (configs.containsKey("ONLINE_ORDER_RETENTION_DAYS")) redisTemplate.opsForValue().set(KEY_ONLINE_ORDER_RETENTION_DAYS, configs.get("ONLINE_ORDER_RETENTION_DAYS"));
+        if (configs.containsKey("RETURN_DAYS"))
+            redisTemplate.opsForValue().set(KEY_RETURN_DAYS, configs.get("RETURN_DAYS"));
+        if (configs.containsKey("EXCHANGE_DAYS"))
+            redisTemplate.opsForValue().set(KEY_EXCHANGE_DAYS, configs.get("EXCHANGE_DAYS"));
+        if (configs.containsKey("OFFLINE_PAYMENT_DAYS"))
+            redisTemplate.opsForValue().set(KEY_OFFLINE_PAYMENT_DAYS, configs.get("OFFLINE_PAYMENT_DAYS"));
+        if (configs.containsKey("ONLINE_ORDER_RETENTION_DAYS"))
+            redisTemplate.opsForValue().set(KEY_ONLINE_ORDER_RETENTION_DAYS, configs.get("ONLINE_ORDER_RETENTION_DAYS"));
+        if (configs.containsKey("DELIVERY_START_TIME"))
+            redisTemplate.opsForValue().set("config:delivery:start_time", configs.get("DELIVERY_START_TIME"));
+        if (configs.containsKey("DELIVERY_END_TIME"))
+            redisTemplate.opsForValue().set("config:delivery:end_time", configs.get("DELIVERY_END_TIME"));
 
         Map<String, Object> successResp = new HashMap<>();
         successResp.put("success", true);
@@ -128,6 +158,7 @@ public class AdminConfigController {
         return ResponseEntity.ok(successResp);
     }
 
+    //加載數據的
     @GetMapping("/get")
     public ResponseEntity<?> getCurrentConfig() {
         Map<String, String> configs = new HashMap<>();
@@ -165,6 +196,11 @@ public class AdminConfigController {
         String onlineRetentionDays = redisTemplate.opsForValue().get(KEY_ONLINE_ORDER_RETENTION_DAYS);
         configs.put("ONLINE_ORDER_RETENTION_DAYS", onlineRetentionDays != null ? onlineRetentionDays : "1"); // 默認 1 天
 
+        String deliveryStartTime = redisTemplate.opsForValue().get(KEY_DELIVERY_START_TIME);
+        configs.put("DELIVERY_START_TIME", deliveryStartTime != null ? deliveryStartTime : "09：00");
+
+        String deliveryEndTime = redisTemplate.opsForValue().get(KEY_DELIVERY_END_TIME);
+        configs.put("DELIVERY_END_TIME", deliveryEndTime != null ? deliveryEndTime : "18:00"); // 默認 18:00
         return ResponseEntity.ok(configs);
     }
 
@@ -183,11 +219,16 @@ public class AdminConfigController {
 
         // 1. 先準備要保存到數據庫的配置
         Map<String, String> dbConfigs = new HashMap<>();
-        if (configs.containsKey("NOTIFICATION_TEXT")) dbConfigs.put("NOTIFICATION_TEXT", configs.get("NOTIFICATION_TEXT"));
-        if (configs.containsKey("NOTIFICATION_TEXT_COLOR")) dbConfigs.put("NOTIFICATION_TEXT_COLOR", configs.get("NOTIFICATION_TEXT_COLOR"));
-        if (configs.containsKey("NOTIFICATION_FONT_WEIGHT")) dbConfigs.put("NOTIFICATION_FONT_WEIGHT", configs.get("NOTIFICATION_FONT_WEIGHT"));
-        if (configs.containsKey("NOTIFICATION_FONT_SIZE")) dbConfigs.put("NOTIFICATION_FONT_SIZE", configs.get("NOTIFICATION_FONT_SIZE"));
-        if (configs.containsKey("NOTIFICATION_FONT_ITALIC")) dbConfigs.put("NOTIFICATION_FONT_ITALIC", configs.get("NOTIFICATION_FONT_ITALIC"));
+        if (configs.containsKey("NOTIFICATION_TEXT"))
+            dbConfigs.put("NOTIFICATION_TEXT", configs.get("NOTIFICATION_TEXT"));
+        if (configs.containsKey("NOTIFICATION_TEXT_COLOR"))
+            dbConfigs.put("NOTIFICATION_TEXT_COLOR", configs.get("NOTIFICATION_TEXT_COLOR"));
+        if (configs.containsKey("NOTIFICATION_FONT_WEIGHT"))
+            dbConfigs.put("NOTIFICATION_FONT_WEIGHT", configs.get("NOTIFICATION_FONT_WEIGHT"));
+        if (configs.containsKey("NOTIFICATION_FONT_SIZE"))
+            dbConfigs.put("NOTIFICATION_FONT_SIZE", configs.get("NOTIFICATION_FONT_SIZE"));
+        if (configs.containsKey("NOTIFICATION_FONT_ITALIC"))
+            dbConfigs.put("NOTIFICATION_FONT_ITALIC", configs.get("NOTIFICATION_FONT_ITALIC"));
         if (configs.containsKey("SCROLL_ENABLED")) dbConfigs.put("SCROLL_ENABLED", configs.get("SCROLL_ENABLED"));
         if (configs.containsKey("SCROLL_DIRECTION")) dbConfigs.put("SCROLL_DIRECTION", configs.get("SCROLL_DIRECTION"));
         if (configs.containsKey("SCROLL_SPEED")) dbConfigs.put("SCROLL_SPEED", configs.get("SCROLL_SPEED"));
@@ -197,15 +238,24 @@ public class AdminConfigController {
         systemConfigService.updateConfigs(dbConfigs);
 
         // 3. 數據庫保存成功後，再更新 Redis
-        if (configs.containsKey("NOTIFICATION_TEXT")) redisTemplate.opsForValue().set(KEY_NOTIFICATION_TEXT, configs.get("NOTIFICATION_TEXT"));
-        if (configs.containsKey("NOTIFICATION_TEXT_COLOR")) redisTemplate.opsForValue().set(KEY_NOTIFICATION_TEXT_COLOR, configs.get("NOTIFICATION_TEXT_COLOR"));
-        if (configs.containsKey("NOTIFICATION_FONT_WEIGHT")) redisTemplate.opsForValue().set(KEY_NOTIFICATION_FONT_WEIGHT, configs.get("NOTIFICATION_FONT_WEIGHT"));
-        if (configs.containsKey("NOTIFICATION_FONT_SIZE")) redisTemplate.opsForValue().set(KEY_NOTIFICATION_FONT_SIZE, configs.get("NOTIFICATION_FONT_SIZE"));
-        if (configs.containsKey("NOTIFICATION_FONT_ITALIC")) redisTemplate.opsForValue().set(KEY_NOTIFICATION_FONT_ITALIC, configs.get("NOTIFICATION_FONT_ITALIC"));
-        if (configs.containsKey("SCROLL_ENABLED")) redisTemplate.opsForValue().set(KEY_SCROLL_ENABLED, configs.get("SCROLL_ENABLED"));
-        if (configs.containsKey("SCROLL_DIRECTION")) redisTemplate.opsForValue().set(KEY_SCROLL_DIRECTION, configs.get("SCROLL_DIRECTION"));
-        if (configs.containsKey("SCROLL_SPEED")) redisTemplate.opsForValue().set(KEY_SCROLL_SPEED, configs.get("SCROLL_SPEED"));
-        if (configs.containsKey("SCROLL_INTERVAL")) redisTemplate.opsForValue().set(KEY_SCROLL_INTERVAL, configs.get("SCROLL_INTERVAL"));
+        if (configs.containsKey("NOTIFICATION_TEXT"))
+            redisTemplate.opsForValue().set(KEY_NOTIFICATION_TEXT, configs.get("NOTIFICATION_TEXT"));
+        if (configs.containsKey("NOTIFICATION_TEXT_COLOR"))
+            redisTemplate.opsForValue().set(KEY_NOTIFICATION_TEXT_COLOR, configs.get("NOTIFICATION_TEXT_COLOR"));
+        if (configs.containsKey("NOTIFICATION_FONT_WEIGHT"))
+            redisTemplate.opsForValue().set(KEY_NOTIFICATION_FONT_WEIGHT, configs.get("NOTIFICATION_FONT_WEIGHT"));
+        if (configs.containsKey("NOTIFICATION_FONT_SIZE"))
+            redisTemplate.opsForValue().set(KEY_NOTIFICATION_FONT_SIZE, configs.get("NOTIFICATION_FONT_SIZE"));
+        if (configs.containsKey("NOTIFICATION_FONT_ITALIC"))
+            redisTemplate.opsForValue().set(KEY_NOTIFICATION_FONT_ITALIC, configs.get("NOTIFICATION_FONT_ITALIC"));
+        if (configs.containsKey("SCROLL_ENABLED"))
+            redisTemplate.opsForValue().set(KEY_SCROLL_ENABLED, configs.get("SCROLL_ENABLED"));
+        if (configs.containsKey("SCROLL_DIRECTION"))
+            redisTemplate.opsForValue().set(KEY_SCROLL_DIRECTION, configs.get("SCROLL_DIRECTION"));
+        if (configs.containsKey("SCROLL_SPEED"))
+            redisTemplate.opsForValue().set(KEY_SCROLL_SPEED, configs.get("SCROLL_SPEED"));
+        if (configs.containsKey("SCROLL_INTERVAL"))
+            redisTemplate.opsForValue().set(KEY_SCROLL_INTERVAL, configs.get("SCROLL_INTERVAL"));
 
         Map<String, Object> successResp = new HashMap<>();
         successResp.put("success", true);

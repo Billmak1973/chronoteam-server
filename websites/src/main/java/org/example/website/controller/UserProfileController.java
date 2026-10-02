@@ -11,6 +11,7 @@ import org.example.website.dto.Result;
 import org.example.website.entity.User;
 import org.example.website.repository.UserRepository;
 import org.example.website.security.CustomUserDetails;
+import org.example.website.service.UserAddressService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
@@ -35,19 +36,36 @@ public class UserProfileController {
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
 
+    // 注入 UserAddressService 處理獨立地址表
+    private final UserAddressService userAddressService;
+
+    public UserProfileController(UserAddressService userAddressService) {
+        this.userAddressService = userAddressService;
+    }
+
+    /**
+     * 輔助方法：判斷是否為員工角色 (非普通顧客)
+     */
+    private boolean isStaffRole(User.Role role) {
+        return role == User.Role.ADMIN ||
+                role == User.Role.SALES ||
+                role == User.Role.COURIER ||
+                role == User.Role.APPRAISER;
+    }
+
     @Operation(
             summary = "更新用戶個人資料",
-            description = "允許用戶更新用戶名、地址和備用地址。修改用戶名時會進行唯一性校驗，若校驗通過則更新數據庫並清除舊的 Redis 緩存。"
+            description = "允許用戶更新用戶名、地址和備用地址。員工角色(ADMIN/SALES/COURIER/APPRAISER)還可更新郵箱、手機和工作電話。"
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "更新成功，或返回特定業務提示 (如 SAME_USERNAME, USERNAME_EXISTS)", content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Result.class))),
+            @ApiResponse(responseCode = "200", description = "更新成功，或返回特定業務提示", content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Result.class))),
             @ApiResponse(responseCode = "401", description = "未登入或認證失效"),
             @ApiResponse(responseCode = "404", description = "用戶不存在")
     })
     @PutMapping("/update-profile")
     public ResponseEntity<?> updateProfile(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "需要更新的字段鍵值對。支持的 key 包括: 'username' (新用戶名), 'address' (地址), 'backupAddress' (備用地址)。空字符串表示清空該字段。",
+                    description = "需要更新的字段鍵值對。支持的 key: 'username', 'address', 'backupAddress', 'email', 'phone', 'workPhone'。空字符串表示清空該字段。",
                     required = true,
                     content = @io.swagger.v3.oas.annotations.media.Content(
                             schema = @io.swagger.v3.oas.annotations.media.Schema(
@@ -62,8 +80,8 @@ public class UserProfileController {
         User user = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        //  記錄舊的用戶名，用於後續精準清除 Redis 緩存
         String oldUsername = user.getUsername();
+        boolean isStaff = isStaffRole(user.getRole());
 
         // 2. 遍歷並校驗傳入的字段
         for (Map.Entry<String, String> entry : updates.entrySet()) {
@@ -71,29 +89,54 @@ public class UserProfileController {
             String value = entry.getValue();
 
             if (key.equals("username")) {
-                //  核心校驗 1：新用戶名和原用戶名一樣
                 if (value.equals(oldUsername)) {
                     return ResponseEntity.ok(Map.of("success", false, "message", "SAME_USERNAME"));
                 }
-
-                //  核心校驗 2：新用戶名已被其他用戶註冊
                 if (userRepository.existsByUsername(value)) {
                     return ResponseEntity.ok(Map.of("success", false, "message", "USERNAME_EXISTS"));
                 }
-
-                // 校驗通過，才允許修改
                 user.setUsername(value);
-            } else if (key.equals("address")) {
-                user.setAddress(value.isEmpty() ? null : value);
-            } else if (key.equals("backupAddress")) {
-                user.setBackupAddress(value.isEmpty() ? null : value);
+            }
+            // === 核心修改：地址字段交由 UserAddressService 處理 ===
+            else if (key.equals("address")) {
+                // ranking = 1 代表主地址。若 value 為空，Service 層會自動執行刪除邏輯
+                userAddressService.updateOrCreateAddress(user, 1, value.isEmpty() ? null : value);
+            }
+            else if (key.equals("backupAddress")) {
+                // ranking = 2 代表備用地址。若 value 為空，Service 層會自動執行刪除邏輯
+                userAddressService.updateOrCreateAddress(user, 2, value.isEmpty() ? null : value);
+            }
+            // === 員工專屬字段校驗與更新 ===
+            else if (key.equals("email")) {
+                if (!isStaff) {
+                    return ResponseEntity.ok(Map.of("success", false, "message", "無權修改電子郵件"));
+                }
+                if (!value.equals(user.getEmail()) && userRepository.findByEmail(value).isPresent()) {
+                    return ResponseEntity.ok(Map.of("success", false, "message", "EMAIL_EXISTS"));
+                }
+                user.setEmail(value.isEmpty() ? null : value);
+            }
+            else if (key.equals("phone")) {
+                if (!isStaff) {
+                    return ResponseEntity.ok(Map.of("success", false, "message", "無權修改手機號碼"));
+                }
+                if (!value.equals(user.getPhone()) && userRepository.findByPhone(value).isPresent()) {
+                    return ResponseEntity.ok(Map.of("success", false, "message", "PHONE_EXISTS"));
+                }
+                user.setPhone(value.isEmpty() ? null : value);
+            }
+            else if (key.equals("workPhone")) {
+                if (!isStaff) {
+                    return ResponseEntity.ok(Map.of("success", false, "message", "無權修改工作電話"));
+                }
+                user.setWorkPhone(value.isEmpty() ? null : value);
             }
         }
 
-        // 3. 保存到數據庫
+        // 3. 保存到數據庫 (更新 User 實體，如 username, email, phone 等)
         userRepository.save(user);
 
-        // 4. 【關鍵】清除 Redis 緩存 (使用 oldUsername 確保舊緩存被徹底清除)
+        // 4. 清除 Redis 緩存 (使用舊用戶名確保舊緩存被徹底清除)
         String cacheKey = "user:info:" + oldUsername;
         redisTemplate.delete(cacheKey);
         System.out.println("✅ 已清除用戶緩存: " + cacheKey);

@@ -674,59 +674,90 @@ Auth.togglePassword = function (inputId, icon) {
  * @returns {Promise<void>}
  */
 Auth.handleRegister = async function (e) {
-    e.preventDefault();
-    const form = e.target;
-    const msg = document.getElementById("registerMsg");
-    const btn = form.querySelector('button[type="submit"]');
+  e.preventDefault();
+  const form = e.target;
+  const msg = document.getElementById("registerMsg");
 
-    if (form.password.value !== form.confirmPassword.value) {
-        msg.textContent = "❌ 兩次密碼輸入不一致";
-        msg.style.color = "var(--accent)";
-        form.confirmPassword.focus();
-        return;
+  // 1. 密碼一致性校驗
+  if (form.password.value !== form.confirmPassword.value) {
+    msg.textContent = "❌ 兩次密碼輸入不一致";
+    msg.style.color = "var(--accent)";
+    form.confirmPassword.focus();
+    return;
+  }
+
+  // 2. 獲取地址相關欄位 (使用 ID 獲取更穩妥)
+  const regionSelect = document.getElementById("regionSelect");
+  const districtSelect = document.getElementById("districtSelect");
+  const addressInput = document.getElementById("regAddress");
+
+  const region = regionSelect ? regionSelect.value : "";
+  const district = districtSelect ? districtSelect.value : "";
+  const detailAddress = addressInput ? addressInput.value.trim() : "";
+
+  // 3. 【核心修改】非強制校驗：只有當用戶選擇了區域時，才校驗詳細地址
+  // 如果用戶完全沒選區域，說明不想填地址，直接放行
+  if (region && (!detailAddress || !detailAddress.includes(region))) {
+    msg.textContent = "❌ 既然選擇了區域，詳細地址不能為空，且必須包含所選區域！";
+    msg.style.color = "var(--accent)";
+    if (addressInput) {
+      addressInput.focus();
+      addressInput.style.borderColor = "#e94560";
     }
+    return; // 阻止提交
+  }
 
-    msg.textContent = "";
+  // 4. 組裝完整地址 (如果有的話)
+  let fullAddress = "";
+  if (region && detailAddress) {
+    fullAddress = district ? `${region} ${district} ${detailAddress}` : `${region} ${detailAddress}`;
+  }
 
-    try {
-        const formData = {
-            username: form.username.value.trim(),
-            name: form.name.value.trim(),
-            email: form.email.value.trim(),
-            password: form.password.value,
-            phone: form.phone.value.trim(),
-            address: form.address ? form.address.value.trim() : "",
-        };
+  msg.textContent = "";
 
-        const response = await fetch("/api/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(formData),
-        });
-        const result = await response.json();
+  try {
+    // 5. 構建發送至後端的數據 (包含可選的地址字段)
+    const formData = {
+      username: form.username.value.trim(),
+      name: form.name.value.trim(),
+      email: form.email.value.trim(),
+      password: form.password.value,
+      phone: form.phone.value.trim(),
+      // 傳遞地址信息 (可選)
+      region: region,
+      district: district,
+      detailAddress: detailAddress,
+      fullAddress: fullAddress.trim()
+    };
 
-        if (response.ok) {
-            msg.textContent = "✅ 註冊成功！3秒後自動登入...";
-            msg.style.color = "green";
-            setTimeout(() => {
-                Auth.closeRegisterModal();
-                Auth.openLoginModal();
-                const loginForm = document.getElementById("loginForm");
-                if (loginForm) {
-                    loginForm.username.value = formData.username;
-                    loginForm.password.focus();
-                }
-            }, 2500);
-        } else {
-            msg.textContent = "❌ " + (result.message || "註冊失敗，請重試");
-            msg.style.color = "var(--accent)";
+    const response = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+    const result = await response.json();
+
+    if (response.ok) {
+      msg.textContent = "✅ 註冊成功！3秒後自動登入...";
+      msg.style.color = "green";
+      setTimeout(() => {
+        Auth.closeRegisterModal();
+        Auth.openLoginModal();
+        const loginForm = document.getElementById("loginForm");
+        if (loginForm) {
+          loginForm.username.value = formData.username;
+          loginForm.password.focus();
         }
-    } catch (error) {
-        msg.textContent = "❌ 網絡錯誤，請檢查連接";
-        msg.style.color = "var(--accent)";
-    } finally {
-
+      }, 2500);
+    } else {
+      msg.textContent = "❌ " + (result.message || "註冊失敗，請重試");
+      msg.style.color = "var(--accent)";
     }
+  } catch (error) {
+    msg.textContent = "❌ 網絡錯誤，請檢查連接";
+    msg.style.color = "var(--accent)";
+    console.error("註冊錯誤:", error);
+  }
 };
 
 /**
