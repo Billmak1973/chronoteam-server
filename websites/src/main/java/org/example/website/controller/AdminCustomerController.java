@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.entity.User;
+import org.example.website.entity.UserAddress;
+import org.example.website.repository.UserAddressRepository;
 import org.example.website.repository.UserRepository;
 import org.example.website.security.CustomUserDetails;
 import org.example.website.util.PaginationUtils;
@@ -32,10 +34,12 @@ public class AdminCustomerController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserAddressRepository userAddressRepository; // 2. 新增注入
 
-    public AdminCustomerController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AdminCustomerController(UserRepository userRepository, PasswordEncoder passwordEncoder, UserAddressRepository userAddressRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userAddressRepository = userAddressRepository;
     }
 
     /**
@@ -47,9 +51,6 @@ public class AdminCustomerController {
         return "admin/admin-customers";
     }
 
-    /**
-     * 2. AJAX API: 獲取用戶列表 (修正版：支持 1-based 頁碼)
-     */
     @Operation(
             summary = "獲取後台用戶分頁列表",
             description = "支持關鍵字(用戶名/姓名/郵箱/手機)與角色篩選的分頁查詢，返回 1-based 頁碼及智能分頁數據。"
@@ -71,14 +72,11 @@ public class AdminCustomerController {
             @Parameter(description = "角色篩選 (ADMIN, CUSTOMER, SALES, COURIER, APPRAISER)", example = "CUSTOMER")
             @RequestParam(required = false) String role) {
 
-        // 1. 轉換為 0-based 索引供 Spring Data JPA 使用
         int pageIndex = Math.max(0, page - 1);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-
         Page<User> usersPage;
 
         try {
-            // 動態篩選邏輯
             if ((keyword != null && !keyword.isEmpty()) && (role != null && !role.isEmpty())) {
                 usersPage = userRepository.findByKeywordAndRole(keyword, User.Role.valueOf(role), pageable);
             } else if (keyword != null && !keyword.isEmpty()) {
@@ -89,12 +87,18 @@ public class AdminCustomerController {
                 usersPage = userRepository.findAll(pageable);
             }
         } catch (Exception e) {
-            // 防止 Repository 方法未定義導致崩潰，降級為查詢全部
             usersPage = userRepository.findAll(pageable);
         }
 
+        // 4. 批量獲取當前頁用戶的地址信息 (避免 N+1 查詢性能問題)
+        List<User> users = usersPage.getContent();
+        Map<Long, List<UserAddress>> addressMap = new HashMap<>();
+        for (User user : users) {
+            addressMap.put(user.getId(), userAddressRepository.findByUserOrderByRankingAsc(user));
+        }
+
         // 數據清洗
-        List<Map<String, Object>> cleanUsers = usersPage.getContent().stream().map(user -> {
+        List<Map<String, Object>> cleanUsers = users.stream().map(user -> {
             Map<String, Object> item = new HashMap<>();
             item.put("id", user.getId());
             item.put("uid", user.getUid());
@@ -103,19 +107,34 @@ public class AdminCustomerController {
             item.put("email", user.getEmail());
             item.put("phone", user.getPhone());
             item.put("workPhone", user.getWorkPhone());
-//            item.put("address", user.getAddress());
-//            item.put("backupAddress", user.getBackupAddress());
             item.put("role", user.getRole().name());
             item.put("createdAt", user.getCreatedAt());
             item.put("updatedAt", user.getUpdatedAt());
+
+            // 5. 格式化地址信息為 HTML
+            List<UserAddress> addrs = addressMap.get(user.getId());
+            if (addrs != null && !addrs.isEmpty()) {
+                StringBuilder addrHtml = new StringBuilder();
+                for (int i = 0; i < addrs.size(); i++) {
+                    UserAddress addr = addrs.get(i);
+                    String prefix = (i == 0) ? "<span style='color:var(--gold); font-weight:600;'>主:</span> " :
+                            (i == 1) ? "<span style='color:#64748b;'>備:</span> " :
+                                    "<span style='color:#64748b;'>" + (i + 1) + ":</span> ";
+
+                    addrHtml.append("<div style='margin-bottom: 4px; white-space: normal;'>")
+                            .append(prefix)
+                            .append(addr.getFullAddress())
+                            .append("</div>");
+                }
+                item.put("addressesHtml", addrHtml.toString());
+            } else {
+                item.put("addressesHtml", "<span style='color:#cbd5e1;'>未設置</span>");
+            }
+
             return item;
         }).collect(Collectors.toList());
 
-        // 2. 使用 PaginationUtils 構建基礎響應 (包含 smartPages, totalPages 等)
         Map<String, Object> response = PaginationUtils.buildPageResponse(usersPage, cleanUsers);
-
-        // 3. 【關鍵修正】：覆蓋 currentPage，將 0-based 轉回 1-based 返回給前端
-        // PaginationUtils 內部存的是 usersPage.getNumber() (即 0)，前端需要 1
         response.put("currentPage", page);
 
         return ResponseEntity.ok(response);

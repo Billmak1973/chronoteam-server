@@ -580,6 +580,26 @@
                                     </small>
                                 </div>
 
+                                <div class="form-group">
+                                    <label for="maxUserAddresses"><i class="fas fa-map-marker-alt"></i> 用戶最大地址數量</label>
+                                    <input type="number" id="maxUserAddresses" step="1" min="1" max="20" required
+                                        class="form-input" placeholder="例如：5">
+                                    <small class="form-hint">
+                                        <i class="fas fa-info-circle"></i> 限制每個用戶帳戶最多可以保存的收貨地址數量（建議設置為 1 到 20 之間）。
+                                    </small>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="maxDeliveryDateOptions"><i class="fas fa-calendar-check"></i>
+                                        最大可選配送日期數</label>
+                                    <input type="number" id="maxDeliveryDateOptions" step="1" min="1" max="30" required
+                                        class="form-input" placeholder="例如：4">
+                                    <small class="form-hint">
+                                        <i class="fas fa-info-circle"></i> 顧客在結帳時，配送日期下拉選單中最多顯示的未來可選日期數量（建議設置為 3 到 7
+                                        之間，避免選項過多）。
+                                    </small>
+                                </div>
+
                                 <button type="submit" class="btn-save-config" id="saveReturnBtn"><i
                                         class="fas fa-save"></i> 保存退换货设置</button>
                             </form>
@@ -977,6 +997,13 @@
                     if (configs.ONLINE_ORDER_RETENTION_DAYS !== undefined) document.getElementById('onlineOrderRetentionDays').value = configs.ONLINE_ORDER_RETENTION_DAYS;
                     if (configs.DELIVERY_START_TIME) document.getElementById('deliveryStartTime').value = configs.DELIVERY_START_TIME;
                     if (configs.DELIVERY_END_TIME) document.getElementById('deliveryEndTime').value = configs.DELIVERY_END_TIME;
+                    // 加載最大地址數量
+                    if (configs.MAX_USER_ADDRESSES !== undefined) {
+                        document.getElementById('maxUserAddresses').value = configs.MAX_USER_ADDRESSES;
+                    }
+                    if (configs.MAX_DELIVERY_DATE_OPTIONS !== undefined) {
+                        document.getElementById('maxDeliveryDateOptions').value = configs.MAX_DELIVERY_DATE_OPTIONS;
+                    }
                 }
             } catch (error) {console.warn('加載當前配置失敗:', error);}
         }
@@ -1090,7 +1117,9 @@
                 "OFFLINE_PAYMENT_DAYS": document.getElementById('offlinePaymentDays').value,
                 "ONLINE_ORDER_RETENTION_DAYS": document.getElementById('onlineOrderRetentionDays').value,
                 "DELIVERY_START_TIME": document.getElementById('deliveryStartTime').value,
-                "DELIVERY_END_TIME": document.getElementById('deliveryEndTime').value
+                "DELIVERY_END_TIME": document.getElementById('deliveryEndTime').value,
+                "MAX_USER_ADDRESSES": document.getElementById('maxUserAddresses').value,
+                "MAX_DELIVERY_DATE_OPTIONS": document.getElementById('maxDeliveryDateOptions').value
             };
             await saveConfig('/api/admin/config/update-return-policy', data, 'saveReturnBtn', '退换货政策已成功保存！');
         }

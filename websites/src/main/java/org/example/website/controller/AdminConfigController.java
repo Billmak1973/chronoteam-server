@@ -29,6 +29,8 @@ public class AdminConfigController {
     private static final String KEY_ONLINE_ORDER_RETENTION_DAYS = "config:return:online_order_retention_days";
     private static final String KEY_DELIVERY_START_TIME = "config:delivery:start_time";
     private static final String KEY_DELIVERY_END_TIME = "config:delivery:end_time";
+    private static final String KEY_MAX_USER_ADDRESSES = "config:user:max_addresses";
+    private static final String KEY_MAX_DELIVERY_DATE_OPTIONS = "config:delivery:max_date_options";
 
     // 全局截单时间与偏移量
     private static final String KEY_GLOBAL_CUTOFF_TIME = "config:delivery:global_cutoff_time";
@@ -133,6 +135,12 @@ public class AdminConfigController {
             dbConfigs.put("DELIVERY_START_TIME", configs.get("DELIVERY_START_TIME"));
         if (configs.containsKey("DELIVERY_END_TIME"))
             dbConfigs.put("DELIVERY_END_TIME", configs.get("DELIVERY_END_TIME"));
+        if (configs.containsKey("MAX_USER_ADDRESSES")) {
+            dbConfigs.put("MAX_USER_ADDRESSES", configs.get("MAX_USER_ADDRESSES"));
+        }
+        if (configs.containsKey("MAX_DELIVERY_DATE_OPTIONS")) {
+            dbConfigs.put("MAX_DELIVERY_DATE_OPTIONS", configs.get("MAX_DELIVERY_DATE_OPTIONS"));
+        }
 
         // 2. 【核心修改】先保存到數據庫
         systemConfigService.updateConfigs(dbConfigs);
@@ -150,6 +158,12 @@ public class AdminConfigController {
             redisTemplate.opsForValue().set("config:delivery:start_time", configs.get("DELIVERY_START_TIME"));
         if (configs.containsKey("DELIVERY_END_TIME"))
             redisTemplate.opsForValue().set("config:delivery:end_time", configs.get("DELIVERY_END_TIME"));
+        if (configs.containsKey("MAX_USER_ADDRESSES")) {
+            redisTemplate.opsForValue().set(KEY_MAX_USER_ADDRESSES, configs.get("MAX_USER_ADDRESSES"));
+        }
+        if (configs.containsKey("MAX_DELIVERY_DATE_OPTIONS")) {
+            redisTemplate.opsForValue().set(KEY_MAX_DELIVERY_DATE_OPTIONS, configs.get("MAX_DELIVERY_DATE_OPTIONS"));
+        }
 
         Map<String, Object> successResp = new HashMap<>();
         successResp.put("success", true);
@@ -163,44 +177,25 @@ public class AdminConfigController {
     public ResponseEntity<?> getCurrentConfig() {
         Map<String, String> configs = new HashMap<>();
 
-        String shippingFee = redisTemplate.opsForValue().get(KEY_SHIPPING_FEE);
-        configs.put("SHIPPING_FEE", shippingFee != null ? shippingFee : "50");
+        // 直接放入 Redis 獲取的結果，若無數據則為 null
+        configs.put("SHIPPING_FEE", redisTemplate.opsForValue().get(KEY_SHIPPING_FEE));
+        configs.put("FREE_SHIPPING_THRESHOLD", redisTemplate.opsForValue().get(KEY_FREE_SHIPPING_THRESHOLD));
+        configs.put("DELIVERY_MODE", redisTemplate.opsForValue().get(KEY_DELIVERY_MODE));
+        configs.put("DELIVERY_SPECIFIC_DAYS", redisTemplate.opsForValue().get(KEY_DELIVERY_SPECIFIC_DAYS));
+        configs.put("DELIVERY_CUSTOM_DAYS", redisTemplate.opsForValue().get(KEY_DELIVERY_CUSTOM_DAYS));
+        configs.put("RETURN_DAYS", redisTemplate.opsForValue().get(KEY_RETURN_DAYS));
+        configs.put("EXCHANGE_DAYS", redisTemplate.opsForValue().get(KEY_EXCHANGE_DAYS));
+        configs.put("OFFLINE_PAYMENT_DAYS", redisTemplate.opsForValue().get(KEY_OFFLINE_PAYMENT_DAYS));
+        configs.put("GLOBAL_CUTOFF_TIME", redisTemplate.opsForValue().get(KEY_GLOBAL_CUTOFF_TIME));
+        configs.put("CUTOFF_DAY_OFFSET", redisTemplate.opsForValue().get(KEY_CUTOFF_DAY_OFFSET));
+        configs.put("ONLINE_ORDER_RETENTION_DAYS", redisTemplate.opsForValue().get(KEY_ONLINE_ORDER_RETENTION_DAYS));
+        configs.put("DELIVERY_START_TIME", redisTemplate.opsForValue().get(KEY_DELIVERY_START_TIME));
+        configs.put("DELIVERY_END_TIME", redisTemplate.opsForValue().get(KEY_DELIVERY_END_TIME));
+        configs.put("MAX_USER_ADDRESSES", redisTemplate.opsForValue().get(KEY_MAX_USER_ADDRESSES));
 
-        String freeThreshold = redisTemplate.opsForValue().get(KEY_FREE_SHIPPING_THRESHOLD);
-        configs.put("FREE_SHIPPING_THRESHOLD", freeThreshold != null ? freeThreshold : "50000");
+        // 【新增】獲取 MAX_DELIVERY_DATE_OPTIONS，沒有數據則為 null
+        configs.put("MAX_DELIVERY_DATE_OPTIONS", redisTemplate.opsForValue().get(KEY_MAX_DELIVERY_DATE_OPTIONS));
 
-        String deliveryMode = redisTemplate.opsForValue().get(KEY_DELIVERY_MODE);
-        configs.put("DELIVERY_MODE", deliveryMode != null ? deliveryMode : "NEXT_DAY");
-
-        String specificDays = redisTemplate.opsForValue().get(KEY_DELIVERY_SPECIFIC_DAYS);
-        configs.put("DELIVERY_SPECIFIC_DAYS", specificDays != null ? specificDays : "6,7");
-
-        String customDays = redisTemplate.opsForValue().get(KEY_DELIVERY_CUSTOM_DAYS);
-        configs.put("DELIVERY_CUSTOM_DAYS", customDays != null ? customDays : "3");
-
-        String returnDays = redisTemplate.opsForValue().get(KEY_RETURN_DAYS);
-        configs.put("RETURN_DAYS", returnDays != null ? returnDays : "0");
-
-        String exchangeDays = redisTemplate.opsForValue().get(KEY_EXCHANGE_DAYS);
-        configs.put("EXCHANGE_DAYS", exchangeDays != null ? exchangeDays : "0");
-
-        String offlinePaymentDays = redisTemplate.opsForValue().get(KEY_OFFLINE_PAYMENT_DAYS);
-        configs.put("OFFLINE_PAYMENT_DAYS", offlinePaymentDays != null ? offlinePaymentDays : "3");
-
-        String globalCutoffTime = redisTemplate.opsForValue().get(KEY_GLOBAL_CUTOFF_TIME);
-        configs.put("GLOBAL_CUTOFF_TIME", globalCutoffTime != null ? globalCutoffTime : "16:00");
-
-        String cutoffDayOffset = redisTemplate.opsForValue().get(KEY_CUTOFF_DAY_OFFSET);
-        configs.put("CUTOFF_DAY_OFFSET", cutoffDayOffset != null ? cutoffDayOffset : "-1");
-
-        String onlineRetentionDays = redisTemplate.opsForValue().get(KEY_ONLINE_ORDER_RETENTION_DAYS);
-        configs.put("ONLINE_ORDER_RETENTION_DAYS", onlineRetentionDays != null ? onlineRetentionDays : "1"); // 默認 1 天
-
-        String deliveryStartTime = redisTemplate.opsForValue().get(KEY_DELIVERY_START_TIME);
-        configs.put("DELIVERY_START_TIME", deliveryStartTime != null ? deliveryStartTime : "09：00");
-
-        String deliveryEndTime = redisTemplate.opsForValue().get(KEY_DELIVERY_END_TIME);
-        configs.put("DELIVERY_END_TIME", deliveryEndTime != null ? deliveryEndTime : "18:00"); // 默認 18:00
         return ResponseEntity.ok(configs);
     }
 

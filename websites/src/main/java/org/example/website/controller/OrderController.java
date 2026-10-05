@@ -223,6 +223,18 @@ public ResponseEntity<Map<String, Object>> getPaidOrders(
         }
 
         // ==========================================
+        // 提取收貨地址資訊 (userAddress)
+        // ==========================================
+        if (order.getUserAddress() != null) {
+            Map<String, Object> addressMap = new HashMap<>();
+            addressMap.put("fullAddress", order.getUserAddress().getFullAddress());
+            addressMap.put("contactPhone", order.getUserAddress().getContactPhone());
+            map.put("userAddress", addressMap);
+        } else {
+            map.put("userAddress", null);
+        }
+
+        // ==========================================
         // 售後狀態判斷邏輯 (保持不變)
         // ==========================================
         List<AfterSalesRequest> requests = afterSalesRequestRepository.findByOriginalOrder_OrderId(order.getOrderId());

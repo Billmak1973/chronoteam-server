@@ -68,8 +68,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * @param pageable 分頁與排序參數
      * @return 包含訂單及用戶信息的分頁結果
      */
-    @Query(value = "SELECT o FROM Order o JOIN FETCH o.user",
-            countQuery = "SELECT count(o) FROM Order o")
+    @Query(value = "SELECT o FROM Order o LEFT JOIN FETCH o.user LEFT JOIN FETCH o.userAddress", countQuery = "SELECT count(o) FROM Order o")
     Page<Order> findAllWithUsers(Pageable pageable);
 
     /**

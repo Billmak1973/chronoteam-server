@@ -1672,6 +1672,23 @@
                 }
 
                 // ==========================================
+                // 在已支付且狀態為 PAID, SHIPPED, COMPLETED 時，顯示收貨地址和聯繫電話
+                // ==========================================
+                if (isPaid && ['PAID', 'SHIPPED', 'COMPLETED'].includes(order.status) && order.userAddress) {
+                    const fullAddress = order.userAddress.fullAddress || '未填寫地址';
+                    const contactPhone = order.userAddress.contactPhone || '未填寫電話';
+
+                    timeExtra += `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;">
+                        <i class="fas fa-map-marker-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                        收貨地址：<strong>${fullAddress}</strong>
+                    </p>`;
+                    timeExtra += `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;">
+                        <i class="fas fa-phone" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                        聯繫電話：<strong>${contactPhone}</strong>
+                    </p>`;
+                }
+
+                // ==========================================
                 // 如果訂單狀態為 SHIPPED 且有關聯的快遞員，顯示專屬提示
                 // ==========================================
                 if (order.status === 'SHIPPED' && order.courier) {

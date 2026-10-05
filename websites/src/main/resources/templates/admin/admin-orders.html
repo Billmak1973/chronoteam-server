@@ -739,6 +739,54 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(253, 126, 20, 0.4);
         }
+
+        /* 接受配送按鈕 (綠色系) */
+        .btn-courier-claim {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+            box-shadow: 0 2px 5px rgba(40, 167, 69, 0.2);
+            transition: all 0.2s;
+        }
+
+        .btn-courier-claim:hover {
+            background: linear-gradient(135deg, #218838 0%, #1ea980 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        }
+
+        /* 取消領取按鈕 (橙色系) */
+        .btn-courier-cancel-claim {
+            background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%);
+            color: white;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+            box-shadow: 0 2px 5px rgba(253, 126, 20, 0.2);
+            transition: all 0.2s;
+        }
+
+        .btn-courier-cancel-claim:hover {
+            background: linear-gradient(135deg, #e8590c 0%, #d9480f 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(253, 126, 20, 0.3);
+        }
     </style>
 </head>
 
@@ -772,12 +820,15 @@
                                 <th>13. 創建時間</th>
                                 <th>14. 支付時間</th>
                                 <th>15. 收貨時間</th>
+                                <th>16. 收貨地址</th>
+                                <th>17. 聯係電話</th>
+                                <th>18. 聯係人</th>
                                 <!-- 移除發貨截止，新增以下兩列 -->
-                                <th>16. 預計送達</th>
-                                <th>17. 預約到店</th>
-                                <th>18. 用戶可見</th>
-                                <th>19. 是否已過期</th>
-                                <th style="text-align: center;">20. 操作</th>
+                                <th>19. 預計送達</th>
+                                <th>20. 預約到店</th>
+                                <th>21. 用戶可見</th>
+                                <th>22. 是否已過期</th>
+                                <th style="text-align: center;">23. 操作</th>
                             </tr>
                         </thead>
                         <tbody id="ordersTableBody"></tbody>
@@ -921,26 +972,110 @@
         </div>
     </div>
 
+    <div id="cancelClaimModal" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal-box" style="max-width: 450px; border-top: 5px solid #fd7e14;">
+            <h3 class="modal-title" style="margin-bottom: 1rem; text-align: center; color: var(--primary);">
+                <i class="fas fa-exclamation-triangle" style="color: #fd7e14; margin-right: 0.5rem;"></i> 確認取消領取？
+            </h3>
+            <p style="color: var(--gray); margin-bottom: 1.5rem; text-align: center; line-height: 1.6;">
+                您確定要拒絕接受訂單 <strong id="cancelClaimOrderNoDisplay" style="color: var(--primary);"></strong> 的配送任務嗎？<br>
+                取消後，該訂單的快遞員將被清空，狀態恢復為未分配。
+            </p>
+            <div class="modal-actions" style="display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn-cancel" onclick="closeCancelClaimModal()"
+                    style="padding: 0.7rem 1.5rem; background: #e9ecef; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <i class="fas fa-times"></i> 我再想想
+                </button>
+                <button class="btn-confirm" onclick="confirmCancelClaim()"
+                    style="padding: 0.7rem 1.5rem; background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <i class="fas fa-check"></i> 確認拒絕
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 彈窗 1：狀態選擇 (z-index: 10001) -->
+    <!-- ========================================== -->
+    <div id="statusUpdateModal" class="custom-modal-overlay" style="display: none; z-index: 10001;">
+        <div class="custom-modal-box" style="max-width: 400px; border-top: 5px solid #17a2b8;">
+            <h3 class="modal-title" style="margin-bottom: 1.5rem; text-align: center;">
+                <i class="fas fa-truck" style="color: #17a2b8; margin-right: 0.5rem;"></i> 更新快遞狀態
+            </h3>
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">選擇新狀態</label>
+                <select id="newOrderStatusSelect" class="form-control"
+                    style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+                    <option value="PAID">已付款 (PAID)</option>
+                    <option value="SHIPPED">已發貨 (SHIPPED)</option>
+                    <option value="COMPLETED">已完成 (COMPLETED)</option>
+                </select>
+            </div>
+            <div class="modal-actions" style="display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn-cancel" onclick="closeStatusUpdateModal()"
+                    style="padding: 0.7rem 1.5rem; background: #e9ecef; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">取消</button>
+                <button class="btn-confirm" onclick="confirmStatusUpdate()"
+                    style="padding: 0.7rem 1.5rem; background: #17a2b8; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">確認更新</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 彈窗 2：COMPLETED 二次確認 (z-index: 10002，比上一個高) -->
+    <!-- ========================================== -->
+    <div id="completedConfirmModal" class="custom-modal-overlay" style="display: none; z-index: 10002;">
+        <div class="custom-modal-box" style="max-width: 450px; border-top: 5px solid #28a745;">
+            <div class="modal-icon"
+                style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); width: 70px; height: 70px; margin: 0 auto 1.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-check-circle" style="font-size: 2rem; color: white;"></i>
+            </div>
+            <h3 class="modal-title" style="margin-bottom: 1rem; text-align: center;">確認完成整個流程？</h3>
+
+            <!-- 【修改處】：新增 id="completedConfirmDesc" -->
+            <p id="completedConfirmDesc"
+                style="color: var(--gray); text-align: center; margin-bottom: 2rem; line-height: 1.6;">
+                您即將把訂單狀態更改為 <strong style="color: #28a745;">已完成 (COMPLETED)</strong>。<br>
+                此操作將記錄收貨時間，且訂單流程將正式結束。是否繼續？
+            </p>
+
+            <div class="modal-actions" style="display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn-cancel" onclick="closeCompletedConfirmModal()"
+                    style="padding: 0.7rem 1.5rem; background: #e9ecef; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">我再想想</button>
+                <button class="btn-confirm" onclick="executeCompleteOrder()"
+                    style="padding: 0.7rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">確認完成</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>
     <script src="/js/admin-table.js"></script>
     <div th:replace="~{fragments/common :: modals}"></div>
+    <script th:inline="javascript">
+        // ==========================================
+        // 0. 注入當前登錄用戶的角色與用戶名
+        // ==========================================
+        const currentUserRole = /*[[${#authentication.principal.role.name()}]]*/ 'CUSTOMER';
+        const currentUsername = /*[[${#authentication.name}]]*/ 'anonymous';
 
-    <script>
         // ==========================================
-        //  1. 全局變量聲明
+        // 1. 全局變量聲明 (嚴格初始化為 null，絕不使用假默認值)
         // ==========================================
-        let onlineOrderRetentionDays = 1; // 默認 1 天
-        let offlinePaymentDays = 3;       // 默認 3 天
+        let onlineOrderRetentionDays = null;
+        let offlinePaymentDays = null;
 
         let currentPickupOrderNo = null;
         let pendingCancelOrderNo = null;
         let pendingCancelBuyerUsername = null;
         let pendingRemindOrderNo = null;
         let currentAssignOrderNo = null;
+        let currentCancelClaimOrderNo = null;
+
+        // 【新增】快遞狀態更新相關全局變量
+        let currentUpdatingOrderNo = null;
 
         // ==========================================
-        // ✅ 2. 格式化與輔助函數
+        // 2. 格式化與輔助函數
         // ==========================================
         function formatDateTime(dt) {
             if (!dt) return '<span class="text-muted">-</span>';
@@ -971,6 +1106,9 @@
             'CANCELLED': {label: '已取消', cls: 'status-cancelled'},
         };
 
+        // ==========================================
+        // 修改 getExpirationStatus 函數，嚴格處理 null 情況
+        // ==========================================
         function getExpirationStatus(order) {
             if (!order.createdAt) return '<span class="text-muted">-</span>';
             const now = new Date();
@@ -978,6 +1116,10 @@
             const diffHours = (now - createdAt) / (1000 * 60 * 60);
 
             if (order.paymentMethod === 'PAYPAL_SIM' && order.paymentStatus === 'UNPAID') {
+                // 嚴格校驗：如果數據庫沒查到，明確提示「未配置」，絕不給假數據
+                if (onlineOrderRetentionDays === null) {
+                    return '<span class="text-muted" title="後台系統配置未設置該參數">未配置</span>';
+                }
                 const maxHours = onlineOrderRetentionDays * 24;
                 if (diffHours >= maxHours) {
                     return '<span class="status-badge status-cancelled"><i class="fas fa-exclamation-circle"></i> 已過期</span>';
@@ -986,6 +1128,10 @@
             }
 
             if (order.paymentMethod === 'OFFLINE_STORE' && order.paymentStatus === 'PENDING_OFFLINE') {
+                // 嚴格校驗：如果數據庫沒查到，明確提示「未配置」，絕不給假數據
+                if (offlinePaymentDays === null) {
+                    return '<span class="text-muted" title="後台系統配置未設置該參數">未配置</span>';
+                }
                 const maxHours = offlinePaymentDays * 24;
                 if (diffHours >= maxHours) {
                     return '<span class="status-badge status-cancelled"><i class="fas fa-exclamation-circle"></i> 已過期</span>';
@@ -996,7 +1142,7 @@
         }
 
         // ==========================================
-        // ✅ 3. 核心：行渲染回調函數
+        // 3. 核心：行渲染回調函數
         // ==========================================
         function renderOrderRow(order) {
             const ps = paymentStatusMap[order.paymentStatus] || {label: '未知', cls: ''};
@@ -1015,20 +1161,24 @@
             const needDeliveryHtml = order.delivery ? '<span class="bool-yes"><i class="fas fa-check-circle"></i> 是</span>' : '<span class="bool-no"><i class="fas fa-times-circle"></i> 否</span>';
             const visibleHtml = order.isVisible ? '<span class="bool-yes"><i class="fas fa-eye"></i> 可見</span>' : '<span class="bool-no"><i class="fas fa-eye-slash"></i> 隱藏</span>';
 
-            // 計算是否已過期
             const now = new Date();
             const createdAt = new Date(order.createdAt);
             const diffHours = (now - createdAt) / (1000 * 60 * 60);
             let isExpired = false;
-            if (order.paymentMethod === 'PAYPAL_SIM' && order.paymentStatus === 'UNPAID') {
-                isExpired = diffHours >= ((typeof onlineOrderRetentionDaysConfig !== 'undefined' && onlineOrderRetentionDaysConfig !== null) ? onlineOrderRetentionDaysConfig * 24 : 24);
-            } else if (order.paymentMethod === 'OFFLINE_STORE' && order.paymentStatus === 'PENDING_OFFLINE') {
-                isExpired = diffHours >= ((typeof offlinePaymentDaysConfig !== 'undefined' && offlinePaymentDaysConfig !== null) ? offlinePaymentDaysConfig * 24 : 72);
+
+            // 嚴格使用全局變量計算，若為 null 則 isExpired 保持 false，交由 getExpirationStatus 顯示「未配置」
+            if (onlineOrderRetentionDays !== null && order.paymentMethod === 'PAYPAL_SIM' && order.paymentStatus === 'UNPAID') {
+                isExpired = diffHours >= (onlineOrderRetentionDays * 24);
+            } else if (offlinePaymentDays !== null && order.paymentMethod === 'OFFLINE_STORE' && order.paymentStatus === 'PENDING_OFFLINE') {
+                isExpired = diffHours >= (offlinePaymentDays * 24);
             }
 
             const expirationHtml = getExpirationStatus(order);
 
-            // 按鈕生成邏輯
+            const fullAddressHtml = order.fullAddress ? `<span style="color:#334155; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;" title="${order.fullAddress}">${order.fullAddress}</span>` : '<span class="text-muted">-</span>';
+            const contactPhoneHtml = order.contactPhone ? `<span style="color:#334155;">${order.contactPhone}</span>` : '<span class="text-muted">-</span>';
+            const receiverNameHtml = order.receiverName ? `<span style="color:#334155;">${order.receiverName}</span>` : '<span class="text-muted">-</span>';
+
             let pickupBtnHtml = '';
             if (order.deliveryMethod === 'STORE_PICKUP' && (order.orderStatus === 'PENDING' || order.orderStatus === 'PAID')) {
                 pickupBtnHtml = `<button class="btn-pickup" data-order-no="${order.orderNo}" data-amount="${order.totalAmount}" data-payment-status="${order.paymentStatus}" onclick="openPickupModal(this)"><i class="fas fa-box-open"></i> 取貨</button>`;
@@ -1049,12 +1199,62 @@
                 }
             }
 
-            // 分配快遞員按鈕邏輯：當需快遞(delivery=true) 且 快遞員為空時顯示
+            // ==========================================
+            // 操作按鈕邏輯 (已按需求修改顯示條件)
+            // ==========================================
             let actionButtonsHtml = '';
-            if (order.delivery === true && !order.courierUsername) {
-                actionButtonsHtml += `<button class="btn-sm" style="background: #17a2b8; color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display:inline-flex; align-items:center; justify-content:center; gap:0.3rem;" onclick="openAssignCourierModal('${order.orderNo}')">
-                    <i class="fas fa-user-plus"></i> 分配快遞
+            if (order.delivery === true) {
+                // 核心條件：courier_id 為 null，或者 (courier_id 不為 null 且 order_status 為 'PAID')
+                if (!order.courierUsername || (order.courierUsername && order.orderStatus === 'PAID')) {
+                    if (currentUserRole === 'ADMIN') {
+                        // 根據是否已有快遞員，動態調整按鈕文字與圖標
+                        const btnText = !order.courierUsername ? '分配快遞' : '重新分配';
+                        const btnIcon = !order.courierUsername ? 'fa-user-plus' : 'fa-user-edit';
+
+                        actionButtonsHtml += `<button class="btn-courier-claim" onclick="openAssignCourierModal('${order.orderNo}')" title="管理員${btnText}">
+                    <i class="fas ${btnIcon}"></i> ${btnText}
                 </button>`;
+                    } else if (!order.courierUsername) {
+                        // 非管理員且還沒有快遞員時，顯示接受配送
+                        actionButtonsHtml += `<button class="btn-courier-claim" onclick="claimCourierOrder('${order.orderNo}')">
+                    <i class="fas fa-hand-holding-box"></i> 接受配送
+                </button>`;
+                    }
+                }
+
+                // 保留原有邏輯：如果已經被當前登入的快遞員領取，且狀態為 PAID，允許其取消領取
+                if (order.courierUsername === currentUsername && order.orderStatus === 'PAID') {
+                    actionButtonsHtml += `<button class="btn-courier-cancel-claim" onclick="openCancelClaimModal('${order.orderNo}')">
+                <i class="fas fa-times-circle"></i> 取消領取
+            </button>`;
+                }
+            }
+
+            // ==========================================
+            // 【新增】快遞狀態更新按鈕渲染邏輯
+            // ==========================================
+            // ==========================================
+            // 【新增】快遞狀態更新按鈕渲染邏輯
+            // ==========================================
+            let courierActionBtnHtml = '';
+            // 條件：有快遞員 且 狀態為 PAID 或 SHIPPED
+            if (order.courierUsername && (order.orderStatus === 'PAID' || order.orderStatus === 'SHIPPED')) {
+                // 判斷當前用戶是否有權操作
+                const canOperate = (currentUserRole === 'ADMIN' || currentUserRole === 'COURIER');
+
+                // 如果無權操作，設置 disabled 和 半透明樣式，但依然渲染出來 (所有人都能看到)
+                const disabledAttr = canOperate ? '' : 'disabled title="僅限管理員或快遞員操作"';
+                const opacityStyle = canOperate ? '' : 'opacity: 0.6; cursor: not-allowed;';
+
+                // 【修改處】：onclick 中加入了第三個參數 '${order.estimatedDeliveryDate || ''}'
+                courierActionBtnHtml = `
+                <button class="btn-update-status"
+                        style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; display:inline-flex; align-items:center; justify-content:center; gap:0.3rem; ${opacityStyle}"
+                        ${disabledAttr}
+                        onclick="if(${canOperate}) openStatusUpdateModal('${order.orderNo}', '${order.orderStatus}', '${order.estimatedDeliveryDate || ''}')">
+                    <i class="fas fa-sync-alt"></i> 更新狀態
+                </button>
+            `;
             }
 
             const formatDateOnly = (dt) => {
@@ -1079,8 +1279,9 @@
                     </div>
                     <div class="item-price">HK$ ${formatMoney(it.subtotal)}</div>
                 </div>`).join('');
+
                 detailsRowsHtml = `<tr class="order-details-row" style="display:none;" data-parent-order="${order.orderId}">
-                <td colspan="20">
+                <td colspan="23">
                     <div class="order-details-content">
                         <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
                             <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細 <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
@@ -1091,7 +1292,7 @@
             </tr>`;
             } else {
                 detailsRowsHtml = `<tr class="order-details-row" style="display:none;" data-parent-order="${order.orderId}">
-                <td colspan="20">
+                <td colspan="23">
                     <div class="order-details-content">
                         <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
                             <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細 <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
@@ -1118,6 +1319,9 @@
             <td>${formatDateTime(order.createdAt)}</td>
             <td>${formatDateTime(order.paidAt)}</td>
             <td>${formatDateTime(order.receivedAt)}</td>
+            <td>${fullAddressHtml}</td>
+            <td>${contactPhoneHtml}</td>
+            <td>${receiverNameHtml}</td>
             <td>${estimatedDeliveryHtml}</td>
             <td>${appointmentDateHtml}</td>
             <td>${visibleHtml}</td>
@@ -1127,13 +1331,14 @@
                 ${pickupBtnHtml}
                 ${cancelExpiredBtnHtml}
                 ${remindPickupBtnHtml}
-               ${actionButtonsHtml}
+                ${actionButtonsHtml}
+                ${courierActionBtnHtml}
             </td>
         </tr>${detailsRowsHtml}`;
         }
 
         // ==========================================
-        // ✅ 4. 初始化與表格加載
+        // 4. 初始化與表格加載
         // ==========================================
         const tableConfig = {
             apiUrl: '/admin/api/orders/list',
@@ -1143,8 +1348,13 @@
             renderRow: renderOrderRow,
             emptyText: '暫無訂單數據',
             onSuccess: function (data) {
-                if (data.onlineOrderRetentionDays !== undefined) onlineOrderRetentionDays = data.onlineOrderRetentionDays;
-                if (data.offlinePaymentDays !== undefined) offlinePaymentDays = data.offlinePaymentDays;
+                // 嚴格從後端獲取，如果是 null 就保持 null，絕不給默認值
+                window.onlineOrderRetentionDays = data.onlineOrderRetentionDays;
+                window.offlinePaymentDays = data.offlinePaymentDays;
+
+                // 同步更新局部作用域變量
+                onlineOrderRetentionDays = data.onlineOrderRetentionDays;
+                offlinePaymentDays = data.offlinePaymentDays;
             }
         };
 
@@ -1171,8 +1381,22 @@
         }
 
         // ==========================================
-        // ✅ 5. 彈窗業務邏輯
+        // 5. 彈窗業務邏輯 (原有邏輯保持不變)
         // ==========================================
+
+        function closePickupModal() {
+            closeModal('pickupModal', () => {
+                currentPickupOrderNo = null;
+            });
+        }
+
+        function closeCancelExpiredModal() {
+            closeModal('cancelExpiredModal', () => {
+                pendingCancelOrderNo = null;
+                pendingCancelBuyerUsername = null;
+            });
+        }
+
         function openPickupModal(button) {
             currentPickupOrderNo = button.getAttribute('data-order-no');
             const totalAmount = button.getAttribute('data-amount');
@@ -1294,10 +1518,6 @@
             }
         }
 
-        // ==========================================
-        // 分配快遞員業務邏輯
-        // ==========================================
-
         async function openAssignCourierModal(orderNo) {
             currentAssignOrderNo = orderNo;
             document.getElementById('assignOrderNoDisplay').textContent = orderNo;
@@ -1346,7 +1566,6 @@
                 if (result.success) {
                     closeModal('assignCourierModal', () => {currentAssignOrderNo = null;});
                     showNotification('✅ ' + result.message);
-                    // 刷新表格以顯示最新分配的快遞員名稱
                     AdminTable.loadData(tableConfig);
                 } else {
                     showNotification('❌ ' + (result.message || '分配失敗'), true);
@@ -1357,27 +1576,199 @@
             }
         }
 
-        // ==========================================
-        // ✅ 6. 核心優化：統一管理彈窗關閉與事件監聽
-        // ==========================================
+        async function claimCourierOrder(orderNo) {
+            try {
+                const res = await fetch(`/admin/api/order/${orderNo}/claim`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showNotification('✅ ' + (result.message || '領取成功'));
+                    AdminTable.loadData(tableConfig);
+                } else {
+                    showNotification('❌ ' + (result.message || '領取失敗'), true);
+                }
+            } catch (e) {
+                console.error('領取訂單錯誤:', e);
+                showNotification('❌ 網絡錯誤', true);
+            }
+        }
 
-        /**
-         * 通用關閉彈窗函數 (取代原本分散的 closeXXX 函數)
-         * @param {string} modalId - 彈窗的 ID
-         * @param {Function} resetFn - 關閉後需要執行的狀態重置函數 (可選)
-         */
+        function openCancelClaimModal(orderNo) {
+            currentCancelClaimOrderNo = orderNo;
+            const displayEl = document.getElementById('cancelClaimOrderNoDisplay');
+            if (displayEl) displayEl.textContent = orderNo;
+
+            const modal = document.getElementById('cancelClaimModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeCancelClaimModal() {
+            const modal = document.getElementById('cancelClaimModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            currentCancelClaimOrderNo = null;
+        }
+
+        async function confirmCancelClaim() {
+            if (!currentCancelClaimOrderNo) return;
+
+            try {
+                const res = await fetch(`/admin/api/order/${currentCancelClaimOrderNo}/cancel-claim`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showNotification('✅ ' + (result.message || '已成功取消領取'));
+                    closeCancelClaimModal();
+                    AdminTable.loadData(tableConfig);
+                } else {
+                    showNotification('❌ ' + (result.message || '取消失敗'), true);
+                }
+            } catch (e) {
+                console.error('取消領取錯誤:', e);
+                showNotification('❌ 網絡錯誤', true);
+            }
+        }
+
+        // ==========================================
+        // 6. 【新增】快遞狀態更新彈窗業務邏輯
+        // ==========================================
+        // ==========================================
+        // 6. 【新增】快遞狀態更新彈窗業務邏輯
+        // ==========================================
+        window.openStatusUpdateModal = function (orderNo, currentStatus, estimatedDeliveryDate) {
+            currentUpdatingOrderNo = orderNo;
+            const select = document.getElementById('newOrderStatusSelect');
+            // 默認智能選中：如果是 PAID 就預設選 SHIPPED，否則保持當前
+            select.value = currentStatus === 'PAID' ? 'SHIPPED' : currentStatus;
+
+            // 【核心新增】：日期比較邏輯，動態替換 COMPLETED 二次確認彈窗的提示文字
+            const confirmDescEl = document.getElementById('completedConfirmDesc');
+            if (confirmDescEl && estimatedDeliveryDate) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // 將今天的時間設為 00:00:00 以便純日期比較
+
+                // 解析預計送達日期
+                const estDate = new Date(estimatedDeliveryDate);
+                estDate.setHours(0, 0, 0, 0);
+
+                if (today < estDate) {
+                    // 今天早於預計送達日期，顯示提前送貨警告
+                    confirmDescEl.innerHTML = `
+                    <span style="color: #dc3545; font-weight: 600;"><i class="fas fa-exclamation-triangle"></i> 警告：提前送貨</span><br>
+                    預計送達日期為 <strong>${estimatedDeliveryDate}</strong>，但您現在即將把訂單標記為「已完成」。<br>
+                    此操作將立即記錄收貨時間並結束訂單流程。請確認客戶確實已提前收到商品且無異議。是否繼續？
+                `;
+                } else {
+                    // 恢復默認提示文字
+                    confirmDescEl.innerHTML = `
+                    您即將把訂單狀態更改為 <strong style="color: #28a745;">已完成 (COMPLETED)</strong>。<br>
+                    此操作將記錄收貨時間，且訂單流程將正式結束。是否繼續？
+                `;
+                }
+            }
+
+            document.getElementById('statusUpdateModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 禁止背景滾動
+        };
+
+        window.closeStatusUpdateModal = function () {
+            document.getElementById('statusUpdateModal').style.display = 'none';
+            document.body.style.overflow = '';
+            currentUpdatingOrderNo = null;
+        };
+
+        // 點擊「確認更新」時的邏輯分流
+        window.confirmStatusUpdate = function () {
+            const newStatus = document.getElementById('newOrderStatusSelect').value;
+            if (newStatus === 'COMPLETED') {
+                // 核心需求：如果是 COMPLETED，關閉當前彈窗，冒出二次確認彈窗
+
+                // 【修復】：直接隱藏 DOM，不要調用 closeStatusUpdateModal()，防止它清空 currentUpdatingOrderNo
+                document.getElementById('statusUpdateModal').style.display = 'none';
+
+                // 顯示二次確認彈窗
+                document.getElementById('completedConfirmModal').style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            } else {
+                // 如果是 PAID 或 SHIPPED，直接執行更新
+                executeStatusUpdate(newStatus);
+            }
+        };
+
+        window.closeCompletedConfirmModal = function () {
+            document.getElementById('completedConfirmModal').style.display = 'none';
+            document.body.style.overflow = '';
+            currentUpdatingOrderNo = null;
+        };
+
+        // 二次確認後，執行最終的 COMPLETED 更新
+        window.executeCompleteOrder = function () {
+            executeStatusUpdate('COMPLETED');
+        };
+
+        // 執行實際的 API 更新請求
+        async function executeStatusUpdate(newStatus) {
+            if (!currentUpdatingOrderNo) return;
+
+            try {
+                const response = await fetch(`/admin/api/order/${currentUpdatingOrderNo}/update-courier-status`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({newStatus: newStatus})
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('✅ ' + result.message);
+                    }
+                    // 關閉所有相關彈窗
+                    closeCompletedConfirmModal();
+                    closeStatusUpdateModal();
+
+                    // 刷新表格數據
+                    if (typeof AdminTable !== 'undefined' && typeof tableConfig !== 'undefined') {
+                        AdminTable.loadData(tableConfig);
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + (result.message || '更新失敗'), true);
+                    }
+                }
+            } catch (error) {
+                console.error('更新狀態錯誤:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                }
+            }
+        }
+
+        // ==========================================
+        // 7. 通用彈窗關閉與全局事件監聽
+        // ==========================================
         function closeModal(modalId, resetFn) {
             const modal = document.getElementById(modalId);
             if (modal) {
                 modal.style.display = 'none';
-                document.body.style.overflow = ''; // 恢復背景滾動
+                document.body.style.overflow = '';
             }
             if (typeof resetFn === 'function') {
                 resetFn();
             }
         }
 
-        // 1. 點擊遮罩層關閉彈窗 (統一處理)
+        // 點擊遮罩層關閉彈窗
         document.addEventListener('click', function (e) {
             if (e.target.id === 'pickupModal') {
                 closeModal('pickupModal', () => {currentPickupOrderNo = null;});
@@ -1385,18 +1776,27 @@
                 closeModal('cancelExpiredModal', () => {pendingCancelOrderNo = null; pendingCancelBuyerUsername = null;});
             } else if (e.target.id === 'remindPickupModal') {
                 closeModal('remindPickupModal', () => {pendingRemindOrderNo = null;});
-            } else if (e.target.id === 'assignCourierModal') { // 【新增】
+            } else if (e.target.id === 'assignCourierModal') {
                 closeModal('assignCourierModal', () => {currentAssignOrderNo = null;});
+            } else if (e.target.id === 'cancelClaimModal') {
+                closeCancelClaimModal();
+            } else if (e.target.id === 'statusUpdateModal') {
+                closeStatusUpdateModal();
+            } else if (e.target.id === 'completedConfirmModal') {
+                closeCompletedConfirmModal();
             }
         });
 
-        // 2. ESC 鍵關閉彈窗 (統一處理)
+        // ESC 鍵關閉彈窗
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 closeModal('pickupModal', () => {currentPickupOrderNo = null;});
                 closeModal('cancelExpiredModal', () => {pendingCancelOrderNo = null; pendingCancelBuyerUsername = null;});
                 closeModal('remindPickupModal', () => {pendingRemindOrderNo = null;});
                 closeModal('assignCourierModal', () => {currentAssignOrderNo = null;});
+                closeCancelClaimModal();
+                closeStatusUpdateModal();
+                closeCompletedConfirmModal();
             }
         });
     </script>

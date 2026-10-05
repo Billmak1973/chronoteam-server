@@ -30,6 +30,7 @@ public class OrderService {
     private final OfflineStoreRepository offlineStoreRepository;
     private final StoreInventoryRepository storeInventoryRepository;
     private final NotificationRepository notificationRepository;
+    private final UserAddressRepository userAddressRepository;
 
     /**
      * 1. 創建訂單 (移除庫存扣減，僅校驗庫存是否充足)
@@ -128,8 +129,8 @@ public class OrderService {
      * 2. 線上模擬支付處理 (支付成功後扣減庫存，並正確處理運費)
      */
     @Transactional
-    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount,
-                                 String deliveryMethod, Long storeId, LocalDate customerSelectedDeliveryDate,LocalDate appointmentDate) {
+    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount, String deliveryMethod,
+                                 Long storeId, LocalDate customerSelectedDeliveryDate,LocalDate appointmentDate,Long addressId) {
         // 1. 查詢訂單並校驗權限
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
@@ -186,22 +187,35 @@ public class OrderService {
             }
         }
 
-        // 8. 【核心修正】設置預計送達日期 (如果顧客選擇了快遞且指定了日期)
+        // 8. 如果是快遞配送，且前端傳來了有效的 addressId，則關聯收貨地址
+        if ("EXPRESS".equals(deliveryMethod) && addressId != null) {
+            UserAddress userAddress = userAddressRepository.findById(addressId)
+                    .orElseThrow(() -> new RuntimeException("收貨地址不存在"));
+
+            // 【安全校驗】：確保該地址確實屬於當前登錄用戶，防止越權漏洞
+            if (!userAddress.getUser().getUsername().equals(username)) {
+                throw new RuntimeException("無權使用此收貨地址");
+            }
+
+            order.setUserAddress(userAddress);
+        }
+
+        // 9. 【核心修正】設置預計送達日期 (如果顧客選擇了快遞且指定了日期)
         if (customerSelectedDeliveryDate != null && "EXPRESS".equals(deliveryMethod)) {
             order.setEstimatedDeliveryDate(customerSelectedDeliveryDate);
         }
 
-        // 9. 更新支付狀態
+        // 10. 更新支付狀態
         order.setPaymentStatus(Order.PaymentStatus.PAID_SIMULATED);
         order.setStatus(Order.OrderStatus.PAID);
         order.setPaidAt(LocalDateTime.now());
 
         Order savedOrder = orderRepository.save(order);
 
-        // 10. 線上支付成功，呼叫線上專屬的庫存扣減方法！
+        // 11. 線上支付成功，呼叫線上專屬的庫存扣減方法！
         deductOnlineStock(savedOrder);
         // ==========================================
-        // 11. 記錄季度銷售報表數據
+        // 12. 記錄季度銷售報表數據
         // ==========================================
         for (OrderItem item : savedOrder.getItems()) {
             Product product = item.getProduct();
@@ -218,7 +232,7 @@ public class OrderService {
             );
         }
 
-        // 12. 更新每日業務報表
+        // 13. 更新每日業務報表
         dailyBusinessReportService.updateDailyReport(savedOrder);
 
         return savedOrder;

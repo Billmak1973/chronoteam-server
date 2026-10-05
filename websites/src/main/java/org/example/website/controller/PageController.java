@@ -179,31 +179,23 @@ public class PageController {
         return "dashboard";
     }
 
-
-    // 修改 accountProfile 方法
     @GetMapping("/account/profile")
-    public String accountProfile(Model model) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    public String accountProfile(Model model, Authentication authentication) {
         String username = authentication.getName();
-
         User user = userService.findByUsername(username);
 
-        // 獲取該用戶的地址列表 (按 ranking 排序)
+        // 透過 user_id 關聯查詢，並按 ranking 升序排列 (1=主地址, 2=第二地址...)
         List<UserAddress> addresses = userAddressRepository.findByUserOrderByRankingAsc(user);
 
-        String mainAddress = null;
-        String backupAddress = null;
+        // 獲取系統配置的最大地址數量
+        int maxAddresses = systemConfigService.getMaxUserAddresses();
 
-        if (addresses != null && !addresses.isEmpty()) {
-            mainAddress = addresses.get(0).getFullAddress(); // 第一個作為主地址
-            if (addresses.size() > 1) {
-                backupAddress = addresses.get(1).getFullAddress(); // 第二個作為備用地址
-            }
-        }
+        // 判斷當前地址數量是否小於最大允許數量
+        boolean canAddMoreAddresses = (addresses != null ? addresses.size() : 0) < maxAddresses;
 
         model.addAttribute("user", user);
-        model.addAttribute("mainAddress", mainAddress);       // 新增：傳遞主地址
-        model.addAttribute("backupAddress", backupAddress);   // 新增：傳遞備用地址
+        model.addAttribute("addresses", addresses);
+        model.addAttribute("canAddMoreAddresses", canAddMoreAddresses); // 新增：傳遞布林值給前端
 
         return "profile";
     }

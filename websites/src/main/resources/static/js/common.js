@@ -686,19 +686,16 @@ Auth.handleRegister = async function (e) {
     return;
   }
 
-  // 2. 獲取地址相關欄位 (使用 ID 獲取更穩妥)
-  const regionSelect = document.getElementById("regionSelect");
-  const districtSelect = document.getElementById("districtSelect");
+  // 2. 獲取地址輸入框 (使用 ID 獲取更穩妥)
   const addressInput = document.getElementById("regAddress");
 
-  const region = regionSelect ? regionSelect.value : "";
-  const district = districtSelect ? districtSelect.value : "";
-  const detailAddress = addressInput ? addressInput.value.trim() : "";
+  // 【核心修復】：級聯選擇器已經自動將「區域 + 行政區」寫入到 regAddress 中
+  // 所以直接獲取它的值作為完整地址即可，千萬不要再手動拼接 region 和 district！
+  const fullAddress = addressInput ? addressInput.value.trim() : "";
 
-  // 3. 【核心修改】非強制校驗：只有當用戶選擇了區域時，才校驗詳細地址
-  // 如果用戶完全沒選區域，說明不想填地址，直接放行
-  if (region && (!detailAddress || !detailAddress.includes(region))) {
-    msg.textContent = "❌ 既然選擇了區域，詳細地址不能為空，且必須包含所選區域！";
+  // 3. 簡單校驗：如果填寫了地址，確保它不為空
+  if (fullAddress && fullAddress.length < 3) {
+    msg.textContent = "❌ 詳細地址不能為空！";
     msg.style.color = "var(--accent)";
     if (addressInput) {
       addressInput.focus();
@@ -707,27 +704,18 @@ Auth.handleRegister = async function (e) {
     return; // 阻止提交
   }
 
-  // 4. 組裝完整地址 (如果有的話)
-  let fullAddress = "";
-  if (region && detailAddress) {
-    fullAddress = district ? `${region} ${district} ${detailAddress}` : `${region} ${detailAddress}`;
-  }
-
   msg.textContent = "";
 
   try {
-    // 5. 構建發送至後端的數據 (包含可選的地址字段)
+    // 4. 構建發送至後端的數據
     const formData = {
       username: form.username.value.trim(),
       name: form.name.value.trim(),
       email: form.email.value.trim(),
       password: form.password.value,
       phone: form.phone.value.trim(),
-      // 傳遞地址信息 (可選)
-      region: region,
-      district: district,
-      detailAddress: detailAddress,
-      fullAddress: fullAddress.trim()
+      // 直接傳遞已經拼接好的完整地址，後端 UserService 會直接使用 fullAddress
+      fullAddress: fullAddress
     };
 
     const response = await fetch("/api/register", {
@@ -759,7 +747,6 @@ Auth.handleRegister = async function (e) {
     console.error("註冊錯誤:", error);
   }
 };
-
 /**
  * 處理登入表單的異步提交邏輯。
  * 包含 API 請求、成功後的頁面刷新、針對用戶名不存在或密碼錯誤的特定 UI 反饋 (shake 動畫)。

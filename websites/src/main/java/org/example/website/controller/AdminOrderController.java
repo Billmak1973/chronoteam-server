@@ -17,6 +17,7 @@ import org.example.website.repository.NotificationRepository;
 import org.example.website.repository.OrderItemRepository;
 import org.example.website.repository.OrderRepository;
 import org.example.website.repository.UserRepository;
+import org.example.website.security.CustomUserDetails;
 import org.example.website.service.NotificationService;
 import org.example.website.service.OrderService;
 import org.example.website.service.SystemConfigService;
@@ -135,7 +136,12 @@ public class AdminOrderController {
             item.put("isVisible", order.getIsVisible());
             // 新增返回提醒次數
             item.put("pickupReminderCount", order.getPickupReminderCount() != null ? order.getPickupReminderCount() : 0);
-
+            // 獲取並放入收貨地址與聯繫電話
+            item.put("fullAddress", order.getUserAddress() != null ? order.getUserAddress().getFullAddress() : null);
+            item.put("contactPhone", order.getUserAddress() != null ? order.getUserAddress().getContactPhone() : null);
+            item.put("receiverName",order.getUserAddress() != null ? order.getUserAddress().getReceiverName() : null);
+            // 在構建 cleanOrders 的 map 時，補充 courierId：
+            item.put("courierId", order.getCourier() != null ? order.getCourier().getId() : null);
             // 將明細嵌入訂單對象
             List<OrderItem> items = orderItemsMap.getOrDefault(order.getOrderId(), Collections.emptyList());
             List<Map<String, Object>> cleanItems = items.stream().map(oi -> {
@@ -326,4 +332,118 @@ public class AdminOrderController {
         return ResponseEntity.ok(Result.ok("成功分配快遞員: " + courier.getUsername()));
     }
 
+    /**
+     * 快遞員認領訂單
+     */
+    @PostMapping("/api/order/{orderNo}/claim")
+    @Transactional
+    public ResponseEntity<?> claimOrder(@PathVariable String orderNo, Authentication authentication) {
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用戶不存在"));
+
+        // 1. 權限校驗：僅限快遞員
+        if (user.getRole() != User.Role.COURIER) {
+            return ResponseEntity.status(403).body(Result.error("僅限快遞員進行此操作"));
+        }
+
+        // 2. 查找訂單
+        Order order = orderRepository.findByOrderNo(orderNo)
+                .orElseThrow(() -> new RuntimeException("訂單不存在"));
+
+        // 3. 校驗是否已被認領
+        if (order.getCourier() != null) {
+            return ResponseEntity.badRequest().body(Result.error("該訂單已被其他快遞員認領，無法重複認領"));
+        }
+
+        // 4. 分配快遞員並保存
+        order.setCourier(user);
+        orderRepository.save(order);
+
+        return ResponseEntity.ok(Result.ok("認領成功"));
+    }
+
+    /**
+     * 快遞員取消認領訂單
+     */
+    @PostMapping("/api/order/{orderNo}/cancel-claim")
+    @Transactional
+    public ResponseEntity<?> cancelClaimOrder(@PathVariable String orderNo, Authentication authentication) {
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用戶不存在"));
+
+        if (user.getRole() != User.Role.COURIER) {
+            return ResponseEntity.status(403).body(Result.error("僅限快遞員進行此操作"));
+        }
+
+        Order order = orderRepository.findByOrderNo(orderNo)
+                .orElseThrow(() -> new RuntimeException("訂單不存在"));
+
+        // 校驗是否是自己認領的訂單
+        if (order.getCourier() == null || !order.getCourier().getId().equals(user.getId())) {
+            return ResponseEntity.badRequest().body(Result.error("您無權取消此訂單的認領"));
+        }
+
+        // 校驗訂單狀態 (根據需求：僅在 PAID 狀態下可取消認領，防止已發貨後隨意取消)
+        // 注意：請根據你實際的 OrderStatus 枚舉名稱調整，例如 'PAID', 'PAID_SIMULATED' 等
+        if (order.getStatus() != Order.OrderStatus.PAID) {
+            return ResponseEntity.badRequest().body(Result.error("訂單狀態已變更，無法取消認領"));
+        }
+
+        // 取消認領：將 courier 設為 null
+        order.setCourier(null);
+        orderRepository.save(order);
+
+        return ResponseEntity.ok(Result.ok("已成功取消認領"));
+    }
+
+    /**
+     * 快遞員/管理員更新訂單狀態 API
+     */
+    @PostMapping("/api/order/{orderNo}/update-courier-status")
+    @ResponseBody
+    @Transactional
+    public ResponseEntity<?> updateCourierStatus(
+            @PathVariable String orderNo,
+            @RequestBody Map<String, String> payload,
+            Authentication authentication) {
+
+        // 1. 基礎登入校驗
+        if (authentication == null || !authentication.isAuthenticated() || "anonymousUser".equals(authentication.getPrincipal())) {
+            return ResponseEntity.status(401).body(Result.error("請先登入"));
+        }
+
+        // 2. 核心權限校驗：僅限 ADMIN 或 COURIER
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        if (userDetails.getRole() != User.Role.ADMIN && userDetails.getRole() != User.Role.COURIER) {
+            return ResponseEntity.status(403).body(Result.error("無權操作，僅限管理員或快遞員"));
+        }
+
+        String newStatusStr = payload.get("newStatus");
+        Order.OrderStatus newStatus;
+        try {
+            newStatus = Order.OrderStatus.valueOf(newStatusStr);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Result.error("無效的狀態值"));
+        }
+
+        // 3. 查找訂單
+        Order order = orderRepository.findByOrderNo(orderNo)
+                .orElseThrow(() -> new RuntimeException("訂單不存在"));
+
+        // 4. 業務校驗：只有 PAID 或 SHIPPED 狀態才能透過此按鈕更新
+        if (order.getStatus() != Order.OrderStatus.PAID && order.getStatus() != Order.OrderStatus.SHIPPED) {
+            return ResponseEntity.badRequest().body(Result.error("當前訂單狀態不允許此操作"));
+        }
+
+        // 5. 更新狀態
+        order.setStatus(newStatus);
+        if (newStatus == Order.OrderStatus.COMPLETED) {
+            order.setReceivedAt(LocalDateTime.now()); // 記錄完成時間
+        }
+        orderRepository.save(order);
+
+        return ResponseEntity.ok(Result.ok("訂單狀態更新成功"));
+    }
 }

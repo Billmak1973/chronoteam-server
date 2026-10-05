@@ -1501,38 +1501,54 @@
                 </label>
 
                 <!--  快遞配送 (已整合備用地址切換功能) -->
+                <!-- 快遞配送 (基於 userAddresses 列表重構) -->
                 <div class="payment-option" style="margin-bottom: 0.5rem; background: white;">
+                    <!-- 1. 判斷是否有地址，決定 radio 是否可用 -->
                     <input type="radio" name="deliveryMethod" value="EXPRESS" id="delivery-express"
-                        onchange="toggleDeliveryMethod()"
-                        th:disabled="${user.address == null || user.address.isEmpty()}"
-                        th:checked="${user.address != null && !user.address.isEmpty()}">
+                        onchange="toggleDeliveryMethod()" th:disabled="${#lists.isEmpty(userAddresses)}"
+                        th:checked="${!#lists.isEmpty(userAddresses)}">
+
                     <label for="delivery-express" style="cursor: pointer;"
-                        th:classappend="${user.address == null || user.address.isEmpty()} ? 'text-muted' : ''">
+                        th:classappend="${#lists.isEmpty(userAddresses)} ? 'text-muted' : ''">
                         <i class="fas fa-shipping-fast"></i>
                         <div style="flex: 1;">
                             <div style="font-weight: 600;">快遞配送</div>
-                            <div style="font-size: 0.85rem; color: var(--gray);">
-                                <span id="expressDeliveryAddress">
-                                    <span th:if="${user.address != null && !user.address.isEmpty()}">送至: <span
-                                            th:text="${user.address}">您的收貨地址</span></span>
-                                    <span th:if="${user.address == null || user.address.isEmpty()}"
-                                        style="color: #dc3545; font-weight: 600;">請先在「帳戶信息」中填寫收貨地址</span>
-                                </span>
-                            </div>
 
-                            <!-- 备用地址切换按钮 -->
-                            <div th:if="${user.backupAddress != null && !user.backupAddress.isEmpty()}"
-                                style="margin-top: 0.5rem;">
-                                <button type="button" id="toggleAddressBtn" class="btn-sm"
-                                    style="background: transparent; color: var(--gold); border: 1px dashed var(--gold); padding: 0.3rem 0.8rem; font-size: 0.8rem; cursor: pointer; border-radius: 4px;"
-                                    onclick="showAddressToggleModal()">
-                                    <i class="fas fa-exchange-alt"></i>
-                                    <span id="toggleAddressText">改用備用地址收貨</span>
-                                </button>
+                            <!-- 2. 地址選擇區域 -->
+                            <div style="font-size: 0.85rem; color: var(--gray); margin-top: 0.3rem;">
+                                <!-- 無地址提示 -->
+                                <span th:if="${#lists.isEmpty(userAddresses)}"
+                                    style="color: #dc3545; font-weight: 600;">
+                                    請先在「帳戶信息」中填寫收貨地址
+                                </span>
+
+                                <!-- 有地址時顯示下拉框 -->
+                                <div th:if="${!#lists.isEmpty(userAddresses)}" style="margin-top: 0.5rem;">
+                                    <label
+                                        style="display: block; margin-bottom: 0.3rem; font-weight: 500; color: var(--primary);">
+                                        選擇收貨地址：
+                                    </label>
+                                    <select id="deliveryAddressSelect" onchange="updateDeliveryAddressSelection()"
+                                        style="width: 100%; max-width: 450px; padding: 0.5rem; border: 2px solid #e9ecef; border-radius: 6px; font-size: 0.9rem; cursor: pointer; background: white;">
+
+                                        <!-- 遍歷 userAddresses，默認選中 ranking == 1 的地址 -->
+                                        <option th:each="addr : ${userAddresses}" th:value="${addr.addressId}"
+                                            th:data-full-address="${addr.fullAddress}"
+                                            th:data-receiver="${addr.receiverName}" th:data-phone="${addr.contactPhone}"
+                                            th:selected="${addr.ranking == 1}"
+                                            th:text="${(addr.ranking == 1 ? '【主地址】' : '') + addr.fullAddress + ' (' + addr.receiverName + ' ' + addr.contactPhone + ')'}">
+                                            地址選項
+                                        </option>
+                                    </select>
+
+                                    <!-- 隱藏的 input，用於在結帳提交時傳遞選中的 addressId 給後端 -->
+                                    <input type="hidden" id="selectedDeliveryAddressId"
+                                        th:value="${userAddresses[0].addressId}">
+                                </div>
                             </div>
                         </div>
 
-                        <!-- 右侧倒计时区域（与左侧内容并排） -->
+                        <!-- 右側倒計時區域（與左側內容並排，保持原樣） -->
                         <div style="flex-shrink: 0; margin-left: 1rem; text-align: right;">
                             <div
                                 style="background: #fff9f0; border: 1px dashed var(--gold); border-radius: 6px; padding: 0.8rem; min-width: 200px;">
@@ -1568,15 +1584,13 @@
                                 </div>
                             </div>
                         </div>
-
                     </label>
                 </div>
 
                 <!-- 門店自取 - 只有當有店鋪時才顯示 -->
                 <div th:if="${hasStores}" class="payment-option" style="background: white;">
                     <input type="radio" name="deliveryMethod" value="STORE_PICKUP" id="delivery-pickup"
-                        onchange="toggleDeliveryMethod()"
-                        th:checked="${user.address == null || user.address.isEmpty()}">
+                        onchange="toggleDeliveryMethod()" th:checked="${#lists.isEmpty(userAddresses)}">
                     <label for="delivery-pickup">
                         <i class="fas fa-store-alt"></i>
                         <div>
@@ -1609,18 +1623,12 @@
 
                 <select id="storeSelect" name="storeId" onchange="updateStoreInfo()">
                     <option value="">請選擇店鋪</option>
-                    <option th:each="store : ${activeStores}"
-                            th:value="${store.storeId}"
-                            th:data-name="${store.name}"
-                            th:data-address="${store.address}"
-                            th:data-phone="${store.phone}"
-                            th:data-hours="${store.hours}"
-                            th:data-schedule-mode="${store.scheduleMode}"
-                            th:data-daily-hours="${store.dailyHours}"
-                            th:data-closed-start-date="${store.closedStartDate}"
-                            th:data-closed-end-date="${store.closedEndDate}"
-                            th:data-closed-reason="${store.closedReason}"
-                            th:text="${store.name + ' - ' + store.address}">
+                    <option th:each="store : ${activeStores}" th:value="${store.storeId}" th:data-name="${store.name}"
+                        th:data-address="${store.address}" th:data-phone="${store.phone}" th:data-hours="${store.hours}"
+                        th:data-schedule-mode="${store.scheduleMode}" th:data-daily-hours="${store.dailyHours}"
+                        th:data-closed-start-date="${store.closedStartDate}"
+                        th:data-closed-end-date="${store.closedEndDate}" th:data-closed-reason="${store.closedReason}"
+                        th:text="${store.name + ' - ' + store.address}">
                     </option>
                 </select>
 
@@ -1629,16 +1637,18 @@
                     <ul id="storeInfoList"></ul>
 
                     <!-- 新增：取貨日期選擇區域 -->
-                    <div id="pickupDateSelection" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed rgba(133, 100, 4, 0.3);">
+                    <div id="pickupDateSelection"
+                        style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed rgba(133, 100, 4, 0.3);">
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #856404;">
                             <i class="fas fa-calendar-alt" style="margin-right: 0.3rem;"></i> 選擇取貨日期：
                         </label>
                         <select id="pickupDateSelect" onchange="updatePickupDate()"
-                                style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px; font-size: 0.9rem; cursor: pointer;">
+                            style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px; font-size: 0.9rem; cursor: pointer;">
                             <option value="">請選擇取貨日期</option>
                             <!-- JavaScript 會動態填充可用日期 -->
                         </select>
-                        <div id="pickupDateInfo" style="margin-top: 0.5rem; font-size: 0.85rem; color: #856404; display: none;">
+                        <div id="pickupDateInfo"
+                            style="margin-top: 0.5rem; font-size: 0.85rem; color: #856404; display: none;">
                             <i class="fas fa-info-circle" style="margin-right: 0.3rem;"></i>
                             預計取貨：<span id="selectedPickupDate" style="font-weight: 600;"></span>
                         </div>
@@ -1883,6 +1893,7 @@
         const baseShippingFee = [[${shippingFee}]];
         const freeShippingThreshold = [[${freeShippingThreshold}]];
         const offlinePaymentDays = /*[[${offlinePaymentDays}]]*/ 7;
+        const maxDeliveryDateOptions = /*[[${maxDeliveryDateOptions}]]*/ 0;
 
         // ==========================================
         // 0. 命名空間初始化
@@ -1900,9 +1911,7 @@
             // 標記支付是否已完成
             isPaymentCompleted: false,
             // 標記是否允許直接離開（用於點擊「確認離開」後放行）
-            allowExit: false,
-            // 标记当前是否使用备用地址
-            isUsingBackupAddress: false
+            allowExit: false
         };
 
         // 簡寫引用
@@ -2526,6 +2535,26 @@
         }
 
         // ==========================================
+        // 地址選擇與切換功能 (基於下拉框)
+        // ==========================================
+        /**
+         * 當用戶切換收貨地址下拉框時觸發 (HTML 中已綁定 onchange)
+         */
+        function updateDeliveryAddressSelection() {
+            const select = document.getElementById('deliveryAddressSelect');
+            if (!select) return;
+
+            const selectedOption = select.options[select.selectedIndex];
+            const addressId = selectedOption.value;
+
+            // 更新隱藏的 input，以便結帳提交時後端能獲取到正確的 addressId
+            const hiddenInput = document.getElementById('selectedDeliveryAddressId');
+            if (hiddenInput) {
+                hiddenInput.value = addressId;
+            }
+        }
+
+        // ==========================================
         // 5. 店鋪信息與支付方式切換
         // ==========================================
         // 切換支付方式 (線上/線下) — 此函數不變，保留原樣
@@ -2637,7 +2666,7 @@
                 }
             }
 
-            return { valid: true };
+            return {valid: true};
         }
 
         // 重寫：從 <option> 的 data-* 屬性動態讀取店鋪信息，並智能解析營業時間
@@ -2832,6 +2861,8 @@
             const storeId = storeSelect ? storeSelect.value : '';
             const selectedDeliveryDate = document.getElementById('deliveryDateSelect') ? document.getElementById('deliveryDateSelect').value : null;
             const selectedPickupDate = document.getElementById('pickupDateSelect') ? document.getElementById('pickupDateSelect').value : null;
+            // 獲取選中的收貨地址 ID
+            const selectedAddressId = document.getElementById('selectedDeliveryAddressId') ? document.getElementById('selectedDeliveryAddressId').value : null;
             // 獲取當前選擇的配送方式
             const deliveryMethodRadio = document.querySelector('input[name="deliveryMethod"]:checked');
             const deliveryMethod = deliveryMethodRadio ? deliveryMethodRadio.value : 'STORE_PICKUP';
@@ -2870,7 +2901,8 @@
                             deliveryMethod: deliveryMethod, // 傳遞配送方式給後端
                             storeId: deliveryMethod === 'STORE_PICKUP' ? storeId : null, // 如果是快遞，不傳 storeId
                             deliveryDate: selectedDeliveryDate, //傳遞選中的日期給後端
-                            appointmentDate: deliveryMethod === 'STORE_PICKUP' ? selectedPickupDate : null//如果是門店自取，則傳遞預約取貨日期
+                            appointmentDate: deliveryMethod === 'STORE_PICKUP' ? selectedPickupDate : null,//如果是門店自取，則傳遞預約取貨日期
+                            addressId: selectedAddressId  // 傳遞地址 ID 給後端
                         })
                     });
                     const result = await response.json();
@@ -3157,6 +3189,9 @@
 
             // 初始化取貨日期選擇器
             initPickupDateSelector();
+
+            // 初始化地址下拉框的隱藏域
+            updateDeliveryAddressSelection();
         });
 
         // 点击遮罩层关闭确认框 (包含取消全選 和 取消訂單)
@@ -3310,19 +3345,15 @@
             // 清空現有選項（保留第一個提示選項）
             select.innerHTML = '<option value="">請選擇收貨日期</option>';
 
-            const today = new Date();
-            const deliveryMode = /*[[${deliveryMode}]]*/ 'NEXT_DAY';
-
-            // 【核心修改】檢查是否有後端傳來的特定日期列表
-            // 無論是哪種模式，只要後端傳了 availableDeliveryDates，就優先使用
+            // 直接接收後端計算好的日期列表
             const availableDates = /*[[${availableDeliveryDates}]]*/ null;
 
+            // 【核心修復】：完全信任後端生成的列表，移除所有前端的 for 循環硬編碼計算
             if (availableDates && availableDates.length > 0) {
-                // 情況 A：使用後端生成的選項（適用於 SPECIFIC_DAYS 單日或多日，以及未來擴展的其他模式）
                 availableDates.forEach(item => {
                     const option = document.createElement('option');
-                    option.value = item.date;       // YYYY-MM-DD
-                    option.textContent = item.displayText; // 例如：本週三 (10月25日) 或 本週三, 本週五
+                    option.value = item.date;
+                    option.textContent = item.displayText; // 直接使用後端算好的文字 (例如: "3天後 (2026-10-07 星期三)")
                     select.appendChild(option);
                 });
 
@@ -3330,44 +3361,15 @@
                 if (select.options.length > 1) {
                     select.selectedIndex = 1;
                 }
-
-
-            } else if (deliveryMode === 'NEXT_DAY') {
-                // 情況 B：次日達模式（兜底邏輯），保持原有的明天+7天邏輯
-                for (let daysLater = 1; daysLater <= 7; daysLater++) {
-                    const deliveryDate = new Date(today);
-                    deliveryDate.setDate(today.getDate() + daysLater);
-
-                    const year = deliveryDate.getFullYear();
-                    const month = String(deliveryDate.getMonth() + 1).padStart(2, '0');
-                    const day = String(deliveryDate.getDate()).padStart(2, '0');
-                    const dateString = `${year}-${month}-${day}`;
-
-                    const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-                    const weekDay = weekDays[deliveryDate.getDay()];
-                    const displayText = daysLater === 1 ? '明天' :
-                        daysLater === 2 ? '後天' :
-                            `${daysLater}天後`;
-
-                    const option = document.createElement('option');
-                    option.value = dateString;
-                    option.textContent = `${displayText}（${dateString} ${weekDay}）`;
-
-                    // 預設選擇明天
-                    if (daysLater === 1) {
-                        option.selected = true;
-                    }
-                    select.appendChild(option);
-                }
             } else {
-                // 情況 C：其他模式（如 CUSTOM 或 NONE），禁用或顯示提示
-                select.innerHTML = '<option value="">此配送方式不支援選擇日期</option>';
+                // 情況 D：後端未傳遞數據 (例如 maxOptions 為 0 或 NONE 模式)，直接禁用並提示
+                select.innerHTML = '<option value="">暫無可用配送日期</option>';
+                select.disabled = true;
             }
 
             // 觸發初始更新
             updateDeliveryDate();
         }
-
         // 更新配送日期
         function updateDeliveryDate() {
             const select = document.getElementById('deliveryDateSelect');
@@ -3396,133 +3398,6 @@
             updateCountdown();
         }
 
-        // 獲取選中的配送日期
-        function getSelectedDeliveryDate() {
-            const select = document.getElementById('deliveryDateSelect');
-            return select ? select.value : null;
-        }
-
-        // ==========================================
-        //  2. 地址切換功能 (從這裡開始插入代碼 2)
-        // ==========================================
-
-        // 显示地址切换确认弹窗
-        function showAddressToggleModal() {
-            const modal = document.getElementById('addressToggleModal');
-            const currentAddressDisplay = document.getElementById('currentAddressDisplay');
-            const newAddressDisplay = document.getElementById('newAddressDisplay');
-            const toggleText = document.getElementById('toggleAddressText');
-
-            // 获取 Thymeleaf 传递的地址数据
-            const mainAddress = /*[[${user.address}]]*/ '';
-            const backupAddress = /*[[${user.backupAddress}]]*/ '';
-
-            if (CO.isUsingBackupAddress) {
-                currentAddressDisplay.textContent = backupAddress;
-                newAddressDisplay.textContent = mainAddress;
-            } else {
-                currentAddressDisplay.textContent = mainAddress;
-                newAddressDisplay.textContent = backupAddress;
-            }
-
-            if (modal) {
-                modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
-        }
-
-        // 关闭地址切换弹窗
-        function closeAddressToggleModal() {
-            const modal = document.getElementById('addressToggleModal');
-            if (modal) {
-                modal.style.display = 'none';
-                document.body.style.overflow = '';
-            }
-        }
-
-        // 确认切换地址
-        function confirmAddressToggle() {
-            const expressDeliveryAddress = document.getElementById('expressDeliveryAddress');
-            const toggleText = document.getElementById('toggleAddressText');
-
-            const mainAddress = /*[[${user.address}]]*/ '';
-            const backupAddress = /*[[${user.backupAddress}]]*/ '';
-
-            CO.isUsingBackupAddress = !CO.isUsingBackupAddress;
-
-            if (CO.isUsingBackupAddress) {
-                expressDeliveryAddress.innerHTML = `送至: <span style="color: var(--accent);">${backupAddress}</span>`;
-                toggleText.textContent = '改用主地址發貨';
-            } else {
-                expressDeliveryAddress.innerHTML = `送至: <span>${mainAddress}</span>`;
-                toggleText.textContent = '改用備用地址收貨';
-            }
-
-            // 关闭弹窗
-            closeAddressToggleModal();
-
-            // 显示居中成功提示
-            showCenteredSuccessMessage('已成功切換！');
-        }
-
-        // 显示居中成功提示（2秒后自动消失）
-        function showCenteredSuccessMessage(message) {
-            // 创建提示元素
-            const toast = document.createElement('div');
-            toast.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-    padding: 1.5rem 3rem;
-    border-radius: 12px;
-    font-size: 1.2rem;
-    font-weight: 600;
-    box-shadow: 0 10px 40px rgba(40, 167, 69, 0.4);
-    z-index: 10004;
-    animation: slideUpFade 0.4s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-`;
-
-            toast.innerHTML = `
-    <i class="fas fa-check-circle" style="font-size: 1.5rem;"></i>
-    <span>${message}</span>
-`;
-
-            // 添加动画样式
-            const style = document.createElement('style');
-            style.textContent = `
-    @keyframes slideUpFade {
-        from {
-            opacity: 0;
-            transform: translate(-50%, -40%);
-        }
-        to {
-            opacity: 1;
-            transform: translate(-50%, -50%);
-        }
-    }
-`;
-            document.head.appendChild(style);
-
-            document.body.appendChild(toast);
-
-            // 2秒后淡出并移除
-            setTimeout(() => {
-                toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                toast.style.opacity = '0';
-                toast.style.transform = 'translate(-50%, -60%)';
-
-                setTimeout(() => {
-                    toast.remove();
-                    style.remove();
-                }, 300);
-            }, 2000);
-        }
 
         // 初始化取貨日期選擇器
         function initPickupDateSelector() {
@@ -3660,23 +3535,6 @@
             }
         }
 
-        // 点击遮罩层关闭弹窗
-        document.getElementById('addressToggleModal')?.addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeAddressToggleModal();
-            }
-        });
-
-        // ESC 键关闭弹窗
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                const addressModal = document.getElementById('addressToggleModal');
-                if (addressModal && addressModal.style.display === 'flex') {
-                    closeAddressToggleModal();
-                }
-            }
-        });
-
         // ==========================================
         // 全局橋接層 (Global Bridge)
         // 確保 HTML 中的 onclick="..." 不需要修改即可工作
@@ -3714,10 +3572,7 @@
         window.confirmExit = confirmExit;
         window.onPaymentSuccess = onPaymentSuccess;
         window.updateCountdown = updateCountdown;
-        window.showAddressToggleModal = showAddressToggleModal;
-        window.closeAddressToggleModal = closeAddressToggleModal;
-        window.confirmAddressToggle = confirmAddressToggle;
-        window.showCenteredSuccessMessage = showCenteredSuccessMessage;
+        window.updateDeliveryAddressSelection = updateDeliveryAddressSelection;
 
     </script>
 </body>

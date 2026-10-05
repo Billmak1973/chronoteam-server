@@ -155,7 +155,7 @@
 
         .data-table {
             width: 100%;
-            min-width: 1200px;
+            min-width: 1500px;
             /* <--- 新增：強制最小寬度，觸發滾動條 */
             border-collapse: collapse;
             text-align: left;
@@ -555,7 +555,7 @@
                                 <th style="min-width: 200px;">用戶信息</th>
                                 <th style="width: 120px;">聯繫方式</th>
                                 <th style="width: 140px;">角色權限</th>
-                                <th>地址信息</th>
+                                <th style="width: 250px">地址信息</th>
                                 <th style="width: 160px;">註冊時間</th>
                                 <th style="width: 180px; text-align: center;">操作管理</th>
                             </tr>
@@ -655,7 +655,11 @@
     <script src="/js/admin.js"></script>
     <!--  引入通用表格管理器 -->
     <script src="/js/admin-table.js"></script>
-
+    <script th:inline="javascript">
+        // 獲取當前登錄用戶的 ID 和 角色
+        const currentUserId = /*[[${#authentication.principal.id}]]*/ null;
+        const currentUserRole = /*[[${#authentication.principal.role.name()}]]*/ 'CUSTOMER';
+    </script>
     <script>
         // ==========================================
         //  核心重構：使用 AdminTable 統一管理
@@ -704,70 +708,63 @@
                 case 'APPRAISER': roleClass = 'role-APPRAISER'; roleLabel = '鑑定師'; roleIcon = 'fa-magnifying-glass'; break;
             }
 
-            return `
-                <tr>
-                    <td style="color: #94a3b8; font-weight: 600;">#${u.id}</td>
-                    <td><span class="uid-text">${u.uid || '-'}</span></td>
-                    <td>
-                        <div class="user-info-cell">
-                            <span class="user-name">${u.username}</span>
-                            <span class="user-email">${u.name || '未填寫姓名'}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <div style="display:flex; flex-direction:column; gap:0.3rem;">
-                            <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-envelope" style="width:16px; color:#94a3b8;"></i> ${u.email}</span>
-                            <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-phone" style="width:16px; color:#94a3b8;"></i> ${u.phone || '-'}</span>
-                            <!-- 僅當角色不是 CUSTOMER 時，顯示工作電話 -->
-                            ${u.role !== 'CUSTOMER' ? `
-                                <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-briefcase" style="width:16px; color:#94a3b8;"></i> ${u.workPhone || '-'}</span>
-                            ` : ''}
-                        </div>
-                    </td>
-                    <td>
-                        <span class="role-badge ${roleClass}" style="cursor:pointer;"
-                              onclick="openUpdateRoleModal(${u.id}, '${u.username}', '${u.role}')"
-                              title="點擊修改權限">
-                            <i class="fas ${roleIcon}"></i> ${roleLabel}
-                            <i class="fas fa-pen" style="font-size:0.6rem; margin-left:4px; opacity:0.7;"></i>
-                        </span>
-                    </td>
-                    <td>
-                        <div style="display:flex; flex-direction:column; gap:0.4rem;">
-                            <div class="text-truncate-cell" title="${u.address || '未設置'}">
-                                <i class="fas fa-home" style="width:16px; color:#94a3b8;"></i>
-                                ${u.address || '<span style="color:#cbd5e1;">未設置</span>'}
-                            </div>
-                            ${u.address ? `
-                                <div class="text-truncate-cell" title="${u.backupAddress || '未設置'}">
-                                    <i class="fas fa-map-pin" style="width:16px; color:#cbd5e1;"></i>
-                                    ${u.backupAddress ? `<span style="color:#64748b;">${u.backupAddress}</span>` : '<span style="color:#e2e8f0; font-size:0.8rem;">無備用</span>'}
-                                </div>
-                            ` : ''}
-                        </div>
-                    </td>
-                    <td style="font-size: 0.85rem; color: #64748b; font-family: monospace;">
-                        ${formatDate(u.createdAt)}
-                    </td>
-                    <td style="text-align: center; vertical-align: middle;">
-                        <div class="action-grid">
-                            <button class="btn-action-sm btn-review" onclick="viewUserReviews('${u.username}')" title="查看評論">
-                                <i class="fas fa-comments"></i> 評論
-                            </button>
-                            <button class="btn-action-sm btn-order" onclick="viewUserOrders('${u.username}')" title="查看訂單">
-                                <i class="fas fa-shopping-bag"></i> 訂單
-                            </button>
-                            <button class="btn-action-sm btn-penalty" onclick="viewUserPenalties('${u.username}')" title="查看處罰">
-                                <i class="fas fa-gavel"></i> 處罰
-                            </button>
-                            <button class="btn-action-sm btn-report" onclick="viewUserReports('${u.username}')" title="查看舉報">
-                                <i class="fas fa-flag"></i> 舉報
-                            </button>
-                        </div>
-                    </td>
-                </tr>`;
-        }
+            // 【核心修改】：直接使用後端傳來的 addressesHtml，若為空則顯示預設值
+            const addressesHtml = u.addressesHtml || '<span style="color:#cbd5e1; font-style: italic;">未設置</span>';
 
+            return `
+        <tr>
+            <td style="color: #94a3b8; font-weight: 600;">#${u.id}</td>
+            <td><span class="uid-text">${u.uid || '-'}</span></td>
+            <td>
+                <div class="user-info-cell">
+                    <span class="user-name">${u.username}</span>
+                    <span class="user-email">${u.name || '未填寫姓名'}</span>
+                </div>
+            </td>
+            <td>
+                <div style="display:flex; flex-direction:column; gap:0.3rem;">
+                    <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-envelope" style="width:16px; color:#94a3b8;"></i> ${u.email}</span>
+                    <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-phone" style="width:16px; color:#94a3b8;"></i> ${u.phone || '-'}</span>
+                    ${u.role !== 'CUSTOMER' ? `
+                        <span style="font-size:0.9rem; color:#334155;"><i class="fas fa-briefcase" style="width:16px; color:#94a3b8;"></i> ${u.workPhone || '-'}</span>
+                    ` : ''}
+                </div>
+            </td>
+            <td>
+                <span class="role-badge ${roleClass}" style="cursor:pointer;"
+                      onclick="openUpdateRoleModal(${u.id}, '${u.username}', '${u.role}')"
+                      title="點擊修改權限">
+                    <i class="fas ${roleIcon}"></i> ${roleLabel}
+                    <i class="fas fa-pen" style="font-size:0.6rem; margin-left:4px; opacity:0.7;"></i>
+                </span>
+            </td>
+
+            <!-- 【核心修改】：直接渲染 addressesHtml，並設置垂直靠上對齊 -->
+            <td style="vertical-align: top; line-height: 1.6; padding-top: 1.4rem;">
+                ${addressesHtml}
+            </td>
+
+            <td style="font-size: 0.85rem; color: #64748b; font-family: monospace; white-space: nowrap;">
+                ${formatDate(u.createdAt)}
+            </td>
+            <td style="text-align: center; vertical-align: middle;">
+                <div class="action-grid">
+                    <button class="btn-action-sm btn-review" onclick="viewUserReviews('${u.username}')" title="查看評論">
+                        <i class="fas fa-comments"></i> 評論
+                    </button>
+                    <button class="btn-action-sm btn-order" onclick="viewUserOrders('${u.username}')" title="查看訂單">
+                        <i class="fas fa-shopping-bag"></i> 訂單
+                    </button>
+                    <button class="btn-action-sm btn-penalty" onclick="viewUserPenalties('${u.username}')" title="查看處罰">
+                        <i class="fas fa-gavel"></i> 處罰
+                    </button>
+                    <button class="btn-action-sm btn-report" onclick="viewUserReports('${u.username}')" title="查看舉報">
+                        <i class="fas fa-flag"></i> 舉報
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+        }
         // ==========================================
         // 輔助函數 (保持不變)
         // ==========================================
