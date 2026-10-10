@@ -9,6 +9,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -141,6 +144,85 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("requestType") AfterSalesRequest.RequestType requestType,
             @Param("requestStatus") AfterSalesRequest.RequestStatus requestStatus,
             @Param("productName") String productName,
+            Pageable pageable
+    );
+
+    @Query("SELECT o FROM Order o " +
+            "LEFT JOIN o.user u " +
+            "LEFT JOIN o.courier c " +
+            "LEFT JOIN o.offlineStore s " +
+            "LEFT JOIN o.userAddress ua " +
+            "WHERE (:buyerUsername IS NULL OR u.username = :buyerUsername) " +
+            "AND (:courierId IS NULL OR c.id = :courierId) " +
+            "AND (:deliveryMethod IS NULL OR o.deliveryMethod = :deliveryMethod) " +
+            "AND (:storeId IS NULL OR s.storeId = :storeId) " +
+            "AND (:needDelivery IS NULL OR o.delivery = :needDelivery) " +
+            "AND (:paymentMethod IS NULL OR o.paymentMethod = :paymentMethod) " +
+            "AND (:paymentStatus IS NULL OR o.paymentStatus = :paymentStatus) " +
+            "AND (:orderStatus IS NULL OR o.status = :orderStatus) " +
+            "AND (:searchStartDt IS NULL OR o.createdAt >= :searchStartDt) " +
+            "AND (:searchEndDt IS NULL OR o.createdAt <= :searchEndDt) " +
+            "AND (:addressKeyword IS NULL OR ua.fullAddress LIKE CONCAT('%', :addressKeyword, '%')) " +
+            "AND (:deliveryDateStart IS NULL OR o.estimatedDeliveryDate >= :deliveryDateStart) " +
+            "AND (:deliveryDateEnd IS NULL OR o.estimatedDeliveryDate <= :deliveryDateEnd) " +
+            "AND (:appointmentDateStart IS NULL OR o.appointmentDate >= :appointmentDateStart) " +
+            "AND (:appointmentDateEnd IS NULL OR o.appointmentDate <= :appointmentDateEnd) " +
+            // ================= 【新增】：是否已過期篩選邏輯 =================
+            // 邏輯說明：
+            // 1. 如果 isExpired 為 null，則不過濾。
+            // 2. 如果 isExpired = true (已過期)：
+            //    - 線上訂單：創建時間 <= 線上截止時間
+            //    - 線下訂單：創建時間 <= 線下截止時間
+            // 3. 如果 isExpired = false (未過期)：
+            //    - 線上訂單：創建時間 > 線上截止時間
+            //    - 線下訂單：創建時間 > 線下截止時間
+            //    - 其他非待付款狀態的訂單：視為未過期
+            "AND (" +
+            "   :isExpired IS NULL OR " +
+            "   ( " +
+            "       :isExpired = true AND ( " +
+            "           (:onlineDeadline IS NOT NULL AND o.paymentMethod = 'PAYPAL_SIM' AND o.createdAt <= :onlineDeadline) OR " +
+            "           (:offlineDeadline IS NOT NULL AND o.paymentMethod = 'OFFLINE_STORE' AND o.createdAt <= :offlineDeadline) " +
+            "       ) " +
+            "   ) OR " +
+            "   ( " +
+            "       :isExpired = false AND ( " +
+            "           (:onlineDeadline IS NOT NULL AND o.paymentMethod = 'PAYPAL_SIM' AND o.createdAt > :onlineDeadline) OR " +
+            "           (:offlineDeadline IS NOT NULL AND o.paymentMethod = 'OFFLINE_STORE' AND o.createdAt > :offlineDeadline) OR " +
+            "           (o.paymentMethod NOT IN ('PAYPAL_SIM', 'OFFLINE_STORE')) " + // 其他支付方式視為未過期
+            "       ) " +
+            "   ) " +
+            ") " +
+            "AND (" +
+            "   :amountMode IS NULL OR " +
+            "   (:amountMode = 'gt' AND o.totalAmount > :amountVal1) OR " +
+            "   (:amountMode = 'lt' AND o.totalAmount < :amountVal1) OR " +
+            "   (:amountMode = 'eq' AND o.totalAmount = :amountVal1) OR " +
+            "   (:amountMode = 'between' AND o.totalAmount >= :amountVal1 AND o.totalAmount <= :amountVal2)" +
+            ")")
+    Page<Order> findOrdersWithAdvancedFilters(
+            @Param("buyerUsername") String buyerUsername,
+            @Param("courierId") Long courierId,
+            @Param("amountMode") String amountMode,
+            @Param("amountVal1") BigDecimal amountVal1,
+            @Param("amountVal2") BigDecimal amountVal2,
+            @Param("deliveryMethod") String deliveryMethod,
+            @Param("storeId") Long storeId,
+            @Param("needDelivery") Boolean needDelivery,
+            @Param("paymentMethod") String paymentMethod,
+            @Param("paymentStatus") Order.PaymentStatus paymentStatus,
+            @Param("orderStatus") Order.OrderStatus orderStatus,
+            @Param("searchStartDt") LocalDateTime searchStartDt,
+            @Param("searchEndDt") LocalDateTime searchEndDt,
+            @Param("addressKeyword") String addressKeyword,
+            @Param("deliveryDateStart") LocalDate deliveryDateStart,
+            @Param("deliveryDateEnd") LocalDate deliveryDateEnd,
+            @Param("appointmentDateStart") LocalDate appointmentDateStart,
+            @Param("appointmentDateEnd") LocalDate appointmentDateEnd,
+            // 【新增】：過期篩選參數
+            @Param("isExpired") Boolean isExpired,
+            @Param("onlineDeadline") LocalDateTime onlineDeadline,
+            @Param("offlineDeadline") LocalDateTime offlineDeadline,
             Pageable pageable
     );
 }

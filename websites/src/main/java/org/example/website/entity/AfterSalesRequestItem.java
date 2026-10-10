@@ -48,6 +48,9 @@ public class AfterSalesRequestItem {
     @Column(name = "final_settle_amount", precision = 10, scale = 2)
     private BigDecimal finalSettleAmount;
 
+    @Column(name="is_stocked_in", nullable = false)
+    private Boolean isStockedIn;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

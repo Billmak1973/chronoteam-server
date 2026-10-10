@@ -365,6 +365,16 @@
             border-color: var(--gold);
             color: var(--gold);
         }
+
+        /* 隱藏數字輸入框的上下箭頭 (適用於帶有 .no-spin 類的元素) */
+        .no-spin {
+            -moz-appearance: textfield; /* Firefox */
+        }
+        .no-spin::-webkit-outer-spin-button,
+        .no-spin::-webkit-inner-spin-button {
+            -webkit-appearance: none; /* Chrome, Safari, Edge */
+            margin: 0;
+        }
     </style>
 </head>
 
@@ -410,14 +420,14 @@
                                 <div class="form-group">
                                     <label for="shippingFee"><i class="fas fa-coins"></i> 基礎快遞費用 (HKD)</label>
                                     <input type="number" id="shippingFee" step="0.01" min="0" required
-                                        class="form-input" placeholder="例如：50">
+                                        class="form-input no-spin" placeholder="例如：50">
                                     <small class="form-hint"><i class="fas fa-info-circle"></i>
                                         當訂單未達到免郵門檻時，將向顧客收取此固定運費。</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="freeShippingThreshold"><i class="fas fa-gift"></i> 免運費門檻 (HKD)</label>
                                     <input type="number" id="freeShippingThreshold" step="0.01" min="0" required
-                                        class="form-input" placeholder="例如：30000">
+                                        class="form-input no-spin" placeholder="例如：30000">
                                     <small class="form-hint"><i class="fas fa-info-circle"></i> 例如填寫 30000，則顧客訂單總額滿 3
                                         萬即可自動免除快遞費。</small>
                                 </div>
@@ -441,7 +451,7 @@
                                 <div class="form-group" id="cutoffOffsetGroup">
                                     <label for="cutoffDayOffset"><i class="fas fa-calendar-minus"></i> 截單日偏移量
                                         (天)</label>
-                                    <input type="number" id="cutoffDayOffset" class="form-input" value="-1" step="1"
+                                    <input type="number" id="cutoffDayOffset" class="form-input no-spin" value="-1" step="1"
                                         required>
                                     <small class="form-hint"><i class="fas fa-info-circle"></i> 截单日与送货日的间隔天数：<br>•
                                         -1：提前一天截单<br>• 0 ：当天截单</small>
@@ -516,7 +526,7 @@
                                 <div class="form-group" id="customDaysGroup" style="display: none;">
                                     <label for="deliveryCustomDays"><i class="fas fa-calendar-day"></i> 自定義配送天數</label>
                                     <input type="number" id="deliveryCustomDays" step="1" min="2" max="30"
-                                        class="form-input" placeholder="例如：3">
+                                        class="form-input no-spin" placeholder="例如：3">
                                     <small class="form-hint"><i class="fas fa-info-circle"></i> 當選擇「自定義天數」時生效，表示下單後 N
                                         天送達。</small>
                                 </div>
@@ -530,21 +540,21 @@
                                 <div class="form-group">
                                     <label for="returnDays"><i class="fas fa-calendar-alt"></i> 无条件退货天数</label>
                                     <input type="number" id="returnDays" step="1" min="0" max="30" required
-                                        class="form-input" placeholder="例如：7">
+                                        class="form-input no-spin" placeholder="例如：7">
                                     <small class="form-hint"><i class="fas fa-info-circle"></i> 顾客收货后可无条件申请退货的天数（0
                                         表示不支持退货）。</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="exchangeDays"><i class="fas fa-exchange-alt"></i> 无条件换货天数</label>
                                     <input type="number" id="exchangeDays" step="1" min="0" max="30" required
-                                        class="form-input" placeholder="例如：14">
+                                        class="form-input no-spin" placeholder="例如：14">
                                     <small class="form-hint"><i class="fas fa-info-circle"></i> 顾客收货后可无条件申请换货的天数（0
                                         表示不支持换货）。</small>
                                 </div>
                                 <div class="form-group">
                                     <label for="offlinePaymentDays"><i class="fas fa-store"></i> 線下付款/取貨保留天數</label>
                                     <input type="number" id="offlinePaymentDays" step="1" min="1" max="30" required
-                                        class="form-input" placeholder="例如：3">
+                                        class="form-input no-spin" placeholder="例如：3">
                                     <small class="form-hint"><i class="fas fa-info-circle"></i>
                                         顧客選擇「線下付款/門店自取」後，訂單保留的最長天數。逾期系統將自動取消訂單並恢復庫存。</small>
                                 </div>
@@ -554,7 +564,7 @@
                                     <label for="onlineOrderRetentionDays"><i class="fas fa-clock"></i> 網絡訂單保留天數
                                         (待付款)</label>
                                     <input type="number" id="onlineOrderRetentionDays" step="1" min="1" max="30"
-                                        required class="form-input" placeholder="例如：1 (即24小時)">
+                                        required class="form-input no-spin" placeholder="例如：1 (即24小時)">
                                     <small class="form-hint">
                                         <i class="fas fa-info-circle"></i>
                                         顧客下單後未付款，系統保留訂單的最長天數。逾期系統將自動取消訂單並釋放庫存。(例如填寫 1，即保留 24 小時)
@@ -583,7 +593,7 @@
                                 <div class="form-group">
                                     <label for="maxUserAddresses"><i class="fas fa-map-marker-alt"></i> 用戶最大地址數量</label>
                                     <input type="number" id="maxUserAddresses" step="1" min="1" max="20" required
-                                        class="form-input" placeholder="例如：5">
+                                        class="form-input no-spin" placeholder="例如：5">
                                     <small class="form-hint">
                                         <i class="fas fa-info-circle"></i> 限制每個用戶帳戶最多可以保存的收貨地址數量（建議設置為 1 到 20 之間）。
                                     </small>
@@ -593,7 +603,7 @@
                                     <label for="maxDeliveryDateOptions"><i class="fas fa-calendar-check"></i>
                                         最大可選配送日期數</label>
                                     <input type="number" id="maxDeliveryDateOptions" step="1" min="1" max="30" required
-                                        class="form-input" placeholder="例如：4">
+                                        class="form-input no-spin" placeholder="例如：4">
                                     <small class="form-hint">
                                         <i class="fas fa-info-circle"></i> 顧客在結帳時，配送日期下拉選單中最多顯示的未來可選日期數量（建議設置為 3 到 7
                                         之間，避免選項過多）。
@@ -687,7 +697,7 @@
                                 <div class="form-group" id="scrollIntervalGroup">
                                     <label><i class="fas fa-hourglass-half"></i> 滾動間隔 (秒)</label>
                                     <input type="number" id="scrollInterval" min="0" max="60" step="0.5" value="1"
-                                        class="form-input" onchange="updateNotificationPreview()">
+                                        class="form-input no-spin" onchange="updateNotificationPreview()">
                                     <small class="form-hint"><i class="fas fa-info-circle"></i>
                                         文字完全滑出預覽區後，等待多少秒才重新開始下一輪滾動。</small>
                                 </div>
@@ -837,7 +847,7 @@
                                     <label><i class="fas fa-eye"></i> 实时预览</label>
                                     <!-- 預覽容器 -->
                                     <div class="preview-container" id="notificationStage">
-                                        <!-- 【新增】右上角控制按鈕 -->
+                                        <!-- 右上角控制按鈕 -->
                                         <button type="button" id="previewToggleBtn" class="preview-control-btn"
                                             onclick="togglePreview()">
                                             <i class="fas fa-play"></i>
@@ -923,7 +933,7 @@
             const cutoffOffsetGroup = document.getElementById('cutoffOffsetGroup');
             const specificDaysGroup = document.getElementById('specificDaysGroup');
             const customDaysGroup = document.getElementById('customDaysGroup');
-            const continuousDaysModeGroup = document.getElementById('continuousDaysModeGroup'); // 新增
+            const continuousDaysModeGroup = document.getElementById('continuousDaysModeGroup');
             const cutoffDayOffsetInput = document.getElementById('cutoffDayOffset');
             const shippingFeeInput = document.getElementById("shippingFee");
             const freeShippingThresholdInput = document.getElementById('freeShippingThreshold');
@@ -932,7 +942,7 @@
             cutoffOffsetGroup.style.display = 'none';
             specificDaysGroup.style.display = 'none';
             customDaysGroup.style.display = 'none';
-            continuousDaysModeGroup.style.display = 'none'; // 新增：默認隱藏
+            continuousDaysModeGroup.style.display = 'none';
 
             if (mode === 'NONE') {
                 if (shippingFeeInput) {shippingFeeInput.value = '0'; shippingFeeInput.disabled = true;}
@@ -943,20 +953,27 @@
                 globalCutoffGroup.style.display = 'block';
                 cutoffOffsetGroup.style.display = 'block';
 
-                if (mode === 'NEXT_DAY') {
-                    if (cutoffDayOffsetInput) {cutoffDayOffsetInput.value = '-1'; cutoffDayOffsetInput.disabled = true;}
+                // 【核心修改處】：次日達 (NEXT_DAY) 和 自定義天數 (CUSTOM) 模式下，截單日偏移量強制為 -1 且禁用輸入
+                if (mode === 'NEXT_DAY' || mode === 'CUSTOM') {
+                    if (cutoffDayOffsetInput) {
+                        cutoffDayOffsetInput.value = '-1';
+                        cutoffDayOffsetInput.disabled = true; // 設為 true 讓用戶無法手動修改
+                    }
                 } else {
-                    if (cutoffDayOffsetInput) cutoffDayOffsetInput.disabled = false;
+                    if (cutoffDayOffsetInput) {
+                        cutoffDayOffsetInput.disabled = false; // 其他模式允許修改
+                    }
                 }
 
                 if (mode === 'SPECIFIC_DAYS') {
                     specificDaysGroup.style.display = 'block';
-                    // 新增：只在指定星期配送時才檢查是否顯示連續配送日處理模式
                     setTimeout(() => {
                         updateContinuousDaysModeVisibility();
                     }, 100);
                 }
-                else if (mode === 'CUSTOM') customDaysGroup.style.display = 'block';
+                else if (mode === 'CUSTOM') {
+                    customDaysGroup.style.display = 'block';
+                }
             }
         }
 
@@ -1878,6 +1895,23 @@
 
             }
         }
+
+        // ==========================================
+        // 徹底禁止滑鼠滾輪改變數字輸入框的數值
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function () {
+            // 選取頁面上所有帶有 'no-spin' 類別的元素 (通常是 <input type="number">)
+            const noSpinInputs = document.querySelectorAll('.no-spin');
+
+            // 遍歷每一個選取到的輸入框元素
+            noSpinInputs.forEach(input => {
+                // 為該輸入框綁定 'wheel' (滑鼠滾輪) 事件監聽器
+                input.addEventListener('wheel', function (e) {
+                    // 阻止瀏覽器的預設行為：防止滑鼠滾輪意外改變數字輸入框的數值
+                    e.preventDefault();
+                }, { passive: false }); // 必須設定 passive: false，否則 e.preventDefault() 在現代瀏覽器中會失效
+            });
+        });
     </script>
 
 </body>

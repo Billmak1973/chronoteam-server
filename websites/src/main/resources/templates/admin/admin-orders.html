@@ -787,6 +787,115 @@
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(253, 126, 20, 0.3);
         }
+
+        /* 篩選工具欄專屬樣式 */
+        .filter-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 1.5rem;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        /* 【新增】處理日期範圍輸入框的佈局 */
+        #deliveryDateRangeInputs>div {
+            flex-wrap: wrap;
+            /* 允許換行 */
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        #deliveryDateRangeInputs input {
+            flex: 1 1 100px;
+            /* 允許縮小，但最小寬度為 100px */
+            min-width: 100px;
+        }
+
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 0.6rem 0.8rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        .filter-actions {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #f1f3f5;
+        }
+
+        .btn-filter {
+            padding: 0.6rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .btn-search {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+        }
+
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-reset {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-reset:hover {
+            background: #dee2e6;
+        }
+
+        .amount-inputs {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .amount-inputs span {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 
@@ -800,6 +909,206 @@
                 <div class="breadcrumb">後台管理 / 訂單列表</div>
             </div>
             <div class="content-body">
+
+                <div class="filter-bar">
+                    <!-- 買家 -->
+                    <div class="filter-group">
+                        <label>買家</label>
+                        <select id="filter-buyer-mode" onchange="toggleTextInput('buyer')">
+                            <option value="all">全部買家</option>
+                            <option value="specific">指定買家</option>
+                        </select>
+                        <input type="text" id="filter-buyer-input" style="display: none;" placeholder="輸入買家用戶名">
+                    </div>
+
+                    <!-- 總金額 -->
+                    <div class="filter-group">
+                        <label>總金額</label>
+                        <select id="filter-amount-mode" onchange="toggleAmountInput()">
+                            <option value="all">全部金額</option>
+                            <option value="gt">大於</option>
+                            <option value="lt">小於</option>
+                            <option value="eq">等於</option>
+                            <option value="between">區間 (Min ~ Max)</option>
+                        </select>
+                        <div class="amount-inputs">
+                            <input type="number" id="filter-amount-val1" style="display: none;" placeholder="金額">
+                            <span id="filter-amount-separator" style="display: none;">至</span>
+                            <input type="number" id="filter-amount-val2" style="display: none;" placeholder="金額">
+                        </div>
+                    </div>
+
+                    <!-- 配送方式 -->
+                    <div class="filter-group">
+                        <label>配送方式</label>
+                        <select id="filter-delivery-method"
+                            onchange="toggleCourierFilter(); toggleStoreFilter();updateFilterVisibility()">
+                            <option value="all">全部</option>
+                            <option value="STORE_PICKUP">門店自取</option>
+                            <option value="EXPRESS">快遞</option>
+                        </select>
+                    </div>
+
+                    <!-- 線下店鋪 (動態顯示) -->
+                    <div class="filter-group" id="filter-store-group" style="display: none;">
+                        <label>線下店鋪</label>
+                        <select id="filter-store-id">
+                            <option value="all">全部店鋪</option>
+                            <!-- JS 動態填充 -->
+                        </select>
+                    </div>
+
+                    <!-- 需快遞 -->
+                    <div class="filter-group" id="filter-need-delivery-group">
+                        <label>需快遞</label>
+                        <select id="filter-need-delivery" onchange="updateFilterVisibility()">
+                            <option value="all">不限定</option>
+                            <option value="true">是</option>
+                            <option value="false">否</option>
+                        </select>
+                    </div>
+
+                    <!-- 快遞員 -->
+                    <div class="filter-group" id="filter-courier-group" style="display: none;">
+                        <label>快遞員</label>
+                        <select id="filter-courier-id">
+                            <option value="all">全部快遞員</option>
+                            <!-- JS 動態填充 -->
+                        </select>
+                    </div>
+
+                    <!-- 支付方式 -->
+                    <div class="filter-group">
+                        <label>支付方式</label>
+                        <select id="filter-payment-method">
+                            <option value="all">全部</option>
+                            <option value="PAYPAL_SIM">線上支付</option>
+                            <option value="OFFLINE_STORE">線下店鋪支付</option>
+                        </select>
+                    </div>
+
+                    <!-- 在「支付方式」篩選組的前面或後面加入以下代碼 -->
+                    <!-- 收貨地址 (動態顯示，僅當配送方式為快遞時顯示) -->
+                    <div class="filter-group" id="filter-address-group" style="display: none;">
+                        <label>收貨地址</label>
+                        <input type="text" id="filter-address-keyword" placeholder="例如: 港島 灣仔區" style="width: 100%;">
+                        <small style="color: #6c757d; font-size: 0.75rem; margin-top: 2px;">支援模糊匹配，輸入越精確匹配範圍越小</small>
+                    </div>
+
+                    <!-- 預計送達時間 (動態顯示，僅當配送方式為快遞時顯示) -->
+                    <div class="filter-group" id="filter-delivery-date-group" style="display: none;">
+                        <label>預計送達時間</label>
+                        <select id="filter-delivery-date-mode" onchange="toggleDeliveryDateInputs()">
+                            <option value="all">全部</option>
+                            <option value="specific">特定某一天</option>
+                            <option value="range">開始和結束時間</option>
+                        </select>
+                        <!-- 特定某一天 -->
+                        <div id="deliveryDateSpecificInput" style="display: none; margin-top: 0.5rem;">
+                            <input type="date" id="filter-delivery-date-specific" style="width: 100%;" title="特定日期">
+                        </div>
+                        <!-- 開始和結束時間 -->
+                        <div id="deliveryDateRangeInputs" style="display: none; margin-top: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <input type="date" id="filter-delivery-date-start" style="flex: 1;" title="開始日期">
+                                <span style="color: #6c757d; font-size: 0.9rem;">至</span>
+                                <input type="date" id="filter-delivery-date-end" style="flex: 1;" title="結束日期">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 預約到店 (動態顯示，僅當配送方式為門店自取時顯示) -->
+                    <div class="filter-group" id="filter-appointment-group" style="display: none;">
+                        <label>預約到店</label>
+                        <select id="filter-appointment-mode" onchange="toggleAppointmentInputs()">
+                            <option value="all">全部</option>
+                            <option value="specific">特定某一天</option>
+                            <option value="range">開始和結束時間</option>
+                        </select>
+                        <!-- 特定某一天 -->
+                        <div id="appointmentDateSpecificInput" style="display: none; margin-top: 0.5rem;">
+                            <input type="date" id="filter-appointment-specific" style="width: 100%;" title="特定日期">
+                        </div>
+                        <!-- 開始和結束時間 -->
+                        <div id="appointmentDateRangeInputs" style="display: none; margin-top: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <input type="date" id="filter-appointment-start" style="flex: 1;" title="開始日期">
+                                <span style="color: #6c757d; font-size: 0.9rem;">至</span>
+                                <input type="date" id="filter-appointment-end" style="flex: 1;" title="結束日期">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 支付狀態 -->
+                    <div class="filter-group">
+                        <label>支付狀態</label>
+                        <select id="filter-payment-status">
+                            <option value="all">全部</option>
+                            <option value="UNPAID">待付款</option>
+                            <option value="PAID_SIMULATED">已付款(模擬)</option>
+                            <option value="PAID_REAL">已付款(真實)</option>
+                            <option value="PENDING_OFFLINE">待線下付款</option>
+                            <option value="PAID_OFFLINE">已線下付款</option>
+                            <option value="REFUNDED">已退款</option>
+                            <option value="REFUNDING">退款中</option>
+                            <option value="PARTIALLY_REFUNDED">部分退款</option>
+                        </select>
+                    </div>
+
+                    <!-- 訂單狀態 -->
+                    <div class="filter-group" onchange="updateFilterVisibility()">
+                        <label>訂單狀態</label>
+                        <select id="filter-order-status">
+                            <option value="all">全部</option>
+                            <option value="PENDING">待處理</option>
+                            <option value="PAID">已付款</option>
+                            <option value="SHIPPED">已發貨</option>
+                            <option value="COMPLETED">已完成</option>
+                            <option value="CANCELLED">已取消</option>
+                        </select>
+                    </div>
+
+                    <!-- 是否已過期 (動態顯示，僅當訂單狀態為待處理時顯示) -->
+                    <div class="filter-group" id="filter-expired-group" style="display: none;">
+                        <label>是否已過期</label>
+                        <select id="filter-is-expired">
+                            <option value="all">全部</option>
+                            <option value="true">是</option>
+                            <option value="false">否</option>
+                        </select>
+                    </div>
+
+                    <!-- 創建時間 -->
+                    <div class="filter-group">
+                        <label>創建時間</label>
+                        <select id="filter-create-mode" onchange="toggleCreateDateInputs()">
+                            <option value="all">全部</option>
+                            <option value="range">開始和結束時間</option>
+                            <option value="specific">特定日子</option>
+                        </select>
+                        <div id="createDateRangeInputs" style="display: none; margin-top: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <input type="date" id="filter-create-start" style="flex: 1;" title="開始日期">
+                                <span style="color: #6c757d; font-size: 0.9rem;">至</span>
+                                <input type="date" id="filter-create-end" style="flex: 1;" title="結束日期">
+                            </div>
+                        </div>
+                        <div id="createDateSpecificInput" style="display: none; margin-top: 0.5rem;">
+                            <input type="date" id="filter-create-specific" style="width: 100%;" title="特定日期">
+                        </div>
+                    </div>
+
+                    <!-- 操作按鈕 -->
+                    <div class="filter-actions">
+                        <button class="btn-filter btn-reset" onclick="resetFilters()">
+                            <i class="fas fa-redo"></i> 重置
+                        </button>
+                        <button class="btn-filter btn-search" onclick="applyFilters()">
+                            <i class="fas fa-search"></i> 查詢
+                        </button>
+                    </div>
+                </div>
+
                 <div class="table-responsive">
                     <table class="order-table">
                         <!-- 替換原有的 <thead> -->
@@ -1233,9 +1542,6 @@
             // ==========================================
             // 【新增】快遞狀態更新按鈕渲染邏輯
             // ==========================================
-            // ==========================================
-            // 【新增】快遞狀態更新按鈕渲染邏輯
-            // ==========================================
             let courierActionBtnHtml = '';
             // 條件：有快遞員 且 狀態為 PAID 或 SHIPPED
             if (order.courierUsername && (order.orderStatus === 'PAID' || order.orderStatus === 'SHIPPED')) {
@@ -1358,9 +1664,417 @@
             }
         };
 
+        // ==========================================
+        // 新增：加載篩選下拉框選項
+        // ==========================================
+        async function loadFilterOptions() {
+            // 1. 加載快遞員列表
+            try {
+                const courierRes = await fetch('/admin/api/couriers/list');
+                const courierData = await courierRes.json();
+                const courierSelect = document.getElementById('filter-courier-id');
+                if (courierData.success && courierData.data) {
+                    courierData.data.forEach(c => {
+                        const option = document.createElement('option');
+                        option.value = c.id; // 傳遞 ID
+                        option.textContent = c.username;
+                        courierSelect.appendChild(option);
+                    });
+                }
+            } catch (e) {
+                console.error('加載快遞員列表失敗:', e);
+            }
+
+            // 2. 加載線下店鋪列表
+            try {
+                const storeRes = await fetch('/admin/stores/api/active-list');
+                const storeData = await storeRes.json();
+                const storeSelect = document.getElementById('filter-store-id');
+                if (storeData.success && storeData.data) {
+                    storeData.data.forEach(s => {
+                        const option = document.createElement('option');
+                        option.value = s.storeId; // 傳遞 ID
+                        option.textContent = s.name;
+                        storeSelect.appendChild(option);
+                    });
+                }
+            } catch (e) {
+                console.error('加載店鋪列表失敗:', e);
+            }
+        }
+
+        // ==========================================
+        // 4. 初始化與表格加載
+        // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
+            loadFilterOptions(); // 【新增】頁面加載時先獲取下拉框選項
+            updateFilterVisibility(); // 【新增】初始化時根據默認值計算顯示狀態
             AdminTable.loadData(tableConfig);
         });
+
+        // ==========================================
+        // 篩選欄 UI 動態切換邏輯
+        // ==========================================
+        function toggleTextInput(type) {
+            const mode = document.getElementById(`filter-${type}-mode`).value;
+            const input = document.getElementById(`filter-${type}-input`);
+            input.style.display = (mode === 'specific') ? 'block' : 'none';
+            if (mode === 'all') input.value = ''; // 重置時清空
+        }
+
+        function toggleAmountInput() {
+            const mode = document.getElementById('filter-amount-mode').value;
+            const val1 = document.getElementById('filter-amount-val1');
+            const val2 = document.getElementById('filter-amount-val2');
+            const separator = document.getElementById('filter-amount-separator');
+
+            // 先全部隱藏
+            val1.style.display = 'none';
+            val2.style.display = 'none';
+            separator.style.display = 'none';
+            val1.value = '';
+            val2.value = '';
+
+            if (mode === 'gt' || mode === 'lt' || mode === 'eq') {
+                val1.style.display = 'block';
+                val1.placeholder = '輸入金額';
+            } else if (mode === 'between') {
+                val1.style.display = 'block';
+                val2.style.display = 'block';
+                separator.style.display = 'block';
+                val1.placeholder = '最小金額';
+                val2.placeholder = '最大金額';
+            }
+        }
+
+        function toggleCourierFilter() {
+            const deliveryMethod = document.getElementById('filter-delivery-method').value;
+            const needDelivery = document.getElementById('filter-need-delivery').value;
+            const courierGroup = document.getElementById('filter-courier-group');
+
+            // 只有當配送方式為快遞 且 需快遞為"是"時才顯示
+            if (deliveryMethod === 'EXPRESS' && needDelivery === 'true') {
+                courierGroup.style.display = 'flex';
+            } else {
+                courierGroup.style.display = 'none';
+                // 隱藏時重置為全部
+                document.getElementById('filter-courier-id').value = 'all';
+            }
+        }
+
+        // ==========================================
+        // 篩選數據收集與應用邏輯
+        // ==========================================
+        function applyFilters() {
+            const params = {
+                page: 1,
+                size: 25
+            };
+
+            // 1. 收集買家
+            const buyerMode = document.getElementById('filter-buyer-mode').value;
+            if (buyerMode === 'specific') {
+                params.buyerUsername = document.getElementById('filter-buyer-input').value.trim();
+            }
+
+            // 2. 收集快遞員 (改為傳遞 ID)
+            const courierId = document.getElementById('filter-courier-id').value;
+            if (courierId !== 'all') {
+                params.courierId = courierId;
+            }
+
+            // 3. 收集總金額
+            const amountMode = document.getElementById('filter-amount-mode').value;
+            if (amountMode !== 'all') {
+                params.amountMode = amountMode;
+                params.amountVal1 = document.getElementById('filter-amount-val1').value;
+                if (amountMode === 'between') {
+                    params.amountVal2 = document.getElementById('filter-amount-val2').value;
+                }
+            }
+
+            // 4. 收集其他下拉框
+            const deliveryMethod = document.getElementById('filter-delivery-method').value;
+            if (deliveryMethod !== 'all') params.deliveryMethod = deliveryMethod;
+
+            // 【修改處】收集線下店鋪 ID
+            const storeId = document.getElementById('filter-store-id').value;
+            if (storeId !== 'all') {
+                params.storeId = storeId;
+            }
+
+            const needDelivery = document.getElementById('filter-need-delivery').value;
+            if (needDelivery !== 'all') params.needDelivery = (needDelivery === 'true');
+
+            const paymentMethod = document.getElementById('filter-payment-method').value;
+            if (paymentMethod !== 'all') params.paymentMethod = paymentMethod;
+
+            const paymentStatus = document.getElementById('filter-payment-status').value;
+            if (paymentStatus !== 'all') params.paymentStatus = paymentStatus;
+
+            const orderStatus = document.getElementById('filter-order-status').value;
+            if (orderStatus !== 'all') params.orderStatus = orderStatus;
+
+            // 5. 收集創建時間
+            const createMode = document.getElementById('filter-create-mode').value;
+            if (createMode !== 'all') {
+                params.createDateMode = createMode;
+                if (createMode === 'range') {
+                    const startVal = document.getElementById('filter-create-start').value;
+                    const endVal = document.getElementById('filter-create-end').value;
+                    if (startVal) params.createDateStart = startVal;
+                    if (endVal) params.createDateEnd = endVal;
+                } else if (createMode === 'specific') {
+                    const specificVal = document.getElementById('filter-create-specific').value;
+                    if (specificVal) params.createDateSpecific = specificVal;
+                }
+            }
+
+            // 6.收集收貨地址關鍵字
+            const addressKeyword = document.getElementById('filter-address-keyword').value.trim();
+            if (addressKeyword) {
+                params.addressKeyword = addressKeyword;
+            }
+
+            // 7. 收集送達時間
+            const deliveryDateMode = document.getElementById('filter-delivery-date-mode').value;
+            if (deliveryDateMode !== 'all') {
+                params.deliveryDateMode = deliveryDateMode;
+                if (deliveryDateMode === 'range') {
+                    const startVal = document.getElementById('filter-delivery-date-start').value;
+                    const endVal = document.getElementById('filter-delivery-date-end').value;
+
+                    // 【校驗】：開始日期不能晚於結束日期 (yyyy-MM-dd 格式可直接進行字符串比較)
+                    if (startVal && endVal && startVal > endVal) {
+                        if (typeof showNotification === 'function') {
+                            showNotification('❌ 開始日期不能晚於結束日期！', true);
+                        } else {
+                            alert('開始日期不能晚於結束日期！');
+                        }
+                        return; // 阻止執行查詢
+                    }
+
+                    if (startVal) params.deliveryDateStart = startVal;
+                    if (endVal) params.deliveryDateEnd = endVal;
+                } else if (deliveryDateMode === 'specific') {
+                    const specificVal = document.getElementById('filter-delivery-date-specific').value;
+                    if (specificVal) params.deliveryDateSpecific = specificVal;
+                }
+            }
+
+            // 8. 收集預約到店時間
+            const appointmentMode = document.getElementById('filter-appointment-mode').value;
+            if (appointmentMode !== 'all') {
+                params.appointmentDateMode = appointmentMode;
+                if (appointmentMode === 'range') {
+                    const startVal = document.getElementById('filter-appointment-start').value;
+                    const endVal = document.getElementById('filter-appointment-end').value;
+
+                    // 【核心校驗】：開始日期不能晚於結束日期 (yyyy-MM-dd 格式可直接進行字符串比較)
+                    if (startVal && endVal && startVal > endVal) {
+                        if (typeof showNotification === 'function') {
+                            showNotification('❌ 預約開始日期不能晚於結束日期！', true);
+                        } else {
+                            alert('預約開始日期不能晚於結束日期！');
+                        }
+                        return; // 阻止執行查詢
+                    }
+
+                    if (startVal) params.appointmentDateStart = startVal;
+                    if (endVal) params.appointmentDateEnd = endVal;
+                } else if (appointmentMode === 'specific') {
+                    const specificVal = document.getElementById('filter-appointment-specific').value;
+                    if (specificVal) params.appointmentDateSpecific = specificVal;
+                }
+            }
+
+            // 9.收集「是否已過期」參數
+            const isExpired = document.getElementById('filter-is-expired').value;
+            if (isExpired !== 'all') {
+                params.isExpired = (isExpired === 'true'); // 轉為 Boolean 傳遞給後端
+            }
+
+            //  更新 tableConfig 並重新加載
+            tableConfig.params = params;
+            AdminTable.loadData(tableConfig);
+        }
+
+        function toggleStoreFilter() {
+            const deliveryMethod = document.getElementById('filter-delivery-method').value;
+            const storeGroup = document.getElementById('filter-store-group');
+            const storeSelect = document.getElementById('filter-store-id'); // 【修改處】
+
+            if (deliveryMethod === 'STORE_PICKUP') {
+                storeGroup.style.display = 'flex';
+            } else {
+                storeGroup.style.display = 'none';
+                storeSelect.value = 'all'; // 【修改處】隱藏時重置為全部
+            }
+        }
+
+        function resetFilters() {
+            // 重置所有 select 為 'all'
+            document.getElementById('filter-buyer-mode').value = 'all';
+            document.getElementById('filter-courier-id').value = 'all';
+            document.getElementById('filter-amount-mode').value = 'all';
+            document.getElementById('filter-delivery-method').value = 'all';
+            document.getElementById('filter-need-delivery').value = 'all';
+            document.getElementById('filter-payment-method').value = 'all';
+            document.getElementById('filter-payment-status').value = 'all';
+            document.getElementById('filter-order-status').value = 'all';
+
+            document.getElementById('filter-create-mode').value = 'all';
+            document.getElementById('filter-create-start').value = '';
+            document.getElementById('filter-create-end').value = '';
+            document.getElementById('filter-create-specific').value = '';
+            document.getElementById('filter-address-keyword').value = '';
+            document.getElementById('filter-delivery-date-mode').value = 'all';
+            document.getElementById('filter-delivery-date-start').value = '';
+            document.getElementById('filter-delivery-date-end').value = '';
+            document.getElementById('filter-delivery-date-specific').value = '';
+            // 重置預約到店相關輸入框
+            document.getElementById('filter-appointment-mode').value = 'all';
+            document.getElementById('filter-appointment-start').value = '';
+            document.getElementById('filter-appointment-end').value = '';
+            document.getElementById('filter-appointment-specific').value = '';
+            // 重置是否已過期
+            document.getElementById('filter-is-expired').value = 'all';
+            toggleCreateDateInputs(); // 隱藏日期輸入框
+
+            // 觸發 UI 重置函數以隱藏輸入框
+            toggleTextInput('buyer');
+            toggleAmountInput();
+            updateFilterVisibility(); // 【修改】使用整合後的函數恢復正確的顯示狀態
+
+            // 清空所有 input
+            document.getElementById('filter-buyer-input').value = '';
+            document.getElementById('filter-amount-val1').value = '';
+            document.getElementById('filter-amount-val2').value = '';
+
+            // 重置參數並加載
+            tableConfig.params = {page: 1, size: 25};
+            AdminTable.loadData(tableConfig);
+        }
+
+        function updateFilterVisibility() {
+            const deliveryMethod = document.getElementById('filter-delivery-method').value;
+            const storeGroup = document.getElementById('filter-store-group');
+            const needDeliveryGroup = document.getElementById('filter-need-delivery-group');
+            const courierGroup = document.getElementById('filter-courier-group');
+            const addressGroup = document.getElementById('filter-address-group');
+            const deliveryDateGroup = document.getElementById('filter-delivery-date-group');
+            const appointmentGroup = document.getElementById('filter-appointment-group');
+
+            if (deliveryMethod === 'STORE_PICKUP') {
+                storeGroup.style.display = 'flex';
+                needDeliveryGroup.style.display = 'none';
+                document.getElementById('filter-need-delivery').value = 'all';
+                courierGroup.style.display = 'none';
+                document.getElementById('filter-courier-id').value = 'all';
+
+                addressGroup.style.display = 'none';
+                document.getElementById('filter-address-keyword').value = '';
+
+                deliveryDateGroup.style.display = 'none'; // 隱藏送達時間
+                document.getElementById('filter-delivery-date-mode').value = 'all';
+                toggleDeliveryDateInputs();
+
+                appointmentGroup.style.display = 'flex';
+            } else {
+                storeGroup.style.display = 'none';
+                document.getElementById('filter-store-id').value = 'all';
+                needDeliveryGroup.style.display = 'flex';
+
+                if (deliveryMethod === 'EXPRESS' && document.getElementById('filter-need-delivery').value === 'true') {
+                    courierGroup.style.display = 'flex';
+                } else {
+                    courierGroup.style.display = 'none';
+                    document.getElementById('filter-courier-id').value = 'all';
+                }
+
+                // 【核心修改】：只有當配送方式為快遞時，才顯示收貨地址 與 送達時間 篩選框
+                if (deliveryMethod === 'EXPRESS') {
+                    addressGroup.style.display = 'flex';
+                    deliveryDateGroup.style.display = 'flex'; // 顯示送達時間
+                } else {
+                    addressGroup.style.display = 'none';
+                    document.getElementById('filter-address-keyword').value = '';
+
+                    deliveryDateGroup.style.display = 'none'; // 隱藏送達時間
+                    document.getElementById('filter-delivery-date-mode').value = 'all';
+                    toggleDeliveryDateInputs();
+                }
+
+                // 非門店自取時，隱藏並重置預約到店篩選
+                appointmentGroup.style.display = 'none';
+                document.getElementById('filter-appointment-mode').value = 'all';
+                document.getElementById('filter-appointment-specific').value = '';
+                document.getElementById('filter-appointment-start').value = '';
+                document.getElementById('filter-appointment-end').value = '';
+                toggleAppointmentInputs();
+            }
+
+            // 控制「是否已過期」篩選組的顯隱
+            const orderStatus = document.getElementById('filter-order-status').value;
+            const expiredGroup = document.getElementById('filter-expired-group');
+
+            if (orderStatus === 'PENDING') {
+                expiredGroup.style.display = 'flex'; // 顯示
+            } else {
+                expiredGroup.style.display = 'none'; // 隱藏
+                document.getElementById('filter-is-expired').value = 'all'; // 隱藏時重置為全部
+            }
+
+        }
+
+        // ==========================================
+        // 篩選欄 UI 動態切換邏輯 (新增)
+        // ==========================================
+        function toggleCreateDateInputs() {
+            const mode = document.getElementById('filter-create-mode').value;
+            const rangeInputs = document.getElementById('createDateRangeInputs');
+            const specificInput = document.getElementById('createDateSpecificInput');
+
+            rangeInputs.style.display = 'none';
+            specificInput.style.display = 'none';
+
+            if (mode === 'range') {
+                rangeInputs.style.display = 'block';
+            } else if (mode === 'specific') {
+                specificInput.style.display = 'block';
+            }
+        }
+
+        function toggleDeliveryDateInputs() {
+            const mode = document.getElementById('filter-delivery-date-mode').value;
+            const rangeInputs = document.getElementById('deliveryDateRangeInputs');
+            const specificInput = document.getElementById('deliveryDateSpecificInput');
+
+            rangeInputs.style.display = 'none';
+            specificInput.style.display = 'none';
+
+            if (mode === 'range') {
+                rangeInputs.style.display = 'block';
+            } else if (mode === 'specific') {
+                specificInput.style.display = 'block';
+            }
+        }
+
+        function toggleAppointmentInputs() {
+            const mode = document.getElementById('filter-appointment-mode').value;
+            const rangeInputs = document.getElementById('appointmentDateRangeInputs');
+            const specificInput = document.getElementById('appointmentDateSpecificInput');
+
+            rangeInputs.style.display = 'none';
+            specificInput.style.display = 'none';
+
+            if (mode === 'range') {
+                rangeInputs.style.display = 'block';
+            } else if (mode === 'specific') {
+                specificInput.style.display = 'block';
+            }
+        }
+
 
         function toggleOrderDetails(btn) {
             const orderRow = btn.closest('tr');
@@ -1639,10 +2353,7 @@
         }
 
         // ==========================================
-        // 6. 【新增】快遞狀態更新彈窗業務邏輯
-        // ==========================================
-        // ==========================================
-        // 6. 【新增】快遞狀態更新彈窗業務邏輯
+        // 6. 快遞狀態更新彈窗業務邏輯
         // ==========================================
         window.openStatusUpdateModal = function (orderNo, currentStatus, estimatedDeliveryDate) {
             currentUpdatingOrderNo = orderNo;

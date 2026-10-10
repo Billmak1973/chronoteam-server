@@ -79,6 +79,13 @@ public class AfterSalesRequest {
     private BigDecimal finalPriceDifference;
 
     /**
+     * 總退款金額 (退貨時為正數，記錄門店實際退給顧客的金額)
+     * 若是換貨且需退差價，也記錄在此；若需補差價，此字段為 0，差價記錄在 finalPriceDifference
+     */
+    @Column(name = "total_refund_amount", precision = 10, scale = 2)
+    private BigDecimal totalRefundAmount = BigDecimal.ZERO;
+
+    /**
      * 實際處理完成時間 (店員核實商品並執行退款/發出新貨的時間)
      */
     @Column(name = "completed_at")

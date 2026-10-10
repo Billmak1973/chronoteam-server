@@ -23,8 +23,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -121,11 +124,16 @@ public class OrderController {
             map.put("createdAt", order.getCreatedAt());
             map.put("paidAt", order.getPaidAt());
             map.put("receivedAt", order.getReceivedAt());
+            map.put("appointmentDate", order.getAppointmentDate());
 
             if (order.getOfflineStore() != null) {
                 Map<String, Object> storeMap = new HashMap<>();
                 storeMap.put("name", order.getOfflineStore().getName());
                 storeMap.put("address", order.getOfflineStore().getAddress());
+                storeMap.put("phone",order.getOfflineStore().getPhone());
+                storeMap.put("scheduleMode", order.getOfflineStore().getScheduleMode());
+                storeMap.put("hours", order.getOfflineStore().getHours());
+                storeMap.put("dailyHours", order.getOfflineStore().getDailyHours());
                 map.put("offlineStore", storeMap);
             } else {
                 map.put("offlineStore", null);
@@ -204,6 +212,11 @@ public ResponseEntity<Map<String, Object>> getPaidOrders(
             Map<String, Object> storeMap = new HashMap<>();
             storeMap.put("name", order.getOfflineStore().getName());
             storeMap.put("address", order.getOfflineStore().getAddress());
+            storeMap.put("scheduleMode", order.getOfflineStore().getScheduleMode());
+            storeMap.put("hours", order.getOfflineStore().getHours());
+            storeMap.put("dailyHours", order.getOfflineStore().getDailyHours());
+            storeMap.put("closedStartDate", order.getOfflineStore().getClosedStartDate());
+            storeMap.put("closedEndDate", order.getOfflineStore().getClosedEndDate());
             map.put("offlineStore", storeMap);
         } else {
             map.put("offlineStore", null);
@@ -471,5 +484,94 @@ public ResponseEntity<Map<String, Object>> getPaidOrders(
         orderService.confirmPickup(orderNo, currentUsername);
 
         return ResponseEntity.ok(Result.ok("確認收貨成功，訂單狀態已更新為已完成！"));
+    }
+
+    @PutMapping("/{orderNo}/change-delivery-date")
+    @Transactional
+    public ResponseEntity<Result> changeDeliveryDate(
+            @PathVariable String orderNo,
+            @RequestBody Map<String, String> request,
+            Authentication authentication) {
+
+        try {
+            String username = authentication.getName();
+            String newDeliveryDate = request.get("estimatedDeliveryDate");
+
+            // 验证订单权限和状态
+            Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
+                    .orElseThrow(() -> new RuntimeException("订单不存在或无权操作"));
+
+            if (order.getStatus() != Order.OrderStatus.PAID) {
+                return ResponseEntity.badRequest()
+                        .body(Result.error("只有已付款且未发货的订单才能更改送货日期"));
+            }
+
+            if (!"EXPRESS".equals(order.getDeliveryMethod())) {
+                return ResponseEntity.badRequest()
+                        .body(Result.error("只有快递配送订单才能更改送货日期"));
+            }
+
+            // 验证日期格式
+            LocalDate deliveryDate = LocalDate.parse(newDeliveryDate);
+
+            // 更新订单
+            order.setEstimatedDeliveryDate(deliveryDate);
+            orderRepository.save(order);
+
+            return ResponseEntity.ok(Result.ok("送货日期已更新为：" + newDeliveryDate));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Result.error("更改失败：" + e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "修改門店自取訂單的取貨日期", description = "用戶修改已付款門店自取訂單的預約取貨日期")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "修改成功"),
+            @ApiResponse(responseCode = "400", description = "日期超出允許範圍或訂單狀態不符"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
+    @PutMapping("/{orderNo}/change-pickup-date")
+    @Transactional
+    public ResponseEntity<?> changePickupDate(
+            @PathVariable String orderNo,
+            @RequestBody Map<String, String> payload,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
+                .orElseThrow(() -> new RuntimeException("訂單不存在或無權操作"));
+
+        // 1. 校驗訂單狀態與配送方式
+        if (order.getStatus() != Order.OrderStatus.PAID || !"STORE_PICKUP".equals(order.getDeliveryMethod())) {
+            return ResponseEntity.badRequest().body(Result.error("只有已付款且為門店自取的訂單才能修改取貨日期"));
+        }
+
+        String newDateStr = payload.get("appointmentDate");
+        if (newDateStr == null || newDateStr.isEmpty()) {
+            return ResponseEntity.badRequest().body(Result.error("請提供新的預約日期"));
+        }
+
+        LocalDate newDate = LocalDate.parse(newDateStr);
+
+        // 2. 提取 paidAt 的年月日 (格式: 2026-10-06 15:39:22.083567 -> 2026-10-06)
+        LocalDate paidDate = order.getPaidAt().toLocalDate();
+
+        // 3. 計算最大允許日期 (paidAt + offlinePaymentDays)
+        Integer offlinePaymentDays = systemConfigService.getOfflinePaymentDays();
+        if (offlinePaymentDays == null) offlinePaymentDays = 3; // 兜底默認 3 天
+
+        LocalDate maxDate = paidDate.plusDays(offlinePaymentDays);
+
+        // 4. 校驗新日期是否在合法範圍內
+        if (newDate.isBefore(paidDate) || newDate.isAfter(maxDate)) {
+            return ResponseEntity.badRequest().body(Result.error("預約日期必須在付款日期起的 " + offlinePaymentDays + " 天保留期限內"));
+        }
+
+        // 5. 更新訂單
+        order.setAppointmentDate(newDate);
+        orderRepository.save(order);
+
+        return ResponseEntity.ok(Result.ok("取貨日期修改成功"));
     }
 }

@@ -1892,7 +1892,7 @@
         //  接收後端傳來的動態配置
         const baseShippingFee = [[${shippingFee}]];
         const freeShippingThreshold = [[${freeShippingThreshold}]];
-        const offlinePaymentDays = /*[[${offlinePaymentDays}]]*/ 7;
+        const offlinePaymentDays = /*[[${offlinePaymentDays}]]*/ 0;
         const maxDeliveryDateOptions = /*[[${maxDeliveryDateOptions}]]*/ 0;
 
         // ==========================================
@@ -3400,6 +3400,7 @@
 
 
         // 初始化取貨日期選擇器
+        // 初始化取貨日期選擇器
         function initPickupDateSelector() {
             const select = document.getElementById('pickupDateSelect');
             if (!select) return;
@@ -3408,10 +3409,67 @@
             select.innerHTML = '<option value="">請選擇取貨日期</option>';
 
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // 清除時間部分，只保留日期
+            const now = new Date(); // 當前時間（包含時分秒）
+
+            // 【新增】獲取當前店鋪的營業時間
+            const storeSelect = document.getElementById('storeSelect');
+            let todayAvailable = true; // 默認今天可用
+
+            if (storeSelect && storeSelect.value) {
+                const selectedOption = storeSelect.options[storeSelect.selectedIndex];
+                const scheduleMode = selectedOption.getAttribute('data-schedule-mode') || 'UNIFIED';
+                const dailyHoursJson = selectedOption.getAttribute('data-daily-hours') || '{}';
+                const unifiedHours = selectedOption.getAttribute('data-hours') || '';
+
+                // 獲取今天的星期幾 (0=星期日, 1=星期一, ..., 6=星期六)
+                const currentDayOfWeek = now.getDay(); // 注意：JavaScript 中 0 是星期日
+
+                try {
+                    if (scheduleMode === 'DAILY') {
+                        // 解析每日營業時間
+                        const dailyHours = JSON.parse(dailyHoursJson);
+                        const dayKey = currentDayOfWeek === 0 ? 7 : currentDayOfWeek; // 轉換為 1-7 (1=星期一, 7=星期日)
+                        const todaySchedule = dailyHours[dayKey];
+
+                        if (todaySchedule && todaySchedule.closed) {
+                            // 今天休息
+                            todayAvailable = false;
+                        } else if (todaySchedule && todaySchedule.end) {
+                            // 檢查是否已過營業時間
+                            const closingTime = todaySchedule.end; // 格式如 "21:00"
+                            const [closeHour, closeMinute] = closingTime.split(':').map(Number);
+                            const closingDateTime = new Date(today);
+                            closingDateTime.setHours(closeHour, closeMinute, 0, 0);
+
+                            if (now > closingDateTime) {
+                                // 當前時間已超過今天的營業時間
+                                todayAvailable = false;
+                            }
+                        }
+                    } else if (scheduleMode === 'UNIFIED') {
+                        // 統一營業時間模式
+                        if (unifiedHours) {
+                            // 解析統一營業時間，格式如 "11:00 AM - 9:00 PM"
+                            const timeMatch = unifiedHours.match(/(\d{1,2}:\d{2}\s*[AP]M)\s*-\s*(\d{1,2}:\d{2}\s*[AP]M)/i);
+                            if (timeMatch) {
+                                const closingTimeStr = timeMatch[2].trim();
+                                const closingTime = parseTime(closingTimeStr);
+                                const closingDateTime = new Date(today);
+                                closingDateTime.setHours(closingTime.hour, closingTime.minute, 0, 0);
+
+                                if (now > closingDateTime) {
+                                    todayAvailable = false;
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('解析營業時間失敗:', e);
+                    // 解析失敗時，默認今天可用
+                }
+            }
 
             // 【核心修復】獲取店鋪暫停營業日期
-            const storeSelect = document.getElementById('storeSelect');
             let closedStartDate = null;
             let closedEndDate = null;
 
@@ -3438,8 +3496,11 @@
             // 【核心修復】使用後端傳來的 offlinePaymentDays 變量
             const maxDays = offlinePaymentDays || 7; // 如果後端沒傳，默認 7 天
 
+            // 【修改】根據 todayAvailable 決定從哪天開始
+            const startDay = todayAvailable ? 0 : 1;
+
             // 生成未來 offlinePaymentDays 天的可用日期
-            for (let daysLater = 0; daysLater <= maxDays; daysLater++) {
+            for (let daysLater = startDay; daysLater <= maxDays; daysLater++) {
                 const pickupDate = new Date(today);
                 pickupDate.setDate(today.getDate() + daysLater);
                 pickupDate.setHours(0, 0, 0, 0); // 清除時間部分
@@ -3481,6 +3542,24 @@
 
             // 觸發初始更新
             updatePickupDate();
+        }
+
+        // 輔助函數：解析時間字符串（支持 12小時制和24小時制）
+        function parseTime(timeStr) {
+            const match = timeStr.match(/(\d{1,2}):(\d{2})\s*([AP]M)?/i);
+            if (!match) return {hour: 0, minute: 0};
+
+            let hour = parseInt(match[1]);
+            const minute = parseInt(match[2]);
+            const period = match[3] ? match[3].toUpperCase() : null;
+
+            if (period === 'PM' && hour !== 12) {
+                hour += 12;
+            } else if (period === 'AM' && hour === 12) {
+                hour = 0;
+            }
+
+            return {hour, minute};
         }
 
         // 更新取貨日期顯示

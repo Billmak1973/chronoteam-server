@@ -27,6 +27,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -34,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -69,14 +72,11 @@ public class AdminOrderController {
         return "admin/admin-orders";
     }
 
-    /**
-     * 2. 標準化 API：獲取訂單列表 + 明細 (一次性返回，避免 N+1)
-     */
     @GetMapping("/api/orders/list")
     @ResponseBody
     @Operation(
             summary = "獲取後台訂單分頁列表與明細",
-            description = "分頁獲取系統內所有訂單，並一次性關聯查詢訂單內的商品明細，避免 N+1 查詢性能問題。"
+            description = "分頁獲取系統內所有訂單，並一次性關聯查詢訂單內的商品明細，支持多條件篩選，避免 N+1 查詢性能問題。"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "獲取成功", content = @Content(schema = @Schema(implementation = Result.class))),
@@ -88,13 +88,172 @@ public class AdminOrderController {
             @RequestParam(defaultValue = "1") int page,
 
             @Parameter(description = "每頁顯示數量", example = "25")
-            @RequestParam(defaultValue = "25") int size) {
+            @RequestParam(defaultValue = "25") int size,
 
+            @Parameter(description = "買家用戶名 (精確匹配)", example = "testuser")
+            @RequestParam(required = false) String buyerUsername,
+
+            // 【修正】：描述改為 ID，與 Long 類型匹配
+            @Parameter(description = "快遞員 ID (精確匹配)", example = "1")
+            @RequestParam(required = false) Long courierId,
+
+            @Parameter(description = "總金額篩選模式 (gt:大於, lt:小於, eq:等於, between:區間)", example = "between")
+            @RequestParam(required = false) String amountMode,
+
+            @Parameter(description = "總金額篩選值 1 (大於/小於/等於的值，或區間的最小值)", example = "1000")
+            @RequestParam(required = false) BigDecimal amountVal1,
+
+            @Parameter(description = "總金額篩選值 2 (區間的最大值，僅在 amountMode=between 時生效)", example = "5000")
+            @RequestParam(required = false) BigDecimal amountVal2,
+
+            @Parameter(description = "配送方式 (EXPRESS:快遞, STORE_PICKUP:門店自取)", example = "EXPRESS")
+            @RequestParam(required = false) String deliveryMethod,
+
+            // 【修正】：描述改為 ID，與 Long 類型匹配
+            @Parameter(description = "線下店鋪 ID (精確匹配)", example = "1")
+            @RequestParam(required = false) Long storeId,
+
+            @Parameter(description = "是否需快遞 (true/false)", example = "true")
+            @RequestParam(required = false) Boolean needDelivery,
+
+            @Parameter(description = "支付方式 (PAYPAL_SIM, OFFLINE_STORE 等)", example = "PAYPAL_SIM")
+            @RequestParam(required = false) String paymentMethod,
+
+            @Parameter(description = "支付狀態 (UNPAID, PAID_SIMULATED, PAID_REAL, PENDING_OFFLINE, PAID_OFFLINE, REFUNDED)", example = "PAID_SIMULATED")
+            @RequestParam(required = false) String paymentStatus,
+
+            @Parameter(description = "訂單狀態 (PENDING, PAID, SHIPPED, COMPLETED, CANCELLED)", example = "PAID")
+            @RequestParam(required = false) String orderStatus,
+
+            @Parameter(description = "創建時間篩選模式 (all:全部, range:區間, specific:特定日子)")
+            @RequestParam(required = false) String createDateMode,
+
+            @Parameter(description = "創建時間開始日期 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate createDateStart,
+
+            @Parameter(description = "創建時間結束日期 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate createDateEnd,
+
+            @Parameter(description = "創建時間特定日期 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate createDateSpecific,
+
+            @Parameter(description = "收貨地址關鍵字 (模糊匹配)", example = "港島 灣仔區")
+            @RequestParam(required = false) String addressKeyword,
+
+            @Parameter(description = "送達時間篩選模式 (all:全部, range:區間, specific:特定日子)")
+            @RequestParam(required = false) String deliveryDateMode,
+
+            @Parameter(description = "送達時間開始日期 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate deliveryDateStart,
+
+            @Parameter(description = "送達時間結束日期 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate deliveryDateEnd,
+
+            @Parameter(description = "送達時間特定日期 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate deliveryDateSpecific,
+
+            // ================= 【新增】處理預約到店時間參數 =================
+            @Parameter(description = "預約到店時間篩選模式 (all:全部, range:區間, specific:特定日子)")
+            @RequestParam(required = false) String appointmentDateMode,
+
+            @Parameter(description = "預約到店開始日期 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate appointmentDateStart,
+
+            @Parameter(description = "預約到店結束日期 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate appointmentDateEnd,
+
+            @Parameter(description = "預約到店特定日期 (yyyy-MM-dd)")
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate appointmentDateSpecific,
+
+            @Parameter(description = "是否已過期 (true:已過期, false:未過期)")
+            @RequestParam(required = false) Boolean isExpired
+
+    ) {
         // 將 1-based 轉換為 0-based 供 Spring Data 使用
         int pageIndex = Math.max(0, page - 1);
-
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<Order> ordersPage = orderRepository.findAllWithUsers(pageable);
+
+        // 【核心修復】：安全地將 String 轉換為 Enum，避免 JPQL 中 valueOf(null) 報錯
+        Order.PaymentStatus paymentStatusEnum = null;
+        if (paymentStatus != null && !paymentStatus.trim().isEmpty()) {
+            try {
+                paymentStatusEnum = Order.PaymentStatus.valueOf(paymentStatus.trim());
+            } catch (IllegalArgumentException e) {
+                // 忽略無效的枚舉字符串，保持為 null，讓 JPQL 的 IS NULL 條件生效
+            }
+        }
+
+        Order.OrderStatus orderStatusEnum = null;
+        if (orderStatus != null && !orderStatus.trim().isEmpty()) {
+            try {
+                orderStatusEnum = Order.OrderStatus.valueOf(orderStatus.trim());
+            } catch (IllegalArgumentException e) {
+                // 忽略無效的枚舉字符串，保持為 null
+            }
+        }
+
+        LocalDateTime searchStartDt = null;
+        LocalDateTime searchEndDt = null;
+
+        if ("range".equals(createDateMode)) {
+            if (createDateStart != null) searchStartDt = createDateStart.atStartOfDay(); // 00:00:00
+            if (createDateEnd != null) searchEndDt = createDateEnd.atTime(23, 59, 59);   // 23:59:59
+        } else if ("specific".equals(createDateMode)) {
+            if (createDateSpecific != null) {
+                searchStartDt = createDateSpecific.atStartOfDay();
+                searchEndDt = createDateSpecific.atTime(23, 59, 59);
+            }
+        }
+
+        // ================= 【新增】處理送達時間參數 =================
+        LocalDate searchDeliveryDateStart = null;
+        LocalDate searchDeliveryDateEnd = null;
+
+        if ("range".equals(deliveryDateMode)) {
+            searchDeliveryDateStart = deliveryDateStart;
+            searchDeliveryDateEnd = deliveryDateEnd;
+        } else if ("specific".equals(deliveryDateMode)) {
+            // 特定某一天：開始和結束設為同一天
+            searchDeliveryDateStart = deliveryDateSpecific;
+            searchDeliveryDateEnd = deliveryDateSpecific;
+        }
+
+        // ================= 【新增】處理預約到店時間參數 =================
+        LocalDate searchAppointmentDateStart = null;
+        LocalDate searchAppointmentDateEnd = null;
+
+        if ("range".equals(appointmentDateMode)) {
+            searchAppointmentDateStart = appointmentDateStart;
+            searchAppointmentDateEnd = appointmentDateEnd;
+        } else if ("specific".equals(appointmentDateMode)) {
+            // 特定某一天：開始和結束設為同一天
+            searchAppointmentDateStart = appointmentDateSpecific;
+            searchAppointmentDateEnd = appointmentDateSpecific;
+        }
+
+        // ================= 計算過期截止時間 =================
+        LocalDateTime onlineDeadline = null;
+        LocalDateTime offlineDeadline = null;
+
+        if (isExpired != null) {
+            Integer onlineDays = systemConfigService.getOnlineOrderRetentionDays();
+            Integer offlineDays = systemConfigService.getOfflinePaymentDays();
+            LocalDateTime now = LocalDateTime.now();
+
+            if (onlineDays != null) {
+                onlineDeadline = now.minusDays(onlineDays);
+            }
+            if (offlineDays != null) {
+                offlineDeadline = now.minusDays(offlineDays);
+            }
+        }
+
+        // 【核心修改】：調用 Repository 的方法，傳入轉換後的 Enum 及 ID 參數
+        Page<Order> ordersPage = orderRepository.findOrdersWithAdvancedFilters(
+                buyerUsername, courierId, amountMode, amountVal1, amountVal2,
+                deliveryMethod, storeId, needDelivery, paymentMethod, paymentStatusEnum, orderStatusEnum, searchStartDt, searchEndDt,addressKeyword,
+                searchDeliveryDateStart, searchDeliveryDateEnd, searchAppointmentDateStart, searchAppointmentDateEnd,isExpired,onlineDeadline, offlineDeadline,
+                pageable);
 
         // 一次 SQL 查出當前頁所有訂單的明細，按 orderId 分組
         List<Long> orderIds = ordersPage.getContent().stream()
@@ -129,20 +288,18 @@ public class AdminOrderController {
             item.put("paidAt", order.getPaidAt());
             item.put("receivedAt", order.getReceivedAt());
 
-            // 【修改處】：移除 deadlineAt，新增預計送達與預約到店日期
             item.put("estimatedDeliveryDate", order.getEstimatedDeliveryDate());
             item.put("appointmentDate", order.getAppointmentDate());
 
             item.put("isVisible", order.getIsVisible());
-            // 新增返回提醒次數
             item.put("pickupReminderCount", order.getPickupReminderCount() != null ? order.getPickupReminderCount() : 0);
-            // 獲取並放入收貨地址與聯繫電話
+
             item.put("fullAddress", order.getUserAddress() != null ? order.getUserAddress().getFullAddress() : null);
             item.put("contactPhone", order.getUserAddress() != null ? order.getUserAddress().getContactPhone() : null);
-            item.put("receiverName",order.getUserAddress() != null ? order.getUserAddress().getReceiverName() : null);
-            // 在構建 cleanOrders 的 map 時，補充 courierId：
+            item.put("receiverName", order.getUserAddress() != null ? order.getUserAddress().getReceiverName() : null);
+
             item.put("courierId", order.getCourier() != null ? order.getCourier().getId() : null);
-            // 將明細嵌入訂單對象
+
             List<OrderItem> items = orderItemsMap.getOrDefault(order.getOrderId(), Collections.emptyList());
             List<Map<String, Object>> cleanItems = items.stream().map(oi -> {
                 Map<String, Object> m = new LinkedHashMap<>();
@@ -167,8 +324,10 @@ public class AdminOrderController {
 
         response.put("onlineOrderRetentionDays", systemConfigService.getOnlineOrderRetentionDays());
         response.put("offlinePaymentDays", systemConfigService.getOfflinePaymentDays());
+
         return ResponseEntity.ok(response);
     }
+
 
     /**
      * 3. 管理員專屬：獲取訂單明細 (保留備用)

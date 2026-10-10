@@ -68,4 +68,19 @@ public interface AfterSalesRequestRepository extends JpaRepository<AfterSalesReq
             AfterSalesRequest.RequestType requestType,
             Pageable pageable
     );
+
+    /**
+     * 查詢指定訂單下，所有狀態為「已完成」的售後申請記錄
+     * 用於聚合統計該訂單是否已經被 100% 售後處理
+     */
+    List<AfterSalesRequest> findByOriginalOrder_OrderIdAndStatus(
+            Long orderId,
+            AfterSalesRequest.RequestStatus status
+    );
+
+    /**
+     * 檢查是否存在關聯該訂單 ID 的售後申請記錄
+     * 用於區分「普通取消訂單」與「售後退貨訂單」
+     */
+    boolean existsByOriginalOrder_OrderId(Long orderId);
 }

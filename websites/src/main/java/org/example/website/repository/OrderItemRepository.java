@@ -65,4 +65,11 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
      * @return 匹配這些訂單 ID 的所有明細記錄列表
      */
     List<OrderItem> findByOrder_OrderIdIn(List<Long> orderIds);
+
+    /**
+     * 【新增修復】根據訂單 ID 查詢該訂單下的所有商品明細記錄。
+     * 命名規範解析：findBy + Order (關聯的 Order 實體屬性名) + _ + OrderId (Order 實體中的主鍵屬性名)
+     */
+    List<OrderItem> findByOrder_OrderId(Long orderId);
+
 }

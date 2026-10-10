@@ -55,6 +55,7 @@ public class PageController {
     private final ReviewReactionRepository reviewReactionRepository;
     private final OfflineStoreRepository offlineStoreRepository;
     private final UserAddressRepository userAddressRepository;
+    private final AfterSalesRequestRepository afterSalesRequestRepository; // 新增注入
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
@@ -70,7 +71,7 @@ public class PageController {
                           AdminPenaltyRepository adminPenaltyRepository,
                           AdminPenaltyService adminPenaltyService, SystemConfigService systemConfigService,
                           CartService cartService, ProductService productService, AnnouncementReceiptRepository announcementReceiptRepository,
-                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository, NotificationService notificationService, ReviewReactionRepository reviewReactionRepository, OfflineStoreRepository offlineStoreRepository, UserAddressRepository userAddressRepository) {
+                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository, NotificationService notificationService, ReviewReactionRepository reviewReactionRepository, OfflineStoreRepository offlineStoreRepository, UserAddressRepository userAddressRepository, AfterSalesRequestRepository afterSalesRequestRepository) {
         this.userService = userService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -96,6 +97,7 @@ public class PageController {
         this.reviewReactionRepository = reviewReactionRepository;
         this.offlineStoreRepository = offlineStoreRepository;
         this.userAddressRepository = userAddressRepository;
+        this.afterSalesRequestRepository = afterSalesRequestRepository;
     }
 
     @GetMapping("/")
@@ -748,35 +750,68 @@ public class PageController {
     }
 
 
-    /**
-     * 新增：取消與退貨訂單頁面路由
-     */
     @GetMapping("/account/cancelled-orders")
-    public String cancelledAndReturnedOrders(Model model, Authentication authentication) {
-        String username = authentication.getName();
+    public String cancelledAndReturnedOrders(
+            @RequestParam(defaultValue = "cancelled") String tab, // 新增：当前激活的 Tab
+            @RequestParam(defaultValue = "1") int page,          // 新增：当前页码 (1-based)
+            Model model, Authentication authentication) {
 
-        // 1. 獲取 User 實體 (用於側邊欄渲染)
+        String username = authentication.getName();
         User user = userService.findByUsername(username);
         model.addAttribute("user", user);
+        model.addAttribute("currentTab", tab); // 传递给前端，用于高亮 Tab
 
-        // 2.  【核心修改】：直接在數據庫層面加載「可見」且「已取消」的訂單
-        // 這樣就不會加載到那些已經被用戶隱藏 (is_visible = false) 的訂單
-        List<Order> cancelledOrders = orderRepository.findByUser_UsernameAndStatusAndIsVisibleTrue(
+        // 1. 获取该用户所有「可见」且状态为 CANCELLED 的订单
+        List<Order> allCancelledVisibleOrders = orderRepository.findByUser_UsernameAndStatusAndIsVisibleTrue(
                 username, Order.OrderStatus.CANCELLED);
 
-        // 3. 篩選出已退貨的訂單 (同樣只加載可見的)
-        // 若未來 OrderStatus 枚舉中增加了 RETURNED 狀態，可直接替換下方的 CANCELLED
-        List<Order> returnedOrders = orderRepository.findByUser_UsernameAndStatusAndIsVisibleTrue(
-                username, Order.OrderStatus.CANCELLED); // 暫時用 CANCELLED 佔位，未來改為 RETURNED
+        List<Order> cancelledOrders = new ArrayList<>();
+        List<Order> returnedOrders = new ArrayList<>();
 
-        // 4. 傳遞數據到前端
-        model.addAttribute("cancelledOrders", cancelledOrders);
+        // 2. 核心分流逻辑
+        for (Order order : allCancelledVisibleOrders) {
+            if (Order.PaymentStatus.REFUNDED.equals(order.getPaymentStatus()) &&
+                    afterSalesRequestRepository.existsByOriginalOrder_OrderId(order.getOrderId())) {
+                returnedOrders.add(order);
+            } else {
+                cancelledOrders.add(order);
+            }
+        }
+
+        // 3. 根据当前 tab 决定要分页的数据源
+        List<Order> targetList = "returned".equals(tab) ? returnedOrders : cancelledOrders;
+        int totalElements = targetList.size();
+        int size = 10; // 每页显示 10 条
+
+        // 计算总页数 (至少为 1)
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        if (totalPages == 0) totalPages = 1;
+
+        // 将 1-based 的 page 转换为 0-based 的 pageIndex
+        int pageIndex = Math.max(0, page - 1);
+        if (pageIndex >= totalPages) pageIndex = totalPages - 1;
+
+        // 截取当前页的数据
+        int fromIndex = pageIndex * size;
+        int toIndex = Math.min(fromIndex + size, totalElements);
+        List<Order> pagedList = totalElements > 0 ? targetList.subList(fromIndex, toIndex) : new ArrayList<>();
+
+        // 4. 使用 PaginationUtils 生成智能分页数据 (传入 0-based 的 pageIndex)
+        List<PaginationUtils.PageItem> smartPages = PaginationUtils.generateSmartPagination(pageIndex, totalPages);
+
+        // 5. 传递数据到前端
+        // 保留完整列表用于 Tab 上的数量 Badge 显示
         model.addAttribute("cancelledCount", cancelledOrders.size());
-
-        model.addAttribute("returnedOrders", returnedOrders);
         model.addAttribute("returnedCount", returnedOrders.size());
 
-        // 5. 返回視圖名稱
+        // 传递当前页的数据用于 th:each 渲染
+        model.addAttribute("currentOrders", pagedList);
+
+        // 传递分页参数给 Fragment
+        model.addAttribute("currentPage", page);        // 1-based
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("smartPages", smartPages);
+        model.addAttribute("totalElements", totalElements);
         return "cancelled-orders";
     }
 }

@@ -392,120 +392,112 @@
 
         <!-- Tab 切换按钮 -->
         <div class="order-tabs">
-            <button class="tab-btn active" onclick="switchTab('cancelled')">
+            <a th:href="@{/account/cancelled-orders(tab='cancelled', page=1)}"
+               th:classappend="${currentTab == 'cancelled' or currentTab == null} ? 'tab-btn active' : 'tab-btn'">
                 <i class="fas fa-times-circle"></i>
                 取消訂單
                 <span class="badge" th:text="${cancelledCount} ?: 0">0</span>
-            </button>
-            <button class="tab-btn" onclick="switchTab('returned')">
+            </a>
+            <a th:href="@{/account/cancelled-orders(tab='returned', page=1)}"
+               th:classappend="${currentTab == 'returned'} ? 'tab-btn active' : 'tab-btn'">
                 <i class="fas fa-undo"></i>
                 退貨訂單
                 <span class="badge" th:text="${returnedCount} ?: 0">0</span>
-            </button>
+            </a>
         </div>
 
         <!-- 取消訂單 Tab -->
-        <div id="cancelled-tab" class="tab-content active">
-            <div th:if="${cancelledOrders != null and !cancelledOrders.isEmpty()}">
-                <div class="order-card" th:each="order : ${cancelledOrders}" th:data-order-no="${order.orderNo}">
-                    <div class="order-header">
-                        <div class="order-no">
-                            <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                            訂單編號：<span th:text="${order.orderNo}">ORD-123456</span>
+        <div id="cancelled-tab" th:classappend="${currentTab == 'cancelled' or currentTab == null} ? 'tab-content active' : 'tab-content'">
+            <!-- 只有当当前 Tab 是 cancelled 时才渲染内部结构 -->
+            <div th:if="${currentTab == 'cancelled' or currentTab == null}">
+                <div th:if="${#lists.isEmpty(currentOrders)}" class="empty-state">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>暫無取消訂單</h3>
+                    <p>您目前沒有取消的訂單記錄</p>
+                </div>
+                <div th:unless="${#lists.isEmpty(currentOrders)}">
+                    <div class="order-card" th:each="order : ${currentOrders}" th:data-order-no="${order.orderNo}">
+                        <!-- 保持你原有的订单卡片 HTML 不变 -->
+                        <div class="order-header">
+                            <div class="order-no">
+                                <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                                訂單編號：<span th:text="${order.orderNo}">ORD-123456</span>
+                            </div>
+                            <div class="order-time">
+                                <i class="far fa-clock"></i>
+                                <span th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-01 12:00:00</span>
+                            </div>
+                            <button class="btn-delete-order" th:data-order-no="${order.orderNo}" onclick="openDeleteOrderModal(this)">
+                                <i class="fas fa-trash-alt"></i> 刪除
+                            </button>
                         </div>
-                        <div class="order-time">
-                            <i class="far fa-clock"></i>
-                            <span th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-01 12:00:00</span>
-                        </div>
-                        <button class="btn-delete-order"
-                                th:data-order-no="${order.orderNo}"
-                                onclick="openDeleteOrderModal(this)">
-                            <i class="fas fa-trash-alt"></i>
-                            刪除
-                        </button>
-                    </div>
-                    <div class="order-body">
-                        <div style="margin-bottom: 1rem;">
-                                <span class="status-badge status-CANCELLED">
-                                    <i class="fas fa-times-circle"></i>
-                                    <span>已取消</span>
-                                </span>
-                        </div>
-                        <div class="order-items-list">
-                            <div class="order-item" th:each="item : ${order.items}">
-                                <div class="order-item-image">
-                                    <img th:src="@{/images/products/{img}(img=${item.product.image})}"
-                                         th:alt="${item.product.description}"
-                                         onerror="this.src='/images/placeholder.png'">
-                                </div>
-                                <div class="order-item-info">
-                                    <div class="order-item-name" th:text="${item.product.description}">商品名稱</div>
-                                    <div class="order-item-meta">
-                                        <i class="fas fa-tag"></i> <span th:text="${item.product.category}">手錶</span>
+                        <div class="order-body">
+                            <div style="margin-bottom: 1rem;">
+                        <span class="status-badge status-CANCELLED">
+                            <i class="fas fa-times-circle"></i> <span>已取消</span>
+                        </span>
+                            </div>
+                            <div class="order-items-list">
+                                <div class="order-item" th:each="item : ${order.items}">
+                                    <!-- 保持原有商品明细 HTML 不变 -->
+                                    <div class="order-item-image">
+                                        <img th:src="@{/images/products/{img}(img=${item.product.image})}" th:alt="${item.product.description}" onerror="this.src='/images/placeholder.png'">
                                     </div>
-                                    <div class="order-item-meta">
-                                        <i class="fas fa-box"></i> 數量：<span th:text="${item.quantity}">1</span>
-                                    </div>
-                                    <div class="order-item-price">
-                                        HK$ <span th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                                    <div class="order-item-info">
+                                        <div class="order-item-name" th:text="${item.product.description}">商品名稱</div>
+                                        <div class="order-item-meta"><i class="fas fa-tag"></i> <span th:text="${item.product.category}">手錶</span></div>
+                                        <div class="order-item-meta"><i class="fas fa-box"></i> 數量：<span th:text="${item.quantity}">1</span></div>
+                                        <div class="order-item-price">HK$ <span th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <div th:if="${cancelledOrders == null or cancelledOrders.isEmpty()}" class="empty-state">
-                <i class="fas fa-check-circle"></i>
-                <h3>暫無取消訂單</h3>
-                <p>您目前沒有取消的訂單記錄</p>
             </div>
         </div>
 
         <!-- 退貨訂單 Tab -->
-        <div id="returned-tab" class="tab-content">
-            <div th:if="${returnedOrders != null and !returnedOrders.isEmpty()}">
-                <div class="order-card" th:each="order : ${returnedOrders}" th:data-order-no="${order.orderNo}">
-                    <div class="order-header">
-                        <div class="order-no">
-                            <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                            訂單編號：<span th:text="${order.orderNo}">ORD-123456</span>
+        <div id="returned-tab" th:classappend="${currentTab == 'returned'} ? 'tab-content active' : 'tab-content'">
+            <div th:if="${currentTab == 'returned'}">
+                <div th:if="${#lists.isEmpty(currentOrders)}" class="empty-state">
+                    <i class="fas fa-box-open"></i>
+                    <h3>暫無退貨訂單</h3>
+                    <p>您目前沒有退貨的訂單記錄</p>
+                </div>
+                <div th:unless="${#lists.isEmpty(currentOrders)}">
+                    <div class="order-card" th:each="order : ${currentOrders}" th:data-order-no="${order.orderNo}">
+                        <!-- 保持你原有的订单卡片 HTML 不变 -->
+                        <div class="order-header">
+                            <div class="order-no">
+                                <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                                訂單編號：<span th:text="${order.orderNo}">ORD-123456</span>
+                            </div>
+                            <div class="order-time">
+                                <i class="far fa-clock"></i>
+                                <span th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-01 12:00:00</span>
+                            </div>
+                            <button class="btn-delete-order" th:data-order-no="${order.orderNo}" onclick="openDeleteOrderModal(this)">
+                                <i class="fas fa-trash-alt"></i> 刪除
+                            </button>
                         </div>
-                        <div class="order-time">
-                            <i class="far fa-clock"></i>
-                            <span th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-01 12:00:00</span>
-                        </div>
-                        <button class="btn-delete-order"
-                                th:data-order-no="${order.orderNo}"
-                                onclick="openDeleteOrderModal(this)">
-                            <i class="fas fa-trash-alt"></i>
-                            刪除
-                        </button>
-                    </div>
-                    <div class="order-body">
-                        <div style="margin-bottom: 1rem;">
-                                <span class="status-badge status-RETURNED">
-                                    <i class="fas fa-undo"></i>
-                                    <span>已退貨</span>
-                                </span>
-                        </div>
-                        <div class="order-items-list">
-                            <div class="order-item" th:each="item : ${order.items}">
-                                <div class="order-item-image">
-                                    <img th:src="@{/images/products/{img}(img=${item.product.image})}"
-                                         th:alt="${item.product.description}"
-                                         onerror="this.src='/images/placeholder.png'">
-                                </div>
-                                <div class="order-item-info">
-                                    <div class="order-item-name" th:text="${item.product.description}">商品名稱</div>
-                                    <div class="order-item-meta">
-                                        <i class="fas fa-tag"></i> <span th:text="${item.product.category}">手錶</span>
+                        <div class="order-body">
+                            <div style="margin-bottom: 1rem;">
+                        <span class="status-badge status-RETURNED">
+                            <i class="fas fa-undo"></i> <span>已退貨</span>
+                        </span>
+                            </div>
+                            <div class="order-items-list">
+                                <div class="order-item" th:each="item : ${order.items}">
+                                    <!-- 保持原有商品明细 HTML 不变 -->
+                                    <div class="order-item-image">
+                                        <img th:src="@{/images/products/{img}(img=${item.product.image})}" th:alt="${item.product.description}" onerror="this.src='/images/placeholder.png'">
                                     </div>
-                                    <div class="order-item-meta">
-                                        <i class="fas fa-box"></i> 數量：<span th:text="${item.quantity}">1</span>
-                                    </div>
-                                    <div class="order-item-price">
-                                        HK$ <span th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                                    <div class="order-item-info">
+                                        <div class="order-item-name" th:text="${item.product.description}">商品名稱</div>
+                                        <div class="order-item-meta"><i class="fas fa-tag"></i> <span th:text="${item.product.category}">手錶</span></div>
+                                        <div class="order-item-meta"><i class="fas fa-box"></i> 數量：<span th:text="${item.quantity}">1</span></div>
+                                        <div class="order-item-price">HK$ <span th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -513,11 +505,15 @@
                     </div>
                 </div>
             </div>
-            <div th:if="${returnedOrders == null or returnedOrders.isEmpty()}" class="empty-state">
-                <i class="fas fa-box-open"></i>
-                <h3>暫無退貨訂單</h3>
-                <p>您目前沒有退貨的訂單記錄</p>
-            </div>
+            <!-- ========================================== -->
+            <!-- 智能分页导航 (引用 Fragment) -->
+            <!-- ========================================== -->
+            <div th:replace="~{fragments/pagination :: smartPagination(
+                ${currentPage},
+                ${totalPages},
+                ${smartPages},
+                'changePage'
+            )}"></div>
         </div>
     </main>
 </div>
@@ -559,21 +555,39 @@
 
 <!-- 页面专属 JS -->
 <script>
+    // ==========================================
+    // 1. Tab 切換邏輯
+    // ==========================================
     function switchTab(tabName) {
-        // 移除所有 active 类
+        // 移除所有 active 類
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-        // 添加 active 类到选中的 tab
+        // 添加 active 類到選中的 tab
         event.currentTarget.classList.add('active');
         document.getElementById(tabName + '-tab').classList.add('active');
     }
 
-      let pendingDeleteOrderNo = null;
+    // ==========================================
+    // 2. 分頁跳轉函數 (利用 URL 參數保持 Tab 狀態)
+    // ==========================================
+    function changePage(page) {
+        // 獲取當前 URL 中的 tab 參數，默認為 'cancelled'
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentTab = urlParams.get('tab') || 'cancelled';
+
+        // 跳轉到新的頁碼，保持 tab 不變
+        window.location.href = `/account/cancelled-orders?tab=${currentTab}&page=${page}`;
+    }
+
+    // ==========================================
+    // 3. 刪除訂單相關邏輯
+    // ==========================================
+    let pendingDeleteOrderNo = null;
     let pendingDeleteOrderCard = null;
     let pendingDeleteButton = null;
 
-    // 打开删除确认弹窗
+    // 打開刪除確認彈窗
     function openDeleteOrderModal(button) {
         pendingDeleteOrderNo = button.getAttribute('data-order-no');
         pendingDeleteOrderCard = button.closest('.order-card');
@@ -583,7 +597,7 @@
         document.body.style.overflow = 'hidden';
     }
 
-    // 关闭删除确认弹窗
+    // 關閉刪除確認彈窗
     function closeDeleteOrderModal() {
         document.getElementById('deleteOrderModal').style.display = 'none';
         document.body.style.overflow = '';
@@ -592,7 +606,7 @@
         pendingDeleteButton = null;
     }
 
-    // 确认删除订单
+    // 確認刪除訂單
     async function confirmDeleteOrder() {
         if (!pendingDeleteOrderNo) return;
 
@@ -629,14 +643,17 @@
         }
     }
 
-    // 点击遮罩层关闭弹窗
+    // ==========================================
+    // 4. 彈窗全局事件監聽 (遮罩層點擊與 ESC 鍵)
+    // ==========================================
+    // 點擊遮罩層關閉彈窗
     document.getElementById('deleteOrderModal')?.addEventListener('click', function (e) {
         if (e.target === this) {
             closeDeleteOrderModal();
         }
     });
 
-    // ESC键关闭弹窗
+    // ESC鍵關閉彈窗
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             const modal = document.getElementById('deleteOrderModal');

@@ -1058,6 +1058,167 @@
         .order-header {
             position: relative;
         }
+
+        /* ========================================== */
+        /*  修改取貨日期彈窗遮罩層樣式 (補齊缺失的 CSS) */
+        /* ========================================== */
+        .change-pickup-date-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10001;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: overlayFadeIn 0.3s ease;
+        }
+
+        /* 確保動畫關鍵幀已存在 (你的代碼中已有 overlayFadeIn，若無請補上) */
+        @keyframes overlayFadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* 更改送货日期按钮样式 */
+        .btn-change-delivery:hover {
+            background: linear-gradient(135deg, #138496 0%, #117a8b 100%) !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+        }
+
+        /* 更改送货日期弹窗样式 */
+        .change-delivery-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 10001;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: overlayFadeIn 0.3s ease;
+        }
+
+        .change-delivery-modal-box {
+            background: white;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 16px;
+            padding: 2rem;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-top: 4px solid #17a2b8;
+            animation: modalSlideUp 0.4s ease;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .change-delivery-info {
+            background: linear-gradient(135deg, #f0fcfd 0%, #e6f7f9 100%);
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            color: #0c5460;
+        }
+
+        .change-delivery-info strong {
+            color: #055160;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .date-selection-group {
+            margin: 1.5rem 0;
+        }
+
+        .available-dates {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+        }
+
+        .date-option {
+            padding: 0.8rem 0.5rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .date-option:hover:not(.disabled) {
+            border-color: #17a2b8;
+            background: #f0fcfd;
+            transform: translateY(-2px);
+        }
+
+        .date-option.selected {
+            border-color: #17a2b8;
+            background: #17a2b8;
+            color: white;
+        }
+
+        .date-option.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            background: #f8f9fa;
+        }
+
+        .date-option .date-day {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-bottom: 0.3rem;
+        }
+
+        .date-option.selected .date-day {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .date-option .date-num {
+            font-size: 1.2rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .date-option .date-month {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .cutoff-hint {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 0.8rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+            color: #856404;
+        }
+
+        .cutoff-hint i {
+            margin-right: 0.3rem;
+        }
     </style>
 </head>
 
@@ -1371,6 +1532,94 @@
         </div>
     </div>
 
+    <!-- 更改送货日期弹窗 -->
+    <div id="changeDeliveryModal" class="change-delivery-overlay" style="display: none;">
+        <div class="change-delivery-modal-box">
+            <h3 class="modal-title" style="text-align: center; margin-bottom: 1rem;">
+                <i class="fas fa-calendar-alt" style="color: #17a2b8; margin-right: 0.5rem;"></i>
+                更改送货日期
+            </h3>
+
+            <div class="order-no-display" style="text-align: center; margin-bottom: 1rem;">
+                订单编号：<span id="changeDeliveryOrderNo" class="order-no-highlight"></span>
+            </div>
+
+            <div class="change-delivery-info">
+                <strong><i class="fas fa-info-circle"></i> 当前预计送达日期：</strong>
+                <span id="currentDeliveryDate" style="color: #055160; font-weight: 600;">-</span>
+            </div>
+
+            <div class="cutoff-hint">
+                <i class="fas fa-clock"></i>
+                <strong>截单时间提示：</strong>
+                每日 <span id="cutoffTimeDisplay">22:00</span> 后下单，送货日期将顺延一天
+            </div>
+
+            <div class="date-selection-group">
+                <label style="font-weight: 600; color: var(--primary); display: block; margin-bottom: 0.5rem;">
+                    <i class="fas fa-calendar-check" style="color: #17a2b8; margin-right: 0.3rem;"></i>
+                    选择新的送货日期：
+                </label>
+                <div id="availableDates" class="available-dates">
+                    <div style="text-align: center; padding: 2rem; color: var(--gray);">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                        <p>正在加载可选日期...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
+                <button type="button" class="btn-cancel-modal" onclick="ChronoTeamOrders.closeChangeDeliveryModal()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button type="button" class="btn-confirm-cancel" onclick="ChronoTeamOrders.confirmChangeDelivery()"
+                    style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);">
+                    <i class="fas fa-check"></i> 确认更改
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改取貨日期彈窗 -->
+    <div id="changePickupDateModal" class="change-pickup-date-overlay" style="display: none;">
+        <div class="change-pickup-date-modal-box"
+            style="background: white; width: 90%; max-width: 450px; border-radius: 16px; padding: 2rem; box-shadow: 0 20px 60px rgba(0,0,0,0.3); border-top: 5px solid #28a745;">
+            <h3 class="modal-title" style="text-align: center; margin-bottom: 1rem; color: var(--primary);">
+                <i class="fas fa-calendar-check" style="color: #28a745; margin-right: 0.5rem;"></i>
+                修改取貨日期
+            </h3>
+            <div class="order-no-display"
+                style="text-align: center; margin-bottom: 1.5rem; background: #f8f9fa; padding: 0.8rem; border-radius: 8px;">
+                訂單編號：<span id="changePickupOrderNo"
+                    style="color: #dc3545; font-weight: 700; font-family: monospace;"></span>
+            </div>
+            <div class="form-group">
+                <label style="font-weight: 600; color: var(--primary); display: block; margin-bottom: 0.5rem;">
+                    <i class="fas fa-calendar-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                    選擇新的取貨日期：
+                </label>
+                <select id="newPickupDateSelect" class="form-control"
+                    style="width: 100%; padding: 0.8rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 1rem;">
+                    <option value="">請選擇日期...</option>
+                </select>
+                <small id="pickupDateHint" class="form-text"
+                    style="color: #6c757d; margin-top: 0.5rem; display: block;">
+                    <i class="fas fa-info-circle"></i> 請在訂單保留期限內，選擇店舖營業的日期。
+                </small>
+            </div>
+            <div class="modal-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center;">
+                <button type="button" class="btn-cancel-modal" onclick="ChronoTeamOrders.closeChangePickupDateModal()"
+                    style="padding: 0.8rem 1.5rem; background: #e9ecef; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button type="button" class="btn-confirm-cancel" onclick="ChronoTeamOrders.confirmChangePickupDate()"
+                    style="padding: 0.8rem 1.5rem; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);">
+                    <i class="fas fa-check"></i> 確認修改
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div th:replace="~{fragments/common :: modals}"></div>
 
     <!-- ========================================== -->
@@ -1417,7 +1666,16 @@
                 requestType: '',
                 requestStatus: '',
                 productName: ''
-            }
+            },
+
+            currentChangeDeliveryOrderNo: null,
+            systemConfig: {
+                deliveryMode: null,
+                maxDeliveryDateOptions: null,
+                globalCutoffTime: null
+            },
+            currentOrders: [],
+            globalCutoffTime: null
         };
 
         // 簡寫引用 (內部使用更方便)
@@ -1435,6 +1693,9 @@
         // ==========================================
         function switchTab(tabName) {
             if (CTO.currentTab === tabName) return;
+
+            console.log('🔄 切換 Tab:', CTO.currentTab, '→', tabName);
+
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             event.currentTarget.classList.add('active');
             CTO.currentTab = tabName;
@@ -1452,7 +1713,14 @@
                 clearFilters(); // 切換 Tab 時清除篩選條件
             }
 
-            loadOrders(tabName, 1);
+            // 強制清空容器，確保不會有舊數據
+            document.getElementById('orders-container').innerHTML = '';
+            document.getElementById('pagination-container').innerHTML = '';
+
+            // 延遲加載，確保 DOM 已更新
+            setTimeout(() => {
+                loadOrders(tabName, 1);
+            }, 100);
         }
 
         async function loadOrders(type, page) {
@@ -1477,11 +1745,15 @@
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.message || '加載失敗');
 
+                //：將當前頁的訂單數據緩存起來，供彈窗讀取店舖資訊使用！
+                CTO.currentOrders = result.content || [];
+
                 if (result.content && result.content.length > 0) {
                     // 【核心修改 1】：將後端返回的全局送貨時間保存到 CTO 命名空間中，供渲染時使用
                     CTO.deliveryStartTime = result.deliveryStartTime || '09:00';
                     CTO.deliveryEndTime = result.deliveryEndTime || '18:00';
-
+                    // 緩存當前訂單數據，供彈窗讀取店舖資訊
+                    CTO.currentOrders = result.content;
                     container.innerHTML = renderOrderCards(result.content, type);
                 } else {
                     container.innerHTML = renderEmptyState(type);
@@ -1610,6 +1882,17 @@
                 } else if (isPendingOffline || (isPaid && order.paymentMethod === 'OFFLINE_STORE')) {
                     const storeName = order.offlineStore ? order.offlineStore.name : '';
                     paymentInfo = `<strong>线下店铺支付</strong> ${storeName ? `<span style="color: var(--gold); font-size: 0.85rem; margin-left: 0.5rem;">(<i class="fas fa-map-marker-alt"></i> ${storeName})</span>` : ''}`;
+                    // 【核心修改】如果是待線下付款，且有預約日期，則解析並顯示預約日期與營業時間
+                    if (isPendingOffline && order.appointmentDate && order.offlineStore) {
+
+                        const businessHoursText = getStoreBusinessHoursText(order.offlineStore, order.appointmentDate);
+
+                        deliveryInfo = `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;">
+                            <i class="fas fa-calendar-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                            預約到店日期：<strong>${order.appointmentDate}</strong>
+                            <span style="color: var(--primary); margin-left: 0.3rem;">(營業時間: ${businessHoursText})</span>
+                        </p>`;
+                    }
                 } else {
                     paymentInfo = `<strong>${order.paymentMethod === 'PAYPAL_SIM' ? '線上支付 (PayPal/信用卡)' : order.paymentMethod}</strong>`;
                 }
@@ -1618,9 +1901,19 @@
                     const storeName = order.offlineStore ? order.offlineStore.name : '未知店鋪';
                     const apptDate = order.appointmentDate ? order.appointmentDate : '未設定';
                     let apptDateHtml = '';
-                    if (order.status !== 'COMPLETED') {
+                    if (order.status !== 'COMPLETED' && order.appointmentDate && order.offlineStore) {
+                        const businessHoursText = getStoreBusinessHoursText(order.offlineStore, order.appointmentDate);
+
+                        apptDateHtml = `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;">
+            <i class="fas fa-calendar-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>
+            預約取貨日期：<strong>${apptDate}</strong>
+            <span style="color: var(--primary); margin-left: 0.3rem;">(營業時間: ${businessHoursText})</span>
+        </p>`;
+                    } else if (order.status !== 'COMPLETED') {
+                        // 如果沒有店鋪資訊或日期，保持原樣顯示
                         apptDateHtml = `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;"><i class="fas fa-calendar-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>預約取貨日期：<strong>${apptDate}</strong></p>`;
                     }
+
                     deliveryInfo = `<p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;"><i class="fas fa-store" style="color: var(--gold); margin-right: 0.3rem;"></i>配送方式：<strong>到店自取 (${storeName})</strong></p>${apptDateHtml}`;
                 }
 
@@ -1654,11 +1947,29 @@
 
                 let actionsHtml = '';
                 if (isUnpaid && order.paymentMethod === 'PAYPAL_SIM') actionsHtml += `<a href="/checkout?orderNo=${order.orderNo}" class="btn-sm btn-pay"><i class="fas fa-credit-card"></i> 立即支付</a>`;
-                if (isPendingOffline) actionsHtml += `<button class="btn-sm btn-contact" onclick="showNotification('📞 請前往選擇的店鋪完成付款，或聯繫客服：+852 1234 5678')"><i class="fas fa-phone"></i> 聯繫店鋪</button>`;
+                if (isPendingOffline) {
+                    // 動態獲取店鋪電話，如果沒有則顯示「未提供」
+                    const storePhone = (order.offlineStore && order.offlineStore.phone) ? order.offlineStore.phone : '未提供';
+                    const notifyMsg = storePhone !== '未提供'
+                        ? `📞 請前往選擇的店鋪完成付款，或聯繫店鋪：${storePhone}`
+                        : '📞 請前往選擇的店鋪完成付款';
+
+                    actionsHtml += `<button class="btn-sm btn-contact" onclick="showNotification(\`${notifyMsg}\`)"><i class="fas fa-phone"></i> 聯繫店鋪</button>`;
+                }
                 if (isPaid && order.status === 'PAID') actionsHtml += `<button class="btn-sm btn-cancel-order" onclick="ChronoTeamOrders.openCancelOrderModal('${order.orderNo}')" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none;"><i class="fas fa-times-circle"></i> 取消訂單</button>`;
                 if (isUnpaid || isPendingOffline) actionsHtml += `<button class="btn-sm btn-delete-order" onclick="ChronoTeamOrders.openDeleteOrderModal(this)" data-order-no="${order.orderNo}"><i class="fas fa-trash-alt"></i> 刪除訂單</button>`;
                 actionsHtml += `<button class="btn-sm btn-view toggle-details-btn" onclick="ChronoTeamOrders.toggleOrderDetails(this)" data-order-no="${order.orderNo}"><i class="fas fa-eye"></i> 查看詳情</button>`;
-
+                // 在 renderOrderCards 函数中的 actionsHtml 部分添加按钮（在取消订单按钮后）
+                if (isPaid && order.status === 'PAID') {
+                    // 快遞配送 - 修改送貨日期
+                    if (order.deliveryMethod === 'EXPRESS') {
+                        actionsHtml += `<button class="btn-sm btn-change-delivery" onclick="ChronoTeamOrders.openChangeDeliveryModal('${order.orderNo}', '${order.paidAt}')" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; margin-left: 0.5rem;"><i class="fas fa-calendar-alt"></i> 更改送貨日期</button>`;
+                    }
+                    // 到店自取 - 修改取貨日期
+                    if (order.deliveryMethod === 'STORE_PICKUP') {
+                        actionsHtml += `<button class="btn-sm btn-change-pickup-date" onclick="ChronoTeamOrders.openChangePickupDateModal('${order.orderNo}')" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; margin-left: 0.5rem;"><i class="fas fa-calendar-check"></i> 修改取貨日期</button>`;
+                    }
+                }
                 let timeExtra = '';
                 if (isPaid && order.paidAt) timeExtra += `<p>付款時間：<strong>${formatDate(order.paidAt)}</strong></p>`;
                 // ==========================================
@@ -1720,7 +2031,7 @@
                 const partialRefundBadge = isPartiallyRefunded ? `<span style="background: #6f42c1; color: white; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 600; margin-left: 0.5rem; vertical-align: middle;">部分退/換貨</span>` : '';
 
                 return `
-    <div class="${cardClasses}" data-order-no="${order.orderNo}" data-order-status="${order.status}" data-received-at="${order.receivedAt || ''}">
+    <div class="${cardClasses}" data-order-no="${order.orderNo}" data-estimated-delivery="${order.estimatedDeliveryDate || ''}" data-order-status="${order.status}" data-received-at="${order.receivedAt || ''}">
             <div class="order-header">
                 <div class="order-no">
                     <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
@@ -1752,6 +2063,49 @@
             </div>
         </div>`;
             }).join('');
+        }
+
+        /**
+         * 獲取店鋪在指定預約日期的營業時間文字
+         * @param {Object} store - 店鋪資訊物件 (需包含 scheduleMode, hours, dailyHours)
+         * @param {string} appointmentDate - 預約日期 (格式: yyyy-MM-dd)
+         * @returns {string} 營業時間文字
+         */
+        function getStoreBusinessHoursText(store, appointmentDate) {
+            if (!store) return '未設定營業時間';
+
+            if (store.scheduleMode === 'UNIFIED') {
+                // 情況 A：統一營業時間，直接顯示
+                return store.hours || '未設定營業時間';
+            }
+
+            if (store.scheduleMode === 'DAILY' && store.dailyHours) {
+                // 情況 B：每天分別設置，需要根據預約日期解析 JSON
+                try {
+                    const dailyHours = JSON.parse(store.dailyHours);
+
+                    // 安全解析日期，避免時區導致的星期幾偏差 (格式預期為 yyyy-MM-dd)
+                    const parts = appointmentDate.split('-');
+                    const parsedDate = new Date(parts[0], parts[1] - 1, parts[2]);
+                    let dayOfWeek = parsedDate.getDay();
+                    if (dayOfWeek === 0) dayOfWeek = 7; // JS中0是週日，轉換為7以匹配JSON的key
+
+                    const dayInfo = dailyHours[dayOfWeek.toString()];
+                    if (dayInfo) {
+                        if (dayInfo.closed) {
+                            return '店舖休息';
+                        } else {
+                            return `${dayInfo.start} - ${dayInfo.end}`;
+                        }
+                    }
+                } catch (e) {
+                    console.error('解析每日營業時間失敗:', e);
+                    return '營業時間解析錯誤';
+                }
+            }
+
+            // 兜底情況
+            return store.hours || '未設定營業時間';
         }
 
         function renderEmptyState(type) {
@@ -2732,6 +3086,588 @@
             };
             return map[status] || '#6c757d';
         }
+        // ==========================================
+        // 更改送貨日期相關邏輯 (完整修復版)
+        // ==========================================
+
+        // 打開更改送貨日期彈窗
+        window.ChronoTeamOrders.openChangeDeliveryModal = async function (orderNo, paidAt) {
+            CTO.currentChangeDeliveryOrderNo = orderNo;
+
+            // 加載系統配置
+            await loadSystemConfig();
+
+            const modal = document.getElementById('changeDeliveryModal');
+            const orderNoDisplay = document.getElementById('changeDeliveryOrderNo');
+            const currentDeliveryDate = document.getElementById('currentDeliveryDate');
+            const availableDatesContainer = document.getElementById('availableDates');
+
+            // 設置訂單號
+            orderNoDisplay.textContent = orderNo;
+
+            // 【修復 1】：直接從 DOM 元素的 data 屬性中獲取當前預計送達日期（只取日期部分）
+            const orderCard = document.querySelector(`[data-order-no="${orderNo}"]`);
+            const estDateStr = orderCard?.getAttribute('data-estimated-delivery');
+
+            let currentEstDate = '未設定';
+            if (estDateStr) {
+                // 如果是 ISO 格式 (2026-10-07T08:00:00)，只取日期部分
+                if (estDateStr.includes('T')) {
+                    currentEstDate = estDateStr.split('T')[0];
+                } else {
+                    // 如果已經包含時間，用空格分割取第一部分
+                    currentEstDate = estDateStr.split(' ')[0];
+                }
+            }
+            currentDeliveryDate.textContent = currentEstDate;
+
+            // 計算可選日期
+            const availableDates = calculateAvailableDeliveryDates(paidAt);
+
+            // 渲染可選日期
+            renderAvailableDates(availableDates, availableDatesContainer);
+
+            // 顯示彈窗
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        // ==========================================
+        // 加載系統配置 (新增 SPECIFIC_DAYS 所需參數)
+        // ==========================================
+        async function loadSystemConfig() {
+            try {
+                const response = await fetch('/api/admin/config/get');
+                const config = await response.json();
+
+                CTO.systemConfig = {
+                    deliveryMode: config.DELIVERY_MODE || 'NEXT_DAY',
+                    maxDeliveryDateOptions: parseInt(config.MAX_DELIVERY_DATE_OPTIONS) || 7,
+                    globalCutoffTime: config.GLOBAL_CUTOFF_TIME || '22:00',
+                    deliveryCustomDays: parseInt(config.DELIVERY_CUSTOM_DAYS) || 3,
+                    // 【核心新增】：SPECIFIC_DAYS 模式所需的後台配置
+                    cutoffDayOffset: parseInt(config.CUTOFF_DAY_OFFSET) || -1,
+                    specificDays: config.DELIVERY_SPECIFIC_DAYS ? config.DELIVERY_SPECIFIC_DAYS.split(',').map(Number) : [],
+                    continuousMode: config.CONTINUOUS_DAYS_MODE || 'GROUP'
+                };
+            } catch (error) {
+                console.error('加載系統配置失敗:', error);
+                CTO.systemConfig = {
+                    deliveryMode: 'NEXT_DAY',
+                    maxDeliveryDateOptions: 7,
+                    globalCutoffTime: '22:00',
+                    deliveryCustomDays: 3,
+                    cutoffDayOffset: -1,
+                    specificDays: [],
+                    continuousMode: 'GROUP'
+                };
+            }
+        }
+
+        // ==========================================
+        // 計算可選送貨日期 (完整支援 NEXT_DAY, CUSTOM, SPECIFIC_DAYS)
+        // ==========================================
+        function calculateAvailableDeliveryDates(paidAtStr) {
+            const paidAt = new Date(paidAtStr);
+            const config = CTO.systemConfig;
+            const dates = [];
+
+            // 【核心輔助函數】：判斷付款時間 (paidAt) 是否已晚於某個目標日期的截單時刻
+            const isPastCutoffForTarget = (targetDate) => {
+                const cutoffDate = new Date(targetDate);
+                cutoffDate.setDate(cutoffDate.getDate() + config.cutoffDayOffset); // 例如 -1，即前一天
+                const [h, m] = config.globalCutoffTime.split(':').map(Number);
+                cutoffDate.setHours(h, m, 0, 0);
+                return paidAt > cutoffDate; // 如果付款時間晚於截單時刻，說明趕不上了
+            };
+
+            // 【核心輔助函數】：獲取日期的星期幾 (1=週一, 7=週日)
+            const getDayOfWeek = (d) => {
+                const day = d.getDay();
+                return day === 0 ? 7 : day;
+            };
+
+            // ---------------------------------------------------------
+            // 模式 1: NEXT_DAY (次日達)
+            // ---------------------------------------------------------
+            if (config.deliveryMode === 'NEXT_DAY') {
+                let startDate = new Date(paidAt);
+                startDate.setDate(startDate.getDate() + 1);
+                if (isPastCutoffForTarget(startDate)) {
+                    startDate.setDate(startDate.getDate() + 1); // 趕不上，順延一天
+                }
+                startDate.setHours(0, 0, 0, 0);
+                for (let i = 0; i < config.maxDeliveryDateOptions; i++) {
+                    dates.push(new Date(startDate));
+                    startDate.setDate(startDate.getDate() + 1);
+                }
+            }
+            // ---------------------------------------------------------
+            // 模式 2: CUSTOM (自定義天數)
+            // ---------------------------------------------------------
+            else if (config.deliveryMode === 'CUSTOM') {
+                let startDate = new Date(paidAt);
+                startDate.setDate(startDate.getDate() + config.deliveryCustomDays);
+                if (isPastCutoffForTarget(startDate)) {
+                    startDate.setDate(startDate.getDate() + config.deliveryCustomDays); // 趕不上，順延一個週期
+                }
+                startDate.setHours(0, 0, 0, 0);
+                for (let i = 0; i < config.maxDeliveryDateOptions; i++) {
+                    dates.push(new Date(startDate));
+                    startDate.setDate(startDate.getDate() + 1);
+                }
+            }
+            // ---------------------------------------------------------
+            // 模式 3: SPECIFIC_DAYS (指定星期配送) - 核心複雜邏輯
+            // ---------------------------------------------------------
+            else if (config.deliveryMode === 'SPECIFIC_DAYS') {
+                const specificDays = config.specificDays;
+                if (!specificDays || specificDays.length === 0) return dates;
+
+                const sortedDays = [...specificDays].sort((a, b) => a - b);
+                const firstDay = sortedDays[0];
+                const lastDay = sortedDays[sortedDays.length - 1];
+                // 判斷是否為連續天數 (例如 [6, 7] 是連續，[1, 3] 不是)
+                const isConsecutive = sortedDays.length > 1 && (lastDay - firstDay === sortedDays.length - 1);
+
+                // 【子情況 A】：單日配送 (例如只勾選了「週三」)
+                if (sortedDays.length === 1) {
+                    let candidateDate = new Date(paidAt);
+                    // 1. 尋找下一個或當前符合的星期幾
+                    while (getDayOfWeek(candidateDate) !== firstDay) {
+                        candidateDate.setDate(candidateDate.getDate() + 1);
+                    }
+                    // 2. 檢查是否已過該日的截單時間
+                    if (isPastCutoffForTarget(candidateDate)) {
+                        candidateDate.setDate(candidateDate.getDate() + 7); // 趕不上，直接跳至下週的同一天
+                    }
+                    candidateDate.setHours(0, 0, 0, 0);
+
+                    // 3. 每次 +7 天，生成 maxOptionsVal 個選項
+                    for (let i = 0; i < config.maxDeliveryDateOptions; i++) {
+                        dates.push(new Date(candidateDate));
+                        candidateDate.setDate(candidateDate.getDate() + 7);
+                    }
+                }
+                // 【子情況 B】：連續多天 且 模式為 GROUP (整體模式) (例如勾選了「週六、週日」)
+                else if (isConsecutive && config.continuousMode === 'GROUP') {
+                    let cycleStartDate = new Date(paidAt);
+                    // 1. 找到下一個週期的第一天
+                    while (getDayOfWeek(cycleStartDate) !== firstDay) {
+                        cycleStartDate.setDate(cycleStartDate.getDate() + 1);
+                    }
+                    // 2. 檢查該週期的截單時間 (以週期第一天計算截單)
+                    if (isPastCutoffForTarget(cycleStartDate)) {
+                        cycleStartDate.setDate(cycleStartDate.getDate() + 7); // 趕不上，跳至下個週期
+                    }
+                    cycleStartDate.setHours(0, 0, 0, 0);
+
+                    // 3. 遍歷週期內所有被勾選的日子，直到湊滿 maxOptionsVal 個選項
+                    while (dates.length < config.maxDeliveryDateOptions) {
+                        for (let i = 0; i <= (lastDay - firstDay); i++) {
+                            if (dates.length >= config.maxDeliveryDateOptions) break;
+
+                            const checkDate = new Date(cycleStartDate);
+                            checkDate.setDate(checkDate.getDate() + i);
+
+                            if (sortedDays.includes(getDayOfWeek(checkDate))) {
+                                dates.push(new Date(checkDate));
+                            }
+                        }
+                        // 如果還沒湊夠，進入下一個週期 (+7天)
+                        cycleStartDate.setDate(cycleStartDate.getDate() + 7);
+                    }
+                }
+                // 【子情況 C】：非連續多天 或 模式為 INDEPENDENT (獨立模式)
+                else {
+                    let scanDate = new Date(paidAt);
+                    let scanLimit = 60; // 最多掃描 60 天以防死循環
+
+                    while (dates.length < config.maxDeliveryDateOptions && scanLimit > 0) {
+                        const dow = getDayOfWeek(scanDate);
+                        // 如果當天是被勾選的配送日
+                        if (sortedDays.includes(dow)) {
+                            // 且沒有過當天的截單時間
+                            if (!isPastCutoffForTarget(scanDate)) {
+                                dates.push(new Date(scanDate));
+                            }
+                        }
+                        scanDate.setDate(scanDate.getDate() + 1); // 逐日掃描
+                        scanLimit--;
+                    }
+                }
+            }
+
+            return dates;
+        }
+
+        // 渲染可選日期（加入當前時間檢查 - 修正版：當天也算過期）
+        function renderAvailableDates(dates, container) {
+            container.innerHTML = '';
+
+            if (dates.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #dc3545; padding: 2rem;">暫無可選日期</p>';
+                return;
+            }
+
+            // 【新增】獲取當前日期和時間
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1;
+            const currentDay = now.getDate();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+
+            // 【新增】解析截單時間
+            const cutoffTime = CTO.systemConfig.globalCutoffTime || '22:00';
+            const [cutoffHour, cutoffMinute] = cutoffTime.split(':').map(Number);
+
+            // 【新增】檢查當前是否已過截單時間
+            const isCurrentTimeAfterCutoff = (currentHour > cutoffHour) ||
+                (currentHour === cutoffHour && currentMinute >= cutoffMinute);
+
+            dates.forEach(date => {
+                const dateEl = document.createElement('div');
+                dateEl.className = 'date-option';
+                dateEl.dataset.date = date.toISOString().split('T')[0];
+
+                const dayNames = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+                const dayName = dayNames[date.getDay()];
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                const year = date.getFullYear();
+
+                // 【核心修改】檢查該日期是否應該被禁用
+                let isDisabled = false;
+                let disableReason = '';
+
+                // 1. 檢查年份（防止跨年份的錯誤）
+                if (year < currentYear) {
+                    isDisabled = true;
+                    disableReason = '已過期';
+                } else if (year === currentYear) {
+                    // 2. 同年份檢查月份
+                    if (month < currentMonth) {
+                        isDisabled = true;
+                        disableReason = '已過期';
+                    } else if (month === currentMonth) {
+                        // 3. 同月份檢查日期
+                        if (day < currentDay) {
+                            // 昨天及以前
+                            isDisabled = true;
+                            disableReason = '已過期';
+                        } else if (day === currentDay) {
+                            // 【核心修改】：當天也算過期
+                            isDisabled = true;
+                            disableReason = '已過期';
+                        }
+                    }
+                }
+
+                // 4. 【截單時間邏輯】：如果已過截單時間，明天的日期也要禁用（順延）
+                if (!isDisabled && isCurrentTimeAfterCutoff) {
+                    const tomorrow = new Date(now);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(0, 0, 0, 0);
+
+                    const checkDate = new Date(date);
+                    checkDate.setHours(0, 0, 0, 0);
+
+                    if (checkDate.getTime() === tomorrow.getTime()) {
+                        // 這是明天的日期，但因為已過截單時間，所以不能選
+                        isDisabled = true;
+                        disableReason = '已過截單時間';
+                    }
+                }
+
+                // 設置樣式和內容
+                if (isDisabled) {
+                    dateEl.className = 'date-option disabled';
+                    dateEl.style.cssText = `
+                background: #f8f9fa;
+                color: #adb5bd;
+                cursor: not-allowed;
+                opacity: 0.6;
+            `;
+                    dateEl.innerHTML = `
+                <div class="date-day">${dayName}</div>
+                <div class="date-num">${day}</div>
+                <div class="date-month">${month}月</div>
+                <div style="font-size: 0.7rem; color: #dc3545; margin-top: 0.3rem;">${disableReason}</div>
+            `;
+                    // 禁用點擊事件
+                    dateEl.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        showNotification('⚠️ 該日期已無法選擇', true);
+                    });
+                } else {
+                    dateEl.className = 'date-option';
+                    dateEl.innerHTML = `
+                <div class="date-day">${dayName}</div>
+                <div class="date-num">${day}</div>
+                <div class="date-month">${month}月</div>
+            `;
+                    dateEl.addEventListener('click', () => selectDeliveryDate(dateEl, date));
+                }
+
+                container.appendChild(dateEl);
+            });
+        }
+
+        // 選擇送貨日期
+        function selectDeliveryDate(element, date) {
+            // 移除其他選中狀態
+            document.querySelectorAll('.date-option').forEach(el => el.classList.remove('selected'));
+
+            // 添加選中狀態
+            element.classList.add('selected');
+
+            // 存儲選中的日期
+            CTO.selectedDeliveryDate = date;
+        }
+
+        // 確認更改送貨日期
+        window.ChronoTeamOrders.confirmChangeDelivery = async function () {
+            if (!CTO.currentChangeDeliveryOrderNo || !CTO.selectedDeliveryDate) {
+                showNotification('❌ 請選擇送貨日期', true);
+                return;
+            }
+
+            const orderNo = CTO.currentChangeDeliveryOrderNo;
+
+            // 【核心修復】：絕對不要用 toISOString()，會有 8 小時時區偏移導致日期少一天！
+            // 改用本地時間格式化為 YYYY-MM-DD
+            const d = CTO.selectedDeliveryDate;
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const newDeliveryDate = `${year}-${month}-${day}`;
+
+            try {
+                const response = await fetch(`/api/order/${orderNo}/change-delivery-date`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        estimatedDeliveryDate: newDeliveryDate
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    CTO.closeChangeDeliveryModal();
+                    showNotification('✅ 送貨日期已更新為: ' + newDeliveryDate);
+
+                    // 重新加載訂單列表
+                    loadOrders(CTO.currentTab, CTO.currentPage);
+                } else {
+                    showNotification('❌ ' + (result.message || '更新失敗'), true);
+                }
+            } catch (error) {
+                console.error('更改送貨日期失敗:', error);
+                showNotification('❌ 網絡錯誤，請稍後重試', true);
+            }
+        };
+
+        // 關閉更改送貨日期彈窗
+        window.ChronoTeamOrders.closeChangeDeliveryModal = function () {
+            const modal = document.getElementById('changeDeliveryModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            document.body.style.overflow = '';
+            CTO.currentChangeDeliveryOrderNo = null;
+            CTO.selectedDeliveryDate = null;
+        };
+
+        // ==========================================
+        // 【在此處插入代碼 2 的 4 個函數】
+        // ==========================================
+        // ==========================================
+        // 修改取貨日期相關邏輯
+        // ==========================================
+
+        // 1. 打開彈窗
+        CTO.openChangePickupDateModal = function (orderNo) {
+            CTO.currentChangePickupOrderNo = orderNo;
+            document.getElementById('changePickupOrderNo').textContent = orderNo;
+
+            // 從緩存中查找該訂單的完整數據
+            const order = CTO.currentOrders.find(o => o.orderNo === orderNo);
+            if (order) {
+                CTO.initChangePickupDateSelector(order);
+            }
+
+            const modal = document.getElementById('changePickupDateModal');
+            if (modal) {
+                modal.style.display = 'flex'; // 使用 flex 確保居中對齊
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        // 2. 關閉彈窗
+        CTO.closeChangePickupDateModal = function () {
+            const modal = document.getElementById('changePickupDateModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+            CTO.currentChangePickupOrderNo = null;
+        };
+
+        // 3. 初始化日期選擇器 (根據付款日期 + 保留天數 + 店舖營業時間)
+        // 3. 初始化日期選擇器 (根據付款日期 + 保留天數 + 店舖營業時間)
+        CTO.initChangePickupDateSelector = function (order) {
+            const select = document.getElementById('newPickupDateSelect');
+            if (!select || !order.offlineStore) return;
+
+            select.innerHTML = '<option value="">請選擇日期...</option>';
+            const store = order.offlineStore;
+
+            // 【核心修復 1】：安全解析 paidAt 日期，兼容 "2026-10-06T15:39:22" 和 "2026/10/06 15:39:22" 格式
+            const paidAtStr = order.paidAt;
+            let paidDateStr = null;
+            if (paidAtStr) {
+                // 使用正則同時匹配 'T' 和 '空格' 作為分隔符，並將 '/' 替換為 '-' 確保 ISO 格式
+                paidDateStr = paidAtStr.split(/[T\s]/)[0].replace(/\//g, '-');
+            }
+
+            if (!paidDateStr) {
+                console.error(' 無法解析訂單付款日期:', paidAtStr);
+                return;
+            }
+
+            const paidDate = new Date(paidDateStr + 'T00:00:00');
+
+            // 防呆檢查：如果日期解析失敗，直接終止
+            if (isNaN(paidDate.getTime())) {
+                console.error('❌ 付款日期解析為 Invalid Date:', paidDateStr);
+                return;
+            }
+
+            const maxDays = (typeof offlinePaymentDaysConfig !== 'undefined' && offlinePaymentDaysConfig !== null) ? offlinePaymentDaysConfig : 3;
+
+            const maxDate = new Date(paidDate);
+            maxDate.setDate(paidDate.getDate() + maxDays);
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // 獲取店鋪暫停營業日期 (同樣修復日期格式)
+            let closedStartDate = null;
+            let closedEndDate = null;
+            if (store.closedStartDate && String(store.closedStartDate) !== 'null') {
+                closedStartDate = new Date(String(store.closedStartDate).replace(/\//g, '-') + 'T00:00:00');
+            }
+            if (store.closedEndDate && String(store.closedEndDate) !== 'null') {
+                closedEndDate = new Date(String(store.closedEndDate).replace(/\//g, '-') + 'T23:59:59');
+            }
+
+            let currentDate = new Date(today);
+            let hasAvailableDate = false;
+
+            while (currentDate <= maxDate) {
+                let isClosed = false;
+
+                // 檢查是否在暫停營業期間
+                if (closedStartDate && closedEndDate && !isNaN(closedStartDate.getTime()) && !isNaN(closedEndDate.getTime())) {
+                    if (currentDate >= closedStartDate && currentDate <= closedEndDate) {
+                        isClosed = true;
+                    }
+                }
+
+                // 【核心修復 2】：完善店鋪休息日判斷（同時支援 DAILY 和 UNIFIED 模式）
+                if (!isClosed) {
+                    const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
+                    const jsDayKey = dayOfWeek === 0 ? 7 : dayOfWeek;
+
+                    if (store.scheduleMode === 'DAILY' && store.dailyHours) {
+                        try {
+                            const dailyHours = JSON.parse(store.dailyHours);
+                            const dayInfo = dailyHours[jsDayKey.toString()];
+                            if (dayInfo && dayInfo.closed) {
+                                isClosed = true;
+                            }
+                        } catch (e) {
+                            console.error('解析每日營業時間失敗:', e);
+                        }
+                    } else if (store.scheduleMode === 'UNIFIED') {
+                        // 統一營業時間模式：如果沒有設置營業時間字符串，視為休息
+                        if (!store.hours || store.hours.trim() === '') {
+                            isClosed = true;
+                        }
+                    }
+                }
+
+                // 如果該日期可用，則加入選項
+                if (!isClosed) {
+                    const year = currentDate.getFullYear();
+                    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(currentDate.getDate()).padStart(2, '0');
+                    const dateString = `${year}-${month}-${day}`;
+                    const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                    const weekDay = weekDays[currentDate.getDay()];
+                    const displayText = `${weekDay} (${month}/${day})`;
+
+                    const option = document.createElement('option');
+                    option.value = dateString;
+                    option.textContent = displayText;
+                    select.appendChild(option);
+                    hasAvailableDate = true;
+                }
+
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            if (!hasAvailableDate) {
+                const option = document.createElement('option');
+                option.value = "";
+                option.textContent = "在保留期限內無可用營業日";
+                option.disabled = true;
+                select.appendChild(option);
+            } else {
+                // 默認選中第一個可用日期
+                select.selectedIndex = 1;
+            }
+        };
+
+        // 4. 確認修改並發送 API 請求
+        CTO.confirmChangePickupDate = async function () {
+            const orderNo = CTO.currentChangePickupOrderNo;
+            const newDate = document.getElementById('newPickupDateSelect').value;
+
+            if (!newDate) {
+                if (typeof showNotification === 'function') showNotification('❌ 請選擇新的取貨日期', true);
+                else alert('請選擇新的取貨日期');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/order/${orderNo}/change-pickup-date`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({appointmentDate: newDate})
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (typeof showNotification === 'function') showNotification('✅ ' + result.message);
+                    CTO.closeChangePickupDateModal();
+                    // 刷新當前列表以顯示最新日期
+                    loadOrders(CTO.currentTab, CTO.currentPage);
+                } else {
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '修改失敗'), true);
+                    else alert('修改失敗: ' + (result.message || '未知錯誤'));
+                }
+            } catch (error) {
+                console.error('修改取貨日期錯誤:', error);
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤，請稍後重試', true);
+                else alert('網絡錯誤，請稍後重試');
+            }
+        };
 
         // ==========================================
         // 5. 暴露全局 API (僅掛載到命名空間)
@@ -2762,6 +3698,8 @@
             if (e.target === document.getElementById('afterSalesModal')) closeAfterSalesModal();
             if (e.target === document.getElementById('afterSalesDetailsModal')) closeAfterSalesDetailsModal();
             if (e.target === document.getElementById('cancelAfterSalesModal')) closeCancelAfterSalesModal();
+            if (e.target === document.getElementById('changeDeliveryModal')) {window.ChronoTeamOrders.closeChangeDeliveryModal();}
+            if (e.target === document.getElementById('changePickupDateModal')) {window.ChronoTeamOrders.closeChangePickupDateModal();}
         });
 
         document.addEventListener('keydown', function (e) {
@@ -2771,6 +3709,8 @@
                 closeAfterSalesModal();
                 closeAfterSalesDetailsModal();
                 closeCancelAfterSalesModal();
+                window.ChronoTeamOrders.closeChangeDeliveryModal();
+                window.ChronoTeamOrders.closeChangePickupDateModal();
             }
         });
     </script>

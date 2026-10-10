@@ -11,13 +11,14 @@
     <link rel="stylesheet" href="/css/admin.css">
 
     <style>
-        /* 狀態徽章樣式補充 */
+        /* 狀態徽章樣式 */
         .status-badge {
             padding: 0.3rem 0.8rem;
             border-radius: 20px;
             font-size: 0.75rem;
             font-weight: 600;
             display: inline-block;
+            white-space: nowrap;
         }
 
         .status-PENDING {
@@ -45,12 +46,14 @@
             color: #383d41;
         }
 
+        /* 類型徽章樣式 */
         .type-badge {
             padding: 0.3rem 0.8rem;
             border-radius: 20px;
             font-size: 0.75rem;
             font-weight: 600;
             display: inline-block;
+            white-space: nowrap;
         }
 
         .type-RETURN {
@@ -63,6 +66,7 @@
             color: #17a2b8;
         }
 
+        /* 表格基礎樣式 */
         .table-responsive {
             background: white;
             border-radius: 12px;
@@ -73,7 +77,7 @@
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1000px;
+            min-width: 1200px;
         }
 
         .data-table th,
@@ -82,6 +86,7 @@
             text-align: left;
             border-bottom: 1px solid #f1f3f5;
             font-size: 0.9rem;
+            white-space: nowrap;
         }
 
         .data-table th {
@@ -93,6 +98,286 @@
         .data-table tr:hover td {
             background-color: #fcfcfc;
         }
+
+        /* 操作按鈕樣式 - 嚴格水平排列 */
+        .action-cell {
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin: 0 2px;
+        }
+
+        .btn-return {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+
+        .btn-return:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-exchange {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+        }
+
+        .btn-exchange:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+        }
+
+        .btn-details {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-details:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        /* 展開的明細行樣式 */
+        .details-row {
+            display: none;
+            /* 默認隱藏 */
+            background-color: #f8f9fa !important;
+        }
+
+        .details-row.active {
+            display: table-row;
+            /* 展開時顯示 */
+        }
+
+        .details-content {
+            padding: 1.5rem !important;
+            border-bottom: 2px solid #dee2e6 !important;
+        }
+
+        /* 明細網格佈局 */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .info-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .info-item strong {
+            color: #495057;
+            margin-right: 0.5rem;
+        }
+
+        /* 子表格樣式 */
+        .sub-table {
+            width: 100%;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .sub-table th {
+            background: #e9ecef;
+            padding: 0.8rem;
+            font-size: 0.85rem;
+            color: #495057;
+        }
+
+        .sub-table td {
+            padding: 0.8rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid #f1f3f5;
+            white-space: normal;
+            /* 允許明細表格內容換行 */
+        }
+
+        /* 狀態變更彈窗專屬樣式 */
+        .status-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .status-modal-box {
+            background: white;
+            width: 90%;
+            max-width: 450px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUpModal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+            border-top: 5px solid var(--gold);
+        }
+
+        .status-modal-header {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .status-modal-header i {
+            font-size: 1.5rem;
+            color: var(--gold);
+        }
+
+        .status-modal-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+
+        .status-modal-body {
+            padding: 1.5rem;
+        }
+
+        .status-modal-body p {
+            margin: 0 0 1rem 0;
+            color: var(--gray);
+            font-size: 0.95rem;
+        }
+
+        .custom-status-select {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            color: var(--primary);
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236c757d' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+        }
+
+        .custom-status-select:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+        }
+
+        .status-hint {
+            margin-top: 0.8rem;
+            padding: 0.8rem;
+            background: rgba(212, 175, 55, 0.08);
+            border-left: 3px solid var(--gold);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #856404;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .status-modal-actions {
+            padding: 1rem 1.5rem 1.5rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn-modal-cancel,
+        .btn-modal-confirm {
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-modal-cancel {
+            background: #e9ecef;
+            color: var(--primary);
+        }
+
+        .btn-modal-cancel:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        .btn-modal-confirm {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-modal-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUpModal {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 隱藏數字輸入框的上下箭頭 (適用於帶有 .no-spin 類的元素) */
+        .no-spin {
+            -moz-appearance: textfield;
+            /* Firefox */
+        }
+
+        .no-spin::-webkit-outer-spin-button,
+        .no-spin::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            /* Chrome, Safari, Edge */
+            margin: 0;
+        }
     </style>
 </head>
 
@@ -101,7 +386,7 @@
     <div th:replace="~{fragments/common :: navbar}"></div>
 
     <div class="admin-layout">
-        <!-- 引入左側邊欄，高亮 'after-sales' -->
+        <!-- 引入左側邊欄 -->
         <div th:replace="~{fragments/admin-sidebar :: adminSidebar('after-sales')}"></div>
 
         <main class="admin-main">
@@ -143,68 +428,232 @@
                                 <th>關聯訂單</th>
                                 <th>類型</th>
                                 <th>狀態</th>
-                                <th>申請原因</th>
-                                <th>商品明細</th>
-                                <th>預約時間</th>
                                 <th>創建時間</th>
+                                <th style="text-align: center;">操作</th>
                             </tr>
                         </thead>
                         <tbody>
+                            <!-- 空狀態 -->
                             <tr th:if="${#lists.isEmpty(afterSalesList)}">
-                                <td colspan="9" style="text-align: center; padding: 3rem; color: var(--gray);">
+                                <td colspan="7" style="text-align: center; padding: 3rem; color: var(--gray);">
                                     <i class="fas fa-inbox"
                                         style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
                                     暫無售後申請記錄
                                 </td>
                             </tr>
-                            <tr th:each="item : ${afterSalesList}">
-                                <td th:text="${item.requestId}">1</td>
-                                <td th:text="${item.username}">user123</td>
-                                <td>
-                                    <a th:href="@{/admin/orders}" th:text="${item.orderNo}"
-                                        style="color: var(--gold); text-decoration: none;">ORD-XXX</a>
-                                </td>
-                                <td>
-                                    <span th:class="'type-badge type-' + ${item.requestType}"
-                                        th:text="${item.requestType == 'RETURN' ? '退貨' : '換貨'}">退貨</span>
-                                </td>
-                                <td>
-                                    <span th:class="'status-badge status-' + ${item.status}"
-                                        th:text="${item.status}">PENDING</span>
-                                </td>
-                                <td th:text="${item.reason}"
-                                    style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-                                    th:title="${item.reason}">原因...</td>
-                                <td th:text="${item.itemSummary}"
-                                    style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-                                    th:title="${item.itemSummary}">商品 x 1</td>
-                                <td>
-                                    <span th:if="${item.appointmentDate}"
-                                        th:text="${item.appointmentDate + ' ' + item.appointmentTimeSlot}">2023-10-01
-                                        10:00</span>
-                                    <span th:unless="${item.appointmentDate}" style="color: #adb5bd;">-</span>
-                                </td>
-                                <td th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}">2023-10-01 10:00
-                                </td>
-                            </tr>
+
+                            <!--
+                        核心循環結構：使用 th:block 確保主行和詳情行在 DOM 中緊密相連
+                        這樣 JS 可以通過 nextElementSibling 快速找到詳情行，無需 ID 查找
+                    -->
+                            <th:block th:each="req : ${afterSalesList}">
+                                <!-- 1. 主行 (顯示核心信息) -->
+                                <tr>
+                                    <td th:text="${req.requestId}">1</td>
+                                    <!-- 【優化】使用 Elvis 運算符，對 Map 更安全且代碼更簡潔 -->
+                                    <td th:text="${req.username} ?: '未知'">user123</td>
+                                    <td>
+                                        <a th:href="@{/admin/orders}" th:text="${req.orderNo} ?: '未知'"
+                                            style="color: var(--gold); text-decoration: none;">ORD-XXX</a>
+                                    </td>
+                                    <td>
+                                        <span th:class="'type-badge type-' + ${req.requestType}"
+                                            th:text="${req.requestType == 'RETURN' ? '退貨' : '換貨'}">退貨</span>
+                                    </td>
+                                    <td>
+                                        <span th:class="'status-badge status-' + ${req.status}" th:text="${req.status == 'PENDING' ? '待處理' :
+                                             (req.status == 'WAITING_PAYMENT' ? '待補差價' :
+                                             (req.status == 'COMPLETED' ? '已完成' :
+                                             (req.status == 'REJECTED' ? '已拒絕' : '已取消')))}">待處理</span>
+                                    </td>
+                                    <td th:text="${#temporals.format(req.createdAt, 'yyyy-MM-dd HH:mm')}">2023-10-01
+                                        10:00</td>
+
+                                    <!-- 操作列 -->
+                                    <td class="action-cell">
+                                        <button th:if="${req.requestType == 'RETURN' and req.status == 'PENDING'}"
+                                            class="action-btn btn-return"
+                                            th:onclick="'openStatusModal(' + ${req.requestId} + ')'">
+                                            <i class="fas fa-clipboard-check"></i> 審核退貨
+                                        </button>
+
+                                        <button th:if="${req.requestType == 'EXCHANGE' and req.status == 'PENDING'}"
+                                            class="action-btn btn-exchange"
+                                            th:onclick="'handleExchangeRequest(' + ${req.requestId} + ')'">
+                                            <i class="fas fa-exchange-alt"></i> 審核換貨
+                                        </button>
+
+                                        <button class="action-btn btn-details" onclick="toggleDetails(this)">
+                                            <i class="fas fa-eye"></i> 查看明細
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <!-- 2. 詳情行 (默認隱藏，點擊按鈕後展開) -->
+                                <tr class="details-row">
+                                    <td colspan="7" class="details-content">
+
+                                        <!-- A. 主表補充信息 (AfterSalesRequest) -->
+                                        <div class="info-grid">
+                                            <div>
+                                                <div class="info-item"><strong>申請原因：</strong> <span
+                                                        th:text="${req.reason} ?: '-'">-</span></div>
+                                                <div class="info-item"><strong>預約門店 ：</strong> <span
+                                                        th:text="${req.storeName} ?: '-'">-</span></div>
+                                                <div class="info-item"><strong>預約時間：</strong> <span
+                                                        th:text="${req.appointmentDate != null ? req.appointmentDate + ' ' + req.appointmentTimeSlot : '-'}">-</span>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div class="info-item">
+                                                    <strong>最終結算差價：</strong>
+                                                    <span
+                                                        th:text="${req.finalPriceDifference != null ? 'HK$ ' + req.finalPriceDifference : '待定'}"
+                                                        th:style="${req.finalPriceDifference != null and req.finalPriceDifference > 0} ? 'color: #dc3545; font-weight:bold;' : 'color: #28a745;'">-</span>
+                                                </div>
+                                                <div class="info-item" th:if="${req.requestType == 'EXCHANGE'}">
+                                                    <strong>新關聯訂單 (換貨)：</strong>
+                                                    <span th:text="${req.newOrderNo} ?: '-'">-</span>
+                                                </div>
+
+                                                <div class="info-item"><strong>處理完成時間：</strong>
+                                                    <span
+                                                        th:text="${req.completedAt != null ? #temporals.format(req.completedAt, 'yyyy-MM-dd HH:mm') : '-'}">-</span>
+                                                </div>
+                                                <div class="info-item">
+                                                    <strong>入庫狀態：</strong>
+                                                    <span th:text="${req.stockStatusText}"
+                                                        th:style="'color: ' + ${req.stockStatusColor} + '; font-weight: 600;'">
+                                                        -
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- B. 明細表 (AfterSalesRequestItem) -->
+                                        <h5
+                                            style="margin: 1rem 0 0.5rem 0; color: var(--primary); font-size: 1rem; border-left: 4px solid var(--gold); padding-left: 10px;">
+                                            <i class="fas fa-list-ul"></i> 售後商品明細
+                                        </h5>
+
+                                        <table class="sub-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>明細 ID</th>
+                                                    <th>商品名稱</th>
+                                                    <th>原購買數量</th>
+                                                    <th>本次退回數量</th>
+                                                    <th>最終結算金額</th>
+                                                    <th>明細創建時間</th>
+                                                    <!-- 【核心】僅在 WAITING_PAYMENT 或 COMPLETED 狀態下顯示此列 -->
+                                                    <th th:if="${req.status == 'WAITING_PAYMENT' or req.status == 'COMPLETED'}"
+                                                        style="text-align: center;">入庫操作</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- 【優化】直接遍歷，因為 Controller 已確保 items 存在 -->
+                                                <tr th:each="detail : ${req.items}">
+                                                    <td th:text="${detail.requestItemId}">101</td>
+                                                    <!-- 直接使用 Map 中的 productName -->
+                                                    <td th:text="${detail.productName} ?: '未知商品'">Rolex Submariner</td>
+                                                    <!-- 直接使用 Map 中的 returnQuantity -->
+                                                    <td th:text="${detail.returnQuantity} ?: 0">1</td>
+                                                    <td th:text="${detail.returnQuantity}"
+                                                        style="font-weight: 600; color: var(--primary);">1</td>
+                                                    <td th:text="${detail.finalSettleAmount != null ? 'HK$ ' + detail.finalSettleAmount : '店員尚未定價'}"
+                                                        th:style="${detail.finalSettleAmount != null} ? 'color: #28a745; font-weight: 600;' : 'color: #6c757d;'">
+                                                        待定</td>
+                                                    <!-- 加上 createdAt 的空值判斷，防止 Map 中未包含該字段時報錯 -->
+                                                    <td
+                                                        th:text="${detail.createdAt != null ? #temporals.format(detail.createdAt, 'yyyy-MM-dd HH:mm') : '-'}">
+                                                        2023-10-01 10:00</td>
+                                                    <!-- 操作列：判斷是否已入庫 -->
+                                                    <td th:if="${req.status == 'WAITING_PAYMENT' or req.status == 'COMPLETED'}"
+                                                        style="text-align: center;">
+                                                        <!-- 情況 A：已入庫，顯示綠色文字 -->
+                                                        <span th:if="${detail.isStockedIn}"
+                                                            style="color: #28a745; font-weight: 600;">
+                                                            <i class="fas fa-check-circle"></i> 已入庫
+                                                        </span>
+
+                                                        <!-- 情況 B：未入庫，顯示「確認入庫」按鈕 -->
+                                                        <button th:unless="${detail.isStockedIn}" class="btn-sm"
+                                                            th:onclick="'confirmItemStockIn(' + ${detail.requestItemId} + ')'"
+                                                            style="background: var(--gold); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem; margin: 0 auto;">
+                                                            <i class="fas fa-box-open"></i> 確認入庫
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                <tr th:if="${#lists.isEmpty(req.items)}">
+                                                    <td colspan="6"
+                                                        style="text-align: center; color: #6c757d; padding: 1.5rem;">
+                                                        <i class="fas fa-info-circle"></i> 暫無明細記錄
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+
+                                    </td>
+                                </tr>
+                            </th:block>
                         </tbody>
                     </table>
                 </div>
 
-                <!-- 智能分頁組件 (URL 跳轉模式) -->
+                <!-- 智能分頁組件 -->
                 <div style="margin-top: 2rem; display: flex; justify-content: center;">
                     <div th:replace="~{fragments/pagination :: pagination(
-                        ${currentPage},
-                        ${totalPages},
-                        ${smartPages},
-                        '/admin/after-sales',
-                        'status=' + ${filterStatus != null ? filterStatus : ''} + '&type=' + ${filterType != null ? filterType : ''}
-                    )}"></div>
+                            ${currentPage},
+                            ${totalPages},
+                            ${smartPages},
+                            '/admin/after-sales',
+                            'status=' + ${filterStatus != null ? filterStatus : ''} + '&type=' + ${filterType != null ? filterType : ''}
+                        )}"></div>
                 </div>
             </div>
         </main>
     </div>
 
+    <!-- ========================================== -->
+    <!-- 售後狀態變更精美彈窗 -->
+    <!-- ========================================== -->
+    <div id="statusChangeModal" class="status-modal-overlay" style="display: none;">
+        <div class="status-modal-box">
+            <div class="status-modal-header">
+                <i class="fas fa-exchange-alt"></i>
+                <h3>變更售後申請狀態</h3>
+            </div>
+            <div class="status-modal-body">
+                <p>請為申請 <strong id="modalRequestId" style="color: var(--gold);"></strong> 選擇新的處理狀態：</p>
+                <div class="form-group-modal" style="margin-bottom: 1rem;">
+                    <select id="newStatusSelect" class="custom-status-select" onchange="toggleRefundInputs()">
+                        <option value="PENDING">PENDING (待處理)</option>
+                        <option value="COMPLETED" selected>COMPLETED (已完成)</option>
+                        <option value="REJECTED">REJECTED (已拒絕)</option>
+                        <option value="CANCELLED">CANCELLED (已取消)</option>
+                    </select>
+                </div>
+
+                <!-- 【新增】退款金額輸入區域，預設隱藏 -->
+                <div id="refundDetailsContainer"
+                    style="display: none; margin-top: 1rem; padding: 1rem; background: #fff9f0; border-radius: 8px; border: 1px solid #ffeeba;">
+                    <p style="font-size: 0.9rem; color: #856404; font-weight: 600; margin-bottom: 0.8rem;">
+                        <i class="fas fa-calculator"></i> 請填寫最終退款金額 (請參考下方原價)：
+                    </p>
+                    <div id="refundItemsList">
+                        <!-- JS 將動態填充這裡的內容 -->
+                    </div>
+                </div>
+            </div>
+            <div class="status-modal-actions">
+                <button class="btn-modal-cancel" onclick="closeStatusModal()">取消</button>
+                <button class="btn-modal-confirm" onclick="confirmStatusUpdate()">
+                    <i class="fas fa-check"></i> 確認變更
+                </button>
+            </div>
+        </div>
+    </div>
     <!-- 引入公共彈窗 -->
     <div th:replace="~{fragments/common :: modals}"></div>
 
@@ -212,8 +661,22 @@
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>
 
+    <!-- 第一部分：利用 Thymeleaf 将后端数据直接序列化为 JS 对象 -->
+    <script th:inline="javascript">
+        // 直接接收 Controller 传来的 Map<Long, List<Map>>，Thymeleaf 会自动将其转换为合法的 JS 对象
+        const afterSalesDataMap = /*[[${itemsDataMap}]]*/ {};
+
+        console.log('✅ afterSalesDataMap 初始化成功:', afterSalesDataMap);
+    </script>
+
+    <!-- 第二部分：核心交互邏輯 -->
     <script>
-        // 簡單的篩選跳轉邏輯
+        // 全局變量存儲當前操作的 requestId
+        let currentProcessingRequestId = null;
+
+        // ==========================================
+        // 1. 篩選與列表基礎交互
+        // ==========================================
         function applyFilter() {
             const status = document.querySelector('select[name="status"]').value;
             const type = document.querySelector('select[name="type"]').value;
@@ -226,6 +689,201 @@
         function resetFilter() {
             window.location.href = '/admin/after-sales?page=1';
         }
+
+        // 展開/收起明細行邏輯 (利用 DOM 相鄰關係)
+        function toggleDetails(btn) {
+            const mainRow = btn.closest('tr');
+            const detailsRow = mainRow.nextElementSibling;
+
+            if (detailsRow && detailsRow.classList.contains('details-row')) {
+                if (detailsRow.classList.contains('active')) {
+                    detailsRow.classList.remove('active');
+                    btn.innerHTML = '<i class="fas fa-eye"></i> 查看明細';
+                } else {
+                    detailsRow.classList.add('active');
+                    btn.innerHTML = '<i class="fas fa-eye-slash"></i> 收起明細';
+                }
+            }
+        }
+
+        // ==========================================
+        // 2. 彈窗控制與退款輸入框渲染
+        // ==========================================
+        function openStatusModal(requestId) {
+            currentProcessingRequestId = requestId;
+            document.getElementById('modalRequestId').textContent = '#' + requestId;
+
+            // 重置下拉選單為預設值 (COMPLETED)
+            const statusSelect = document.getElementById('newStatusSelect');
+            statusSelect.value = 'COMPLETED';
+
+            // 打開時立即觸發一次退款區塊的顯示/隱藏判斷
+            toggleRefundInputs();
+
+            const modal = document.getElementById('statusChangeModal');
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 禁止背景滾動
+        }
+
+        function closeStatusModal() {
+            const modal = document.getElementById('statusChangeModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = ''; // 恢復背景滾動
+            currentProcessingRequestId = null;
+        }
+
+        function toggleRefundInputs() {
+            const newStatus = document.getElementById('newStatusSelect').value;
+            const container = document.getElementById('refundDetailsContainer');
+            const listContainer = document.getElementById('refundItemsList');
+
+            if (newStatus === 'COMPLETED') {
+                container.style.display = 'block';
+                renderRefundInputs(currentProcessingRequestId, listContainer);
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        function renderRefundInputs(requestId, container) {
+            const items = afterSalesDataMap[requestId] || [];
+            if (!items || items.length === 0) {
+                container.innerHTML = '<p style="color: #6c757d; font-size: 0.85rem;">暫無明細數據</p>';
+                return;
+            }
+
+            let html = '';
+            items.forEach(item => {
+                // 確保 originalPrice 是數字，如果是字符串則轉換
+                const originalPrice = parseFloat(item.originalPrice) || 0;
+                const currentRefund = (item.finalSettleAmount !== null && item.finalSettleAmount !== undefined)
+                    ? item.finalSettleAmount : '';
+
+                html += `
+            <div style="margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px dashed #dee2e6;">
+                <div style="font-size: 0.85rem; color: var(--primary); font-weight: 600; margin-bottom: 0.3rem;">
+                    ${item.productName} (數量: ${item.returnQuantity})
+                </div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <span style="font-size: 0.85rem; color: #28a745; font-weight: 600; min-width: 120px; background: #d4edda; padding: 0.3rem 0.6rem; border-radius: 4px;">
+                        <i class="fas fa-tag"></i> 原價: HK$ ${originalPrice.toFixed(2)}
+                    </span>
+                    <input type="number"
+                           class="refund-amount-input no-spin"
+                           data-request-item-id="${item.requestItemId}"
+                           value="${currentRefund}"
+                           step="0.01"
+                           min="0"
+                           placeholder="輸入退款金額"
+                           style="flex: 1; min-width: 150px; padding: 0.5rem; border: 2px solid #ced4da; border-radius: 6px; font-size: 0.95rem; font-weight: 600;">
+                </div>
+            </div>
+            `;
+            });
+            container.innerHTML = html;
+        }
+
+        // ==========================================
+        // 3. 提交狀態更新 (含退款金額收集)
+        // ==========================================
+        async function confirmStatusUpdate() {
+            if (!currentProcessingRequestId) return;
+
+            const newStatus = document.getElementById('newStatusSelect').value;
+            let itemRefundAmounts = {};
+
+            if (newStatus === 'COMPLETED') {
+                const inputs = document.querySelectorAll('.refund-amount-input');
+                inputs.forEach(input => {
+                    const itemId = input.getAttribute('data-request-item-id');
+                    const value = input.value;
+                    if (value !== '') {
+                        itemRefundAmounts[itemId] = parseFloat(value);
+                    }
+                });
+            }
+
+            try {
+                const response = await fetch(`/admin/api/after-sales/${currentProcessingRequestId}/status`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        newStatus: newStatus,
+                        itemRefundAmounts: itemRefundAmounts
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (typeof showNotification !== 'undefined') {
+                        showNotification('✅ ' + result.message);
+                    } else {
+                        alert('✅ ' + result.message);
+                    }
+                    closeStatusModal();
+                    setTimeout(() => {window.location.reload();}, 1000);
+                } else {
+                    const errorMsg = '❌ 更新失敗：' + (result.message || '未知錯誤');
+                    if (typeof showNotification !== 'undefined') {
+                        showNotification(errorMsg, true);
+                    } else {
+                        alert(errorMsg);
+                    }
+                }
+            } catch (error) {
+                console.error('狀態更新請求錯誤:', error);
+                if (typeof showNotification !== 'undefined') {
+                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                } else {
+                    alert('❌ 網絡錯誤，請稍後重試');
+                }
+            }
+        }
+
+        // ==========================================
+        // 4. 補充缺失的換貨審核函數
+        // ==========================================
+        function handleExchangeRequest(requestId) {
+            console.log('處理換貨申請，ID:', requestId);
+            // 這裡可以複用 openStatusModal，或者根據業務需求打開專門的換貨審核彈窗
+            openStatusModal(requestId);
+        }
+
+        // ==========================================
+        // 5. 事件監聽綁定
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function () {
+            const statusSelect = document.getElementById('newStatusSelect');
+            if (statusSelect) {
+                statusSelect.addEventListener('change', toggleRefundInputs);
+            }
+
+            // 徹底禁止滑鼠滾輪改變數字輸入框的數值
+            const noSpinInputs = document.querySelectorAll('.no-spin');
+            noSpinInputs.forEach(input => {
+                input.addEventListener('wheel', function (e) {
+                    e.preventDefault();
+                }, {passive: false});
+            });
+        });
+
+        // 點擊遮罩層關閉彈窗
+        document.getElementById('statusChangeModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeStatusModal();
+            }
+        });
+
+        // ESC 鍵關閉彈窗
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('statusChangeModal');
+                if (modal && modal.style.display === 'flex') {
+                    closeStatusModal();
+                }
+            }
+        });
     </script>
 </body>
 
