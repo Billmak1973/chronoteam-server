@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/admin.css">
-
     <style>
         /* 狀態徽章樣式 */
         .status-badge {
@@ -103,6 +102,14 @@
         .action-cell {
             text-align: center;
             white-space: nowrap;
+            display: flex;
+            /* 新增：使用 flex 佈局 */
+            flex-direction: column;
+            /* 新增：垂直排列 */
+            gap: 0.5rem;
+            /* 新增：按鈕之間的間距 */
+            align-items: center;
+            /* 新增：水平居中 */
         }
 
         .action-btn {
@@ -116,7 +123,14 @@
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            margin: 0 2px;
+            margin: 0;
+            /* 修改：移除水平 margin */
+            width: 100%;
+            /* 新增：按鈕填滿寬度 */
+            max-width: 120px;
+            /* 新增：限制最大寬度 */
+            justify-content: center;
+            /* 新增：文字居中 */
         }
 
         .btn-return {
@@ -152,13 +166,11 @@
         /* 展開的明細行樣式 */
         .details-row {
             display: none;
-            /* 默認隱藏 */
             background-color: #f8f9fa !important;
         }
 
         .details-row.active {
             display: table-row;
-            /* 展開時顯示 */
         }
 
         .details-content {
@@ -206,10 +218,11 @@
             font-size: 0.85rem;
             border-bottom: 1px solid #f1f3f5;
             white-space: normal;
-            /* 允許明細表格內容換行 */
         }
 
-        /* 狀態變更彈窗專屬樣式 */
+        /* ========================================== */
+        /* 狀態變更彈窗專屬樣式 (已優化滾動與佈局) */
+        /* ========================================== */
         .status-modal-overlay {
             position: fixed;
             top: 0;
@@ -229,12 +242,20 @@
         .status-modal-box {
             background: white;
             width: 90%;
-            max-width: 450px;
+            max-width: 500px;
+            /* 【修改】加寬以容納更多內容 */
+            max-height: 90vh;
+            /* 【新增】限制最大高度為視窗的 90% */
             border-radius: 16px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             animation: slideUpModal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             overflow: hidden;
+            /* 保持 hidden 以保護圓角不被滾動條切斷 */
             border-top: 5px solid var(--gold);
+            display: flex;
+            /* 【新增】使用 flex 佈局 */
+            flex-direction: column;
+            /* 【新增】垂直排列 */
         }
 
         .status-modal-header {
@@ -244,6 +265,8 @@
             display: flex;
             align-items: center;
             gap: 0.8rem;
+            flex-shrink: 0;
+            /* 【新增】防止標題區被壓縮 */
         }
 
         .status-modal-header i {
@@ -259,6 +282,10 @@
 
         .status-modal-body {
             padding: 1.5rem;
+            overflow-y: auto;
+            /* 【新增】允許內容區域垂直滾動 */
+            flex: 1;
+            /* 【新增】佔據剩餘空間 */
         }
 
         .status-modal-body p {
@@ -307,6 +334,10 @@
             display: flex;
             gap: 1rem;
             justify-content: flex-end;
+            flex-shrink: 0;
+            /* 【新增】防止按鈕區被壓縮 */
+            border-top: 1px solid #e9ecef;
+            /* 【新增】添加頂部邊框分隔 */
         }
 
         .btn-modal-cancel,
@@ -344,6 +375,25 @@
             box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
         }
 
+        /* 【新增】美化彈窗內部滾動條 */
+        .status-modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .status-modal-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .status-modal-body::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 3px;
+        }
+
+        .status-modal-body::-webkit-scrollbar-thumb:hover {
+            background: #b8972b;
+        }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -369,14 +419,83 @@
         /* 隱藏數字輸入框的上下箭頭 (適用於帶有 .no-spin 類的元素) */
         .no-spin {
             -moz-appearance: textfield;
-            /* Firefox */
         }
 
         .no-spin::-webkit-outer-spin-button,
         .no-spin::-webkit-inner-spin-button {
             -webkit-appearance: none;
-            /* Chrome, Safari, Edge */
             margin: 0;
+        }
+
+        /* === 新增：統一篩選欄樣式 === */
+        .filter-control {
+            height: 40px;
+            /* 統一高度 */
+            padding: 0 12px;
+            /* 統一內距 */
+            border: 1px solid #ced4da;
+            /* 統一邊框顏色 (淺灰) */
+            border-radius: 6px;
+            /* 統一圓角 */
+            font-size: 0.9rem;
+            background-color: #fff;
+            color: #495057;
+            outline: none;
+            box-sizing: border-box;
+            /* 關鍵：防止 padding 撐大高度 */
+            transition: all 0.2s;
+        }
+
+        /* 聚焦時的金色邊框效果 */
+        .filter-control:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        /* 統一按鈕高度和樣式 */
+        .filter-btn {
+            height: 40px;
+            /* 與輸入框高度一致 */
+            padding: 0 1.2rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        /* 查詢按鈕樣式 */
+        .btn-search {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+        }
+
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(212, 175, 55, 0.3);
+        }
+
+        /* 重置按鈕樣式 */
+        .btn-reset {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-reset:hover {
+            background: #dee2e6;
+            transform: translateY(-1px);
+        }
+
+        /* 覆蓋原有的內聯樣式干擾 */
+        select.form-control,
+        input.form-control {
+            height: auto !important;
+            /* 讓 class 控制高度 */
         }
     </style>
 </head>
@@ -399,8 +518,35 @@
 
             <div class="content-body">
                 <!-- 篩選工具欄 -->
-                <div class="filter-bar" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                    <select class="form-control" name="status" onchange="applyFilter()">
+                <!-- 篩選工具欄 -->
+                <div class="filter-bar"
+                    style="display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;">
+
+                    <!-- 1. 用戶篩選 -->
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <select class="filter-control" id="filterUserMode" onchange="toggleUserInput()"
+                            style="width: 120px;">
+                            <option value="all" th:selected="${filterUserMode == null || filterUserMode == 'all'}">全部用戶
+                            </option>
+                            <option value="specific" th:selected="${filterUserMode == 'specific'}">指定用戶</option>
+                        </select>
+                        <input type="text" id="filterUsername" class="filter-control" th:value="${filterUsername}"
+                            placeholder="輸入用戶名" style="width: 150px; display: none;"
+                            th:style="${filterUserMode == 'specific'} ? 'display: block;' : 'display: none;'">
+                    </div>
+
+                    <!-- 2. 門店篩選 -->
+                    <select class="filter-control" name="filterStoreId" style="width: 150px;">
+                        <option value="all" th:selected="${filterStoreId == null || filterStoreId == 'all'}">全部门店
+                        </option>
+                        <option th:each="store : ${storeList}" th:value="${store.id}" th:text="${store.name}"
+                            th:selected="${filterStoreId != null && filterStoreId == store.id.toString()}">
+                            門店名稱
+                        </option>
+                    </select>
+
+                    <!-- 3. 狀態篩選 (注意：刪除了 onchange) -->
+                    <select class="filter-control" name="status" style="width: 130px;">
                         <option value="">全部狀態</option>
                         <option value="PENDING" th:selected="${filterStatus == 'PENDING'}">待處理</option>
                         <option value="WAITING_PAYMENT" th:selected="${filterStatus == 'WAITING_PAYMENT'}">待補差價</option>
@@ -408,14 +554,26 @@
                         <option value="REJECTED" th:selected="${filterStatus == 'REJECTED'}">已拒絕</option>
                         <option value="CANCELLED" th:selected="${filterStatus == 'CANCELLED'}">已取消</option>
                     </select>
-                    <select class="form-control" name="type" onchange="applyFilter()">
+
+                    <!-- 4. 類型篩選 (注意：刪除了 onchange) -->
+                    <select class="filter-control" name="type" style="width: 120px;">
                         <option value="">全部類型</option>
                         <option value="RETURN" th:selected="${filterType == 'RETURN'}">退貨</option>
                         <option value="EXCHANGE" th:selected="${filterType == 'EXCHANGE'}">換貨</option>
                     </select>
-                    <button class="btn btn-primary" onclick="resetFilter()">
-                        <i class="fas fa-redo"></i> 重置
-                    </button>
+
+                    <!-- 5. 按鈕區域 -->
+                    <div style="display: flex; gap: 0.5rem; margin-left: auto;"> <!-- margin-left: auto 把按鈕推到右邊 -->
+                        <!-- 新增：確定/查詢按鈕 -->
+                        <button class="filter-btn btn-search" onclick="applyFilter()">
+                            <i class="fas fa-search"></i> 查詢
+                        </button>
+
+                        <!-- 重置按鈕 -->
+                        <button class="filter-btn btn-reset" onclick="resetFilter()">
+                            <i class="fas fa-redo"></i> 重置
+                        </button>
+                    </div>
                 </div>
 
                 <!-- 數據表格 -->
@@ -443,9 +601,9 @@
                             </tr>
 
                             <!--
-                        核心循環結構：使用 th:block 確保主行和詳情行在 DOM 中緊密相連
-                        這樣 JS 可以通過 nextElementSibling 快速找到詳情行，無需 ID 查找
-                    -->
+                核心循環結構：使用 th:block 確保主行和詳情行在 DOM 中緊密相連
+                這樣 JS 可以通過 nextElementSibling 快速找到詳情行，無需 ID 查找
+            -->
                             <th:block th:each="req : ${afterSalesList}">
                                 <!-- 1. 主行 (顯示核心信息) -->
                                 <tr>
@@ -471,16 +629,31 @@
 
                                     <!-- 操作列 -->
                                     <td class="action-cell">
+                                        <!-- 退貨按鈕 -->
                                         <button th:if="${req.requestType == 'RETURN' and req.status == 'PENDING'}"
-                                            class="action-btn btn-return"
-                                            th:onclick="'openStatusModal(' + ${req.requestId} + ')'">
+                                            class="action-btn btn-return" th:data-request-id="${req.requestId}"
+                                            th:data-request-type="${req.requestType}"
+                                            onclick="openStatusModalFromData(this)">
                                             <i class="fas fa-clipboard-check"></i> 審核退貨
                                         </button>
 
+                                        <!-- 換貨按鈕 -->
                                         <button th:if="${req.requestType == 'EXCHANGE' and req.status == 'PENDING'}"
-                                            class="action-btn btn-exchange"
-                                            th:onclick="'handleExchangeRequest(' + ${req.requestId} + ')'">
+                                            class="action-btn btn-exchange" th:data-request-id="${req.requestId}"
+                                            th:data-request-type="${req.requestType}"
+                                            onclick="openStatusModalFromData(this)">
                                             <i class="fas fa-exchange-alt"></i> 審核換貨
+                                        </button>
+
+                                        <!-- 轉換類型按鈕 (僅在 PENDING 且無共存衝突時顯示) -->
+                                        <button th:if="${req.status == 'PENDING' and req.canConvertType}"
+                                            class="action-btn"
+                                            style="background: linear-gradient(135deg, #6f42c1 0%, #d63384 100%); color: white;"
+                                            th:data-request-id="${req.requestId}"
+                                            th:data-request-type="${req.requestType}"
+                                            onclick="openConvertTypeModalFromData(this)" title="轉換申請類型">
+                                            <i class="fas fa-sync-alt"></i> 轉為<span
+                                                th:text="${req.requestType == 'RETURN' ? '換貨' : '退貨'}"></span>
                                         </button>
 
                                         <button class="action-btn btn-details" onclick="toggleDetails(this)">
@@ -579,7 +752,8 @@
 
                                                         <!-- 情況 B：未入庫，顯示「確認入庫」按鈕 -->
                                                         <button th:unless="${detail.isStockedIn}" class="btn-sm"
-                                                            th:onclick="'confirmItemStockIn(' + ${detail.requestItemId} + ')'"
+                                                            th:data-request-item-id="${detail.requestItemId}"
+                                                            onclick="confirmItemStockInFromData(this)"
                                                             style="background: var(--gold); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem; margin: 0 auto;">
                                                             <i class="fas fa-box-open"></i> 確認入庫
                                                         </button>
@@ -619,13 +793,15 @@
     <!-- 售後狀態變更精美彈窗 -->
     <!-- ========================================== -->
     <div id="statusChangeModal" class="status-modal-overlay" style="display: none;">
-        <div class="status-modal-box">
+        <div class="status-modal-box" style="max-width: 500px;"> <!-- 稍微加寬以容納新表單 -->
             <div class="status-modal-header">
                 <i class="fas fa-exchange-alt"></i>
-                <h3>變更售後申請狀態</h3>
+                <h3 id="modalTitle">變更售後申請狀態</h3>
             </div>
             <div class="status-modal-body">
                 <p>請為申請 <strong id="modalRequestId" style="color: var(--gold);"></strong> 選擇新的處理狀態：</p>
+
+                <!-- 1. 狀態選擇 -->
                 <div class="form-group-modal" style="margin-bottom: 1rem;">
                     <select id="newStatusSelect" class="custom-status-select" onchange="toggleRefundInputs()">
                         <option value="PENDING">PENDING (待處理)</option>
@@ -635,7 +811,53 @@
                     </select>
                 </div>
 
-                <!-- 【新增】退款金額輸入區域，預設隱藏 -->
+                <!-- 2. 【新增】換貨商品選擇區域 (預設隱藏，僅換貨+已完成時顯示) -->
+                <div id="exchangeDetailsContainer"
+                    style="display: none; margin-top: 1rem; padding: 1rem; background: #f0fcfd; border-radius: 8px; border: 1px solid #bee5eb;">
+                    <p style="font-size: 0.9rem; color: #0c5460; font-weight: 600; margin-bottom: 0.8rem;">
+                        <i class="fas fa-exchange-alt"></i> 請選擇換貨的新商品及數量：
+                    </p>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85rem; color: #495057; display: block; margin-bottom: 0.4rem;">
+                            <i class="fas fa-crown" style="color: var(--gold);"></i> 品牌 <span
+                                style="color: var(--accent);">*</span>
+                        </label>
+                        <select id="exchangeBrandSelect" class="form-control" onchange="loadExchangeProductsByBrand()"
+                            required
+                            style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px; font-size: 0.95rem;">
+                            <option value="">請選擇品牌</option>
+                            <!-- 確保後端 manageAfterSalesPage 有傳遞 allBrands，若無則依賴 JS 動態加載 -->
+                            <option th:each="brand : ${allBrands}" th:value="${brand}" th:text="${brand}">品牌名稱</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.85rem; color: #495057; display: block; margin-bottom: 0.4rem;">
+                            <i class="fas fa-box" style="color: var(--gold);"></i> 商品 <span
+                                style="color: var(--accent);">*</span>
+                        </label>
+                        <select id="exchangeProductSelect" class="form-control" required
+                            style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px; font-size: 0.95rem;">
+                            <option value="">請先選擇品牌</option>
+                        </select>
+                        <small style="color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.3rem;">
+                            <i class="fas fa-info-circle"></i> 選擇品牌後自動加載商品列表
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="font-size: 0.85rem; color: #495057; display: block; margin-bottom: 0.4rem;">
+                            <i class="fas fa-hashtag" style="color: var(--gold);"></i> 換貨數量 <span
+                                style="color: var(--accent);">*</span>
+                        </label>
+                        <input type="number" id="exchangeQuantity" class="form-control no-spin" min="1" required
+                            placeholder="請輸入換貨數量"
+                            style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px; font-size: 0.95rem;">
+                    </div>
+                </div>
+
+                <!-- 3. 【原有】退款金額輸入區域 (預設隱藏) -->
                 <div id="refundDetailsContainer"
                     style="display: none; margin-top: 1rem; padding: 1rem; background: #fff9f0; border-radius: 8px; border: 1px solid #ffeeba;">
                     <p style="font-size: 0.9rem; color: #856404; font-weight: 600; margin-bottom: 0.8rem;">
@@ -643,6 +865,75 @@
                     </p>
                     <div id="refundItemsList">
                         <!-- JS 將動態填充這裡的內容 -->
+                    </div>
+                </div>
+
+                <!-- 4. 【新增】換貨差價計算顯示區域 (預設隱藏，僅換貨+已完成時顯示) -->
+                <div id="exchangeDiffContainer"
+                    style="display: none; margin-top: 1rem; padding: 1rem; background: #e7f3ff; border-radius: 8px; border: 1px solid #b3d9ff;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
+                        <input type="checkbox" id="enableExchangeDiffCalc" onchange="toggleExchangeDiffCalc()"
+                            style="width: 18px; height: 18px; cursor: pointer;">
+                        <label for="enableExchangeDiffCalc"
+                            style="margin: 0; font-size: 0.9rem; color: #0c5460; font-weight: 600; cursor: pointer;">
+                            <i class="fas fa-calculator"></i> 啟用換貨差價自動計算
+                        </label>
+                    </div>
+
+                    <div id="exchangeDiffContent" style="display: none;">
+                        <div style="font-size: 0.85rem; color: #495057; margin-bottom: 0.5rem;">
+                            <strong>計算公式：</strong>（新商品價格 × 換貨數量）- 舊商品退款金額
+                        </div>
+
+                        <div style="background: white; padding: 0.8rem; border-radius: 6px; margin-bottom: 0.5rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px dashed #dee2e6;">
+                                <span style="font-size: 0.85rem; color: #6c757d;">新商品總價：</span>
+                                <span id="newProductTotal" style="font-weight: 600; color: var(--primary);">HK$
+                                    0.00</span>
+                            </div>
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; border-bottom: 1px dashed #dee2e6;">
+                                <span style="font-size: 0.85rem; color: #6c757d;">舊商品退款：</span>
+                                <span id="oldProductRefund" style="font-weight: 600; color: #dc3545;">- HK$ 0.00</span>
+                            </div>
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; margin-top: 0.5rem; border-top: 2px solid var(--gold);">
+                                <span style="font-size: 1rem; font-weight: 700; color: var(--primary);">顧客需補差價：</span>
+                                <span id="finalDiffAmount"
+                                    style="font-size: 1.2rem; font-weight: 700; color: var(--accent);">HK$ 0.00</span>
+                            </div>
+                            <!-- 顧客實際支付金額輸入框 -->
+                            <div style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px dashed #dee2e6;">
+                                <label
+                                    style="font-size: 0.9rem; color: #495057; font-weight: 600; display: block; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-hand-holding-usd" style="color: var(--gold);"></i> 顧客實際支付金額：
+                                </label>
+                                <input type="number" id="customerPaidAmount" class="form-control no-spin" min="0"
+                                    step="0.01" placeholder="請輸入顧客實際給付的金額"
+                                    style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px; font-size: 1rem; font-weight: 600;"
+                                    oninput="calculateBalance()">
+                            </div>
+
+                            <!-- 餘額計算結果顯示 -->
+                            <div id="balanceDisplay"
+                                style="margin-top: 0.8rem; padding: 0.8rem; background: #f8f9fa; border-radius: 6px; border: 1px solid #dee2e6; display: none;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-size: 1rem; font-weight: 700; color: var(--primary);">找零 /
+                                        餘額：</span>
+                                    <span id="balanceAmount" style="font-size: 1.3rem; font-weight: 700;">HK$
+                                        0.00</span>
+                                </div>
+                                <div id="balanceHint"
+                                    style="font-size: 0.85rem; margin-top: 0.4rem; text-align: right; font-weight: 600;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="diffHint"
+                            style="font-size: 0.8rem; color: #856404; padding: 0.5rem; background: rgba(212, 175, 55, 0.1); border-radius: 4px; display: none;">
+                            <i class="fas fa-info-circle"></i> <span id="diffHintText"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -654,6 +945,64 @@
             </div>
         </div>
     </div>
+
+    <!-- ========================================== -->
+    <!-- 轉換類型確認精美彈窗 -->
+    <!-- ========================================== -->
+    <div id="convertTypeModal" class="status-modal-overlay" style="display: none;">
+        <div class="status-modal-box" style="max-width: 420px;">
+            <div class="status-modal-header">
+                <i class="fas fa-sync-alt" style="color: #6f42c1;"></i>
+                <h3>確認轉換申請類型</h3>
+            </div>
+            <div class="status-modal-body">
+                <p id="convertTypeMessage"
+                    style="text-align: center; font-size: 1.05rem; margin-bottom: 1.2rem; line-height: 1.6;"></p>
+                <div
+                    style="background: rgba(220, 53, 69, 0.1); padding: 0.8rem; border-radius: 6px; border-left: 4px solid #dc3545; font-size: 0.85rem; color: #721c24; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>注意：此操作不可逆，且會改變後續的審核流程！</span>
+                </div>
+            </div>
+            <div class="status-modal-actions">
+                <button class="btn-modal-cancel" onclick="closeConvertTypeModal()">
+                    <i class="fas fa-times"></i> 否，取消
+                </button>
+                <button class="btn-modal-confirm" onclick="executeConvertType()"
+                    style="background: linear-gradient(135deg, #6f42c1 0%, #d63384 100%);">
+                    <i class="fas fa-check"></i> 是，確認轉換
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!--  確認入庫確認彈窗 -->
+    <!-- ========================================== -->
+    <div id="stockInConfirmModal" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal-box" style="max-width: 450px; border-top: 5px solid var(--gold);">
+            <div class="modal-icon" style="background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);">
+                <i class="fas fa-box-open"></i>
+            </div>
+            <h3 class="modal-title" style="color: var(--primary); margin-bottom: 1rem;">確認商品已入庫？</h3>
+            <p class="modal-message"
+                style="color: var(--gray); font-size: 1rem; line-height: 1.6; margin-bottom: 1.5rem;">
+                請確認該退貨商品已經實際放入門店倉庫。<br>
+                確認後，系統將自動更新門店庫存並記錄入庫日誌。
+            </p>
+            <div class="modal-actions" style="display: flex; gap: 1rem; justify-content: center;">
+                <button class="btn-cancel" onclick="closeStockInConfirmModal()"
+                    style="padding: 0.7rem 1.5rem; background: #e9ecef; color: var(--primary); border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button class="btn-confirm" onclick="executeConfirmItemStockIn()"
+                    style="padding: 0.7rem 1.5rem; background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);">
+                    <i class="fas fa-check"></i> 確認已入庫
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 引入公共彈窗 -->
     <div th:replace="~{fragments/common :: modals}"></div>
 
@@ -661,36 +1010,87 @@
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>
 
-    <!-- 第一部分：利用 Thymeleaf 将后端数据直接序列化为 JS 对象 -->
+    <!-- ========================================== -->
+    <!-- 核心交互邏輯 (已合併並修復重複聲明問題) -->
+    <!-- ========================================== -->
     <script th:inline="javascript">
-        // 直接接收 Controller 传来的 Map<Long, List<Map>>，Thymeleaf 会自动将其转换为合法的 JS 对象
-        const afterSalesDataMap = /*[[${itemsDataMap}]]*/ {};
-
-        console.log('✅ afterSalesDataMap 初始化成功:', afterSalesDataMap);
-    </script>
-
-    <!-- 第二部分：核心交互邏輯 -->
-    <script>
-        // 全局變量存儲當前操作的 requestId
+        // ==========================================
+        // 0. 全局變量初始化
+        // ==========================================
         let currentProcessingRequestId = null;
+        let currentRequestType = 'RETURN'; // 記錄當前操作是 RETURN 還是 EXCHANGE
 
+        // 全局變量：暫存待轉換的申請信息
+        let pendingConvertRequestId = null;
+        let pendingConvertCurrentType = null;
+
+        // 全局變量：暫存當前要入庫的 requestItemId
+        let pendingStockInItemId = null;
+        // 【修復】：只聲明一次 afterSalesDataMap
+        const afterSalesDataMap = /*[[${itemsDataMap}]]*/ {};
+        console.log('✅ afterSalesDataMap 初始化成功:', afterSalesDataMap);
+
+        // 控制用户名输入框的显示/隐藏
+        function toggleUserInput() {
+            const mode = document.getElementById('filterUserMode').value;
+            const input = document.getElementById('filterUsername');
+            if (mode === 'specific') {
+                input.style.display = 'block';
+                input.focus();
+            } else {
+                input.style.display = 'none';
+                input.value = ''; // 重置时清空
+            }
+        }
+
+        // ==========================================
+        // 1. 篩選與列表基礎交互
+        // =========================================
         // ==========================================
         // 1. 篩選與列表基礎交互
         // ==========================================
         function applyFilter() {
+            // 獲取所有篩選條件的值
             const status = document.querySelector('select[name="status"]').value;
             const type = document.querySelector('select[name="type"]').value;
+
+            // 【新增】獲取用戶和門店篩選值
+            const userMode = document.getElementById('filterUserMode').value;
+            const username = document.getElementById('filterUsername').value.trim();
+            const storeId = document.querySelector('select[name="filterStoreId"]').value;
+
+            // 開始拼接 URL
             let url = '/admin/after-sales?page=1';
+
             if (status) url += '&status=' + status;
             if (type) url += '&type=' + type;
+
+            // 【新增】拼接新參數
+            url += '&filterUserMode=' + userMode;
+            if (userMode === 'specific' && username) {
+                url += '&filterUsername=' + encodeURIComponent(username);
+            }
+            if (storeId !== 'all') {
+                url += '&filterStoreId=' + storeId;
+            }
+
+            // 跳轉
             window.location.href = url;
         }
 
         function resetFilter() {
+            // 重置所有下拉框和輸入框
+            document.getElementById('filterUserMode').value = 'all';
+            document.getElementById('filterUsername').value = '';
+            document.getElementById('filterUsername').style.display = 'none';
+            document.querySelector('select[name="filterStoreId"]').value = 'all';
+            document.querySelector('select[name="status"]').value = '';
+            document.querySelector('select[name="type"]').value = '';
+
+            // 跳轉回首頁 (不加任何參數)
             window.location.href = '/admin/after-sales?page=1';
         }
 
-        // 展開/收起明細行邏輯 (利用 DOM 相鄰關係)
         function toggleDetails(btn) {
             const mainRow = btn.closest('tr');
             const detailsRow = mainRow.nextElementSibling;
@@ -707,17 +1107,29 @@
         }
 
         // ==========================================
-        // 2. 彈窗控制與退款輸入框渲染
+        // 2. 彈窗控制與狀態顯示邏輯
         // ==========================================
-        function openStatusModal(requestId) {
+        function openStatusModal(requestId, requestType) {
             currentProcessingRequestId = requestId;
+            currentRequestType = requestType || 'RETURN';
+
             document.getElementById('modalRequestId').textContent = '#' + requestId;
 
-            // 重置下拉選單為預設值 (COMPLETED)
-            const statusSelect = document.getElementById('newStatusSelect');
-            statusSelect.value = 'COMPLETED';
+            // 動態改變標題文字
+            const modalTitle = document.querySelector('#statusChangeModal .status-modal-header h3');
+            if (currentRequestType === 'EXCHANGE') {
+                modalTitle.textContent = '審核換貨申請';
+            } else {
+                modalTitle.textContent = '審核退貨申請';
+            }
 
-            // 打開時立即觸發一次退款區塊的顯示/隱藏判斷
+            // 重置表單輸入
+            document.getElementById('newStatusSelect').value = 'COMPLETED';
+            document.getElementById('exchangeBrandSelect').value = '';
+            document.getElementById('exchangeProductSelect').innerHTML = '<option value="">請先選擇品牌</option>';
+            document.getElementById('exchangeQuantity').value = '';
+
+            // 打開時立即觸發一次顯示判斷
             toggleRefundInputs();
 
             const modal = document.getElementById('statusChangeModal');
@@ -730,21 +1142,86 @@
             modal.style.display = 'none';
             document.body.style.overflow = ''; // 恢復背景滾動
             currentProcessingRequestId = null;
+            currentRequestType = 'RETURN'; // 重置為默認
         }
 
         function toggleRefundInputs() {
             const newStatus = document.getElementById('newStatusSelect').value;
-            const container = document.getElementById('refundDetailsContainer');
+            const refundContainer = document.getElementById('refundDetailsContainer');
+            const exchangeContainer = document.getElementById('exchangeDetailsContainer');
+            const hintTitle = refundContainer.querySelector('p');
             const listContainer = document.getElementById('refundItemsList');
 
+            // 1. 處理退款/結算金額顯示
             if (newStatus === 'COMPLETED') {
-                container.style.display = 'block';
+                refundContainer.style.display = 'block';
+                if (currentRequestType === 'EXCHANGE') {
+                    hintTitle.innerHTML = '<i class="fas fa-calculator"></i> 請填寫最終結算金額 (正數為顧客需補差價，負數為平台需退款)：';
+                } else {
+                    hintTitle.innerHTML = '<i class="fas fa-calculator"></i> 請填寫最終退款金額 (請參考下方原價)：';
+                }
                 renderRefundInputs(currentProcessingRequestId, listContainer);
             } else {
-                container.style.display = 'none';
+                refundContainer.style.display = 'none';
+            }
+
+            // 2. 處理換貨商品選擇的顯示 (僅在換貨且狀態為已完成時顯示)
+            if (currentRequestType === 'EXCHANGE' && newStatus === 'COMPLETED') {
+                exchangeContainer.style.display = 'block';
+                exchangeDiffContainer.style.display = 'block'; // 顯示差價計算容器
+
+                // 每次打開時重置 checkbox 狀態，防止殘留
+                document.getElementById('enableExchangeDiffCalc').checked = false;
+                document.getElementById('exchangeDiffContent').style.display = 'none';
+            } else {
+                exchangeContainer.style.display = 'none';
+                exchangeDiffContainer.style.display = 'none'; // 隱藏差價計算容器
             }
         }
 
+        // ==========================================
+        // 3. 動態加載換貨商品列表
+        // ==========================================
+        async function loadExchangeProductsByBrand() {
+            const brand = document.getElementById('exchangeBrandSelect').value;
+            const productSelect = document.getElementById('exchangeProductSelect');
+
+            if (!brand) {
+                productSelect.innerHTML = '<option value="">請先選擇品牌</option>';
+                return;
+            }
+
+            productSelect.innerHTML = '';
+
+            try {
+                const response = await fetch(`/brands/${encodeURIComponent(brand)}`);
+                const result = await response.json();
+
+                if (result.success && result.data && result.data.length > 0) {
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = '請選擇商品';
+                    productSelect.appendChild(defaultOption);
+
+                    result.data.forEach(product => {
+                        const option = document.createElement('option');
+                        option.value = product.productId;
+                        option.textContent = `${product.description} (HK$ ${product.price})`;
+                        productSelect.appendChild(option);
+                    });
+                } else {
+                    productSelect.innerHTML = '<option value="">該品牌下暫無可用商品</option>';
+                }
+            } catch (error) {
+                console.error('加載商品列表失敗:', error);
+                productSelect.innerHTML = '<option value="">獲取商品失敗，請重試</option>';
+            }
+        }
+
+
+        // ==========================================
+        // 4. 渲染退款輸入框
+        // ==========================================
         function renderRefundInputs(requestId, container) {
             const items = afterSalesDataMap[requestId] || [];
             if (!items || items.length === 0) {
@@ -754,37 +1231,168 @@
 
             let html = '';
             items.forEach(item => {
-                // 確保 originalPrice 是數字，如果是字符串則轉換
                 const originalPrice = parseFloat(item.originalPrice) || 0;
                 const currentRefund = (item.finalSettleAmount !== null && item.finalSettleAmount !== undefined)
                     ? item.finalSettleAmount : '';
 
                 html += `
-            <div style="margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px dashed #dee2e6;">
-                <div style="font-size: 0.85rem; color: var(--primary); font-weight: 600; margin-bottom: 0.3rem;">
-                    ${item.productName} (數量: ${item.returnQuantity})
+                <div style="margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px dashed #dee2e6;">
+                    <div style="font-size: 0.85rem; color: var(--primary); font-weight: 600; margin-bottom: 0.3rem;">
+                        ${item.productName} (數量: ${item.returnQuantity})
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <span style="font-size: 0.85rem; color: #28a745; font-weight: 600; min-width: 120px; background: #d4edda; padding: 0.3rem 0.6rem; border-radius: 4px;">
+                            <i class="fas fa-tag"></i> 原價: HK$ ${originalPrice.toFixed(2)}
+                        </span>
+                        <input type="number"
+                               class="refund-amount-input no-spin"
+                               data-request-item-id="${item.requestItemId}"
+                               value="${currentRefund}"
+                               step="0.01"
+                               min="0"
+                               placeholder="輸入金額"
+                               style="flex: 1; min-width: 150px; padding: 0.5rem; border: 2px solid #ced4da; border-radius: 6px; font-size: 0.95rem; font-weight: 600;">
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                    <span style="font-size: 0.85rem; color: #28a745; font-weight: 600; min-width: 120px; background: #d4edda; padding: 0.3rem 0.6rem; border-radius: 4px;">
-                        <i class="fas fa-tag"></i> 原價: HK$ ${originalPrice.toFixed(2)}
-                    </span>
-                    <input type="number"
-                           class="refund-amount-input no-spin"
-                           data-request-item-id="${item.requestItemId}"
-                           value="${currentRefund}"
-                           step="0.01"
-                           min="0"
-                           placeholder="輸入退款金額"
-                           style="flex: 1; min-width: 150px; padding: 0.5rem; border: 2px solid #ced4da; border-radius: 6px; font-size: 0.95rem; font-weight: 600;">
-                </div>
-            </div>
             `;
             });
             container.innerHTML = html;
         }
 
         // ==========================================
-        // 3. 提交狀態更新 (含退款金額收集)
+        // 5. 換貨差價計算功能 (新增)
+        // ==========================================
+        function toggleExchangeDiffCalc() {
+            const checkbox = document.getElementById('enableExchangeDiffCalc');
+            const content = document.getElementById('exchangeDiffContent');
+
+            if (checkbox.checked) {
+                content.style.display = 'block';
+                calculateExchangeDiff();
+            } else {
+                content.style.display = 'none';
+            }
+        }
+
+        function calculateExchangeDiff() {
+            const productSelect = document.getElementById('exchangeProductSelect');
+            const quantityInput = document.getElementById('exchangeQuantity');
+            if (!productSelect || !quantityInput) return;
+
+            const selectedOption = productSelect.selectedOptions[0];
+            const quantity = parseInt(quantityInput.value) || 0;
+
+            // 從 option text 中提取價格 (格式: "商品描述 (HK$ 12345)")
+            let newProductPrice = 0;
+            if (selectedOption && selectedOption.value) {
+                const priceMatch = selectedOption.textContent.match(/HK\$\s*([\d,]+)/);
+                if (priceMatch) {
+                    newProductPrice = parseFloat(priceMatch[1].replace(/,/g, ''));
+                }
+            }
+
+            const newProductTotal = newProductPrice * quantity;
+
+            // 獲取舊商品退款總額
+            let oldProductRefund = 0;
+            const refundInputs = document.querySelectorAll('.refund-amount-input');
+            refundInputs.forEach(input => {
+                oldProductRefund += parseFloat(input.value) || 0;
+            });
+
+            // 計算差價
+            const diff = newProductTotal - oldProductRefund;
+
+            // 更新顯示
+            document.getElementById('newProductTotal').textContent = 'HK$ ' + newProductTotal.toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('oldProductRefund').textContent = '- HK$ ' + oldProductRefund.toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            const finalDiffEl = document.getElementById('finalDiffAmount');
+            const diffHintEl = document.getElementById('diffHint');
+            const diffHintTextEl = document.getElementById('diffHintText');
+
+            if (diff > 0) {
+                finalDiffEl.textContent = '+ HK$ ' + diff.toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                finalDiffEl.style.color = '#dc3545'; // 紅色
+                diffHintEl.style.display = 'block';
+                diffHintEl.style.background = 'rgba(220, 53, 69, 0.1)';
+                diffHintTextEl.textContent = `顧客需要補差價 HK$ ${diff.toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            } else if (diff < 0) {
+                finalDiffEl.textContent = '- HK$ ' + Math.abs(diff).toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                finalDiffEl.style.color = '#28a745'; // 綠色
+                diffHintEl.style.display = 'block';
+                diffHintEl.style.background = 'rgba(40, 167, 69, 0.1)';
+                diffHintTextEl.textContent = `平台需要退款 HK$ ${Math.abs(diff).toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2})} 給顧客`;
+            } else {
+                finalDiffEl.textContent = 'HK$ 0.00';
+                finalDiffEl.style.color = '#6c757d'; // 灰色
+                diffHintEl.style.display = 'block';
+                diffHintEl.style.background = 'rgba(108, 117, 125, 0.1)';
+                diffHintTextEl.textContent = '新舊商品價格相等，無需補差價';
+            }
+
+            // 【新增】如果餘額顯示區域目前是打開的，當差價改變時，自動重新計算餘額
+            const balanceDisplay = document.getElementById('balanceDisplay');
+            if (balanceDisplay && balanceDisplay.style.display !== 'none') {
+                calculateBalance();
+            }
+        }
+
+        // 計算找零/餘額的專屬函數
+        function calculateBalance() {
+            const paidInput = document.getElementById('customerPaidAmount');
+            const balanceDisplay = document.getElementById('balanceDisplay');
+            const balanceAmountEl = document.getElementById('balanceAmount');
+            const balanceHintEl = document.getElementById('balanceHint');
+
+            if (!paidInput || !balanceDisplay) return;
+
+            const paidAmount = parseFloat(paidInput.value) || 0;
+
+            // 獲取「顧客需補差價」的數值 (處理可能存在的 "+ HK$ " 或 "- HK$ " 字串)
+            const diffText = document.getElementById('finalDiffAmount').textContent;
+            const diffMatch = diffText.match(/([+-]?)\s*HK\$\s*([\d,]+\.?\d*)/);
+            let requiredDiff = 0;
+            if (diffMatch) {
+                requiredDiff = parseFloat(diffMatch[2].replace(/,/g, ''));
+                if (diffMatch[1] === '-') {
+                    requiredDiff = -requiredDiff;
+                }
+            }
+
+            // 當輸入框有內容時才顯示餘額區塊
+            if (paidInput.value.trim() !== '') {
+                balanceDisplay.style.display = 'block';
+
+                // 核心公式：顧客給的錢 - 顧客需要補的差價 = 餘額
+                const balance = paidAmount - requiredDiff;
+
+                balanceAmountEl.textContent = 'HK$ ' + Math.abs(balance).toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+                if (balance > 0) {
+                    // 給多了，需要找零
+                    balanceAmountEl.style.color = '#28a745'; // 綠色
+                    balanceHintEl.textContent = '✅ 顧客給多了，需找零 HK$ ' + balance.toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    balanceHintEl.style.color = '#28a745';
+                } else if (balance < 0) {
+                    // 給少了，還需要補
+                    balanceAmountEl.style.color = '#dc3545'; // 紅色
+                    balanceHintEl.textContent = '⚠️ 顧客給少了，還差 HK$ ' + Math.abs(balance).toLocaleString('zh-HK', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    balanceHintEl.style.color = '#dc3545';
+                } else {
+                    // 剛好
+                    balanceAmountEl.style.color = '#6c757d'; // 灰色
+                    balanceHintEl.textContent = '✅ 金額剛好，無需找零';
+                    balanceHintEl.style.color = '#6c757d';
+                }
+            } else {
+                // 輸入框為空時隱藏
+                balanceDisplay.style.display = 'none';
+            }
+        }
+
+        // ==========================================
+        // 5. 提交狀態更新
         // ==========================================
         async function confirmStatusUpdate() {
             if (!currentProcessingRequestId) return;
@@ -792,6 +1400,7 @@
             const newStatus = document.getElementById('newStatusSelect').value;
             let itemRefundAmounts = {};
 
+            // 1. 收集舊商品的退款金額
             if (newStatus === 'COMPLETED') {
                 const inputs = document.querySelectorAll('.refund-amount-input');
                 inputs.forEach(input => {
@@ -803,18 +1412,47 @@
                 });
             }
 
+            // 2. 【核心新增】：如果是換貨，收集新換購商品的資訊
+            let exchangeData = null;
+            if (currentRequestType === 'EXCHANGE' && newStatus === 'COMPLETED') {
+                const exchangeProductSelect = document.getElementById('exchangeProductSelect');
+                const exchangeQuantityInput = document.getElementById('exchangeQuantity');
+
+                if (exchangeProductSelect && exchangeProductSelect.value) {
+                    const newProductId = exchangeProductSelect.value;
+                    const newQuantity = parseInt(exchangeQuantityInput.value) || 0;
+
+                    // 從下拉框文本中提取單價 (格式: "商品描述 (HK$ 50000)")
+                    const selectedOption = exchangeProductSelect.selectedOptions[0];
+                    const priceMatch = selectedOption.textContent.match(/HK\$\s*([\d,]+)/);
+                    const unitPrice = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : 0;
+
+                    exchangeData = {
+                        productId: newProductId,
+                        quantity: newQuantity,
+                        unitPrice: unitPrice,
+                        totalPrice: unitPrice * newQuantity // 例如: 50000
+                    };
+                }
+            }
+
             try {
+                // 3. 構建 Payload，將 exchangeData 一起傳給後端
+                const payload = {
+                    newStatus: newStatus,
+                    itemRefundAmounts: itemRefundAmounts
+                };
+                if (exchangeData) {
+                    payload.exchangeData = exchangeData;
+                }
+
                 const response = await fetch(`/admin/api/after-sales/${currentProcessingRequestId}/status`, {
                     method: 'PUT',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        newStatus: newStatus,
-                        itemRefundAmounts: itemRefundAmounts
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 const result = await response.json();
-
                 if (response.ok && result.success) {
                     if (typeof showNotification !== 'undefined') {
                         showNotification('✅ ' + result.message);
@@ -842,16 +1480,194 @@
         }
 
         // ==========================================
-        // 4. 補充缺失的換貨審核函數
+        // 6. 輔助函數 (兼容 HTML 中的 data-* 屬性調用)
         // ==========================================
-        function handleExchangeRequest(requestId) {
-            console.log('處理換貨申請，ID:', requestId);
-            // 這裡可以複用 openStatusModal，或者根據業務需求打開專門的換貨審核彈窗
-            openStatusModal(requestId);
+        function openStatusModalFromData(btn) {
+            const requestId = btn.getAttribute('data-request-id');
+            const requestType = btn.getAttribute('data-request-type');
+            openStatusModal(requestId, requestType);
+        }
+
+        function confirmItemStockInFromData(btn) {
+            const requestItemId = btn.getAttribute('data-request-item-id');
+            confirmItemStockIn(requestItemId);
+        }
+
+        // 【補充】確認入庫的實際執行函數 (防止未定義報錯)
+        async function confirmItemStockIn(requestItemId) {
+            if (!confirm('確定要將此商品標記為已入庫嗎？')) return;
+            try {
+                // 請根據你實際的後端 API 路徑調整這裡
+                const response = await fetch(`/admin/api/after-sales/item/${requestItemId}/stock-in`, {
+                    method: 'PUT'
+                });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    if (typeof showNotification !== 'undefined') showNotification('✅ 入庫成功');
+                    else alert('✅ 入庫成功');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    if (typeof showNotification !== 'undefined') showNotification('❌ ' + (result.message || '入庫失敗'), true);
+                    else alert('❌ ' + (result.message || '入庫失敗'));
+                }
+            } catch (error) {
+                console.error('入庫請求錯誤:', error);
+                if (typeof showNotification !== 'undefined') showNotification('❌ 網絡錯誤，請稍後重試', true);
+                else alert('❌ 網絡錯誤，請稍後重試');
+            }
+        }
+
+        /**
+         * 輔助函數：從 DOM 元素的 data-* 屬性中讀取數據並調用轉換邏輯
+         * (用於解決 Thymeleaf 不允許在 onclick 中直接拼接字符串變量的安全限制)
+         */
+        function openConvertTypeModalFromData(btn) {
+            const requestId = btn.getAttribute('data-request-id');
+            const requestType = btn.getAttribute('data-request-type');
+            openConvertTypeModal(requestId, requestType);
+        }
+
+        /**
+         * 1. 打開轉換類型確認彈窗
+         */
+        function openConvertTypeModal(requestId, currentType) {
+            pendingConvertRequestId = requestId;
+            pendingConvertCurrentType = currentType;
+
+            const targetType = currentType === 'RETURN' ? '換貨' : '退貨';
+            const currentTypeName = currentType === 'RETURN' ? '退貨' : '換貨';
+
+            // 動態設置提示文字
+            document.getElementById('convertTypeMessage').innerHTML = `
+        確定要將此申請從「<strong style="color: #dc3545;">${currentTypeName}</strong>」<br>
+        轉換為「<strong style="color: #17a2b8;">${targetType}</strong>」嗎？
+    `;
+
+            // 顯示彈窗
+            document.getElementById('convertTypeModal').style.display = 'flex';
+        }
+
+        /**
+         * 2. 關閉轉換類型確認彈窗 (點擊「否」或遮罩層時調用)
+         */
+        function closeConvertTypeModal() {
+            document.getElementById('convertTypeModal').style.display = 'none';
+            pendingConvertRequestId = null;
+            pendingConvertCurrentType = null;
+        }
+
+        /**
+         * 3. 執行轉換邏輯 (點擊「是」時調用)
+         */
+        async function executeConvertType() {
+            if (!pendingConvertRequestId) return;
+
+            const requestId = pendingConvertRequestId;
+            const currentType = pendingConvertCurrentType;
+
+            // 先關閉彈窗
+            closeConvertTypeModal();
+
+            try {
+                const response = await fetch(`/admin/api/after-sales/${requestId}/convert-type`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (typeof showNotification !== 'undefined') {
+                        showNotification('✅ ' + result.message);
+                    } else {
+                        alert('✅ ' + result.message);
+                    }
+                    // 刷新頁面以更新按鈕狀態和顯示
+                    setTimeout(() => {window.location.reload();}, 1000);
+                } else {
+                    if (typeof showNotification !== 'undefined') {
+                        showNotification('❌ ' + (result.message || '轉換失敗'), true);
+                    } else {
+                        alert('❌ ' + (result.message || '轉換失敗'));
+                    }
+                }
+            } catch (error) {
+                console.error('轉換類型請求錯誤:', error);
+                if (typeof showNotification !== 'undefined') {
+                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                } else {
+                    alert('❌ 網絡錯誤，請稍後重試');
+                }
+            }
+        }
+
+
+        /**
+         * 1. 點擊按鈕時：打開確認彈窗
+         */
+        function confirmItemStockInFromData(btn) {
+            pendingStockInItemId = btn.getAttribute('data-request-item-id');
+            const modal = document.getElementById('stockInConfirmModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            }
+        }
+
+        /**
+         * 2. 關閉確認彈窗
+         */
+        function closeStockInConfirmModal() {
+            const modal = document.getElementById('stockInConfirmModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = ''; // 恢復背景滾動
+            }
+            pendingStockInItemId = null;
+        }
+
+        /**
+         * 3. 點擊「確認已入庫」後：發送 API 請求 (已移除 Loading 狀態)
+         */
+        async function executeConfirmItemStockIn() {
+            if (!pendingStockInItemId) return;
+
+            const requestItemId = pendingStockInItemId;
+
+            try {
+                const response = await fetch(`/admin/api/after-sales/item/${requestItemId}/stock-in`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    closeStockInConfirmModal();
+                    if (typeof showNotification === 'function') {
+                        showNotification('✅ ' + result.message);
+                    } else {
+                        alert('✅ ' + result.message);
+                    }
+                    // 刷新頁面以更新按鈕狀態 (隱藏已入庫按鈕)
+                    setTimeout(() => {window.location.reload();}, 1000);
+                } else {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + (result.message || '入庫失敗'), true);
+                    } else {
+                        alert('❌ ' + (result.message || '入庫失敗'));
+                    }
+                }
+            } catch (error) {
+                console.error('入庫請求錯誤:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                } else {
+                    alert('❌ 網絡錯誤，請稍後重試');
+                }
+            }
         }
 
         // ==========================================
-        // 5. 事件監聽綁定
+        // 7. 事件監聽綁定
         // ==========================================
         document.addEventListener('DOMContentLoaded', function () {
             const statusSelect = document.getElementById('newStatusSelect');
@@ -859,29 +1675,79 @@
                 statusSelect.addEventListener('change', toggleRefundInputs);
             }
 
+            // 【新增】監聽換貨商品和數量的變化
+            const productSelect = document.getElementById('exchangeProductSelect');
+            const quantityInput = document.getElementById('exchangeQuantity');
+            const refundContainer = document.getElementById('refundDetailsContainer');
+
+            if (productSelect) {
+                productSelect.addEventListener('change', function () {
+                    const checkbox = document.getElementById('enableExchangeDiffCalc');
+                    if (checkbox && checkbox.checked) calculateExchangeDiff();
+                });
+            }
+
+            if (quantityInput) {
+                quantityInput.addEventListener('input', function () {
+                    const checkbox = document.getElementById('enableExchangeDiffCalc');
+                    if (checkbox && checkbox.checked) calculateExchangeDiff();
+                });
+            }
+
+            // 【新增】監聽退款金額輸入框的變化（使用事件委託）
+            if (refundContainer) {
+                refundContainer.addEventListener('input', function (e) {
+                    if (e.target.classList.contains('refund-amount-input')) {
+                        const checkbox = document.getElementById('enableExchangeDiffCalc');
+                        if (checkbox && checkbox.checked) calculateExchangeDiff();
+                    }
+                });
+            }
+
             // 徹底禁止滑鼠滾輪改變數字輸入框的數值
-            const noSpinInputs = document.querySelectorAll('.no-spin');
-            noSpinInputs.forEach(input => {
-                input.addEventListener('wheel', function (e) {
+            document.addEventListener('wheel', function (e) {
+                if (e.target.classList.contains('no-spin')) {
                     e.preventDefault();
-                }, {passive: false});
+                }
+            }, {passive: false});
+        });
+        // ==========================================
+        // 全局彈窗 (Modal) 統一關閉管理
+        // ==========================================
+
+        // 1. 集中管理所有需要支持「點擊遮罩層」和「ESC鍵」關閉的彈窗配置
+        // 格式: { id: '彈窗DOM的ID', closeFn: 對應的關閉函數 }
+        const modalConfigs = [
+            {id: 'statusChangeModal', closeFn: closeStatusModal},
+            {id: 'convertTypeModal', closeFn: closeConvertTypeModal},
+            {id: 'stockInConfirmModal', closeFn: closeStockInConfirmModal},
+
+            //  未來如果有新彈窗，只需在這裡追加一行即可，無需再寫重複的監聽代碼！
+            // 例如: { id: 'unsubscribeModal', closeFn: closeUnsubscribeModal },
+            // 例如: { id: 'deleteOrderModal', closeFn: closeDeleteOrderModal }
+        ];
+
+        // 2. 統一監聽：點擊遮罩層關閉 (使用事件委託)
+        document.addEventListener('click', function (e) {
+            modalConfigs.forEach(config => {
+                const modal = document.getElementById(config.id);
+                // 確保彈窗存在，且點擊的目標正是遮罩層本身 (e.target === modal)，而不是彈窗內部的元素
+                if (modal && e.target === modal && typeof config.closeFn === 'function') {
+                    config.closeFn();
+                }
             });
         });
 
-        // 點擊遮罩層關閉彈窗
-        document.getElementById('statusChangeModal')?.addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeStatusModal();
-            }
-        });
-
-        // ESC 鍵關閉彈窗
+        // 3. 統一監聽：按下 ESC 鍵關閉當前打開的彈窗
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
-                const modal = document.getElementById('statusChangeModal');
-                if (modal && modal.style.display === 'flex') {
-                    closeStatusModal();
-                }
+                modalConfigs.forEach(config => {
+                    const modal = document.getElementById(config.id);
+                    // 如果彈窗存在且正在顯示 (display: flex)，則執行關閉
+                    if (modal && modal.style.display === 'flex' && typeof config.closeFn === 'function') {
+                        config.closeFn();
+                    }
+                });
             }
         });
     </script>

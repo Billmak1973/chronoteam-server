@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 @Data
 public class DailyBusinessReport {
 
-    //  核心規範：絕對不使用 id，使用具體的 reportId
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "report_id")
@@ -25,42 +24,58 @@ public class DailyBusinessReport {
     private LocalDate reportDate;
 
     // ================= 銷售與收入 =================
-
-    /** 總營業額 / GMV (買家實際支付的訂單總金額，包含後來可能被退貨的) */
+    /** 總營業額 / GMV (線上 + 線下總和) */
     @Column(name = "total_gmv", precision = 15, scale = 2)
     private BigDecimal totalGmv = BigDecimal.ZERO;
+
+    /** 【新增】線上總營業額 (GMV) */
+    @Column(name = "online_gmv", precision = 15, scale = 2)
+    private BigDecimal onlineGmv = BigDecimal.ZERO;
+
+    /** 【新增】線下總營業額 (GMV) */
+    @Column(name = "offline_gmv", precision = 15, scale = 2)
+    private BigDecimal offlineGmv = BigDecimal.ZERO;
 
     /** 總訂單數 */
     @Column(name = "total_orders")
     private Integer totalOrders = 0;
+
+    /** 【新增】線上訂單數 */
+    @Column(name = "online_orders")
+    private Integer onlineOrders = 0;
+
+    /** 【新增】線下訂單數 */
+    @Column(name = "offline_orders")
+    private Integer offlineOrders = 0;
 
     /** 總售出件數 */
     @Column(name = "total_items_sold")
     private Integer totalItemsSold = 0;
 
     // ================= 退貨與退款 =================
-
-    /** 退款金額 (當日發生的退貨退款總額) */
+    /** 總退款金額 */
     @Column(name = "refund_amount", precision = 15, scale = 2)
     private BigDecimal refundAmount = BigDecimal.ZERO;
 
-    /** 退貨件數 (當日退貨的商品數量) */
+    /** 【核心修正】僅記錄線下退款金額 (因售後退換貨均在門店處理) */
+    @Column(name = "offline_refund_amount", precision = 15, scale = 2)
+    private BigDecimal offlineRefundAmount = BigDecimal.ZERO;
+
+    /** 退貨件數 */
     @Column(name = "refund_count")
     private Integer refundCount = 0;
 
     // ================= 成本與利潤 =================
-
-    /** 收購二手手錶的總成本 (僅來自「平台買斷」模式的進貨支出) */
+    /** 收購二手手錶的總成本 */
     @Column(name = "acquisition_cost", precision = 15, scale = 2)
     private BigDecimal acquisitionCost = BigDecimal.ZERO;
 
     // ================= 平台活躍度指標 =================
-
     /** 當日新註冊用戶數 */
     @Column(name = "new_users")
     private Integer newUsers = 0;
 
-    /** 當日新增出售申請數 (衡量賣家貨源) */
+    /** 當日新增出售申請數 */
     @Column(name = "new_sell_applications")
     private Integer newSellApplications = 0;
 

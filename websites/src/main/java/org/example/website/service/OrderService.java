@@ -55,6 +55,7 @@ public class OrderService {
 
         //  核心修改 2：設置 User 關聯，不再是 setCustomer
         order.setUser(user);
+        order.setOrderSource("ONLINE");
 
         order.setTotalAmount(totalAmount);
         order.setStatus(Order.OrderStatus.PENDING);
@@ -475,26 +476,29 @@ public class OrderService {
 
     /**
      * 更新每日業務報告 (記錄退款)
-     * 核心原則：totalGmv, totalOrders, totalItemsSold 保持不變，只增加 refundAmount 和 refundCount
+     * 核心原則：totalGmv, totalOrders 保持不變，只增加 refundAmount。
+     * 【核心升級】：根據 orderSource 區分線下退款金額。
      */
     @Transactional
     public void updateDailyBusinessReportForCancellation(Order order) {
         // 使用訂單創建日期或付款日期作為報表日期
-        LocalDate reportDate = order.getCreatedAt().toLocalDate();
+        LocalDate reportDate = order.getPaidAt() != null ? order.getPaidAt().toLocalDate() : order.getCreatedAt().toLocalDate();
 
         DailyBusinessReport report = dailyBusinessReportRepository.findByReportDate(reportDate)
                 .orElseThrow(() -> new RuntimeException("找不到當日的業務報表，無法記錄退款"));
 
-        // 1. 增加退款總金額
-        BigDecimal currentRefundAmount = report.getRefundAmount() != null ? report.getRefundAmount() : BigDecimal.ZERO;
-        report.setRefundAmount(currentRefundAmount.add(order.getTotalAmount()));
+        int itemCount = order.getItems().stream().mapToInt(OrderItem::getQuantity).sum();
+        BigDecimal refundAmount = order.getTotalAmount();
 
-        // 2. 增加退貨總件數
-        int itemCount = order.getItems().stream()
-                .mapToInt(OrderItem::getQuantity)
-                .sum();
-        Integer currentRefundCount = report.getRefundCount() != null ? report.getRefundCount() : 0;
-        report.setRefundCount(currentRefundCount + itemCount);
+        // 1. 增加總退貨件數和總退款金額
+        report.setRefundCount(report.getRefundCount() + itemCount);
+        report.setRefundAmount(report.getRefundAmount().add(refundAmount));
+
+        // 2. 【核心新增】：如果是線下訂單，額外累加到 offlineRefundAmount
+        if ("OFFLINE".equals(order.getOrderSource())) {
+            BigDecimal currentOfflineRefund = report.getOfflineRefundAmount() != null ? report.getOfflineRefundAmount() : BigDecimal.ZERO;
+            report.setOfflineRefundAmount(currentOfflineRefund.add(refundAmount));
+        }
 
         dailyBusinessReportRepository.save(report);
     }

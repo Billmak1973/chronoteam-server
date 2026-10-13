@@ -38,7 +38,8 @@ public class DailyBusinessReportService {
     }
 
     /**
-     * 更新每日業務報告（線上支付成功後調用）
+     * 更新每日業務報告（線上支付成功 或 線下取貨完成後調用）
+     * 【核心升級】：根據 orderSource 精準區分線上與線下業績
      */
     @Transactional
     public void updateDailyReport(Order order) {
@@ -52,18 +53,26 @@ public class DailyBusinessReportService {
                     return newReport;
                 });
 
-        // 1. 更新總營業額/GMV（訂單總金額）
-        BigDecimal currentGmv = report.getTotalGmv() != null ? report.getTotalGmv() : BigDecimal.ZERO;
-        report.setTotalGmv(currentGmv.add(order.getTotalAmount()));
-
-        // 2. 更新總訂單數
-        Integer currentOrders = report.getTotalOrders() != null ? report.getTotalOrders() : 0;
-        report.setTotalOrders(currentOrders + 1);
-
-        // 3. 更新總售出件數（統計訂單中所有商品的總數量）
+        BigDecimal orderAmount = order.getTotalAmount();
         Integer totalItemsSold = calculateTotalItemsSold(order);
-        Integer currentItemsSold = report.getTotalItemsSold() != null ? report.getTotalItemsSold() : 0;
-        report.setTotalItemsSold(currentItemsSold + totalItemsSold);
+
+        // 1. 更新【總計】數據 (保持向後兼容，總數始終累加)
+        //    無論線上線下，【總計】數據始終累加（保證總賬準確）
+        report.setTotalGmv(report.getTotalGmv().add(orderAmount));
+        report.setTotalOrders(report.getTotalOrders() + 1);
+        report.setTotalItemsSold(report.getTotalItemsSold() + totalItemsSold);
+
+        // 2. 【核心新增】：根據訂單來源 (orderSource) 分流統計
+        //     第二步：根據 orderSource 進行【明細】分流統計
+        if ("OFFLINE".equals(order.getOrderSource())) {
+            // 純線下門店開單 / POS機購買
+            report.setOfflineGmv(report.getOfflineGmv().add(orderAmount));
+            report.setOfflineOrders(report.getOfflineOrders() + 1);
+        } else {
+            // 線上商城下單 (包含線上選好去線下付款)
+            report.setOnlineGmv(report.getOnlineGmv().add(orderAmount));
+            report.setOnlineOrders(report.getOnlineOrders() + 1);
+        }
 
         // 保存報告
         dailyBusinessReportRepository.save(report);
