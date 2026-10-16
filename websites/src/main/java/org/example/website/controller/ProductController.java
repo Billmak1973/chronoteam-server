@@ -11,15 +11,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.ProductUpdateRequest;
 import org.example.website.dto.ProductVariantDTO;
 import org.example.website.dto.Result;
-import org.example.website.entity.Order;
-import org.example.website.entity.Product;
-import org.example.website.entity.Review;
-import org.example.website.entity.User;
-import org.example.website.repository.FavoriteRepository;
-import org.example.website.repository.OrderItemRepository;
-import org.example.website.repository.OrderRepository;
-import org.example.website.repository.ProductRepository;
-import org.example.website.repository.ReviewRepository;
+import org.example.website.entity.*;
+import org.example.website.repository.*;
 import org.example.website.security.CustomUserDetails;
 import org.example.website.service.InventoryManagementService;
 import org.example.website.service.ProductService;
@@ -52,6 +45,7 @@ public class ProductController {
     private final FavoriteRepository favoriteRepository;
     private final ProductService productService;
     private final InventoryManagementService inventoryManagementService;
+    private final StoreInventoryRepository storeInventoryRepository;
 
     public ProductController(ProductRepository productRepository,
                              ReviewRepository reviewRepository,
@@ -59,7 +53,7 @@ public class ProductController {
                              OrderRepository orderRepository,
                              OrderItemRepository orderItemRepository,
                              FavoriteRepository favoriteRepository,
-                             ProductService productService, InventoryManagementService inventoryManagementService) {
+                             ProductService productService, InventoryManagementService inventoryManagementService, StoreInventoryRepository storeInventoryRepository) {
         this.productRepository = productRepository;
         this.reviewRepository = reviewRepository;
         this.viewHistoryService = viewHistoryService;
@@ -68,6 +62,7 @@ public class ProductController {
         this.favoriteRepository = favoriteRepository;
         this.productService = productService;
         this.inventoryManagementService = inventoryManagementService;
+        this.storeInventoryRepository = storeInventoryRepository;
     }
 
     /**
@@ -434,5 +429,56 @@ public class ProductController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(Result.okWithData("获取成功", productList));
+    }
+
+    /**
+     * 【新增接口】根據品牌和門店ID獲取商品及庫存列表
+     */
+    @Operation(
+            summary = "根據品牌和門店獲取商品及庫存列表",
+            description = "獲取指定品牌下，特定門店的商品列表及其對應的庫存數量，供售後換貨選擇使用"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "獲取成功"),
+            @ApiResponse(responseCode = "404", description = "品牌或門店不存在")
+    })
+    @GetMapping("/brands/{brand}/store/{storeId}/products")
+    @ResponseBody
+    public ResponseEntity<?> getProductsByBrandAndStore(
+            @Parameter(description = "品牌名稱", example = "Rolex", required = true)
+            @PathVariable String brand,
+
+            @Parameter(description = "門店ID", example = "1", required = true)
+            @PathVariable Long storeId
+    ) {
+        // 1. 獲取該品牌下的所有商品
+        List<Product> products = productRepository.findByBrand(brand);
+
+        // 2. 一次性獲取該門店的所有庫存記錄
+        List<StoreInventory> inventories = storeInventoryRepository.findByStore_StoreId(storeId);
+
+        // 3. 構建庫存 Map: productId -> quantity
+        Map<Integer, Integer> stockMap = inventories.stream()
+                .collect(Collectors.toMap(
+                        inv -> inv.getProduct().getProductId(),
+                        StoreInventory::getQuantity,
+                        (existing, replacement) -> existing // 防止重複鍵衝突
+                ));
+
+        // 4. 組裝返回數據，將庫存信息合併到商品列表中
+        List<Map<String, Object>> productList = products.stream()
+                .map(p -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("productId", p.getProductId());
+                    map.put("description", p.getDescription());
+                    map.put("brand", p.getBrand());
+                    map.put("price", p.getPrice());
+                    // 獲取該商品在該門店的庫存，如果沒有記錄則默認為 0
+                    map.put("stock", stockMap.getOrDefault(p.getProductId(), 0));
+                    return map;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(Result.okWithData("獲取成功", productList));
     }
 }

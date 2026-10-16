@@ -1219,6 +1219,23 @@
         .cutoff-hint i {
             margin-right: 0.3rem;
         }
+
+        /* ========================================== */
+        /* 隱藏 number 輸入框的上下箭頭 (Spinner) */
+        /* ========================================== */
+
+        /* Chrome, Safari, Edge, Opera */
+        #afterSalesQuantity::-webkit-outer-spin-button,
+        #afterSalesQuantity::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Firefox */
+        #afterSalesQuantity {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
     </style>
 </head>
 
@@ -1450,14 +1467,15 @@
                     </small>
                 </div>
 
-                <!-- 數量 -->
+                <!-- 數量 (已移除最大數量提示) -->
                 <div class="form-group">
                     <label id="afterSalesQtyLabel"><i class="fas fa-boxes"></i> 退貨數量 <span
                             style="color: #dc3545;">*</span></label>
                     <input type="number" id="afterSalesQuantity" class="form-control" min="1" value="1" required>
-                    <small id="afterSalesMaxQtyHint" class="form-text" style="color: #6c757d; margin-top: 0.3rem;">
-                        <i class="fas fa-info-circle"></i> 最大可退貨數量為 <span id="maxAfterSalesQuantityDisplay"
-                            style="font-weight: bold; color: #fd7e14;">1</span>
+                    <!-- 剩餘數量提示區塊 -->
+                    <small id="afterSalesRemainingQtyHint" class="form-text"
+                        style="color: #6c757d; margin-top: 0.3rem; display: none;">
+                        <i class="fas fa-info-circle"></i> <span id="remainingQtyText"></span>
                     </small>
                 </div>
 
@@ -2385,16 +2403,12 @@
         // ==========================================
         // 4. 【新增】退貨業務邏輯 (配合新的 HTML 結構)
         // ==========================================
-        /**
-         * 打開售後申請模態框 (通用：支援退貨與換貨，支持雙向借用)
-         */
         window.openAfterSalesModal = async function (orderNo, maxQuantity, productId, requestType) {
             CTO.currentAfterSalesOrderNo = orderNo;
             CTO.currentAfterSalesProductId = productId;
             CTO.currentAfterSalesRequestId = null;
-            CTO.currentRequestType = requestType; // 記錄當前類型
+            CTO.currentRequestType = requestType;
 
-            // 根據類型動態調整 UI 文字與顏色
             const isExchange = requestType === 'EXCHANGE';
             const actionText = isExchange ? '換貨' : '退貨';
             const otherActionText = isExchange ? '退貨' : '換貨';
@@ -2402,7 +2416,6 @@
             const themeGradient = isExchange ? 'linear-gradient(135deg, #17a2b8 0%, #138496 100%)' : 'linear-gradient(135deg, #fd7e14 0%, #e8590c 100%)';
             const iconClass = isExchange ? 'fa-exchange-alt' : 'fa-undo-alt';
 
-            // 動態替換 DOM 內容
             document.getElementById('afterSalesModalTitle').innerHTML = `<i class="fas ${iconClass}" style="color: ${themeColor}; margin-right: 0.5rem;"></i> 申請${actionText}`;
             document.getElementById('afterSalesOrderNoDisplay').textContent = orderNo;
             document.getElementById('afterSalesStoreLabel').innerHTML = `<i class="fas fa-store"></i> 選擇${actionText}店鋪 <span style="color: #dc3545;">*</span>`;
@@ -2413,12 +2426,23 @@
             submitBtn.style.background = themeGradient;
             submitBtn.style.boxShadow = isExchange ? '0 4px 12px rgba(23, 162, 184, 0.3)' : '0 4px 12px rgba(253, 126, 20, 0.3)';
 
-            // 重置表單
             document.getElementById('afterSalesForm').reset();
             const qtyInput = document.getElementById('afterSalesQuantity');
             qtyInput.value = 1;
-            qtyInput.max = maxQuantity;
-            document.getElementById('maxAfterSalesQuantityDisplay').textContent = maxQuantity;
+
+            //  禁用鼠標滾輪改變數值
+            qtyInput.addEventListener('wheel', function (e) {
+                e.preventDefault();
+            }, {passive: false});
+
+            const hintBox = document.getElementById('afterSalesRemainingQtyHint');
+            const hintText = document.getElementById('remainingQtyText');
+            hintBox.style.display = 'none';
+            qtyInput.disabled = false;
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+
             document.getElementById('afterSalesStoreInfo').style.display = 'none';
             document.getElementById('afterSalesTimeSlot').disabled = true;
             document.getElementById('afterSalesTimeSlot').value = '';
@@ -2427,18 +2451,17 @@
             document.getElementById('afterSalesModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
 
-            // 加載店鋪與現有申請數據
             try {
                 await loadAfterSalesStores();
-                // 【核心】傳遞 productId 給後端，以便後端計算 otherTypeQuantity
                 const res = await fetch(`/api/order/after-sales-request?orderNo=${orderNo}&type=${requestType}&productId=${productId}`);
                 const result = await res.json();
 
                 if (res.ok && result.success && result.data) {
                     const existingRequest = result.data;
+                    let currentQuantity = 0; // 当前申请的数量
 
                     // ==========================================
-                    // 情況 A：存在同類型的現有申請，正常回填
+                    // 情況 A：存在同類型的現有申請 (PENDING)，正常回填
                     // ==========================================
                     if (existingRequest.requestId) {
                         CTO.currentAfterSalesRequestId = existingRequest.requestId;
@@ -2459,16 +2482,16 @@
 
                         const existingItem = existingRequest.items?.find(item => item.productId === productId);
                         if (existingItem) {
-                            qtyInput.value = existingItem.returnQuantity;
+                            currentQuantity = existingItem.returnQuantity;
+                            qtyInput.value = currentQuantity;
                             showNotification(`✅ 已加載您之前的${actionText}申請，可直接修改後重新提交`);
                         }
                     }
                     // ==========================================
-                    // 情況 B：【雙向借用核心】沒有同類型申請，但借用了另一種類型的信息
+                    // 情況 B：沒有同類型申請，但借用了另一種類型的信息
                     // ==========================================
                     else if (existingRequest.borrowedInfo) {
                         const borrowed = existingRequest.borrowedInfo;
-
                         if (borrowed.storeId) {
                             document.getElementById('afterSalesStoreSelect').value = borrowed.storeId;
                             updateAfterSalesStoreInfo(borrowed.storeId);
@@ -2480,33 +2503,58 @@
                         if (borrowed.appointmentTimeSlot) {
                             document.getElementById('afterSalesTimeSlot').value = borrowed.appointmentTimeSlot;
                         }
-
-                        // 提示用戶已自動借用
                         showNotification(`💡 已自動為您借用同訂單的${otherActionText}預約信息，您可自行修改`);
                     }
 
                     // ==========================================
-                    // 情況 C：【數量限制核心】顯示另一種類型的申請數量並限制輸入
+                    // 【核心修复】情況 C：計算並顯示剩餘可申請數量
                     // ==========================================
-                    if (existingRequest.otherTypeQuantity) {
-                        const otherQty = existingRequest.otherTypeQuantity;
-                        const otherTypeText = existingRequest.otherRequestType === 'EXCHANGE' ? '換貨' : '退貨';
-                        const remainingQty = maxQuantity - otherQty;
+                    const originalQty = existingRequest.originalQuantity || maxQuantity;
+                    const appliedQty = existingRequest.appliedQuantity || 0;
 
-                        // 在數量輸入框下方添加提示
-                        const maxQtyHint = document.getElementById('afterSalesMaxQtyHint');
-                        maxQtyHint.innerHTML = `
-                    <i class="fas fa-info-circle"></i>
-                    最大可${actionText}數量為 <span id="maxAfterSalesQuantityDisplay" style="font-weight: bold; color: ${themeColor};">${remainingQty}</span>
-                    ${otherQty > 0 ? `<br><small style="color: #6c757d;"><i class="fas fa-exchange-alt"></i> 該商品已申請 ${otherQty} 件${otherTypeText}</small>` : ''}
-                `;
+                    // 🔥 关键修复：计算剩余数量时，要排除当前正在编辑的申请
+                    const hasExistingRequest = !!CTO.currentAfterSalesRequestId;
+                    let remainingQty;
 
-                        // 更新輸入框的 max 屬性，防止用戶手動輸入超過剩餘數量
-                        qtyInput.max = remainingQty;
-                        if (parseInt(qtyInput.value) > remainingQty) {
-                            qtyInput.value = remainingQty;
+                    if (hasExistingRequest) {
+                        // 编辑现有申请：剩余数量 = 原始数量 - (已申请总量 - 当前申请数量)
+                        // 这样用户就可以增加到原始购买数量
+                        remainingQty = originalQty - (appliedQty - currentQuantity);
+                    } else {
+                        // 新增申请：剩余数量 = 原始数量 - 已申请总量
+                        remainingQty = existingRequest.remainingQuantity !== undefined ? existingRequest.remainingQuantity : (originalQty - appliedQty);
+                    }
+
+                    // 1. 设置输入框的 max 属性
+                    qtyInput.max = Math.max(1, remainingQty);
+                    qtyInput.min = 1;
+
+                    // 2. 构建提示 HTML
+                    hintBox.style.display = 'block';
+                    let hintHtml = `該商品原購買 <strong>${originalQty}</strong> 件，目前已申請 <strong>${appliedQty}</strong> 件，<strong style="color: ${themeColor};">剩餘可申請數量為 ${Math.max(0, remainingQty)} 件</strong>`;
+
+                    // 3. 根据情况处理 UI
+                    if (remainingQty <= 0 && !hasExistingRequest) {
+                        // === 情况 A：没有现有申请且数量为0，完全禁用 ===
+                        hintHtml = `<span style="color: #dc3545;"><i class="fas fa-ban"></i> 該商品已達到最大${actionText}數量限制，無法再次申請</span>`;
+                        qtyInput.disabled = true;
+                        submitBtn.disabled = true;
+                        submitBtn.style.opacity = '0.5';
+                        submitBtn.style.cursor = 'not-allowed';
+                    } else {
+                        // === 情况 B：还有剩余数量或正在编辑现有申请，正常启用 ===
+                        if (hasExistingRequest) {
+                            // 编辑现有申请：提示可修改范围
+                            hintHtml = `<span style="color: #28a745;"><i class="fas fa-info-circle"></i> 您可以修改數量（1-${remainingQty}件），或調整預約時間/店鋪等信息</span>`;
+                            submitBtn.innerHTML = `<i class="fas fa-save"></i> 保存修改`;
+                        } else {
+                            // 新增申请
+                            submitBtn.innerHTML = `<i class="fas fa-paper-plane"></i> 確認申請`;
                         }
                     }
+
+                    // 4. 统一应用提示文字
+                    hintText.innerHTML = hintHtml;
                 }
             } catch (e) {
                 console.error(`加載${actionText}申請狀態失敗:`, e);
@@ -2987,7 +3035,7 @@
         };
 
         // ==========================================
-        // 【新增】取消售后申请的相关函数
+        // 取消售后申请的相关函数
         // ==========================================
 
         // 打开取消确认模态框
@@ -3147,7 +3195,7 @@
                     maxDeliveryDateOptions: parseInt(config.MAX_DELIVERY_DATE_OPTIONS) || 7,
                     globalCutoffTime: config.GLOBAL_CUTOFF_TIME || '22:00',
                     deliveryCustomDays: parseInt(config.DELIVERY_CUSTOM_DAYS) || 3,
-                    // 【核心新增】：SPECIFIC_DAYS 模式所需的後台配置
+                    // SPECIFIC_DAYS 模式所需的後台配置
                     cutoffDayOffset: parseInt(config.CUTOFF_DAY_OFFSET) || -1,
                     specificDays: config.DELIVERY_SPECIFIC_DAYS ? config.DELIVERY_SPECIFIC_DAYS.split(',').map(Number) : [],
                     continuousMode: config.CONTINUOUS_DAYS_MODE || 'GROUP'
@@ -3312,7 +3360,7 @@
                 return;
             }
 
-            // 【新增】獲取當前日期和時間
+            // 獲取當前日期和時間
             const now = new Date();
             const currentYear = now.getFullYear();
             const currentMonth = now.getMonth() + 1;
@@ -3320,7 +3368,7 @@
             const currentHour = now.getHours();
             const currentMinute = now.getMinutes();
 
-            // 【新增】解析截單時間
+            // 解析截單時間
             const cutoffTime = CTO.systemConfig.globalCutoffTime || '22:00';
             const [cutoffHour, cutoffMinute] = cutoffTime.split(':').map(Number);
 
@@ -3438,7 +3486,7 @@
 
             const orderNo = CTO.currentChangeDeliveryOrderNo;
 
-            // 【核心修復】：絕對不要用 toISOString()，會有 8 小時時區偏移導致日期少一天！
+            // 絕對不要用 toISOString()，會有 8 小時時區偏移導致日期少一天！
             // 改用本地時間格式化為 YYYY-MM-DD
             const d = CTO.selectedDeliveryDate;
             const year = d.getFullYear();
@@ -3484,9 +3532,6 @@
         };
 
         // ==========================================
-        // 【在此處插入代碼 2 的 4 個函數】
-        // ==========================================
-        // ==========================================
         // 修改取貨日期相關邏輯
         // ==========================================
 
@@ -3519,7 +3564,6 @@
         };
 
         // 3. 初始化日期選擇器 (根據付款日期 + 保留天數 + 店舖營業時間)
-        // 3. 初始化日期選擇器 (根據付款日期 + 保留天數 + 店舖營業時間)
         CTO.initChangePickupDateSelector = function (order) {
             const select = document.getElementById('newPickupDateSelect');
             if (!select || !order.offlineStore) return;
@@ -3527,7 +3571,7 @@
             select.innerHTML = '<option value="">請選擇日期...</option>';
             const store = order.offlineStore;
 
-            // 【核心修復 1】：安全解析 paidAt 日期，兼容 "2026-10-06T15:39:22" 和 "2026/10/06 15:39:22" 格式
+            // 安全解析 paidAt 日期，兼容 "2026-10-06T15:39:22" 和 "2026/10/06 15:39:22" 格式
             const paidAtStr = order.paidAt;
             let paidDateStr = null;
             if (paidAtStr) {
@@ -3579,7 +3623,7 @@
                     }
                 }
 
-                // 【核心修復 2】：完善店鋪休息日判斷（同時支援 DAILY 和 UNIFIED 模式）
+                // 完善店鋪休息日判斷（同時支援 DAILY 和 UNIFIED 模式）
                 if (!isClosed) {
                     const dayOfWeek = currentDate.getDay(); // 0=Sun, 6=Sat
                     const jsDayKey = dayOfWeek === 0 ? 7 : dayOfWeek;
@@ -3694,7 +3738,6 @@
         document.addEventListener('click', function (e) {
             if (e.target === document.getElementById('deleteOrderModal')) closeDeleteOrderModal();
             if (e.target === document.getElementById('cancelOrderModal')) closeCancelOrderModal();
-            // 【修改處】：替換為新的通用 Modal ID
             if (e.target === document.getElementById('afterSalesModal')) closeAfterSalesModal();
             if (e.target === document.getElementById('afterSalesDetailsModal')) closeAfterSalesDetailsModal();
             if (e.target === document.getElementById('cancelAfterSalesModal')) closeCancelAfterSalesModal();

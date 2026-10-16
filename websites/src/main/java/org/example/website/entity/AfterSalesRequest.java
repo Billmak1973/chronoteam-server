@@ -100,7 +100,7 @@ public class AfterSalesRequest {
     private LocalDateTime updatedAt;
 
     // ==========================================
-    // 💡 枚舉定義
+    //  枚舉定義
     // ==========================================
     public enum RequestType {
         RETURN,   // 退貨退款
@@ -115,31 +115,4 @@ public class AfterSalesRequest {
         CANCELLED         // 用戶主動取消
     }
 
-    // ==========================================
-    // 💡 業務邏輯輔助方法
-    // ==========================================
-    @Transient
-    public boolean isFullOrderReturn() {
-        if (this.requestType != RequestType.RETURN || this.originalOrder == null || this.items == null || this.items.isEmpty()) {
-            return false;
-        }
-        List<OrderItem> originalItems = this.originalOrder.getItems();
-        if (originalItems.size() != this.items.size()) {
-            return false;
-        }
-        for (OrderItem original : originalItems) {
-            boolean foundMatch = false;
-            for (AfterSalesRequestItem returnItem : this.items) {
-                if (returnItem.getProduct().getProductId().equals(original.getProduct().getProductId())) {
-                    if (!returnItem.getReturnQuantity().equals(original.getQuantity())) {
-                        return false;
-                    }
-                    foundMatch = true;
-                    break;
-                }
-            }
-            if (!foundMatch) return false;
-        }
-        return true;
-    }
 }

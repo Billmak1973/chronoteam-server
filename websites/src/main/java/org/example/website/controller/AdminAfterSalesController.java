@@ -126,7 +126,6 @@ public class AdminAfterSalesController {
 
         // 執行查詢
         Page<AfterSalesRequest> requestsPage = afterSalesRequestRepository.findAll(spec, pageable);
-
         // ==========================================
         // 【核心重構】：數據清洗，將 Entity 轉為 Map，避免前端 Thymeleaf 觸發懶加載報錯
         // ==========================================

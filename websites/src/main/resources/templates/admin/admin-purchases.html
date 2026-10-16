@@ -1815,35 +1815,58 @@
 
         // 11.6 渲染庫存調整日誌表格
         function renderAdjustmentLogsTable(logs) {
+            // 獲取 HTML 中 id 為 'logs-tbody' 的表格主體元素，準備往裡面插入數據
             const tbody = document.getElementById('logs-tbody');
+
+            // 【新增】調整類型中文映射
+            const adjustmentTypeMap = {
+                'PURCHASE_IN': '採購進貨',
+                'MANUAL_ADJUST': '手動盤點',
+                'TRANSFER_IN': '調撥入庫',
+                'TRANSFER_OUT': '調撥出庫',
+                'DAMAGE': '破損報廢',
+                'RETURN': '客戶退貨',
+                'SALE_OUT': '銷售出庫'
+            };
+
+            // 判斷後端傳來的日誌數據是否為空，或者長度為 0
             if (!logs || logs.length === 0) {
+                // 如果沒有數據，就在表格中顯示「暫無庫存調整日誌」的提示訊息
                 tbody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 3rem; color: var(--gray);"><i class="fas fa-clipboard-list" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>暫無庫存調整日誌</td></tr>`;
                 return;
             }
-
+            // 使用 map 方法遍歷每一條日誌數據 (log)，並將它們轉換成 HTML 的表格行 (<tr>) 字串
             let html = logs.map(log => {
+                // 判斷數量變化：如果變化量大於 0，使用綠色文字類別 (text-success)，否則使用紅色 (text-danger)
                 const changeClass = log.changeQuantity > 0 ? 'text-success' : 'text-danger';
+                // 判斷符號：如果變化量大於 0，在前面加上 '+' 號，否則不加（因為負數自帶 '-' 號）
                 const changeSign = log.changeQuantity > 0 ? '+' : '';
                 let badgeClass = 'badge-manual';
                 if (log.adjustmentType === 'PURCHASE_IN') badgeClass = 'badge-purchase-in';
                 else if (log.adjustmentType === 'TRANSFER_IN' || log.adjustmentType === 'TRANSFER_OUT') badgeClass = 'badge-transfer';
                 else if (log.adjustmentType === 'DAMAGE' || log.adjustmentType === 'SALE_OUT') badgeClass = 'badge-damage';
+                else if (log.adjustmentType === 'RETURN') badgeClass = 'badge-return';
 
+                // 【修改】使用映射對象顯示中文
+                const adjustmentTypeText = adjustmentTypeMap[log.adjustmentType] || log.adjustmentType;
+
+                // 返回當前這一行日誌對應的 HTML 表格行 (<tr>) 字串
                 return `<tr>
-                <td style="font-family: monospace; color: var(--gray);">#${log.logId}</td>
-                <td><div style="font-weight: 600;">${log.productName}</div></td>
-                <td><span class="status-badge ${badgeClass}">${log.adjustmentType}</span></td>
-                <td>${log.warehouseType === 'ONLINE' ? '<i class="fas fa-warehouse"></i> 線上總倉' : '🏪 ' + (log.storeName || '')}</td>
-                <td style="font-weight: 600; color: var(--gray);">${log.previousQuantity}</td>
-                <td style="font-weight: 600;">${log.newQuantity}</td>
-                <td class="${changeClass}" style="font-weight: 700;">${changeSign}${log.changeQuantity}</td>
-                <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${log.reason || ''}">${log.reason || '-'}</td>
-                <td style="font-family: monospace; font-size: 0.8rem; color: var(--gray);">${log.transferBatchId || '-'}</td>
-                <td>${new Date(log.createdAt).toLocaleString('zh-TW', {hour12: false})}</td>
-                <td>${log.operatorName}</td>
-            </tr>`;
+            <td style="font-family: monospace; color: var(--gray);">#${log.logId}</td>
+            <td><div style="font-weight: 600;">${log.productName}</div></td>
+            <td><span class="status-badge ${badgeClass}">${adjustmentTypeText}</span></td>
+            <td>${log.warehouseType === 'ONLINE' ? '<i class="fas fa-warehouse"></i> 線上總倉' : '🏪 ' + (log.storeName || '')}</td>
+            <td style="font-weight: 600; color: var(--gray);">${log.previousQuantity}</td>
+            <td style="font-weight: 600;">${log.newQuantity}</td>
+            <td class="${changeClass}" style="font-weight: 700;">${changeSign}${log.changeQuantity}</td>
+            <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${log.reason || ''}">${log.reason || '-'}</td>
+            <td style="font-family: monospace; font-size: 0.8rem; color: var(--gray);">${log.transferBatchId || '-'}</td>
+            <td>${new Date(log.createdAt).toLocaleString('zh-TW', {hour12: false})}</td>
+            <td>${log.operatorName}</td>
+        </tr>`;
             }).join('');
 
+            // 最後，將拼接好的完整 HTML 字串，一次性塞進表格主體 (tbody) 中，完成畫面渲染
             tbody.innerHTML = html;
         }
 

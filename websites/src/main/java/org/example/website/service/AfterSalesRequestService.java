@@ -96,7 +96,7 @@ public class AfterSalesRequestService {
             request.setCompletedAt(LocalDateTime.now());
 
             // 2. 觸發原訂單狀態的全局同步 (處理原訂單的退貨狀態)
-            syncOrderStatusAfterSalesCompletion(request.getOriginalOrder());
+            syncOrderStatusAfterSalesCompletion(request.getOriginalOrder(),request);
 
             // 3. 【核心修正】：換貨 = 退貨 + 購物。分別處理財務報表與新訂單生成
             if (request.getRequestType() == AfterSalesRequest.RequestType.RETURN) {
@@ -353,14 +353,14 @@ public class AfterSalesRequestService {
      * 【核心邏輯】：售後完成後，重新評估並同步原訂單的狀態
      * <p>
      * 業務場景：當一筆售後申請（退貨/換貨）被標記為「已完成」時，需要重新檢查該訂單的整體售後進度。
-     * 如果訂單內的所有商品都已被售後處理完畢，則將訂單視為「全額退款/取消」；
-     * 如果只有部分商品被處理，則將訂單視為「部分退款」。
+     * 核心規律：對比「原訂單總購買數量」與「已完成售後總數量 + 當前正在處理的售後數量」。
      * </p>
      *
-     * @param order 需要重新評估狀態的原始訂單對象
+     * @param order         需要重新評估狀態的原始訂單對象
+     * @param currentRequest 當前正在處理並即將/剛剛完成狀態變更的售後申請
      */
     @Transactional
-    public void syncOrderStatusAfterSalesCompletion(Order order) {
+    public void syncOrderStatusAfterSalesCompletion(Order order, AfterSalesRequest currentRequest) {
         // ==========================================
         // 1. 獲取訂單基準數據：查詢該訂單下的所有商品明細
         // ==========================================
@@ -377,29 +377,38 @@ public class AfterSalesRequestService {
         // ==========================================
         // 3. 統計每個 OrderItem 已經被售後處理的總數量
         // ==========================================
-        // 建立映射表：Key = OrderItem 的 ID, Value = 該明細已被售後處理的累計數量
         Map<Long, Integer> processedQuantityMap = new HashMap<>();
+
+        // 3.1 累加「歷史已經成功」的退/換貨數量 (每項物品都要找)
         for (AfterSalesRequest req : completedRequests) {
             for (AfterSalesRequestItem reqItem : req.getItems()) {
                 Long orderItemId = reqItem.getOrderItem().getOrderItemId();
-                int qty = reqItem.getReturnQuantity(); // 獲取本次售後申請處理的數量
+                int qty = reqItem.getReturnQuantity();
+                processedQuantityMap.put(orderItemId, processedQuantityMap.getOrDefault(orderItemId, 0) + qty);
+            }
+        }
 
-                // 累加到對應的 OrderItem 上 (支援同一個訂單明細被分多次售後處理的情況)
+        // 3.2 【核心修復】：加上「現在退貨/換貨物品」的數量！
+        // 因為當前這個 request 正在被標記為完成，它的數量必須算入總處理量中
+        if (currentRequest != null && currentRequest.getItems() != null) {
+            for (AfterSalesRequestItem currentItem : currentRequest.getItems()) {
+                Long orderItemId = currentItem.getOrderItem().getOrderItemId();
+                int qty = currentItem.getReturnQuantity();
                 processedQuantityMap.put(orderItemId, processedQuantityMap.getOrDefault(orderItemId, 0) + qty);
             }
         }
 
         // ==========================================
-        // 4. 判斷是否為「整單處理」(即所有商品都被售後處理完畢)
+        // 4. 最後才和原訂單總購買數量對比！
         // ==========================================
         boolean isFullyProcessed = true; // 預設為整單處理
 
         for (OrderItem orderItem : orderItems) {
-            // 獲取該明細已被處理的數量（若未出現在 Map 中則為 0）
-            int processedQty = processedQuantityMap.getOrDefault(orderItem.getOrderItemId(), 0);
+            // 獲取該明細的「歷史已完成數量 + 當前處理數量」總和
+            int totalProcessedQty = processedQuantityMap.getOrDefault(orderItem.getOrderItemId(), 0);
 
-            // 核心比對：如果「已處理數量」小於「原始購買數量」，說明還有商品未被售後處理
-            if (processedQty < orderItem.getQuantity()) {
+            // 核心比對：如果「總處理數量」小於「原始購買數量」，說明還有商品未被售後處理
+            if (totalProcessedQty < orderItem.getQuantity()) {
                 isFullyProcessed = false; // 標記為部分處理
                 break; // 只要有一個明細未處理完，即可提前跳出循環，優化性能
             }
@@ -414,10 +423,7 @@ public class AfterSalesRequestService {
             order.setPaymentStatus(Order.PaymentStatus.REFUNDED);
         } else {
             // 【情況 B：部分處理完畢】 -> 訂單狀態保持不變，支付狀態標記為部分退款
-            // 注意：如果已經是全額退款狀態，則不覆蓋（防止狀態倒退或邏輯衝突）
-            if (order.getPaymentStatus() != Order.PaymentStatus.REFUNDED) {
-                order.setPaymentStatus(Order.PaymentStatus.PARTIALLY_REFUNDED);
-            }
+            order.setPaymentStatus(Order.PaymentStatus.PARTIALLY_REFUNDED);
         }
 
         // ==========================================

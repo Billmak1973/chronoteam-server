@@ -640,7 +640,7 @@
                                         <!-- 換貨按鈕 -->
                                         <button th:if="${req.requestType == 'EXCHANGE' and req.status == 'PENDING'}"
                                             class="action-btn btn-exchange" th:data-request-id="${req.requestId}"
-                                            th:data-request-type="${req.requestType}"
+                                            th:data-request-type="${req.requestType}" th:data-store-id="${req.storeId}"
                                             onclick="openStatusModalFromData(this)">
                                             <i class="fas fa-exchange-alt"></i> 審核換貨
                                         </button>
@@ -854,6 +854,10 @@
                         <input type="number" id="exchangeQuantity" class="form-control no-spin" min="1" required
                             placeholder="請輸入換貨數量"
                             style="width: 100%; padding: 0.6rem; border: 2px solid #e9ecef; border-radius: 6px; font-size: 0.95rem;">
+                        <small id="stockHint"
+                            style="color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.3rem;">
+                            <i class="fas fa-info-circle"></i> 選擇商品後會顯示最大可換貨數量
+                        </small>
                     </div>
                 </div>
 
@@ -1019,6 +1023,7 @@
         // ==========================================
         let currentProcessingRequestId = null;
         let currentRequestType = 'RETURN'; // 記錄當前操作是 RETURN 還是 EXCHANGE
+        let currentStoreId = null; // 用於存儲當前處理的售後申請的門店 ID
 
         // 全局變量：暫存待轉換的申請信息
         let pendingConvertRequestId = null;
@@ -1139,10 +1144,89 @@
 
         function closeStatusModal() {
             const modal = document.getElementById('statusChangeModal');
-            modal.style.display = 'none';
+            if (modal) {
+                modal.style.display = 'none';
+            }
             document.body.style.overflow = ''; // 恢復背景滾動
+
+            // 徹底清理表單狀態和內存，防止下次打開殘留
+            resetStatusModalForm();
+
+            // 重置全局變量
             currentProcessingRequestId = null;
-            currentRequestType = 'RETURN'; // 重置為默認
+            currentRequestType = 'RETURN';
+            currentStoreId = null;
+        }
+
+        /**
+         * 徹底重置狀態變更彈窗的所有表單狀態與計算結果，防止內存洩漏和數據殘留
+         */
+        function resetStatusModalForm() {
+            // 1. 重置基礎選擇框
+            const statusSelect = document.getElementById('newStatusSelect');
+            if (statusSelect) statusSelect.value = 'COMPLETED';
+
+            const brandSelect = document.getElementById('exchangeBrandSelect');
+            if (brandSelect) brandSelect.value = '';
+
+            const productSelect = document.getElementById('exchangeProductSelect');
+            if (productSelect) productSelect.innerHTML = '<option value="">請先選擇品牌</option>';
+
+            const qtyInput = document.getElementById('exchangeQuantity');
+            if (qtyInput) {
+                qtyInput.value = '';
+                qtyInput.max = '';
+                qtyInput.placeholder = '請輸入換貨數量';
+            }
+
+            // 2. 重置差價計算 Checkbox 和顯示區域
+            const diffCalcCheckbox = document.getElementById('enableExchangeDiffCalc');
+            if (diffCalcCheckbox) diffCalcCheckbox.checked = false;
+
+            const diffContent = document.getElementById('exchangeDiffContent');
+            if (diffContent) diffContent.style.display = 'none';
+
+            // 3. 隱藏所有動態容器並【清空內部動態生成的 DOM】(釋放內存)
+            const refundContainer = document.getElementById('refundDetailsContainer');
+            if (refundContainer) {
+                refundContainer.style.display = 'none';
+                document.getElementById('refundItemsList').innerHTML = ''; // 徹底清空退款輸入框
+            }
+
+            const exchangeContainer = document.getElementById('exchangeDetailsContainer');
+            if (exchangeContainer) exchangeContainer.style.display = 'none';
+
+            const diffContainer = document.getElementById('exchangeDiffContainer');
+            if (diffContainer) diffContainer.style.display = 'none';
+
+            // 4. 清空金額輸入與餘額顯示
+            const paidInput = document.getElementById('customerPaidAmount');
+            if (paidInput) paidInput.value = '';
+
+            const balanceDisplay = document.getElementById('balanceDisplay');
+            if (balanceDisplay) balanceDisplay.style.display = 'none';
+
+            const diffHint = document.getElementById('diffHint');
+            if (diffHint) diffHint.style.display = 'none';
+
+            // 5. 重置所有計算結果文本為初始默認狀態
+            const newTotalEl = document.getElementById('newProductTotal');
+            if (newTotalEl) newTotalEl.textContent = 'HK$ 0.00';
+
+            const oldRefundEl = document.getElementById('oldProductRefund');
+            if (oldRefundEl) oldRefundEl.textContent = '- HK$ 0.00';
+
+            const finalDiffEl = document.getElementById('finalDiffAmount');
+            if (finalDiffEl) {
+                finalDiffEl.textContent = 'HK$ 0.00';
+                finalDiffEl.style.color = '#6c757d'; // 恢復默認灰色
+            }
+
+            const balanceAmountEl = document.getElementById('balanceAmount');
+            if (balanceAmountEl) balanceAmountEl.textContent = 'HK$ 0.00';
+
+            const balanceHintEl = document.getElementById('balanceHint');
+            if (balanceHintEl) balanceHintEl.textContent = '';
         }
 
         function toggleRefundInputs() {
@@ -1185,40 +1269,58 @@
         async function loadExchangeProductsByBrand() {
             const brand = document.getElementById('exchangeBrandSelect').value;
             const productSelect = document.getElementById('exchangeProductSelect');
+            const quantityInput = document.getElementById('exchangeQuantity');
 
             if (!brand) {
                 productSelect.innerHTML = '<option value="">請先選擇品牌</option>';
+                quantityInput.max = ''; // 清空最大值限制
                 return;
             }
 
-            productSelect.innerHTML = '';
+            // 使用全局變量 currentStoreId
+            if (!currentStoreId) {
+                productSelect.innerHTML = '<option value="">無法獲取預約門店資訊</option>';
+                return;
+            }
+
+            productSelect.innerHTML = '<option value="">加載中...</option>';
+            quantityInput.value = ''; // 清空數量
+            quantityInput.max = ''; // 清空最大值
 
             try {
-                const response = await fetch(`/brands/${encodeURIComponent(brand)}`);
+                const response = await fetch(`/brands/${encodeURIComponent(brand)}/store/${currentStoreId}/products`);
                 const result = await response.json();
 
                 if (result.success && result.data && result.data.length > 0) {
-                    const defaultOption = document.createElement('option');
-                    defaultOption.value = '';
-                    defaultOption.textContent = '請選擇商品';
-                    productSelect.appendChild(defaultOption);
+                    productSelect.innerHTML = '<option value="">請選擇商品</option>';
 
                     result.data.forEach(product => {
                         const option = document.createElement('option');
                         option.value = product.productId;
-                        option.textContent = `${product.description} (HK$ ${product.price})`;
+                        const stock = product.stock || 0;
+
+                        // 將庫存信息存入 data 屬性
+                        option.dataset.stock = stock;
+
+                        if (stock > 0) {
+                            option.textContent = `${product.description} (HK$ ${product.price}) - 庫存: ${stock}`;
+                        } else {
+                            option.textContent = `${product.description} (HK$ ${product.price}) - 缺貨`;
+                            option.disabled = true;
+                            option.style.color = '#999';
+                            option.style.backgroundColor = '#f5f5f5';
+                        }
+
                         productSelect.appendChild(option);
                     });
                 } else {
-                    productSelect.innerHTML = '<option value="">該品牌下暫無可用商品</option>';
+                    productSelect.innerHTML = '<option value="">該門店暫無此品牌商品</option>';
                 }
             } catch (error) {
                 console.error('加載商品列表失敗:', error);
                 productSelect.innerHTML = '<option value="">獲取商品失敗，請重試</option>';
             }
         }
-
-
         // ==========================================
         // 4. 渲染退款輸入框
         // ==========================================
@@ -1412,18 +1514,26 @@
                 });
             }
 
-            // 2. 【核心新增】：如果是換貨，收集新換購商品的資訊
+            // 2. 【核心新增】：如果是換貨，收集新換購商品的資訊並校驗庫存
             let exchangeData = null;
             if (currentRequestType === 'EXCHANGE' && newStatus === 'COMPLETED') {
                 const exchangeProductSelect = document.getElementById('exchangeProductSelect');
                 const exchangeQuantityInput = document.getElementById('exchangeQuantity');
 
                 if (exchangeProductSelect && exchangeProductSelect.value) {
+                    const selectedOption = exchangeProductSelect.selectedOptions[0];
                     const newProductId = exchangeProductSelect.value;
                     const newQuantity = parseInt(exchangeQuantityInput.value) || 0;
+                    const stock = parseInt(selectedOption.dataset.stock) || 0;
 
-                    // 從下拉框文本中提取單價 (格式: "商品描述 (HK$ 50000)")
-                    const selectedOption = exchangeProductSelect.selectedOptions[0];
+                    // 【核心校驗】：檢查數量是否超過庫存
+                    if (newQuantity > stock) {
+                        showNotification(`❌ 換貨數量 (${newQuantity}) 超過庫存 (${stock})，請調整數量`, true);
+                        exchangeQuantityInput.focus();
+                        return; // 阻止提交
+                    }
+
+                    // 從下拉框文本中提取單價
                     const priceMatch = selectedOption.textContent.match(/HK\$\s*([\d,]+)/);
                     const unitPrice = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : 0;
 
@@ -1431,8 +1541,11 @@
                         productId: newProductId,
                         quantity: newQuantity,
                         unitPrice: unitPrice,
-                        totalPrice: unitPrice * newQuantity // 例如: 50000
+                        totalPrice: unitPrice * newQuantity
                     };
+                } else if (!exchangeProductSelect.value) {
+                    showNotification('❌ 請選擇換貨商品', true);
+                    return;
                 }
             }
 
@@ -1485,6 +1598,7 @@
         function openStatusModalFromData(btn) {
             const requestId = btn.getAttribute('data-request-id');
             const requestType = btn.getAttribute('data-request-type');
+            currentStoreId = btn.getAttribute('data-store-id'); // 獲取當前申請的門店ID並存入全局變量
             openStatusModal(requestId, requestType);
         }
 
@@ -1675,7 +1789,7 @@
                 statusSelect.addEventListener('change', toggleRefundInputs);
             }
 
-            // 【新增】監聽換貨商品和數量的變化
+            // 監聽換貨商品和數量的變化
             const productSelect = document.getElementById('exchangeProductSelect');
             const quantityInput = document.getElementById('exchangeQuantity');
             const refundContainer = document.getElementById('refundDetailsContainer');
@@ -1694,12 +1808,53 @@
                 });
             }
 
-            // 【新增】監聽退款金額輸入框的變化（使用事件委託）
+            // 監聽退款金額輸入框的變化（使用事件委託）
             if (refundContainer) {
                 refundContainer.addEventListener('input', function (e) {
                     if (e.target.classList.contains('refund-amount-input')) {
                         const checkbox = document.getElementById('enableExchangeDiffCalc');
                         if (checkbox && checkbox.checked) calculateExchangeDiff();
+                    }
+                });
+            }
+
+
+            if (productSelect && quantityInput) {
+                productSelect.addEventListener('change', function () {
+                    const selectedOption = this.selectedOptions[0];
+                    const stock = parseInt(selectedOption.dataset.stock) || 0;
+
+                    if (stock > 0) {
+                        quantityInput.max = stock;
+                        quantityInput.placeholder = `最多可輸入 ${stock}`;
+
+                        // 如果當前數量超過庫存，自動修正
+                        const currentQty = parseInt(quantityInput.value) || 0;
+                        if (currentQty > stock) {
+                            quantityInput.value = stock;
+                            showNotification(`⚠️ 數量已自動調整為最大庫存 ${stock}`, true);
+                        }
+                    } else {
+                        quantityInput.max = '';
+                        quantityInput.placeholder = '請輸入換貨數量';
+                    }
+                });
+            }
+
+            // 監聽數量輸入，實時校驗
+            if (quantityInput) {
+                quantityInput.addEventListener('input', function () {
+                    const selectedOption = productSelect.selectedOptions[0];
+                    const stock = parseInt(selectedOption.dataset.stock) || 0;
+                    const currentValue = parseInt(this.value) || 0;
+
+                    if (stock > 0 && currentValue > stock) {
+                        this.value = stock;
+                        showNotification(`⚠️ 換貨數量不能超過庫存 (${stock})`, true);
+                    }
+
+                    if (currentValue < 1) {
+                        this.value = 1;
                     }
                 });
             }

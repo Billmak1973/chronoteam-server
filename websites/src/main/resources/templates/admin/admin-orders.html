@@ -93,6 +93,12 @@
             color: #5a32a3;
         }
 
+        /* 部分退款樣式 (使用稍微淺一點的紫色以作區分) */
+        .status-partially-refunded {
+            background: #f3e8ff;
+            color: #6b21a8;
+        }
+
         .order-details-row {
             background: #f8f9fa;
         }
@@ -946,6 +952,7 @@
                             <option value="all">全部</option>
                             <option value="STORE_PICKUP">門店自取</option>
                             <option value="EXPRESS">快遞</option>
+                            <option value="OFFLINE_DIRECT">綫下直接領取</option>
                         </select>
                     </div>
 
@@ -1405,6 +1412,7 @@
             'PAID_OFFLINE': {label: '已線下付款', cls: 'status-paid'},
             'PENDING_OFFLINE': {label: '待線下付款', cls: 'status-pending'},
             'REFUNDED': {label: '已退款', cls: 'status-refunded'},
+            'PARTIALLY_REFUNDED': {label: '部分退款', cls: 'status-partially-refunded'},
         };
 
         const orderStatusMap = {
@@ -1459,7 +1467,8 @@
 
             let deliveryHtml = order.deliveryMethod === 'EXPRESS' ? '<span style="color:#004085;"><i class="fas fa-truck"></i> 快遞</span>' :
                 order.deliveryMethod === 'STORE_PICKUP' ? '<span style="color:#155724;"><i class="fas fa-store"></i> 門店自取</span>' :
-                    `<span class="text-muted">${order.deliveryMethod || '-'}</span>`;
+                    order.deliveryMethod === 'OFFLINE_DIRECT' ? '<span style="color:#fd7e14; font-weight:600;"><i class="fas fa-walking"></i> 線下直接領取</span>' :
+                        `<span class="text-muted">${order.deliveryMethod || '-'}</span>`;
 
             let courierHtml = order.delivery ? (order.courierUsername ? `<span style="color:#004085;">${order.courierUsername}</span>` : '<span class="text-muted">未分配</span>') : '<span class="text-muted">-</span>';
 

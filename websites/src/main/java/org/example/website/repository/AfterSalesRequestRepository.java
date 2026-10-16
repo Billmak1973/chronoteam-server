@@ -4,6 +4,7 @@ import org.example.website.entity.AfterSalesRequest;
 import org.example.website.entity.AfterSalesRequestItem;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -74,16 +75,6 @@ public interface AfterSalesRequestRepository extends JpaRepository<AfterSalesReq
             @Param("status") AfterSalesRequest.RequestStatus status
     );
 
-    Page<AfterSalesRequest> findByStatus(AfterSalesRequest.RequestStatus status, Pageable pageable);
-
-    Page<AfterSalesRequest> findByRequestType(AfterSalesRequest.RequestType requestType, Pageable pageable);
-
-    Page<AfterSalesRequest> findByStatusAndRequestType(
-            AfterSalesRequest.RequestStatus status,
-            AfterSalesRequest.RequestType requestType,
-            Pageable pageable
-    );
-
     /**
      * 查詢指定訂單下，所有狀態為「已完成」的售後申請記錄
      * 用於聚合統計該訂單是否已經被 100% 售後處理
@@ -105,4 +96,12 @@ public interface AfterSalesRequestRepository extends JpaRepository<AfterSalesReq
      */
     @Query("SELECT DISTINCT a.storeId FROM AfterSalesRequest a WHERE a.storeId IS NOT NULL AND a.storeId != ''")
     List<String> findDistinctStoreIds();
+
+    @Query("SELECT COALESCE(SUM(i.returnQuantity), 0) FROM AfterSalesRequestItem i " +
+            "JOIN i.afterSalesRequest r " +
+            "WHERE i.orderItem.orderItemId = :orderItemId " +
+            "AND r.status IN ('PENDING', 'COMPLETED')")
+    Integer sumValidReturnQuantityByOrderItemId(@Param("orderItemId") Long orderItemId);
+
+
 }

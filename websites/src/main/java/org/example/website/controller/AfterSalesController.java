@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,7 @@ public class AfterSalesController {
     private final OrderRepository orderRepository;
     private final AfterSalesRequestRepository afterSalesRequestRepository;
     private final OfflineStoreRepository offlineStoreRepository;
-    // 【修改處】添加 final 關鍵字，讓 @RequiredArgsConstructor 自動注入
+    // 添加 final 關鍵字，讓 @RequiredArgsConstructor 自動注入
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     /**
@@ -129,66 +130,67 @@ public class AfterSalesController {
         }
     }
 
-
-
-
-    /**
-     * 獲取訂單現有的待處理售後申請 (通用：支持退貨/換貨 + 雙向借用)
-     * 【核心合併】：同時返回同訂單同商品的另一種申請類型數量，並在無同類型記錄時，自動返回另一類型的預約信息供前端借用。
-     */
-    @Operation(summary = "獲取現有售後申請", description = "根據訂單號和申請類型獲取記錄。支持獲取同商品的另一種類型數量，並在無同類型記錄時自動返回另一類型的預約信息供借用。")
+    @Operation(summary = "獲取現有售後申請及剩餘可申請數量", description = "計算並返回該商品剩餘可退/換貨的數量")
     @GetMapping("/after-sales-request")
     @ResponseBody
     public ResponseEntity<?> getExistingAfterSalesRequest(
             @RequestParam String orderNo,
-            @RequestParam String type, // 接收 "RETURN" 或 "EXCHANGE"
-            @RequestParam Integer productId, // 【保留代碼1】商品ID，用於精確匹配該商品的申請數量
+            @RequestParam String type,
+            @RequestParam Integer productId,
             Authentication authentication) {
 
         String username = authentication.getName();
-        // 校驗訂單權限
-        orderRepository.findByOrderNoAndUser_Username(orderNo, username)
+        Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或無權訪問"));
 
-        // 動態解析枚舉
+        // 1. 獲取該商品在訂單中的原始購買數量
+        OrderItem targetOrderItem = order.getItems().stream()
+                .filter(item -> item.getProduct().getProductId().equals(productId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("訂單中找不到該商品"));
+
+        int originalQuantity = targetOrderItem.getQuantity();
+        Long orderItemId = targetOrderItem.getOrderItemId();
+
         AfterSalesRequest.RequestType reqType = AfterSalesRequest.RequestType.valueOf(type);
         AfterSalesRequest.RequestType otherType = (reqType == AfterSalesRequest.RequestType.RETURN)
                 ? AfterSalesRequest.RequestType.EXCHANGE
                 : AfterSalesRequest.RequestType.RETURN;
 
-        // 1. 優先查找當前類型的申請
+        // 2. 查找當前類型的 PENDING 申請 (用於回填表單)
         AfterSalesRequest currentRequest = afterSalesRequestRepository
-                .findByOriginalOrder_OrderNoAndRequestTypeAndStatus(
-                        orderNo, reqType, AfterSalesRequest.RequestStatus.PENDING)
+                .findByOriginalOrder_OrderNoAndRequestTypeAndStatus(orderNo, reqType, AfterSalesRequest.RequestStatus.PENDING)
                 .orElse(null);
 
-        // 2. 查找另一種類型的申請 (用於獲取另一種申請的數量，或作為借用信息)
-        AfterSalesRequest otherRequest = afterSalesRequestRepository
-                .findByOriginalOrder_OrderNoAndRequestTypeAndStatus(
-                        orderNo, otherType, AfterSalesRequest.RequestStatus.PENDING)
+        // 3. 查找另一種類型的 PENDING 申請 (僅用於借用預約信息)
+        AfterSalesRequest otherRequestPending = afterSalesRequestRepository
+                .findByOriginalOrder_OrderNoAndRequestTypeAndStatus(orderNo, otherType, AfterSalesRequest.RequestStatus.PENDING)
                 .orElse(null);
 
-        // 3. 構建返回數據
+        // 4. 【核心新增】計算已佔用的數量 (狀態為 PENDING 或 COMPLETED)
+        Integer appliedQuantity = afterSalesRequestRepository.sumValidReturnQuantityByOrderItemId(orderItemId);
+        if (appliedQuantity == null) appliedQuantity = 0;
+
+        // 5. 計算剩餘可申請數量
+        int remainingQuantity = originalQuantity - appliedQuantity;
+
         Map<String, Object> data = new HashMap<>();
 
+        // 回填現有申請數據
         if (currentRequest != null) {
-            // 情況 A：存在同類型的申請，正常返回完整信息
             data.put("requestId", currentRequest.getRequestId());
             data.put("storeId", currentRequest.getStoreId());
             data.put("appointmentDate", currentRequest.getAppointmentDate());
             data.put("appointmentTimeSlot", currentRequest.getAppointmentTimeSlot());
             data.put("reason", currentRequest.getReason());
 
-            // 【保留代碼1】提取當前申請中該特定商品的數量
             AfterSalesRequestItem currentItem = currentRequest.getItems().stream()
                     .filter(item -> item.getProduct().getProductId().equals(productId))
-                    .findFirst()
-                    .orElse(null);
+                    .findFirst().orElse(null);
             if (currentItem != null) {
                 data.put("currentQuantity", currentItem.getReturnQuantity());
             }
 
-            // 【保留代碼1】提取當前申請的所有商品明細 (供前端展示或處理)
             List<Map<String, Object>> items = currentRequest.getItems().stream().map(item -> {
                 Map<String, Object> itemMap = new HashMap<>();
                 itemMap.put("productId", item.getProduct().getProductId());
@@ -196,68 +198,49 @@ public class AfterSalesController {
                 return itemMap;
             }).collect(Collectors.toList());
             data.put("items", items);
-
         }
-        else if (otherRequest != null) {
-            // ==========================================
-            // 【核心修改】：檢查預約時間是否已過期
-            // ==========================================
-            boolean isTimeValid = true; // 默認有效
-
-            if (otherRequest.getAppointmentDate() != null) {
-                LocalDate appointmentDate = otherRequest.getAppointmentDate();
-                String timeSlotStr = otherRequest.getAppointmentTimeSlot(); // 例如 "12:00" 或 "10:00 - 12:00"
-
+        else if (otherRequestPending != null) {
+            // 借用另一種類型的預約信息邏輯 (保持不變)
+            boolean isTimeValid = true;
+            if (otherRequestPending.getAppointmentDate() != null) {
+                LocalDate appointmentDate = otherRequestPending.getAppointmentDate();
+                String timeSlotStr = otherRequestPending.getAppointmentTimeSlot();
                 LocalDateTime appointmentDateTime;
 
-                // 嘗試解析具體時間
                 if (timeSlotStr != null && !timeSlotStr.isEmpty()) {
                     try {
-                        // 假設時間格式是 "HH:mm" 或者 "HH:mm - HH:mm"，我們取開始時間來對比
                         String startTimeStr = timeSlotStr.split(" - ")[0].trim();
-                        LocalTime startTime = LocalTime.parse(startTimeStr, DateTimeFormatter.ofPattern("HH:mm"));
+                        java.time.LocalTime startTime = java.time.LocalTime.parse(startTimeStr, java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
                         appointmentDateTime = LocalDateTime.of(appointmentDate, startTime);
                     } catch (Exception e) {
-                        // 如果解析失敗（例如格式不對），保守起見，只對比日期（視為當天有效）
                         appointmentDateTime = appointmentDate.atStartOfDay();
                     }
                 } else {
-                    // 如果沒有具體時間，只對比日期
                     appointmentDateTime = appointmentDate.atStartOfDay();
                 }
 
-                // 【核心判斷】：如果當前時間已經晚於預約時間，則視為過期，不借用
                 if (LocalDateTime.now().isAfter(appointmentDateTime)) {
                     isTimeValid = false;
-                    System.out.println("⚠️ 另一種類型的申請預約時間已過期 (" + appointmentDateTime + ")，取消自動借用。");
                 }
             }
 
-            // 只有當時間有效時，才返回借用信息
             if (isTimeValid) {
                 data.put("borrowedInfo", Map.of(
-                        "storeId", otherRequest.getStoreId(),
-                        "appointmentDate", otherRequest.getAppointmentDate(),
-                        "appointmentTimeSlot", otherRequest.getAppointmentTimeSlot()
+                        "storeId", otherRequestPending.getStoreId(),
+                        "appointmentDate", otherRequestPending.getAppointmentDate(),
+                        "appointmentTimeSlot", otherRequestPending.getAppointmentTimeSlot()
                 ));
             }
         }
 
-        // 【核心新增】如果存在另一種類型的申請，無論當前類型是否存在，都返回該商品在另一種申請中的數量，以便前端計算剩餘可申請數量
-        if (otherRequest != null) {
-            AfterSalesRequestItem otherItem = otherRequest.getItems().stream()
-                    .filter(item -> item.getProduct().getProductId().equals(productId))
-                    .findFirst()
-                    .orElse(null);
-            if (otherItem != null) {
-                data.put("otherTypeQuantity", otherItem.getReturnQuantity());
-                data.put("otherRequestType", otherType.name());
-            }
-        }
+        // 6. 【核心新增】將計算結果返回給前端
+        data.put("originalQuantity", originalQuantity);
+        data.put("appliedQuantity", appliedQuantity);
+        data.put("remainingQuantity", remainingQuantity);
 
-        // 如果兩種類型都沒有找到申請，則返回無現有申請
-        if (currentRequest == null && otherRequest == null) {
-            return ResponseEntity.ok(Result.okWithData("無現有申請", null));
+        // 如果完全沒有任何記錄且剩餘數量為 0 (理論上不會，但做個防護)
+        if (currentRequest == null && otherRequestPending == null && appliedQuantity == 0) {
+            return ResponseEntity.ok(Result.okWithData("無現有申請", data));
         }
 
         return ResponseEntity.ok(Result.okWithData("找到相關申請信息", data));

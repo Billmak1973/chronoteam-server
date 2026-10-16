@@ -95,4 +95,7 @@ public interface StoreInventoryRepository extends JpaRepository<StoreInventory, 
             @Param("condition") WatchCondition condition,
             Pageable pageable
     );
+
+    // 根據門店ID獲取該門店的所有庫存記錄
+    List<StoreInventory> findByStore_StoreId(Long storeId);
 }
