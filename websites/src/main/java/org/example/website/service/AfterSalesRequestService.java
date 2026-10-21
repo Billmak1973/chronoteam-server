@@ -83,6 +83,16 @@ public class AfterSalesRequestService {
             throw new RuntimeException("狀態未發生改變");
         }
 
+        // ==========================================
+        // 【核心修復】：將記錄操作員的邏輯移到 if (COMPLETED) 的外面！
+        // 這樣無論是變成 COMPLETED, REJECTED 還是 CANCELLED，都會記錄當前操作員
+        // ==========================================
+        if (operatorUsername != null && !operatorUsername.trim().isEmpty()) {
+            User operatorUser = userRepository.findByUsername(operatorUsername)
+                    .orElseThrow(() -> new RuntimeException("操作員不存在: " + operatorUsername));
+            request.setOperator(operatorUser);
+        }
+
         if (newStatus == AfterSalesRequest.RequestStatus.COMPLETED) {
             BigDecimal totalRefund = BigDecimal.ZERO;
 
@@ -494,8 +504,7 @@ public class AfterSalesRequestService {
         log.setChangeQuantity(returnQty); // 正數表示增加
         log.setReason("售後退貨入庫 (申請ID: " + request.getRequestId() + ")");
         log.setAdjustmentType(InventoryAdjustmentLog.AdjustmentType.RETURN); // 類型為 RETURN
-        log.setTransferBatchId(java.util.UUID.randomUUID().toString()); // 生成獨立批次號
-
+        log.setAfterSalesRequestId(request.getRequestId());
         adjustmentLogRepository.save(log);
     }
 }

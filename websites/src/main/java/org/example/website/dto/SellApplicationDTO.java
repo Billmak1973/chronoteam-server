@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -18,6 +20,8 @@ public class SellApplicationDTO {
     private String model;
 
     private Integer purchaseYear;
+
+    private Integer quantity;
 
     private List<String> accessories;
 
@@ -36,4 +40,11 @@ public class SellApplicationDTO {
 
     @NotNull(message = "請選擇交易模式")
     private String transactionMode;  // "BUYOUT" 或 "CONSIGNMENT"
+
+    // ==========================================
+    // 線下預約交接資訊欄位
+    // ==========================================
+    private String storeId;
+    private LocalDate appointmentDate;
+    private String appointmentTimeSlot;
 }

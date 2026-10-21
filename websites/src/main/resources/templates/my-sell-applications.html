@@ -7,12 +7,10 @@
     <title>我的出售申請 - ChronoTeam</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
-
-    <!--  1. 引入側邊欄專屬 CSS -->
     <link rel="stylesheet" href="/css/sidebar.css">
 
     <style>
-        /*  2. 佈局相關 (與 dashboard / password 頁面保持一致) */
+        /* 佈局相關 */
         .dashboard-container {
             display: flex;
             min-height: calc(100vh - 150px);
@@ -49,6 +47,67 @@
             color: var(--gray);
             margin-bottom: 2rem;
             font-size: 0.95rem;
+        }
+
+        /* 【新增】財務統計卡片樣式（從結算記錄頁面移過來） */
+        .finance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .finance-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            transition: transform 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .finance-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .finance-card::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            width: 100px;
+            height: 100px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 50%;
+        }
+
+        .finance-card i {
+            font-size: 2rem;
+            color: var(--gold);
+            background: rgba(255, 255, 255, 0.1);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+        }
+
+        .finance-info h4 {
+            margin: 0;
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .finance-info p {
+            margin: 0.2rem 0 0;
+            font-size: 0.85rem;
+            opacity: 0.8;
         }
 
         /* 卡片與列表樣式 */
@@ -97,7 +156,7 @@
             gap: 0.5rem;
         }
 
-        /* 狀態標籤 (對應 SellApplication.ApplicationStatus 枚舉) */
+        /* 狀態標籤 */
         .status-badge {
             padding: 0.3rem 0.8rem;
             border-radius: 20px;
@@ -169,25 +228,158 @@
                 flex-direction: column;
             }
         }
+
+        /* ========================================== */
+        /* 自定義取消確認彈窗 (取代原生 confirm) */
+        /* ========================================== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(3px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem 2rem 2rem;
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        }
+
+        .modal-overlay.show .modal-box {
+            animation: modalPop 0.25s ease;
+        }
+
+        @keyframes modalPop {
+            from {
+                transform: scale(0.85);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-icon {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 1.2rem;
+            border-radius: 50%;
+            background: #f8d7da;
+            color: #dc3545;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .modal-box h3 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .modal-box p {
+            color: var(--gray);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 1.8rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .modal-btn.cancel {
+            background: #e9ecef;
+            color: var(--primary);
+        }
+
+        .modal-btn.cancel:hover {
+            background: #dee2e6;
+        }
+
+        .modal-btn.confirm {
+            background: #dc3545;
+            color: white;
+        }
+
+        .modal-btn.confirm:hover {
+            background: #bb2d3b;
+            transform: translateY(-2px);
+        }
+
+        .modal-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
     </style>
 </head>
 
 <body>
     <div th:replace="~{fragments/common :: navbar}"></div>
 
-    <!-- 3. 使用 Flex 佈局容器取代原來的 page-hero -->
     <div class="dashboard-container">
-
-        <!--  4. 引入側邊欄 Fragment，傳入 activePage='sell-applications' 以高亮當前菜單 -->
         <div th:replace="~{fragments/sidebar :: sidebar(activePage='sell-applications')}"></div>
 
-        <!--  5. 右側主內容 -->
         <main class="main-content">
             <h2 class="page-title"><i class="fas fa-list-alt"></i> 我的出售申請</h2>
             <p class="page-subtitle">查看您提交的手錶出售申請進度與鑑定狀態</p>
 
-            <!--  注意：因為 Controller 返回的是 Page 對象，遍歷時必須使用 .content -->
-            <!-- 如果有申請記錄 -->
+            <!-- 【新增】財務統計卡片（從結算記錄頁面移過來） -->
+            <div class="finance-grid" th:if="${totalRevenue != null or settledCount != null}">
+                <div class="finance-card">
+                    <i class="fas fa-coins"></i>
+                    <div class="finance-info">
+                        <!-- 後端已保證 totalRevenue 不為 null，直接格式化即可，不會報錯 -->
+                        <h4 th:text="'HK$ ' + ${#numbers.formatDecimal(totalRevenue, 1, 'COMMA', 0, 'POINT')}">HK$ 0
+                        </h4>
+                        <p>累計總成交額</p>
+                    </div>
+                </div>
+
+                <!-- 已結算申請數量（替換了原本的實際淨收益） -->
+                <div class="finance-card" style="background: linear-gradient(135deg, #155724 0%, #28a745 100%);">
+                    <i class="fas fa-check-circle" style="color: white; background: rgba(255,255,255,0.2);"></i>
+                    <div class="finance-info">
+                        <h4 th:text="${settledCount != null ? settledCount : 0}">0</h4>
+                        <p>已結算申請數量</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 申請列表 -->
             <div th:if="${applications != null and !applications.content.isEmpty()}">
                 <div class="card" th:each="app : ${applications.content}">
                     <div class="app-header">
@@ -196,13 +388,10 @@
                             <span th:text="${app.brand}">Brand</span> - <span th:text="${app.series}">Series</span>
                         </div>
 
-                        <!--  【修改處】：將狀態標籤與取消按鈕包裹在同一個 div 中，確保不破壞原有的左右佈局 -->
                         <div style="display: flex; align-items: center; gap: 1rem;">
-                            <!-- 狀態標籤，根據 app.status 動態顯示顏色 -->
                             <span class="status-badge" th:classappend="'status-' + ${app.status}"
                                 th:text="${app.status}">PENDING</span>
 
-                            <!--  【新增處】：取消按鈕（僅在 PENDING 狀態顯示） -->
                             <button th:if="${app.status.name() == 'PENDING'}"
                                 th:onclick="|cancelApplication(${app.applicationId})|"
                                 style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
@@ -215,16 +404,33 @@
                     <div class="app-details">
                         <div>型號：<span th:text="${app.model} ?: '未填寫'">-</span></div>
                         <div>購買年份：<span th:text="${app.purchaseYear}">-</span></div>
+                        <div>件數：<span th:text="${app.quantity} ?: 1">1</span></div>
                         <div>交易模式：
-                            <!--  因為只顯示 BUYOUT，直接顯示固定文字 -->
                             <span style="color: var(--gold); font-weight: 600;">平台直接買斷</span>
                         </div>
                         <div>提交時間：<span th:text="${#temporals.format(app.createdAt, 'yyyy-MM-dd HH:mm')}">-</span></div>
+                        <!-- 【新增】線下預約交接資訊 (僅在有預約日期時顯示) -->
+                        <div th:if="${app.appointmentDate != null}"
+                            style="grid-column: 1 / -1; margin-top: 0.8rem; padding-top: 1rem; border-top: 1px dashed #e9ecef;">
+                            <div
+                                style="color: var(--primary); font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                                <i class="fas fa-store" style="color: var(--gold);"></i> 線下預約交接資訊
+                            </div>
+                            <div
+                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; color: var(--gray); font-size: 0.9rem;">
+                                <div>預約門店：<span style="color: var(--primary);"
+                                        th:text="${storeMap[app.storeId]} ?: '未指定'">-</span></div>
+                                <div>預約日期：<span style="color: var(--primary);"
+                                        th:text="${#temporals.format(app.appointmentDate, 'yyyy-MM-dd')}">-</span></div>
+                                <div>預約時間：<span style="color: var(--primary);"
+                                        th:text="${app.appointmentTimeSlot} ?: '未指定'">-</span></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 如果沒有申請記錄 -->
+            <!-- 空狀態 -->
             <div th:if="${applications == null or applications.content.isEmpty()}" class="card empty-state">
                 <i class="fas fa-inbox"></i>
                 <h3 style="color: var(--primary); margin-bottom: 0.5rem;">您還沒有提交過出售申請</h3>
@@ -234,6 +440,22 @@
         </main>
     </div>
 
+    <div class="modal-overlay" id="cancelModalOverlay" onclick="if(event.target === this) closeCancelModal()">
+        <div class="modal-box">
+            <div class="modal-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3>確定要取消此出售申請嗎？</h3>
+            <p>取消後，該申請將被標記為「已取消」狀態，<br>鑑定流程將同時終止。</p>
+            <div class="modal-actions">
+                <button class="modal-btn cancel" onclick="closeCancelModal()">
+                    <i class="fas fa-arrow-left"></i> 返回
+                </button>
+                <button class="modal-btn confirm" id="confirmCancelBtn" onclick="confirmCancel()">
+                    <i class="fas fa-times"></i> 確認取消
+                </button>
+            </div>
+        </div>
+    </div>
+
     <footer class="footer">
         <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
             Rights Reserved.</p>
@@ -241,28 +463,43 @@
 
     <div th:replace="~{fragments/common :: modals}"></div>
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
     <script src="/js/common.js"></script>
 
-    <!-- 【新增處】：取消申請的專屬 JS 函數 -->
     <script>
-        async function cancelApplication(applicationId) {
-            if (!confirm('⚠️ 確定要取消此出售申請嗎？\n\n取消後，該申請將被標記為已取消狀態。')) {
-                return;
-            }
+        // 暫存等待取消的申請 ID
+        let pendingCancelId = null;
+
+        // 打開自定義彈窗 (不再使用原生 confirm)
+        function cancelApplication(applicationId) {
+            pendingCancelId = applicationId;
+            document.getElementById('cancelModalOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden'; // 鎖定背景滾動
+        }
+
+        // 關閉彈窗
+        function closeCancelModal() {
+            pendingCancelId = null;
+            document.getElementById('cancelModalOverlay').classList.remove('show');
+            document.body.style.overflow = ''; // 恢復背景滾動
+        }
+
+        // 點擊「確認取消」後才真正發送請求
+        async function confirmCancel() {
+            if (pendingCancelId === null) return;
 
             try {
-                const response = await fetch(`/sell/cancel/${applicationId}`, {
+                const response = await fetch(`/sell/cancel/${pendingCancelId}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: {'Content-Type': 'application/json'}
                 });
 
                 const result = await response.json();
 
                 if (response.ok && result.success) {
+                    closeCancelModal();
                     showNotification('✅ 申請已取消');
-                    // 刷新頁面以更新狀態
                     setTimeout(() => location.reload(), 1000);
                 } else {
                     showNotification('❌ ' + (result.message || '取消失敗'), true);
@@ -272,6 +509,11 @@
                 showNotification('❌ 網絡錯誤，請稍後重試', true);
             }
         }
+
+        // 支援按 ESC 鍵關閉彈窗
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeCancelModal();
+        });
     </script>
 </body>
 

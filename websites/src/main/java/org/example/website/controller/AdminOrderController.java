@@ -9,14 +9,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.Result;
-import org.example.website.entity.Notification;
-import org.example.website.entity.Order;
-import org.example.website.entity.OrderItem;
-import org.example.website.entity.User;
-import org.example.website.repository.NotificationRepository;
-import org.example.website.repository.OrderItemRepository;
-import org.example.website.repository.OrderRepository;
-import org.example.website.repository.UserRepository;
+import org.example.website.entity.*;
+import org.example.website.repository.*;
 import org.example.website.security.CustomUserDetails;
 import org.example.website.service.NotificationService;
 import org.example.website.service.OrderService;
@@ -52,14 +46,16 @@ public class AdminOrderController {
     private final OrderService orderService;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final AfterSalesRequestRepository afterSalesRequestRepository;
 
-    public AdminOrderController(OrderRepository orderRepository, OrderItemRepository orderItemRepository, SystemConfigService systemConfigService, OrderService orderService, NotificationRepository notificationRepository, UserRepository userRepository) {
+    public AdminOrderController(OrderRepository orderRepository, OrderItemRepository orderItemRepository, SystemConfigService systemConfigService, OrderService orderService, NotificationRepository notificationRepository, UserRepository userRepository, AfterSalesRequestRepository afterSalesRequestRepository) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.systemConfigService = systemConfigService;
         this.orderService = orderService;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.afterSalesRequestRepository = afterSalesRequestRepository;
     }
 
     /**
@@ -93,7 +89,6 @@ public class AdminOrderController {
             @Parameter(description = "買家用戶名 (精確匹配)", example = "testuser")
             @RequestParam(required = false) String buyerUsername,
 
-            // 【修正】：描述改為 ID，與 Long 類型匹配
             @Parameter(description = "快遞員 ID (精確匹配)", example = "1")
             @RequestParam(required = false) Long courierId,
 
@@ -109,7 +104,6 @@ public class AdminOrderController {
             @Parameter(description = "配送方式 (EXPRESS:快遞, STORE_PICKUP:門店自取)", example = "EXPRESS")
             @RequestParam(required = false) String deliveryMethod,
 
-            // 【修正】：描述改為 ID，與 Long 類型匹配
             @Parameter(description = "線下店鋪 ID (精確匹配)", example = "1")
             @RequestParam(required = false) Long storeId,
 
@@ -120,7 +114,7 @@ public class AdminOrderController {
             @RequestParam(required = false) String paymentMethod,
 
             @Parameter(description = "支付狀態 (UNPAID, PAID_SIMULATED, PAID_REAL, PENDING_OFFLINE, PAID_OFFLINE, REFUNDED)", example = "PAID_SIMULATED")
-            @RequestParam(required = false) String paymentStatus,
+            @RequestParam(required = false) String paymentStatus,//原生SQL參數必須用 String，避免 Hibernate 6 處理 null Enum 時拋出 JdbcMapping NPE
 
             @Parameter(description = "訂單狀態 (PENDING, PAID, SHIPPED, COMPLETED, CANCELLED)", example = "PAID")
             @RequestParam(required = false) String orderStatus,
@@ -152,7 +146,6 @@ public class AdminOrderController {
             @Parameter(description = "送達時間特定日期 (yyyy-MM-dd)")
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate deliveryDateSpecific,
 
-            // ================= 【新增】處理預約到店時間參數 =================
             @Parameter(description = "預約到店時間篩選模式 (all:全部, range:區間, specific:特定日子)")
             @RequestParam(required = false) String appointmentDateMode,
 
@@ -167,19 +160,20 @@ public class AdminOrderController {
 
             @Parameter(description = "是否已過期 (true:已過期, false:未過期)")
             @RequestParam(required = false) Boolean isExpired
-
     ) {
-        // 將 1-based 轉換為 0-based 供 Spring Data 使用
         int pageIndex = Math.max(0, page - 1);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // 【核心修復】：安全地將 String 轉換為 Enum，避免 JPQL 中 valueOf(null) 報錯
+        // ==========================================
+        // 步驟 1：為 JPQL 查詢安全轉換 Enum (允許為 null)
+        // 【關鍵 3】Controller 作為橋樑：先將前端傳來的 String 安全轉換為 Enum (允許為 null)，專門提供給 JPQL 使用
+        // ==========================================
         Order.PaymentStatus paymentStatusEnum = null;
         if (paymentStatus != null && !paymentStatus.trim().isEmpty()) {
             try {
                 paymentStatusEnum = Order.PaymentStatus.valueOf(paymentStatus.trim());
             } catch (IllegalArgumentException e) {
-                // 忽略無效的枚舉字符串，保持為 null，讓 JPQL 的 IS NULL 條件生效
+                // 忽略無效的枚舉字符串，保持為 null
             }
         }
 
@@ -196,8 +190,8 @@ public class AdminOrderController {
         LocalDateTime searchEndDt = null;
 
         if ("range".equals(createDateMode)) {
-            if (createDateStart != null) searchStartDt = createDateStart.atStartOfDay(); // 00:00:00
-            if (createDateEnd != null) searchEndDt = createDateEnd.atTime(23, 59, 59);   // 23:59:59
+            if (createDateStart != null) searchStartDt = createDateStart.atStartOfDay();
+            if (createDateEnd != null) searchEndDt = createDateEnd.atTime(23, 59, 59);
         } else if ("specific".equals(createDateMode)) {
             if (createDateSpecific != null) {
                 searchStartDt = createDateSpecific.atStartOfDay();
@@ -205,57 +199,48 @@ public class AdminOrderController {
             }
         }
 
-        // ================= 【新增】處理送達時間參數 =================
         LocalDate searchDeliveryDateStart = null;
         LocalDate searchDeliveryDateEnd = null;
-
         if ("range".equals(deliveryDateMode)) {
             searchDeliveryDateStart = deliveryDateStart;
             searchDeliveryDateEnd = deliveryDateEnd;
         } else if ("specific".equals(deliveryDateMode)) {
-            // 特定某一天：開始和結束設為同一天
             searchDeliveryDateStart = deliveryDateSpecific;
             searchDeliveryDateEnd = deliveryDateSpecific;
         }
 
-        // ================= 【新增】處理預約到店時間參數 =================
         LocalDate searchAppointmentDateStart = null;
         LocalDate searchAppointmentDateEnd = null;
-
         if ("range".equals(appointmentDateMode)) {
             searchAppointmentDateStart = appointmentDateStart;
             searchAppointmentDateEnd = appointmentDateEnd;
         } else if ("specific".equals(appointmentDateMode)) {
-            // 特定某一天：開始和結束設為同一天
             searchAppointmentDateStart = appointmentDateSpecific;
             searchAppointmentDateEnd = appointmentDateSpecific;
         }
 
-        // ================= 計算過期截止時間 =================
         LocalDateTime onlineDeadline = null;
         LocalDateTime offlineDeadline = null;
-
         if (isExpired != null) {
             Integer onlineDays = systemConfigService.getOnlineOrderRetentionDays();
             Integer offlineDays = systemConfigService.getOfflinePaymentDays();
             LocalDateTime now = LocalDateTime.now();
-
-            if (onlineDays != null) {
-                onlineDeadline = now.minusDays(onlineDays);
-            }
-            if (offlineDays != null) {
-                offlineDeadline = now.minusDays(offlineDays);
-            }
+            if (onlineDays != null) onlineDeadline = now.minusDays(onlineDays);
+            if (offlineDays != null) offlineDeadline = now.minusDays(offlineDays);
         }
 
-        // 【核心修改】：調用 Repository 的方法，傳入轉換後的 Enum 及 ID 參數
+        // ==========================================
+        // 步驟 2：調用 JPQL 方法 (傳入 Enum)
+        // ==========================================
         Page<Order> ordersPage = orderRepository.findOrdersWithAdvancedFilters(
                 buyerUsername, courierId, amountMode, amountVal1, amountVal2,
-                deliveryMethod, storeId, needDelivery, paymentMethod, paymentStatusEnum, orderStatusEnum, searchStartDt, searchEndDt,addressKeyword,
-                searchDeliveryDateStart, searchDeliveryDateEnd, searchAppointmentDateStart, searchAppointmentDateEnd,isExpired,onlineDeadline, offlineDeadline,
+                deliveryMethod, storeId, needDelivery, paymentMethod,
+                paymentStatusEnum, orderStatusEnum, // ⚠️ 傳入 Enum
+                searchStartDt, searchEndDt, addressKeyword,
+                searchDeliveryDateStart, searchDeliveryDateEnd, searchAppointmentDateStart, searchAppointmentDateEnd,
+                isExpired, onlineDeadline, offlineDeadline,
                 pageable);
 
-        // 一次 SQL 查出當前頁所有訂單的明細，按 orderId 分組
         List<Long> orderIds = ordersPage.getContent().stream()
                 .map(Order::getOrderId)
                 .collect(Collectors.toList());
@@ -269,7 +254,6 @@ public class AdminOrderController {
             orderItemsMap = new HashMap<>();
         }
 
-        // 數據清洗：將 Order + OrderItems 組裝為前端友好的 Map
         List<Map<String, Object>> cleanOrders = ordersPage.getContent().stream().map(order -> {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("orderId", order.getOrderId());
@@ -287,20 +271,63 @@ public class AdminOrderController {
             item.put("createdAt", order.getCreatedAt());
             item.put("paidAt", order.getPaidAt());
             item.put("receivedAt", order.getReceivedAt());
-
             item.put("estimatedDeliveryDate", order.getEstimatedDeliveryDate());
             item.put("appointmentDate", order.getAppointmentDate());
-
             item.put("isVisible", order.getIsVisible());
             item.put("pickupReminderCount", order.getPickupReminderCount() != null ? order.getPickupReminderCount() : 0);
-
             item.put("fullAddress", order.getUserAddress() != null ? order.getUserAddress().getFullAddress() : null);
             item.put("contactPhone", order.getUserAddress() != null ? order.getUserAddress().getContactPhone() : null);
             item.put("receiverName", order.getUserAddress() != null ? order.getUserAddress().getReceiverName() : null);
-
             item.put("courierId", order.getCourier() != null ? order.getCourier().getId() : null);
 
+            // ==========================================
+            // 計算部分退款的實際消費金額
+            // ==========================================
             List<OrderItem> items = orderItemsMap.getOrDefault(order.getOrderId(), Collections.emptyList());
+
+            // 計算訂單原始總金額（所有商品小計之和）
+            BigDecimal originalTotalAmount = items.stream()
+                    .map(oi -> oi.getPrice().multiply(BigDecimal.valueOf(oi.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // 如果是部分退款狀態，查詢退款明細
+            BigDecimal refundAmount = BigDecimal.ZERO;
+            List<Map<String, Object>> refundItems = new ArrayList<>();
+
+            if (order.getPaymentStatus() == Order.PaymentStatus.PARTIALLY_REFUNDED) {
+                // 查詢該訂單的所有售後申請（退貨/換貨）
+                List<AfterSalesRequest> afterSalesRequests = afterSalesRequestRepository
+                        .findByOriginalOrder_OrderIdAndStatus(order.getOrderId(), AfterSalesRequest.RequestStatus.COMPLETED);
+
+                // 累加退款金額並收集退款明細
+                for (AfterSalesRequest request : afterSalesRequests) {
+                    for (AfterSalesRequestItem requestItem : request.getItems()) {
+                        BigDecimal itemRefundAmount = requestItem.getFinalSettleAmount() != null
+                                ? requestItem.getFinalSettleAmount()
+                                : requestItem.getProduct().getPrice().multiply(BigDecimal.valueOf(requestItem.getReturnQuantity()));
+
+                        refundAmount = refundAmount.add(itemRefundAmount);
+
+                        // 收集退款明細信息
+                        Map<String, Object> refundItemMap = new LinkedHashMap<>();
+                        refundItemMap.put("productName", requestItem.getProduct() != null ? requestItem.getProduct().getDescription() : "未知商品");
+                        refundItemMap.put("returnQuantity", requestItem.getReturnQuantity());
+                        refundItemMap.put("unitPrice", requestItem.getProduct() != null ? requestItem.getProduct().getPrice() : BigDecimal.ZERO);
+                        refundItemMap.put("refundAmount", itemRefundAmount);
+                        refundItemMap.put("requestType", request.getRequestType() != null ? request.getRequestType().name() : "RETURN");
+                        refundItems.add(refundItemMap);
+                    }
+                }
+            }
+
+            // 計算實際消費金額 = 訂單總金額 - 退款金額
+            BigDecimal actualSpentAmount = order.getTotalAmount().subtract(refundAmount);
+            item.put("refundAmount", refundAmount);
+            item.put("actualSpentAmount", actualSpentAmount);
+            item.put("refundItems", refundItems);
+            // ==========================================
+            // 商品明細渲染（保持原有邏輯）
+            // ==========================================
             List<Map<String, Object>> cleanItems = items.stream().map(oi -> {
                 Map<String, Object> m = new LinkedHashMap<>();
                 m.put("productName", oi.getProduct() != null ? oi.getProduct().getDescription() : "未知商品");
@@ -312,23 +339,30 @@ public class AdminOrderController {
                 return m;
             }).collect(Collectors.toList());
             item.put("items", cleanItems);
-
             return item;
         }).collect(Collectors.toList());
 
-        // 使用 PaginationUtils 構建標準響應
         Map<String, Object> response = PaginationUtils.buildPageResponse(ordersPage, cleanOrders);
-
-        // 關鍵！覆蓋 currentPage，將 0-based 轉回 1-based 返回給前端
         response.put("currentPage", page);
-
         response.put("onlineOrderRetentionDays", systemConfigService.getOnlineOrderRetentionDays());
         response.put("offlinePaymentDays", systemConfigService.getOfflinePaymentDays());
 
+        // ==========================================
+        // 步驟 3：調用原生 SQL 方法 (直接傳入 String，避開 Hibernate 6 的 Enum null 映射 Bug)
+        // ==========================================
+        BigDecimal totalSpentAmount = orderRepository.calculateTotalSpentAmountWithAdvancedFilters(
+                buyerUsername, courierId, amountMode, amountVal1, amountVal2,
+                deliveryMethod, storeId, needDelivery, paymentMethod,
+                paymentStatus, orderStatus, // 【關鍵】 直接傳入原始 String，允許為 null
+                searchStartDt, searchEndDt, addressKeyword,
+                searchDeliveryDateStart, searchDeliveryDateEnd, searchAppointmentDateStart, searchAppointmentDateEnd,
+                isExpired, onlineDeadline, offlineDeadline
+        );
+
+        response.put("totalSpentAmount", totalSpentAmount != null ? totalSpentAmount : BigDecimal.ZERO);
+
         return ResponseEntity.ok(response);
     }
-
-
     /**
      * 3. 管理員專屬：獲取訂單明細 (保留備用)
      */

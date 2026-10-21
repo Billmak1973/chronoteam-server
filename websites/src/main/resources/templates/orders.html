@@ -1270,6 +1270,10 @@
                     style="background: var(--light); color: var(--primary); border: 1px solid #ddd; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem;">
                     <i class="fas fa-filter"></i> 顯示售後篩選
                 </button>
+                <button onclick="toggleOrderStatusFilter()" class="btn-sm" id="orderStatusFilterBtn"
+                    style="background: var(--light); color: var(--primary); border: 1px solid #ddd; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; margin-left: 0.5rem;">
+                    <i class="fas fa-box"></i> 篩選貨物狀態
+                </button>
             </div>
 
             <!-- ========================================== -->
@@ -1289,7 +1293,6 @@
                         <i class="fas fa-times"></i> 關閉篩選
                     </button>
                 </div>
-
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
                     <!-- 申請類型篩選 -->
                     <div class="form-group" style="margin-bottom: 0;">
@@ -1305,7 +1308,6 @@
                             <option value="EXCHANGE">換貨</option>
                         </select>
                     </div>
-
                     <!-- 申請狀態篩選 -->
                     <div class="form-group" style="margin-bottom: 0;">
                         <label
@@ -1323,7 +1325,6 @@
                             <option value="CANCELLED">已取消</option>
                         </select>
                     </div>
-
                     <!-- 商品篩選 -->
                     <div class="form-group" style="margin-bottom: 0;">
                         <label
@@ -1336,13 +1337,56 @@
                             style="width: 100%; padding: 0.7rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 0.95rem;">
                     </div>
                 </div>
-
                 <!-- 篩選結果統計 -->
                 <div id="filterStats"
                     style="margin-top: 1rem; padding: 0.8rem; background: white; border-radius: 8px; font-size: 0.9rem; color: var(--gray); display: none; border: 1px solid #e9ecef;">
                     <i class="fas fa-info-circle" style="color: var(--gold); margin-right: 0.3rem;"></i>
                     <span id="filterStatsText"></span>
                     <button onclick="clearFilters()"
+                        style="margin-left: 1rem; background: none; border: none; color: var(--accent); cursor: pointer; font-weight: 600; text-decoration: underline;">清除篩選</button>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- 貨物狀態篩選區域 (預設隱藏) -->
+            <!-- ========================================== -->
+            <div id="order-status-filter-section" class="filter-section"
+                style="display: none; margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 12px; border: 1px solid #e9ecef;">
+                <div
+                    style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+                    <h4
+                        style="margin: 0; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center;">
+                        <i class="fas fa-box" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                        貨物狀態篩選
+                    </h4>
+                    <button onclick="closeOrderStatusFilter()"
+                        style="background: none; border: none; color: var(--gray); cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem;">
+                        <i class="fas fa-times"></i> 關閉篩選
+                    </button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <!-- 貨物狀態篩選 -->
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label
+                            style="font-weight: 600; color: var(--primary); font-size: 0.9rem; display: block; margin-bottom: 0.4rem;">
+                            <i class="fas fa-truck" style="margin-right: 0.3rem;"></i>
+                            配送狀態
+                        </label>
+                        <select id="filterOrderStatus" class="form-control" onchange="applyOrderStatusFilter()"
+                            style="width: 100%; padding: 0.7rem; border: 2px solid #e9ecef; border-radius: 8px; font-size: 0.95rem;">
+                            <option value="">全部狀態</option>
+                            <option value="PAID">已付款/待發貨</option>
+                            <option value="SHIPPED">已發貨/配送中</option>
+                            <option value="COMPLETED">已完成/已收貨</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- 篩選結果統計 -->
+                <div id="orderStatusFilterStats"
+                    style="margin-top: 1rem; padding: 0.8rem; background: white; border-radius: 8px; font-size: 0.9rem; color: var(--gray); display: none; border: 1px solid #e9ecef;">
+                    <i class="fas fa-info-circle" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                    <span id="orderStatusFilterStatsText"></span>
+                    <button onclick="clearOrderStatusFilter()"
                         style="margin-left: 1rem; background: none; border: none; color: var(--accent); cursor: pointer; font-weight: 600; text-decoration: underline;">清除篩選</button>
                 </div>
             </div>
@@ -1741,6 +1785,7 @@
             }, 100);
         }
 
+        // 修改原有的 loadOrders 函數，支持貨物狀態篩選
         async function loadOrders(type, page) {
             const container = document.getElementById('orders-container');
             const paginationContainer = document.getElementById('pagination-container');
@@ -1753,32 +1798,49 @@
 
                 // 構建 Query Parameters
                 let queryParams = `?page=${page}`;
+
                 if (type === 'paid') {
-                    if (CTO.currentFilters.requestType) queryParams += `&requestType=${CTO.currentFilters.requestType}`;
-                    if (CTO.currentFilters.requestStatus) queryParams += `&requestStatus=${CTO.currentFilters.requestStatus}`;
-                    if (CTO.currentFilters.productName) queryParams += `&productName=${encodeURIComponent(CTO.currentFilters.productName)}`;
+                    // 檢查是否有貨物狀態篩選
+                    if (CTO.currentFilters.orderStatus) {
+                        queryParams += `&orderStatus=${CTO.currentFilters.orderStatus}`;
+                    } else {
+                        // 否則使用售後篩選
+                        if (CTO.currentFilters.requestType) queryParams += `&requestType=${CTO.currentFilters.requestType}`;
+                        if (CTO.currentFilters.requestStatus) queryParams += `&requestStatus=${CTO.currentFilters.requestStatus}`;
+                        if (CTO.currentFilters.productName) queryParams += `&productName=${encodeURIComponent(CTO.currentFilters.productName)}`;
+                    }
                 }
 
                 const response = await fetch(`${apiUrl}${queryParams}`);
                 const result = await response.json();
+
                 if (!response.ok) throw new Error(result.message || '加載失敗');
 
-                //：將當前頁的訂單數據緩存起來，供彈窗讀取店舖資訊使用！
                 CTO.currentOrders = result.content || [];
 
                 if (result.content && result.content.length > 0) {
-                    // 【核心修改 1】：將後端返回的全局送貨時間保存到 CTO 命名空間中，供渲染時使用
                     CTO.deliveryStartTime = result.deliveryStartTime || '09:00';
                     CTO.deliveryEndTime = result.deliveryEndTime || '18:00';
-                    // 緩存當前訂單數據，供彈窗讀取店舖資訊
                     CTO.currentOrders = result.content;
                     container.innerHTML = renderOrderCards(result.content, type);
                 } else {
                     container.innerHTML = renderEmptyState(type);
                 }
 
-                // 統一呼叫：無論有沒有訂單，都交給 updateFilterStats 去判斷是否顯示
-                updateFilterStats(result.totalElements);
+                // 更新統計
+                if (type === 'paid') {
+                    if (CTO.currentFilters.orderStatus) {
+                        updateOrderStatusFilterStats(result.totalElements);
+                        // 隱藏售後篩選統計
+                        const afterSalesStatsDiv = document.getElementById('filterStats');
+                        if (afterSalesStatsDiv) afterSalesStatsDiv.style.display = 'none';
+                    } else {
+                        updateFilterStats(result.totalElements);
+                        // 隱藏貨物狀態統計
+                        const orderStatusStatsDiv = document.getElementById('orderStatusFilterStats');
+                        if (orderStatusStatsDiv) orderStatusStatsDiv.style.display = 'none';
+                    }
+                }
 
                 renderSmartPagination(paginationContainer, result.currentPage + 1, result.totalPages, result.smartPages);
             } catch (error) {
@@ -1788,8 +1850,11 @@
                 // 發生錯誤時也強制隱藏統計
                 const statsDiv = document.getElementById('filterStats');
                 if (statsDiv) statsDiv.style.display = 'none';
+                const orderStatusStatsDiv = document.getElementById('orderStatusFilterStats');
+                if (orderStatusStatsDiv) orderStatusStatsDiv.style.display = 'none';
             }
         }
+
 
         function updateFilterStats(totalElements) {
             const statsDiv = document.getElementById('filterStats');
@@ -1813,20 +1878,72 @@
             }
         }
         // ==========================================
-        // 3. 【新增】篩選相關的前端邏輯
+        // 3. 篩選相關的前端邏輯
         // ==========================================
-
-        // 展開/收起篩選區域
         window.toggleFilterSection = function () {
             const section = document.getElementById('paid-filter-section');
+            const orderStatusSection = document.getElementById('order-status-filter-section');
             const toggleBtn = document.getElementById('filter-toggle-container');
+            const afterSalesBtn = toggleBtn.querySelector('button');
+            const orderStatusBtn = document.getElementById('orderStatusFilterBtn');
+
             if (section.style.display === 'none') {
+                // 1. 強制關閉並清空「貨物狀態篩選」的 UI 和狀態
+                orderStatusSection.style.display = 'none';
+                orderStatusBtn.innerHTML = '<i class="fas fa-box"></i> 篩選貨物狀態';
+                document.getElementById('filterOrderStatus').value = '';
+                CTO.currentFilters.orderStatus = '';
+                const orderStatusStatsDiv = document.getElementById('orderStatusFilterStats');
+                if (orderStatusStatsDiv) orderStatusStatsDiv.style.display = 'none';
+
+                // 2. 打開「售後申請篩選」
                 section.style.display = 'block';
-                toggleBtn.querySelector('button').innerHTML = '<i class="fas fa-filter"></i> 隱藏售後篩選';
+                afterSalesBtn.innerHTML = '<i class="fas fa-filter"></i> 隱藏售後篩選';
+
+                // 3. 因為另一個已被清空，如果當前也沒有任何售後條件，則重置加載全部數據
+                if (!CTO.currentFilters.requestType && !CTO.currentFilters.requestStatus && !CTO.currentFilters.productName) {
+                    loadOrders('paid', 1);
+                }
             } else {
+                // 關閉「售後申請篩選」，並調用 clearFilters (它會清空所有條件並重新加載)
                 section.style.display = 'none';
-                toggleBtn.querySelector('button').innerHTML = '<i class="fas fa-filter"></i> 顯示售後篩選';
+                afterSalesBtn.innerHTML = '<i class="fas fa-filter"></i> 顯示售後篩選';
+                clearFilters();
             }
+        };
+
+        // 清除篩選
+        window.clearFilters = function () {
+            // 清除售後篩選表單的值
+            document.getElementById('filterRequestType').value = '';
+            document.getElementById('filterRequestStatus').value = '';
+            document.getElementById('filterProductName').value = '';
+
+            // 清除貨物狀態篩選表單的值（如果有）
+            const orderStatusSelect = document.getElementById('filterOrderStatus');
+            if (orderStatusSelect) {
+                orderStatusSelect.value = '';
+            }
+
+            // 重置全局篩選對象（包含所有篩選條件）
+            CTO.currentFilters = {
+                requestType: '',
+                requestStatus: '',
+                productName: '',
+                orderStatus: ''  // 確保 orderStatus 也被清除
+            };
+
+            CTO.currentPage = 1;
+
+            // 重置時立刻強制隱藏所有統計區塊
+            const statsDiv = document.getElementById('filterStats');
+            if (statsDiv) statsDiv.style.display = 'none';
+
+            const orderStatusStatsDiv = document.getElementById('orderStatusFilterStats');
+            if (orderStatusStatsDiv) orderStatusStatsDiv.style.display = 'none';
+
+            // 重新加載訂單列表
+            loadOrders('paid', 1);
         };
 
         window.closeFilterSection = function () {
@@ -1851,22 +1968,10 @@
             loadOrders('paid', 1);
         };
 
-        // 清除篩選
-        window.clearFilters = function () {
-            document.getElementById('filterRequestType').value = '';
-            document.getElementById('filterRequestStatus').value = '';
-            document.getElementById('filterProductName').value = '';
 
-            CTO.currentFilters = {requestType: '', requestStatus: '', productName: ''};
-            CTO.currentPage = 1;
-
-            //  重置時立刻強制隱藏
-            const statsDiv = document.getElementById('filterStats');
-            if (statsDiv) statsDiv.style.display = 'none';
-
-            loadOrders('paid', 1);
-        };
-
+        /**
+         * 渲染訂單卡片列表 (完整版)
+         */
         function renderOrderCards(orders, type) {
             return orders.map(order => {
                 const isUnpaid = type === 'unpaid';
@@ -1902,14 +2007,12 @@
                     paymentInfo = `<strong>线下店铺支付</strong> ${storeName ? `<span style="color: var(--gold); font-size: 0.85rem; margin-left: 0.5rem;">(<i class="fas fa-map-marker-alt"></i> ${storeName})</span>` : ''}`;
                     // 【核心修改】如果是待線下付款，且有預約日期，則解析並顯示預約日期與營業時間
                     if (isPendingOffline && order.appointmentDate && order.offlineStore) {
-
                         const businessHoursText = getStoreBusinessHoursText(order.offlineStore, order.appointmentDate);
-
                         deliveryInfo = `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;">
-                            <i class="fas fa-calendar-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>
-                            預約到店日期：<strong>${order.appointmentDate}</strong>
-                            <span style="color: var(--primary); margin-left: 0.3rem;">(營業時間: ${businessHoursText})</span>
-                        </p>`;
+                    <i class="fas fa-calendar-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                    預約到店日期：<strong>${order.appointmentDate}</strong>
+                    <span style="color: var(--primary); margin-left: 0.3rem;">(營業時間: ${businessHoursText})</span>
+                </p>`;
                     }
                 } else {
                     paymentInfo = `<strong>${order.paymentMethod === 'PAYPAL_SIM' ? '線上支付 (PayPal/信用卡)' : order.paymentMethod}</strong>`;
@@ -1921,28 +2024,43 @@
                     let apptDateHtml = '';
                     if (order.status !== 'COMPLETED' && order.appointmentDate && order.offlineStore) {
                         const businessHoursText = getStoreBusinessHoursText(order.offlineStore, order.appointmentDate);
-
                         apptDateHtml = `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;">
-            <i class="fas fa-calendar-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>
-            預約取貨日期：<strong>${apptDate}</strong>
-            <span style="color: var(--primary); margin-left: 0.3rem;">(營業時間: ${businessHoursText})</span>
-        </p>`;
+                    <i class="fas fa-calendar-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                    預約取貨日期：<strong>${apptDate}</strong>
+                    <span style="color: var(--primary); margin-left: 0.3rem;">(營業時間: ${businessHoursText})</span>
+                </p>`;
                     } else if (order.status !== 'COMPLETED') {
-                        // 如果沒有店鋪資訊或日期，保持原樣顯示
                         apptDateHtml = `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;"><i class="fas fa-calendar-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>預約取貨日期：<strong>${apptDate}</strong></p>`;
                     }
-
                     deliveryInfo = `<p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;"><i class="fas fa-store" style="color: var(--gold); margin-right: 0.3rem;"></i>配送方式：<strong>到店自取 (${storeName})</strong></p>${apptDateHtml}`;
                 }
 
                 let hintHtml = '';
 
-                // 【新增】部分退/換貨專屬提示
+                // 【優化】部分退/換貨專屬提示 (精準區分退貨、換貨或兩者皆有)
                 if (isPartiallyRefunded) {
+                    const hasReturn = order.hasReturn === true;
+                    const hasExchange = order.hasExchange === true;
+
+                    let actionText = '售後處理'; // 預設兜底文案
+                    let iconClass = 'fa-exchange-alt';
+
+                    if (hasReturn && hasExchange) {
+                        actionText = '退貨與換貨';
+                        iconClass = 'fa-exchange-alt';
+                    } else if (hasReturn) {
+                        actionText = '退貨';
+                        iconClass = 'fa-undo';
+                    } else if (hasExchange) {
+                        actionText = '換貨';
+                        iconClass = 'fa-sync-alt';
+                    }
+
                     hintHtml += `<p style="color: #6f42c1; font-weight: 600; font-size: 0.85rem; background: rgba(111, 66, 193, 0.08); border-left: 3px solid #6f42c1; padding: 0.5rem 0.8rem; border-radius: 6px; margin-bottom: 0.5rem; line-height: 1.5;">
-                <i class="fas fa-exchange-alt" style="margin-right: 0.3rem;"></i> 此訂單包含部分退貨/換貨，部分金額或商品已處理。
-            </p>`;
+        <i class="fas ${iconClass}" style="margin-right: 0.3rem;"></i> 此訂單包含部分${actionText}，部分金額或商品已處理。
+    </p>`;
                 }
+
 
                 if (isUnpaid) {
                     const days = (typeof onlineOrderRetentionDaysConfig !== 'undefined' && onlineOrderRetentionDaysConfig !== null) ? onlineOrderRetentionDaysConfig : 1;
@@ -1966,71 +2084,57 @@
                 let actionsHtml = '';
                 if (isUnpaid && order.paymentMethod === 'PAYPAL_SIM') actionsHtml += `<a href="/checkout?orderNo=${order.orderNo}" class="btn-sm btn-pay"><i class="fas fa-credit-card"></i> 立即支付</a>`;
                 if (isPendingOffline) {
-                    // 動態獲取店鋪電話，如果沒有則顯示「未提供」
                     const storePhone = (order.offlineStore && order.offlineStore.phone) ? order.offlineStore.phone : '未提供';
                     const notifyMsg = storePhone !== '未提供'
                         ? `📞 請前往選擇的店鋪完成付款，或聯繫店鋪：${storePhone}`
                         : '📞 請前往選擇的店鋪完成付款';
-
                     actionsHtml += `<button class="btn-sm btn-contact" onclick="showNotification(\`${notifyMsg}\`)"><i class="fas fa-phone"></i> 聯繫店鋪</button>`;
                 }
-                if (isPaid && order.status === 'PAID') actionsHtml += `<button class="btn-sm btn-cancel-order" onclick="ChronoTeamOrders.openCancelOrderModal('${order.orderNo}')" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none;"><i class="fas fa-times-circle"></i> 取消訂單</button>`;
+                if (isPaid && order.status === 'PAID' || order.status === 'SHIPPED') actionsHtml += `<button class="btn-sm btn-cancel-order" onclick="ChronoTeamOrders.openCancelOrderModal('${order.orderNo}')" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none;"><i class="fas fa-times-circle"></i> 取消訂單</button>`;
                 if (isUnpaid || isPendingOffline) actionsHtml += `<button class="btn-sm btn-delete-order" onclick="ChronoTeamOrders.openDeleteOrderModal(this)" data-order-no="${order.orderNo}"><i class="fas fa-trash-alt"></i> 刪除訂單</button>`;
                 actionsHtml += `<button class="btn-sm btn-view toggle-details-btn" onclick="ChronoTeamOrders.toggleOrderDetails(this)" data-order-no="${order.orderNo}"><i class="fas fa-eye"></i> 查看詳情</button>`;
-                // 在 renderOrderCards 函数中的 actionsHtml 部分添加按钮（在取消订单按钮后）
+
                 if (isPaid && order.status === 'PAID') {
-                    // 快遞配送 - 修改送貨日期
                     if (order.deliveryMethod === 'EXPRESS') {
                         actionsHtml += `<button class="btn-sm btn-change-delivery" onclick="ChronoTeamOrders.openChangeDeliveryModal('${order.orderNo}', '${order.paidAt}')" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; margin-left: 0.5rem;"><i class="fas fa-calendar-alt"></i> 更改送貨日期</button>`;
                     }
-                    // 到店自取 - 修改取貨日期
                     if (order.deliveryMethod === 'STORE_PICKUP') {
                         actionsHtml += `<button class="btn-sm btn-change-pickup-date" onclick="ChronoTeamOrders.openChangePickupDateModal('${order.orderNo}')" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; margin-left: 0.5rem;"><i class="fas fa-calendar-check"></i> 修改取貨日期</button>`;
                     }
                 }
+
                 let timeExtra = '';
                 if (isPaid && order.paidAt) timeExtra += `<p>付款時間：<strong>${formatDate(order.paidAt)}</strong></p>`;
-                // ==========================================
-                //如果是快遞配送且有預計送達日期，則在付款時間下顯示
-                // ==========================================
+
                 if (isPaid && order.deliveryMethod === 'EXPRESS' && order.estimatedDeliveryDate) {
                     timeExtra += `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;">
-                        <i class="fas fa-truck" style="color: var(--gold); margin-right: 0.3rem;"></i>
-                       預計送達日期：<strong>${order.estimatedDeliveryDate} </strong>
-                    </p>`;
+                <i class="fas fa-truck" style="color: var(--gold); margin-right: 0.3rem;"></i>
+               預計送達日期：<strong>${order.estimatedDeliveryDate} </strong>
+            </p>`;
                 }
 
-                // ==========================================
-                // 在已支付且狀態為 PAID, SHIPPED, COMPLETED 時，顯示收貨地址和聯繫電話
-                // ==========================================
                 if (isPaid && ['PAID', 'SHIPPED', 'COMPLETED'].includes(order.status) && order.userAddress) {
                     const fullAddress = order.userAddress.fullAddress || '未填寫地址';
                     const contactPhone = order.userAddress.contactPhone || '未填寫電話';
-
                     timeExtra += `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;">
-                        <i class="fas fa-map-marker-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>
-                        收貨地址：<strong>${fullAddress}</strong>
-                    </p>`;
+                <i class="fas fa-map-marker-alt" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                收貨地址：<strong>${fullAddress}</strong>
+            </p>`;
                     timeExtra += `<p style="margin-top: 0.3rem; font-size: 0.9rem; color: var(--gray); line-height: 1.5;">
-                        <i class="fas fa-phone" style="color: var(--gold); margin-right: 0.3rem;"></i>
-                        聯繫電話：<strong>${contactPhone}</strong>
-                    </p>`;
+                <i class="fas fa-phone" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                聯繫電話：<strong>${contactPhone}</strong>
+            </p>`;
                 }
 
-                // ==========================================
-                // 如果訂單狀態為 SHIPPED 且有關聯的快遞員，顯示專屬提示
-                // ==========================================
                 if (order.status === 'SHIPPED' && order.courier) {
                     const courierName = order.courier.username || '快遞員';
                     const courierPhone = order.courier.workPhone || '預留電話';
-                    // 從 CTO 命名空間獲取後端傳來的全局送貨時間配置
                     const startTime = CTO.deliveryStartTime || '09:00';
                     const endTime = CTO.deliveryEndTime || '18:00';
-
                     timeExtra += `<p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--primary); line-height: 1.5; background: rgba(212, 175, 55, 0.08); padding: 0.6rem 0.8rem; border-radius: 6px; border-left: 3px solid var(--gold);">
-                    <i class="fas fa-user-shield" style="color: var(--gold); margin-right: 0.3rem;"></i>
-                    快遞員 <strong>${courierName}</strong> 將在預計送達日期內 (<strong>${startTime} - ${endTime}</strong>) 為您派件，請留意來電 <strong>${courierPhone}</strong>。
-                </p>`;
+                <i class="fas fa-user-shield" style="color: var(--gold); margin-right: 0.3rem;"></i>
+                快遞員 <strong>${courierName}</strong> 將在預計送達日期內 (<strong>${startTime} - ${endTime}</strong>) 為您派件，請留意來電 <strong>${courierPhone}</strong>。
+            </p>`;
                 }
 
                 if (isPaid && order.status === 'COMPLETED' && order.receivedAt) timeExtra += `<p>收貨時間：<strong>${formatDate(order.receivedAt)}</strong></p>`;
@@ -2045,8 +2149,64 @@
                 if (order.afterSalesHint) cardClasses += ' has-pending-after-sales';
                 if (isPartiallyRefunded) cardClasses += ' is-partially-refunded';
 
-                // 【新增】部分退換貨專屬徽章
-                const partialRefundBadge = isPartiallyRefunded ? `<span style="background: #6f42c1; color: white; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 600; margin-left: 0.5rem; vertical-align: middle;">部分退/換貨</span>` : '';
+                // 【核心優化】部分退換貨專屬徽章 (動態判斷文案與圖標)
+                let partialRefundBadge = '';
+                if (isPartiallyRefunded) {
+                    //  統一從 refundDetails 計算，不要依賴 order.hasReturn/hasExchange
+                    let hasReturn = false;
+                    let hasExchange = false;
+
+                    if (order.refundDetails && order.refundDetails.length > 0) {
+                        order.refundDetails.forEach(detail => {
+                            if (detail.requestType === 'RETURN') hasReturn = true;
+                            if (detail.requestType === 'EXCHANGE') hasExchange = true;
+                        });
+                    }
+
+                    let badgeText = '部分退/換貨';
+                    let badgeIcon = 'fa-exchange-alt';
+
+                    if (hasReturn && !hasExchange) {
+                        badgeText = '部分退貨';
+                        badgeIcon = 'fa-undo';
+                    } else if (!hasReturn && hasExchange) {
+                        badgeText = '部分換貨';
+                        badgeIcon = 'fa-sync-alt';
+                    }
+
+                    partialRefundBadge = `<span style="background: #6f42c1; color: white; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 12px; font-weight: 600; margin-left: 0.5rem; vertical-align: middle; display: inline-flex; align-items: center;">
+        <i class="fas ${badgeIcon}" style="margin-right: 0.3rem;"></i>${badgeText}
+    </span>`;
+                }
+
+                // ==========================================
+                // 【核心整合】動態金額顯示區塊
+                // ==========================================
+                let amountHtml = '';
+                if (isPartiallyRefunded) {
+                    let hasReturn = false;
+                    let hasExchange = false;
+                    if (order.refundDetails && order.refundDetails.length > 0) {
+                        order.refundDetails.forEach(detail => {
+                            if (detail.requestType === 'RETURN') hasReturn = true;
+                            if (detail.requestType === 'EXCHANGE') hasExchange = true;
+                        });
+                    }
+
+                    let refundLabel = '已退/換貨';
+                    if (hasReturn && !hasExchange) refundLabel = '已退貨';
+                    else if (!hasReturn && hasExchange) refundLabel = '已換貨';
+
+                    amountHtml = `
+                <div class="order-amount" style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;">
+                    <div style="color: var(--accent); font-size: 1.2rem; font-weight: 700;">HK$ ${formatPrice(order.actualSpentAmount)}</div>
+                    <div style="color: #dc3545; font-size: 0.85rem; text-decoration: line-through;">原金額: HK$ ${formatPrice(order.totalAmount)}</div>
+                    <div style="color: #6f42c1; font-size: 0.8rem;">(${refundLabel}: HK$ ${formatPrice(order.totalRefundAmount)})</div>
+                </div>
+            `;
+                } else {
+                    amountHtml = `<div class="order-amount">HK$ ${formatPrice(order.totalAmount)}</div>`;
+                }
 
                 return `
     <div class="${cardClasses}" data-order-no="${order.orderNo}" data-estimated-delivery="${order.estimatedDeliveryDate || ''}" data-order-status="${order.status}" data-received-at="${order.receivedAt || ''}">
@@ -2067,7 +2227,7 @@
                     ${timeExtra}
                     ${afterSalesHintHtml}
                 </div>
-                <div class="order-amount">HK$ ${formatPrice(order.totalAmount)}</div>
+                ${amountHtml}
                 <div class="order-actions">${actionsHtml}</div>
             </div>
             <div class="order-details" id="details-${order.orderNo}">
@@ -2211,12 +2371,11 @@
             const statuses = await Promise.all(statusPromises);
             const statusMap = new Map(statuses.map(s => [s.id, s]));
 
-            // 2. 【新增】獲取售后申請存在性狀態
+            // 2. 獲取售后申請存在性狀態 (原有邏輯)
             const afterSalesPromises = orderItems.map(async (item) => {
                 try {
                     const res = await fetch(`/api/order/after-sales-existence?orderNo=${orderNo}&productId=${item.product.id}`);
                     const r = await res.json();
-                    // 假設返回結構為 { success: true, data: { hasReturn: boolean, hasExchange: boolean } }
                     return {
                         id: item.product.id,
                         hasReturn: r.data?.hasReturn || false,
@@ -2230,13 +2389,42 @@
             const afterSalesStatuses = await Promise.all(afterSalesPromises);
             const afterSalesMap = new Map(afterSalesStatuses.map(s => [s.id, s]));
 
-            let html = '';
+            let itemsHtml = '';
             orderItems.forEach(item => {
                 const status = statusMap.get(item.product.id) || {canReview: false, reviewed: false};
                 const asStatus = afterSalesMap.get(item.product.id) || {hasReturn: false, hasExchange: false};
 
+                // ==========================================
+                // 【新增】：計算已成功退貨/換貨的數量 (僅統計 COMPLETED 狀態)
+                // ==========================================
+                const completedReturnQty = item.completedReturnQty || 0;
+                const completedExchangeQty = item.completedExchangeQty || 0;
+
+                let afterSalesQtyHtml = '';
+                if (completedReturnQty > 0 && completedExchangeQty > 0) {
+                    afterSalesQtyHtml = `
+                <div style="font-size: 0.8rem; color: #28a745; margin-top: 0.3rem;">
+                    <i class="fas fa-check-circle"></i>
+                    已成功退貨 ${completedReturnQty} 件 和 已成功換貨 ${completedExchangeQty} 件
+                </div>
+            `;
+                } else if (completedReturnQty > 0) {
+                    afterSalesQtyHtml = `
+                <div style="font-size: 0.8rem; color: #28a745; margin-top: 0.3rem;">
+                    <i class="fas fa-check-circle"></i>
+                    已成功退貨 ${completedReturnQty} 件
+                </div>
+            `;
+                } else if (completedExchangeQty > 0) {
+                    afterSalesQtyHtml = `
+                <div style="font-size: 0.8rem; color: #28a745; margin-top: 0.3rem;">
+                    <i class="fas fa-check-circle"></i>
+                    已成功換貨 ${completedExchangeQty} 件
+                </div>
+            `;
+                }
+
                 let returnBtnHtml = '', exchangeBtnHtml = '';
-                // ... (原有的退貨/換貨按鈕生成邏輯保持不變) ...
                 const hideExchangeBtn = item.hideExchangeBtn === true;
                 const hideReturnBtn = item.hideReturnBtn === true;
 
@@ -2256,32 +2444,30 @@
                     }
                 }
 
-                // 3. 【新增】生成售后詳情提示鏈接
                 let afterSalesLinkHtml = '';
                 if (asStatus.hasReturn && asStatus.hasExchange) {
                     afterSalesLinkHtml = `<div style="width: 100%; margin-top: 8px;">
-                    <a href="#" onclick="showAfterSalesDetails('${orderNo}', ${item.product.id}); return false;"
-                       style="color: #6c757d; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; background: #f8f9fa; padding: 5px 10px; border-radius: 4px; border: 1px dashed #ced4da;">
-                       <i class="fas fa-file-alt"></i> 請點擊查看退貨和換貨詳情
-                    </a>
-                </div>`;
+            <a href="#" onclick="showAfterSalesDetails('${orderNo}', ${item.product.id}); return false;"
+               style="color: #6c757d; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; background: #f8f9fa; padding: 5px 10px; border-radius: 4px; border: 1px dashed #ced4da;">
+               <i class="fas fa-file-alt"></i> 請點擊查看退貨和換貨詳情
+            </a>
+        </div>`;
                 } else if (asStatus.hasReturn) {
                     afterSalesLinkHtml = `<div style="width: 100%; margin-top: 8px;">
-                    <a href="#" onclick="showAfterSalesDetails('${orderNo}', ${item.product.id}); return false;"
-                       style="color: #fd7e14; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; background: #fff9f0; padding: 5px 10px; border-radius: 4px; border: 1px dashed #ffeeba;">
-                       <i class="fas fa-undo-alt"></i> 請點擊查看退貨詳情
-                    </a>
-                </div>`;
+            <a href="#" onclick="showAfterSalesDetails('${orderNo}', ${item.product.id}); return false;"
+               style="color: #fd7e14; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; background: #fff9f0; padding: 5px 10px; border-radius: 4px; border: 1px dashed #ffeeba;">
+               <i class="fas fa-undo-alt"></i> 請點擊查看退貨詳情
+            </a>
+        </div>`;
                 } else if (asStatus.hasExchange) {
                     afterSalesLinkHtml = `<div style="width: 100%; margin-top: 8px;">
-                    <a href="#" onclick="showAfterSalesDetails('${orderNo}', ${item.product.id}); return false;"
-                       style="color: #17a2b8; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; background: #f0fcfd; padding: 5px 10px; border-radius: 4px; border: 1px dashed #bee5eb;">
-                       <i class="fas fa-exchange-alt"></i> 請點擊查看換貨詳情
-                    </a>
-                </div>`;
+            <a href="#" onclick="showAfterSalesDetails('${orderNo}', ${item.product.id}); return false;"
+               style="color: #17a2b8; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; background: #f0fcfd; padding: 5px 10px; border-radius: 4px; border: 1px dashed #bee5eb;">
+               <i class="fas fa-exchange-alt"></i> 請點擊查看換貨詳情
+            </a>
+        </div>`;
                 }
 
-                // ... (原有的 actionBtnHtml 邏輯) ...
                 let actionBtnHtml = '';
                 if (status.reviewed) {
                     actionBtnHtml = `<div style="display:flex;flex-direction:column;gap:0.3rem;align-items:center;"><button class="btn-sm btn-review" onclick="ChronoTeamOrders.viewMyReview(${item.product.id})" style="background:#6c757d;cursor:pointer;width:100%;"><i class="fas fa-check-circle"></i> 已評價</button><div style="font-size:0.8rem;color:var(--gold);cursor:pointer;text-align:center;font-weight:600;" onclick="ChronoTeamOrders.viewMyReview(${item.product.id})"><i class="fas fa-eye"></i> 去查看評價！</div></div>` + returnBtnHtml + exchangeBtnHtml;
@@ -2291,24 +2477,77 @@
                     actionBtnHtml = `<button class="btn-sm btn-review" disabled style="background:#e9ecef;color:#6c757d;cursor:not-allowed;"><i class="fas fa-lock"></i> 暫不可評價</button>` + returnBtnHtml + exchangeBtnHtml;
                 }
 
-                // 將 afterSalesLinkHtml 加入到 order-item-actions 的末尾
-                html += `<div class="order-item">
-            <div class="order-item-image" onclick="window.location.href='/product/${item.product.id}'" title="查看商品詳情">
-                <img src="/images/products/${item.product.image}" alt="${item.product.description}" onerror="this.src='/images/placeholder.png'">
+                // 【修改處】：在數量旁邊插入 ${afterSalesQtyHtml}
+                itemsHtml += `<div class="order-item">
+        <div class="order-item-image" onclick="window.location.href='/product/${item.product.id}'" title="查看商品詳情">
+            <img src="/images/products/${item.product.image}" alt="${item.product.description}" onerror="this.src='/images/placeholder.png'">
+        </div>
+        <div class="order-item-info">
+            <div class="order-item-name">${item.product.description}</div>
+            <div class="order-item-meta"><i class="fas fa-tag"></i> ${item.product.category || '手錶'}</div>
+            <div class="order-item-meta">
+                <i class="fas fa-box"></i> 數量：${item.quantity}
+                ${afterSalesQtyHtml}
             </div>
-            <div class="order-item-info">
-                <div class="order-item-name">${item.product.description}</div>
-                <div class="order-item-meta"><i class="fas fa-tag"></i> ${item.product.category || '手錶'}</div>
-                <div class="order-item-meta"><i class="fas fa-box"></i> 數量：${item.quantity}</div>
-                <div class="order-item-price">HK$ ${formatPrice(item.price)}</div>
-            </div>
-            <div class="order-item-actions" style="flex-direction: column; align-items: flex-end;">
-                ${actionBtnHtml}
-                ${afterSalesLinkHtml}
-            </div>
-        </div>`;
+            <div class="order-item-price">HK$ ${formatPrice(item.price)}</div>
+        </div>
+        <div class="order-item-actions" style="flex-direction: column; align-items: flex-end;">
+            ${actionBtnHtml}
+            ${afterSalesLinkHtml}
+        </div>
+    </div>`;
             });
-            container.innerHTML = html;
+
+            // ==========================================
+            // 【核心新增】：渲染退款/換貨明細區塊 (原有邏輯完整保留)
+            // ==========================================
+            let refundDetailsHtml = '';
+            // 從全局 CTO.currentOrders 中查找當前 order 對象以獲取 refundDetails
+            const currentOrder = CTO.currentOrders.find(o => o.orderNo === orderNo);
+
+            // 【修改後】：根據明細內容動態生成標題與圖標
+            if (currentOrder && currentOrder.refundDetails && currentOrder.refundDetails.length > 0) {
+                let hasReturn = false;
+                let hasExchange = false;
+                currentOrder.refundDetails.forEach(detail => {
+                    if (detail.requestType === 'RETURN') hasReturn = true;
+                    if (detail.requestType === 'EXCHANGE') hasExchange = true;
+                });
+
+                let refundTitle = '退款/換貨明細';
+                let refundIcon = 'fa-undo-alt';
+                if (hasReturn && !hasExchange) {
+                    refundTitle = '退款明細';
+                    refundIcon = 'fa-undo-alt';
+                } else if (!hasReturn && hasExchange) {
+                    refundTitle = '換貨明細';
+                    refundIcon = 'fa-exchange-alt';
+                }
+
+                refundDetailsHtml = `
+        <div style="margin-top: 1rem; padding: 1rem; background: #fff5f5; border: 1px solid #ffe0e0; border-radius: 8px;">
+            <h5 style="color: #dc3545; margin-top: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 0.95rem; margin-bottom: 0.8rem;">
+                <i class="fas ${refundIcon}"></i> ${refundTitle}
+            </h5>
+            ${currentOrder.refundDetails.map(detail => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px dashed #ffd6d6; font-size: 0.9rem;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: var(--primary);">${detail.productName}</div>
+                        <div style="color: #6c757d; font-size: 0.8rem;">
+                            ${detail.requestType === 'RETURN' ? '退貨' : '換貨'}數量：${detail.returnQuantity} 件
+                        </div>
+                    </div>
+                    <div style="color: #dc3545; font-weight: 700; font-size: 1rem;">
+                        退貨金額： HK$ ${formatPrice(detail.refundAmount)}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+            }
+
+            // 將商品列表與退款明細合併渲染
+            container.innerHTML = itemsHtml + refundDetailsHtml;
         }
 
         // ==========================================
@@ -2400,9 +2639,10 @@
             }
         }
 
-        // ==========================================
-        // 4. 【新增】退貨業務邏輯 (配合新的 HTML 結構)
-        // ==========================================
+        // 4. 退貨業務邏輯 (配合新的 HTML 結構)
+        //重置表單（清空 afterSalesDate 和 afterSalesTimeSlot）。如果後端返回了現有的申請記錄或借用的預約信息，
+        // 會自動回填 afterSalesDate 和 afterSalesTimeSlot 的值，並觸發 updateAfterSalesTimeSlots() 來驗證和顯示提示。
+        // 最後調用 loadAfterSalesStores() 加載可用店鋪列表。
         window.openAfterSalesModal = async function (orderNo, maxQuantity, productId, requestType) {
             CTO.currentAfterSalesOrderNo = orderNo;
             CTO.currentAfterSalesProductId = productId;
@@ -2512,7 +2752,7 @@
                     const originalQty = existingRequest.originalQuantity || maxQuantity;
                     const appliedQty = existingRequest.appliedQuantity || 0;
 
-                    // 🔥 关键修复：计算剩余数量时，要排除当前正在编辑的申请
+                    //  关键修复：计算剩余数量时，要排除当前正在编辑的申请
                     const hasExistingRequest = !!CTO.currentAfterSalesRequestId;
                     let remainingQty;
 
@@ -2561,9 +2801,7 @@
             }
         };
 
-        /**
-         * 關閉退貨申請模態框
-         */
+
         window.closeAfterSalesModal = function () {
             document.getElementById('afterSalesModal').style.display = 'none';
             document.body.style.overflow = '';
@@ -2598,7 +2836,9 @@
         }
 
         /**
-         * 當店鋪選擇改變時，更新營業資訊與日期限制 (通用)
+         * 解析營業時間：根據店鋪的 scheduleMode，如果是 UNIFIED 則直接顯示 hours；如果是 DAILY，則解析 dailyHours JSON 並顯示「今日」的營業時間或休息狀態。
+         * 顯示特殊規則：檢查並提示是否需要提前預約 (returnAdvanceDays)，以及當前是否處於暫停售後期間 (returnBlackoutStartDate ~ returnBlackoutEndDate)。
+         * 限制日期選擇：根據 returnAdvanceDays 計算出最早可預約的日期，並設置到 <input type="date" id="afterSalesDate"> 的 min 屬性上，防止用戶選擇太早的日期。同時禁用時間輸入框，強制用戶先選日期。
          */
         window.updateAfterSalesStoreInfo = function (storeId) {
             const store = CTO.loadedStores.find(s => s.storeId == storeId);
@@ -2669,9 +2909,13 @@
             return `${String(h).padStart(2, '0')}:${minutes} ${period}`;
         }
 
-        // ==========================================
-        // 當預約日期改變時，驗證並限制時間輸入範圍 (完整版)
-        // ==========================================
+        /**
+         * 檢查店鋪當日是否營業：根據選中的日期計算出星期幾，如果是 DAILY 模式則檢查 JSON 中該天是否 closed: true；如果是 UNIFIED 模式則默認營業。
+         * 檢查固定休息日：檢查該星期幾是否在店鋪的 returnClosedDaysOfWeek 列表中。
+         * 檢查暫停售後期間：檢查選中的日期是否落在店鋪的 returnBlackoutStartDate 和 returnBlackoutEndDate 之間。
+         * 獲取並轉換營業時間：調用 parseBusinessHours 和 convertTo24Hour 輔助函數，將店鋪的營業時間（如 "10:00 AM - 06:00 PM"）轉換為 24 小時制（如 start: "10:00", end: "18:00"）。
+         * 設置輸入限制與實時驗證：將計算出的 startTime 和 endTime 分別賦值給 <input type="time" id="afterSalesTimeSlot"> 的 min 和 max 屬性。如果用戶手動輸入了超出範圍的時間，代碼會自動將其修正為最接近的有效時間，並在下方顯示紅色警告提示；如果在範圍內則顯示綠色提示。
+         */
         window.updateAfterSalesTimeSlots = function () {
             const storeId = document.getElementById('afterSalesStoreSelect').value;
             const selectedDateStr = document.getElementById('afterSalesDate').value;
@@ -3713,6 +3957,117 @@
             }
         };
 
+        // ==========================================
+        // 貨物狀態篩選相關邏輯
+        // ==========================================
+        window.toggleOrderStatusFilter = function () {
+            const orderStatusSection = document.getElementById('order-status-filter-section');
+            const afterSalesSection = document.getElementById('paid-filter-section');
+            const orderStatusBtn = document.getElementById('orderStatusFilterBtn');
+            const afterSalesBtn = document.querySelector('#filter-toggle-container button');
+
+            if (orderStatusSection.style.display === 'none') {
+                // 1. 強制關閉並清空「售後申請篩選」的 UI 和狀態
+                afterSalesSection.style.display = 'none';
+                afterSalesBtn.innerHTML = '<i class="fas fa-filter"></i> 顯示售後篩選';
+                document.getElementById('filterRequestType').value = '';
+                document.getElementById('filterRequestStatus').value = '';
+                document.getElementById('filterProductName').value = '';
+                CTO.currentFilters.requestType = '';
+                CTO.currentFilters.requestStatus = '';
+                CTO.currentFilters.productName = '';
+                const statsDiv = document.getElementById('filterStats');
+                if (statsDiv) statsDiv.style.display = 'none';
+
+                // 2. 打開「貨物狀態篩選」
+                orderStatusSection.style.display = 'block';
+                orderStatusBtn.innerHTML = '<i class="fas fa-box"></i> 隱藏貨物狀態篩選';
+
+                // 3. 因為另一個已被清空，如果當前也沒有任何貨物狀態條件，則重置加載全部數據
+                if (!CTO.currentFilters.orderStatus) {
+                    loadOrders('paid', 1);
+                }
+            } else {
+                // 關閉「貨物狀態篩選」，並調用 clearOrderStatusFilter (它會清空條件並重新加載)
+                orderStatusSection.style.display = 'none';
+                orderStatusBtn.innerHTML = '<i class="fas fa-box"></i> 篩選貨物狀態';
+                clearOrderStatusFilter();
+            }
+        };
+
+        // 應用貨物狀態篩選
+        window.applyOrderStatusFilter = function () {
+            const orderStatus = document.getElementById('filterOrderStatus').value;
+
+            // 清除售後篩選條件
+            document.getElementById('filterRequestType').value = '';
+            document.getElementById('filterRequestStatus').value = '';
+            document.getElementById('filterProductName').value = '';
+            CTO.currentFilters = {requestType: '', requestStatus: '', productName: ''};
+
+            // 設置貨物狀態篩選
+            CTO.currentFilters.orderStatus = orderStatus;
+            CTO.currentPage = 1;
+
+            // 更新統計
+            updateOrderStatusFilterStats();
+
+            // 加載訂單
+            loadOrders('paid', 1);
+        };
+
+        // 關閉貨物狀態篩選
+        window.closeOrderStatusFilter = function () {
+            const orderStatusSection = document.getElementById('order-status-filter-section');
+            const orderStatusBtn = document.getElementById('orderStatusFilterBtn');
+
+            orderStatusSection.style.display = 'none';
+            orderStatusBtn.innerHTML = '<i class="fas fa-box"></i> 篩選貨物狀態';
+            clearOrderStatusFilter();
+        };
+
+        // 清除貨物狀態篩選
+        window.clearOrderStatusFilter = function () {
+            document.getElementById('filterOrderStatus').value = '';
+            CTO.currentFilters.orderStatus = '';
+            CTO.currentPage = 1;
+
+            const statsDiv = document.getElementById('orderStatusFilterStats');
+            if (statsDiv) statsDiv.style.display = 'none';
+
+            loadOrders('paid', 1);
+        };
+
+        // 更新貨物狀態篩選統計
+        function updateOrderStatusFilterStats(totalElements) {
+            const statsDiv = document.getElementById('orderStatusFilterStats');
+            const statsText = document.getElementById('orderStatusFilterStatsText');
+
+            if (!statsDiv || !statsText) return;
+
+            const orderStatus = CTO.currentFilters.orderStatus;
+
+            if (orderStatus) {
+                statsDiv.style.display = 'block';
+                let statusText = '';
+                switch (orderStatus) {
+                    case 'PAID':
+                        statusText = '已付款/待發貨';
+                        break;
+                    case 'SHIPPED':
+                        statusText = '已發貨/配送中';
+                        break;
+                    case 'COMPLETED':
+                        statusText = '已完成/已收貨';
+                        break;
+                    default:
+                        statusText = '全部狀態';
+                }
+                statsText.textContent = `找到 ${totalElements} 筆${statusText}的訂單`;
+            } else {
+                statsDiv.style.display = 'none';
+            }
+        }
         // ==========================================
         // 5. 暴露全局 API (僅掛載到命名空間)
         // ==========================================

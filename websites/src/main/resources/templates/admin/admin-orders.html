@@ -1105,6 +1105,19 @@
                         </div>
                     </div>
 
+                    <!-- 篩選條件實際消費總額顯示區 -->
+                    <div
+                        style="margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #fff9f0 0%, #ffffff 100%); border-radius: 8px; border-left: 4px solid var(--gold); display: flex; align-items: center; gap: 0.8rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <i class="fas fa-coins" style="color: var(--gold); font-size: 1.5rem;"></i>
+                        <div>
+                            <!--  如果發現訂單中有 PARTIALLY_REFUNDED（部分退款/退貨），就要用該訂單的總金額減去退/換貨的物品金額！-->
+                            <div style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">當前篩選條件實際消費總額
+                                (已扣除退/換貨)</div>
+                            <div id="filtered-total-spent-amount"
+                                style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">HK$ 0.00</div>
+                        </div>
+                    </div>
+
                     <!-- 操作按鈕 -->
                     <div class="filter-actions">
                         <button class="btn-filter btn-reset" onclick="resetFilters()">
@@ -1563,13 +1576,13 @@
 
                 // 【修改處】：onclick 中加入了第三個參數 '${order.estimatedDeliveryDate || ''}'
                 courierActionBtnHtml = `
-                <button class="btn-update-status"
-                        style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; display:inline-flex; align-items:center; justify-content:center; gap:0.3rem; ${opacityStyle}"
-                        ${disabledAttr}
-                        onclick="if(${canOperate}) openStatusUpdateModal('${order.orderNo}', '${order.orderStatus}', '${order.estimatedDeliveryDate || ''}')">
-                    <i class="fas fa-sync-alt"></i> 更新狀態
-                </button>
-            `;
+            <button class="btn-update-status"
+                    style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.85rem; display:inline-flex; align-items:center; justify-content:center; gap:0.3rem; ${opacityStyle}"
+                    ${disabledAttr}
+                    onclick="if(${canOperate}) openStatusUpdateModal('${order.orderNo}', '${order.orderStatus}', '${order.estimatedDeliveryDate || ''}')">
+                <i class="fas fa-sync-alt"></i> 更新狀態
+            </button>
+        `;
             }
 
             const formatDateOnly = (dt) => {
@@ -1583,73 +1596,130 @@
             const estimatedDeliveryHtml = order.estimatedDeliveryDate ? `<span style="color:#004085;">${formatDateOnly(order.estimatedDeliveryDate)}</span>` : '<span class="text-muted">-</span>';
             const appointmentDateHtml = order.appointmentDate ? `<span style="color:#155724;">${formatDateOnly(order.appointmentDate)}</span>` : '<span class="text-muted">-</span>';
 
+            // ==========================================
+            // 【新增】部分退款金額顯示邏輯
+            // ==========================================
+            let amountDisplayHtml = '';
+            if (order.paymentStatus === 'PARTIALLY_REFUNDED') {
+                // 顯示實際消費金額和退款金額
+                amountDisplayHtml = `
+            <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                <div style="color: var(--accent); font-weight: 700; font-size: 1.1rem;">
+                    HK$ ${formatMoney(order.actualSpentAmount)}
+                    <span style="font-size: 0.75rem; color: var(--gray); font-weight: 500;">(實際消費)</span>
+                </div>
+                <div style="color: #dc3545; font-size: 0.85rem; font-weight: 600;">
+                    <i class="fas fa-minus-circle"></i> 退款: HK$ ${formatMoney(order.refundAmount)}
+                </div>
+                <div style="color: var(--gray); font-size: 0.75rem; text-decoration: line-through;">
+                    原訂單: HK$ ${formatMoney(order.totalAmount)}
+                </div>
+            </div>
+        `;
+            } else {
+                // 正常訂單顯示
+                amountDisplayHtml = `<span style="color:var(--accent); font-weight:700;">HK$ ${formatMoney(order.totalAmount)}</span>`;
+            }
+
+            // ==========================================
+            // 訂單明細渲染（新增退款明細顯示）
+            // ==========================================
             let detailsRowsHtml = '';
             if (order.items && order.items.length > 0) {
                 const itemsHtml = order.items.map(it => `
-                <div class="item-card" style="margin-bottom:0;">
-                    <img class="item-img" src="/images/products/${it.productImage || 'placeholder.png'}" onerror="this.src='/images/placeholder.png'" alt="Product">
-                    <div class="item-info">
-                        <div class="item-name">${it.productName || '未知商品'}</div>
-                        <div class="item-meta">數量: ${it.quantity} | 單價: HK$ ${formatMoney(it.price)} | 分類: ${it.productCategory || '-'}</div>
-                    </div>
-                    <div class="item-price">HK$ ${formatMoney(it.subtotal)}</div>
-                </div>`).join('');
+            <div class="item-card" style="margin-bottom:0;">
+                <img class="item-img" src="/images/products/${it.productImage || 'placeholder.png'}" onerror="this.src='/images/placeholder.png'" alt="Product">
+                <div class="item-info">
+                    <div class="item-name">${it.productName || '未知商品'}</div>
+                    <div class="item-meta">數量: ${it.quantity} | 單價: HK$ ${formatMoney(it.price)} | 分類: ${it.productCategory || '-'}</div>
+                </div>
+                <div class="item-price">HK$ ${formatMoney(it.subtotal)}</div>
+            </div>`).join('');
+
+                // 如果是部分退款，顯示退款明細
+                let refundItemsHtml = '';
+                if (order.paymentStatus === 'PARTIALLY_REFUNDED' && order.refundItems && order.refundItems.length > 0) {
+                    refundItemsHtml = `
+                <div style="margin-top: 1.5rem; padding: 1rem; background: #fff5f5; border-radius: 8px; border-left: 4px solid #dc3545;">
+                    <h5 style="margin-bottom: 0.8rem; color: #dc3545; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-undo-alt"></i> 退款明細 (共 HK$ ${formatMoney(order.refundAmount)})
+                    </h5>
+                    ${order.refundItems.map(refundItem => `
+                        <div style="display: flex; align-items: center; padding: 0.6rem 0; border-bottom: 1px dashed #ffcdd2; font-size: 0.9rem;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: var(--primary);">${refundItem.productName}</div>
+                                <div style="color: var(--gray); font-size: 0.85rem;">
+                                    退回數量: ${refundItem.returnQuantity}件 × HK$ ${formatMoney(refundItem.unitPrice)}
+                                    <span style="margin-left: 0.5rem; color: #6c757d;">
+                                        (${refundItem.requestType === 'RETURN' ? '退貨' : '換貨'})
+                                    </span>
+                                </div>
+                            </div>
+                            <div style="color: #dc3545; font-weight: 700; font-size: 1rem;">
+                                -HK$ ${formatMoney(refundItem.refundAmount)}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+                }
 
                 detailsRowsHtml = `<tr class="order-details-row" style="display:none;" data-parent-order="${order.orderId}">
-                <td colspan="23">
-                    <div class="order-details-content">
-                        <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
-                            <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細 <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
-                        </h4>
-                        <div style="display:flex; flex-direction:column; gap:0.8rem;">${itemsHtml}</div>
-                    </div>
-                </td>
-            </tr>`;
+            <td colspan="23">
+                <div class="order-details-content">
+                    <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
+                        <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細 <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
+                    </h4>
+                    <div style="display:flex; flex-direction:column; gap:0.8rem;">${itemsHtml}</div>
+                    ${refundItemsHtml}
+                </div>
+            </td>
+        </tr>`;
             } else {
                 detailsRowsHtml = `<tr class="order-details-row" style="display:none;" data-parent-order="${order.orderId}">
-                <td colspan="23">
-                    <div class="order-details-content">
-                        <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
-                            <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細 <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
-                        </h4>
-                        <p style="text-align:center; color:#6c757d; padding:1rem; margin:0;"><i class="fas fa-inbox"></i> 該訂單沒有商品</p>
-                    </div>
-                </td>
-            </tr>`;
+            <td colspan="23">
+                <div class="order-details-content">
+                    <h4 style="margin-bottom:1rem; color:var(--primary); display:flex; align-items:center; gap:0.5rem;">
+                        <i class="fas fa-box-open" style="color:var(--gold);"></i> 訂單商品明細 <span class="text-muted" style="font-size:0.85rem; font-weight:normal;">（訂單編號：${order.orderNo}）</span>
+                    </h4>
+                    <p style="text-align:center; color:#6c757d; padding:1rem; margin:0;"><i class="fas fa-inbox"></i> 該訂單沒有商品</p>
+                </div>
+            </td>
+        </tr>`;
             }
 
             return `<tr data-order-id="${order.orderId}">
-            <td class="text-muted">${order.orderId}</td>
-            <td><strong style="font-family:monospace; color:var(--primary);">${order.orderNo}</strong></td>
-            <td><i class="fas fa-user" style="color:var(--gold); margin-right:5px;"></i> ${order.buyerUsername}</td>
-            <td>${courierHtml}</td>
-            <td style="color:var(--accent); font-weight:700;">HK$ ${formatMoney(order.totalAmount)}</td>
-            <td>HK$ ${formatMoney(order.shippingFee)}</td>
-            <td>${deliveryHtml}</td>
-            <td>${needDeliveryHtml}</td>
-            <td>${paymentMethodHtml}</td>
-            <td><span class="status-badge ${ps.cls}">${ps.label}</span></td>
-            <td><span class="status-badge ${os.cls}">${os.label}</span></td>
-            <td class="text-muted">${order.offlineStoreName || '-'}</td>
-            <td>${formatDateTime(order.createdAt)}</td>
-            <td>${formatDateTime(order.paidAt)}</td>
-            <td>${formatDateTime(order.receivedAt)}</td>
-            <td>${fullAddressHtml}</td>
-            <td>${contactPhoneHtml}</td>
-            <td>${receiverNameHtml}</td>
-            <td>${estimatedDeliveryHtml}</td>
-            <td>${appointmentDateHtml}</td>
-            <td>${visibleHtml}</td>
-            <td>${expirationHtml}</td>
-            <td style="text-align:center; vertical-align:middle; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; min-width: 200px;">
-                <button class="btn-toggle" onclick="toggleOrderDetails(this)"><i class="fas fa-eye"></i> <span>明細</span></button>
-                ${pickupBtnHtml}
-                ${cancelExpiredBtnHtml}
-                ${remindPickupBtnHtml}
-                ${actionButtonsHtml}
-                ${courierActionBtnHtml}
-            </td>
-        </tr>${detailsRowsHtml}`;
+        <td class="text-muted">${order.orderId}</td>
+        <td><strong style="font-family:monospace; color:var(--primary);">${order.orderNo}</strong></td>
+        <td><i class="fas fa-user" style="color:var(--gold); margin-right:5px;"></i> ${order.buyerUsername}</td>
+        <td>${courierHtml}</td>
+        <td>${amountDisplayHtml}</td>
+        <td>HK$ ${formatMoney(order.shippingFee)}</td>
+        <td>${deliveryHtml}</td>
+        <td>${needDeliveryHtml}</td>
+        <td>${paymentMethodHtml}</td>
+        <td><span class="status-badge ${ps.cls}">${ps.label}</span></td>
+        <td><span class="status-badge ${os.cls}">${os.label}</span></td>
+        <td class="text-muted">${order.offlineStoreName || '-'}</td>
+        <td>${formatDateTime(order.createdAt)}</td>
+        <td>${formatDateTime(order.paidAt)}</td>
+        <td>${formatDateTime(order.receivedAt)}</td>
+        <td>${fullAddressHtml}</td>
+        <td>${contactPhoneHtml}</td>
+        <td>${receiverNameHtml}</td>
+        <td>${estimatedDeliveryHtml}</td>
+        <td>${appointmentDateHtml}</td>
+        <td>${visibleHtml}</td>
+        <td>${expirationHtml}</td>
+        <td style="text-align:center; vertical-align:middle; display: flex; flex-wrap: wrap; justify-content: center; gap: 0.4rem; min-width: 200px;">
+            <button class="btn-toggle" onclick="toggleOrderDetails(this)"><i class="fas fa-eye"></i> <span>明細</span></button>
+            ${pickupBtnHtml}
+            ${cancelExpiredBtnHtml}
+            ${remindPickupBtnHtml}
+            ${actionButtonsHtml}
+            ${courierActionBtnHtml}
+        </td>
+    </tr>${detailsRowsHtml}`;
         }
 
         // ==========================================
@@ -1670,11 +1740,21 @@
                 // 同步更新局部作用域變量
                 onlineOrderRetentionDays = data.onlineOrderRetentionDays;
                 offlinePaymentDays = data.offlinePaymentDays;
+
+                // 【新增】更新篩選條件下的總消費金額顯示
+                const totalSpentEl = document.getElementById('filtered-total-spent-amount');
+                if (totalSpentEl) {
+                    const amount = data.totalSpentAmount !== null ? data.totalSpentAmount : 0;
+                    totalSpentEl.textContent = 'HK$ ' + new Intl.NumberFormat('zh-HK', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }).format(amount);
+                }
             }
         };
 
         // ==========================================
-        // 新增：加載篩選下拉框選項
+        // 加載篩選下拉框選項
         // ==========================================
         async function loadFilterOptions() {
             // 1. 加載快遞員列表
@@ -1716,8 +1796,40 @@
         // 4. 初始化與表格加載
         // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
-            loadFilterOptions(); // 【新增】頁面加載時先獲取下拉框選項
-            updateFilterVisibility(); // 【新增】初始化時根據默認值計算顯示狀態
+            loadFilterOptions(); // 页面加载时先获取下拉框选项
+            updateFilterVisibility(); // 初始化时根据默认值计算显示状态
+
+            // ==========================================
+            // 【新增】检查 URL 参数，自动筛选指定买家
+            // ==========================================
+            const urlParams = new URLSearchParams(window.location.search);
+            const buyerUsername = urlParams.get('buyerUsername');
+
+            if (buyerUsername) {
+                // 设置买家筛选模式为"指定买家"
+                const buyerModeSelect = document.getElementById('filter-buyer-mode');
+                const buyerInput = document.getElementById('filter-buyer-input');
+
+                if (buyerModeSelect && buyerInput) {
+                    buyerModeSelect.value = 'specific';
+                    buyerInput.value = buyerUsername;
+                    buyerInput.style.display = 'block';
+
+                    // 更新表格查询参数
+                    tableConfig.params.buyerUsername = buyerUsername;
+                    tableConfig.params.page = 1; // 重置到第一页
+
+                    // 触发 UI 联动显示
+                    updateFilterVisibility();
+
+                    // 显示提示信息
+                    if (typeof showNotification === 'function') {
+                        showNotification(` 正在查看买家 "${buyerUsername}" 的订单`);
+                    }
+                }
+            }
+
+            // 加载表格数据
             AdminTable.loadData(tableConfig);
         });
 
@@ -1989,6 +2101,31 @@
                 toggleDeliveryDateInputs();
 
                 appointmentGroup.style.display = 'flex';
+            }     // 线下直接领取的逻辑
+            else if (deliveryMethod === 'OFFLINE_DIRECT') {
+                storeGroup.style.display = 'none';
+                document.getElementById('filter-store-id').value = 'all';
+
+                // 【核心修改】隐藏需快递选项
+                needDeliveryGroup.style.display = 'none';
+                document.getElementById('filter-need-delivery').value = 'all';
+
+                courierGroup.style.display = 'none';
+                document.getElementById('filter-courier-id').value = 'all';
+
+                addressGroup.style.display = 'none';
+                document.getElementById('filter-address-keyword').value = '';
+
+                deliveryDateGroup.style.display = 'none'; // 隱藏送達時間
+                document.getElementById('filter-delivery-date-mode').value = 'all';
+                toggleDeliveryDateInputs();
+
+                appointmentGroup.style.display = 'none';
+                document.getElementById('filter-appointment-mode').value = 'all';
+                document.getElementById('filter-appointment-specific').value = '';
+                document.getElementById('filter-appointment-start').value = '';
+                document.getElementById('filter-appointment-end').value = '';
+                toggleAppointmentInputs();
             } else {
                 storeGroup.style.display = 'none';
                 document.getElementById('filter-store-id').value = 'all';

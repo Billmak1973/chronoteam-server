@@ -38,4 +38,9 @@ public interface OfflineStoreRepository extends JpaRepository<OfflineStore, Long
      * @return 所有活躍門店的列表
      */
     List<OfflineStore> findByIsActiveTrue();
+
+    /**
+     * 根據門店 ID (Long 類型) 列表批量查詢門店
+     */
+    List<OfflineStore> findByStoreIdIn(List<Long> storeIds);
 }

@@ -1,5 +1,6 @@
 package org.example.website.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -49,7 +50,29 @@ public class InventoryAdjustmentLog {
     @Column(name = "reason", length = 500, nullable = false)
     private String reason;
 
-    // ================= 【新增核心字段】 =================
+    // ================= 【關聯出售申請】 =================
+    /**
+     * 關聯的出售申請 (可選)
+     * 【業務邏輯】：
+     * 當庫存變動是由於「出售申請」觸發時（例如：平台買斷入庫、用戶取消退回等），
+     * 記錄對應的 SellApplication，方便財務與倉管進行溯源對賬。
+     *
+     * 獲取 ID 的方式：log.getSellApplication().getApplicationId()
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sell_application_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "user", "imagePaths", "accessories", "notes"})
+    private SellApplication sellApplication;
+
+    // ================= 【核心字段】 =================
+    /**
+     * 關聯的售後申請 ID (可選)
+     * 【業務邏輯】：
+     * 當 adjustmentType 為 RETURN (客戶退貨) 或 EXCHANGE (換貨退回) 時，
+     * 記錄觸發此次庫存變動的售後申請單 ID，方便財務與倉管進行溯源對賬。
+     */
+    @Column(name = "after_sales_request_id")
+    private Long afterSalesRequestId;
 
     /**
      * 調整類型 (精確區分業務場景)

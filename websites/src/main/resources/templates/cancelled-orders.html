@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,21 +9,51 @@
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/sidebar.css">
     <style>
+        /* ========================================== */
+        /* 1. 全局與基礎佈局變數 (ChronoTeam 主題) */
+        /* ========================================== */
+        :root {
+            --primary: #1a1a2e;
+            --secondary: #16213e;
+            --accent: #e94560;
+            --gold: #d4af37;
+            --gold-light: #f4e4ba;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+            --gray-light: #e9ecef;
+            --success: #28a745;
+            --warning: #fd7e14;
+            --danger: #dc3545;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.12);
+            --radius: 12px;
+            --radius-lg: 16px;
+        }
+
+        /* ========================================== */
+        /* 2. 頁面主容器佈局 */
+        /* ========================================== */
         .dashboard-container {
             display: flex;
             min-height: calc(100vh - 150px);
             max-width: 1400px;
             margin: 2rem auto;
-            padding: 0 1rem;
+            padding: 0 1.5rem;
             gap: 2rem;
+            align-items: stretch;
         }
+
         .main-content {
             flex: 1;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
             padding: 2.5rem;
+            display: flex;
+            flex-direction: column;
         }
+
         .page-title {
             font-size: 1.8rem;
             color: var(--primary);
@@ -33,635 +64,838 @@
             border-bottom: 2px solid var(--light);
             padding-bottom: 1rem;
         }
+
         .page-title i {
             color: var(--gold);
         }
+
         .page-subtitle {
             color: var(--gray);
             margin-bottom: 2rem;
             font-size: 0.95rem;
         }
-        /* Tab 样式 */
+
+        /* ========================================== */
+        /* 3. Tab 切換按鈕樣式 */
+        /* ========================================== */
         .order-tabs {
             display: flex;
             gap: 1rem;
             margin-bottom: 2rem;
-            border-bottom: 2px solid #e9ecef;
+            border-bottom: 2px solid var(--gray-light);
         }
+
         .tab-btn {
             padding: 1rem 2rem;
             background: none;
             border: none;
             border-bottom: 3px solid transparent;
             cursor: pointer;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             font-weight: 600;
             color: var(--gray);
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
             margin-bottom: -2px;
+            text-decoration: none;
         }
+
         .tab-btn:hover {
             color: var(--primary);
+            background: rgba(212, 175, 55, 0.05);
         }
+
         .tab-btn.active {
             color: var(--primary);
             border-bottom-color: var(--gold);
         }
+
         .tab-btn .badge {
-            background: #e9ecef;
+            background: var(--gray-light);
             color: var(--gray);
             padding: 0.2rem 0.6rem;
             border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 500;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.3s;
         }
+
         .tab-btn.active .badge {
             background: var(--gold);
             color: white;
         }
-        /* Tab 内容区域 */
+
         .tab-content {
             display: none;
+            flex: 1;
+            flex-direction: column;
         }
+
         .tab-content.active {
-            display: block;
+            display: flex;
+            animation: fadeIn 0.4s ease;
         }
-        /* 订单卡片 */
+
+        /* ========================================== */
+        /* 4. 訂單卡片樣式 (核心) */
+        /* ========================================== */
         .order-card {
             background: white;
-            border: 1px solid #e9ecef;
-            border-radius: 12px;
+            border: 1px solid var(--gray-light);
+            border-radius: var(--radius);
             margin-bottom: 1.5rem;
             overflow: hidden;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
         .order-card:hover {
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-3px);
+            border-color: var(--gold-light);
         }
+
         .order-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 1rem 1.5rem;
-            background: var(--light);
-            border-bottom: 1px solid #e9ecef;
+            background: linear-gradient(to right, #fafafa, #ffffff);
+            border-bottom: 1px solid var(--gray-light);
             flex-wrap: wrap;
             gap: 1rem;
         }
+
         .order-no {
             font-weight: 600;
             color: var(--primary);
             font-family: monospace;
             font-size: 0.95rem;
+            display: flex;
+            align-items: center;
         }
+
         .order-time {
             color: var(--gray);
             font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
+
         .order-body {
             padding: 1.5rem;
         }
+
+        /* ========================================== */
+        /* 5. 狀態徽章樣式 */
+        /* ========================================== */
+        .status-badge {
+            padding: 0.35rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .status-CANCELLED {
+            background: rgba(108, 117, 125, 0.1);
+            color: #495057;
+            border: 1px solid rgba(108, 117, 125, 0.2);
+        }
+
+        .status-RETURNED {
+            background: rgba(253, 126, 20, 0.1);
+            color: #d35400;
+            border: 1px solid rgba(253, 126, 20, 0.2);
+        }
+
+        /* ========================================== */
+        /* 6. 訂單商品明細樣式 */
+        /* ========================================== */
         .order-items-list {
             display: flex;
             flex-direction: column;
             gap: 1rem;
         }
+
         .order-item {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 8px;
             display: flex;
-            gap: 1rem;
-            align-items: center;
-            border: 1px solid #e9ecef;
+            gap: 1.2rem;
+            padding: 1rem;
+            background: var(--light);
+            border-radius: 8px;
+            border: 1px solid transparent;
+            transition: all 0.3s;
         }
+
+        .order-item:hover {
+            background: white;
+            border-color: var(--gold-light);
+            box-shadow: var(--shadow-sm);
+        }
+
         .order-item-image {
             width: 80px;
             height: 80px;
             border-radius: 6px;
             overflow: hidden;
             flex-shrink: 0;
-            background: var(--light);
+            background: white;
+            border: 1px solid var(--gray-light);
         }
+
         .order-item-image img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            transition: transform 0.3s;
         }
+
+        .order-item:hover .order-item-image img {
+            transform: scale(1.05);
+        }
+
         .order-item-info {
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
+
         .order-item-name {
             font-weight: 600;
             color: var(--primary);
-            margin-bottom: 0.3rem;
+            margin-bottom: 0.4rem;
+            font-size: 1rem;
         }
+
         .order-item-meta {
             font-size: 0.85rem;
             color: var(--gray);
-            margin-bottom: 0.2rem;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
+
         .order-item-price {
             color: var(--accent);
             font-weight: 700;
             font-size: 1.1rem;
+            margin-top: 0.3rem;
         }
-        .status-badge {
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
+
+        /* ========================================== */
+        /* 7. 操作按鈕樣式 */
+        /* ========================================== */
+        .btn-delete-order {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 0.4rem 0.9rem;
+            border-radius: 6px;
+            cursor: pointer;
             font-size: 0.85rem;
             font-weight: 600;
+            transition: all 0.3s;
             display: inline-flex;
             align-items: center;
             gap: 0.4rem;
         }
-        .status-CANCELLED {
-            background: #f8d7da;
-            color: #721c24;
+
+        .btn-delete-order:hover {
+            background: var(--danger);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
         }
-        .status-RETURNED {
-            background: #fff3cd;
-            color: #856404;
-        }
+
+        /* ========================================== */
+        /* 8. 空狀態樣式 */
+        /* ========================================== */
         .empty-state {
             text-align: center;
             padding: 4rem 2rem;
-            background: #f8f9fa;
-            border-radius: 12px;
+            color: var(--gray);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--light);
+            border-radius: var(--radius);
+            border: 2px dashed var(--gray-light);
         }
+
         .empty-state i {
-            font-size: 4rem;
-            color: #ddd;
+            font-size: 3.5rem;
+            color: #cbd5e1;
             margin-bottom: 1rem;
         }
+
         .empty-state h3 {
             color: var(--primary);
             margin-bottom: 0.5rem;
+            font-size: 1.2rem;
         }
-        .empty-state p {
+
+        /* ========================================== */
+        /* 9. 刪除確認彈窗樣式 (精美版) */
+        /* ========================================== */
+        .delete-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: none;
+            /* 預設隱藏，由 JS 控制為 flex */
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .delete-modal-box {
+            background: white;
+            padding: 2.5rem 2rem;
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-top: 5px solid var(--danger);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 頂部光暈裝飾 */
+        .delete-modal-box::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(220, 53, 69, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .delete-modal-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #dc3545 100%);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 8px 20px rgba(220, 53, 69, 0.3);
+            animation: iconPulse 2s infinite;
+        }
+
+        .delete-modal-icon i {
+            font-size: 2rem;
+            color: white;
+        }
+
+        .delete-modal-title {
+            font-size: 1.4rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .delete-modal-message {
             color: var(--gray);
-            margin-bottom: 1.5rem;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
         }
+
+        .delete-modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+
+        .btn-cancel-delete,
+        .btn-confirm-delete {
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 0.95rem;
+            min-width: 110px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-cancel-delete {
+            background: var(--light);
+            color: var(--primary);
+            border: 1px solid var(--gray-light);
+        }
+
+        .btn-cancel-delete:hover {
+            background: #e2e8f0;
+            transform: translateY(-2px);
+        }
+
+        .btn-confirm-delete {
+            background: linear-gradient(135deg, var(--danger) 0%, #c82333 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-confirm-delete:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+        }
+
+        /* ========================================== */
+        /* 10. 頁腳樣式 */
+        /* ========================================== */
         .footer {
             background: var(--primary);
             color: rgba(255, 255, 255, 0.7);
             padding: 2rem;
             text-align: center;
             margin-top: 3rem;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
         }
-        @media (max-width: 900px) {
-            .dashboard-container {
-                flex-direction: column;
+
+        /* ========================================== */
+        /* 11. 動畫定義 */
+        /* ========================================== */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
             }
         }
 
-          /* 删除按钮样式 */
-      .order-header-actions {
-          display: flex;
-          align-items: center;
-          gap: 0.8rem;
-      }
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.9);
+            }
 
-      .btn-delete-order {
-          background: transparent;
-          color: var(--accent);
-          border: 1px solid var(--accent);
-          padding: 0.4rem 0.8rem;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 0.85rem;
-          transition: all 0.3s;
-          display: inline-flex;
-          align-items: center;
-          gap: 0.3rem;
-      }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
 
-      .btn-delete-order:hover {
-          background: var(--accent);
-          color: white;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 8px rgba(233, 69, 96, 0.3);
-      }
+        @keyframes iconPulse {
 
-      /* 删除确认弹窗样式 */
-      .delete-modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(4px);
-          z-index: 10000;
-          display: none;
-          justify-content: center;
-          align-items: center;
-          animation: fadeIn 0.3s ease;
-      }
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+            }
 
-      .delete-modal-box {
-          background: white;
-          padding: 2.5rem 2rem;
-          border-radius: 16px;
-          width: 90%;
-          max-width: 420px;
-          text-align: center;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-          animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          border-top: 5px solid var(--accent);
-      }
+            50% {
+                box-shadow: 0 0 0 15px rgba(220, 53, 69, 0);
+            }
+        }
 
-      .delete-modal-icon {
-          width: 70px;
-          height: 70px;
-          background: linear-gradient(135deg, #ff6b6b 0%, #dc3545 100%);
-          border-radius: 50%;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          margin: 0 auto 1.5rem;
-          box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
-          animation: iconPulse 2s infinite;
-      }
+        /* ========================================== */
+        /* 12. 響應式設計 (RWD) */
+        /* ========================================== */
+        @media (max-width: 900px) {
+            .dashboard-container {
+                flex-direction: column;
+                padding: 0 1rem;
+                margin: 1rem auto;
+            }
 
-      .delete-modal-icon i {
-          font-size: 2rem;
-          color: white;
-      }
+            .main-content {
+                padding: 1.5rem;
+            }
 
-      .delete-modal-title {
-          font-size: 1.5rem;
-          color: var(--primary);
-          margin-bottom: 1rem;
-          font-weight: 700;
-      }
+            .order-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.8rem;
+            }
 
-      .delete-modal-message {
-          color: var(--gray);
-          font-size: 1rem;
-          line-height: 1.6;
-          margin-bottom: 2rem;
-      }
+            .btn-delete-order {
+                align-self: flex-end;
+            }
+        }
 
-      .delete-modal-actions {
-          display: flex;
-          gap: 1rem;
-          justify-content: center;
-      }
+        @media (max-width: 600px) {
+            .order-tabs {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
 
-      .btn-cancel-delete {
-          padding: 0.7rem 1.5rem;
-          background: #e9ecef;
-          color: var(--primary);
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 600;
-          transition: all 0.3s;
-      }
+            .tab-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 0.8rem;
+            }
 
-      .btn-cancel-delete:hover {
-          background: #dee2e6;
-          transform: translateY(-2px);
-      }
+            .order-item {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
 
-      .btn-confirm-delete {
-          padding: 0.7rem 1.5rem;
-          background: linear-gradient(135deg, var(--accent) 0%, #c73e54 100%);
-          color: white;
-          border: none;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 600;
-          transition: all 0.3s;
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-          box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
-      }
+            .order-item-image {
+                width: 100%;
+                height: 150px;
+            }
 
-      .btn-confirm-delete:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
-      }
+            .order-item-info {
+                align-items: center;
+                width: 100%;
+            }
 
-      @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-      }
+            .delete-modal-actions {
+                flex-direction: column;
+            }
 
-      @keyframes slideUp {
-          from {
-              opacity: 0;
-              transform: translateY(50px) scale(0.9);
-          }
-          to {
-              opacity: 1;
-              transform: translateY(0) scale(1);
-          }
-      }
-
-      @keyframes iconPulse {
-          0%, 100% {
-              box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-          }
-          70% {
-              box-shadow: 0 0 0 15px rgba(220, 53, 69, 0);
-          }
-          100% {
-              box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-          }
-      }
+            .btn-cancel-delete,
+            .btn-confirm-delete {
+                width: 100%;
+            }
+        }
     </style>
 </head>
+
 <body>
-<!-- 引入公共导航栏 -->
-<div th:replace="~{fragments/common :: navbar}"></div>
+    <!-- 引入公共导航栏 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="dashboard-container">
-    <!-- 引入侧边栏 -->
-    <div th:replace="~{fragments/sidebar :: sidebar(activePage='cancelled-orders')}"></div>
+    <div class="dashboard-container">
+        <!-- 引入侧边栏 -->
+        <div th:replace="~{fragments/sidebar :: sidebar(activePage='cancelled-orders')}"></div>
 
-    <main class="main-content">
-        <h2 class="page-title"><i class="fas fa-times-circle"></i> 取消與退貨訂單</h2>
-        <p class="page-subtitle">查看您已取消或退貨的訂單記錄</p>
+        <main class="main-content">
+            <h2 class="page-title"><i class="fas fa-times-circle"></i> 取消與退貨訂單</h2>
+            <p class="page-subtitle">查看您已取消或退貨的訂單記錄</p>
 
-        <!-- Tab 切换按钮 -->
-        <div class="order-tabs">
-            <a th:href="@{/account/cancelled-orders(tab='cancelled', page=1)}"
-               th:classappend="${currentTab == 'cancelled' or currentTab == null} ? 'tab-btn active' : 'tab-btn'">
-                <i class="fas fa-times-circle"></i>
-                取消訂單
-                <span class="badge" th:text="${cancelledCount} ?: 0">0</span>
-            </a>
-            <a th:href="@{/account/cancelled-orders(tab='returned', page=1)}"
-               th:classappend="${currentTab == 'returned'} ? 'tab-btn active' : 'tab-btn'">
-                <i class="fas fa-undo"></i>
-                退貨訂單
-                <span class="badge" th:text="${returnedCount} ?: 0">0</span>
-            </a>
-        </div>
+            <!-- Tab 切换按钮 -->
+            <div class="order-tabs">
+                <a th:href="@{/account/cancelled-orders(tab='cancelled', page=1)}"
+                    th:classappend="${currentTab == 'cancelled' or currentTab == null} ? 'tab-btn active' : 'tab-btn'">
+                    <i class="fas fa-times-circle"></i>
+                    取消訂單
+                    <span class="badge" th:text="${cancelledCount} ?: 0">0</span>
+                </a>
+                <a th:href="@{/account/cancelled-orders(tab='returned', page=1)}"
+                    th:classappend="${currentTab == 'returned'} ? 'tab-btn active' : 'tab-btn'">
+                    <i class="fas fa-undo"></i>
+                    退貨訂單
+                    <span class="badge" th:text="${returnedCount} ?: 0">0</span>
+                </a>
+            </div>
 
-        <!-- 取消訂單 Tab -->
-        <div id="cancelled-tab" th:classappend="${currentTab == 'cancelled' or currentTab == null} ? 'tab-content active' : 'tab-content'">
-            <!-- 只有当当前 Tab 是 cancelled 时才渲染内部结构 -->
-            <div th:if="${currentTab == 'cancelled' or currentTab == null}">
-                <div th:if="${#lists.isEmpty(currentOrders)}" class="empty-state">
-                    <i class="fas fa-check-circle"></i>
-                    <h3>暫無取消訂單</h3>
-                    <p>您目前沒有取消的訂單記錄</p>
-                </div>
-                <div th:unless="${#lists.isEmpty(currentOrders)}">
-                    <div class="order-card" th:each="order : ${currentOrders}" th:data-order-no="${order.orderNo}">
-                        <!-- 保持你原有的订单卡片 HTML 不变 -->
-                        <div class="order-header">
-                            <div class="order-no">
-                                <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                                訂單編號：<span th:text="${order.orderNo}">ORD-123456</span>
+            <!-- 取消訂單 Tab -->
+            <div id="cancelled-tab"
+                th:classappend="${currentTab == 'cancelled' or currentTab == null} ? 'tab-content active' : 'tab-content'">
+                <!-- 只有当当前 Tab 是 cancelled 时才渲染内部结构 -->
+                <div th:if="${currentTab == 'cancelled' or currentTab == null}">
+                    <div th:if="${#lists.isEmpty(currentOrders)}" class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>暫無取消訂單</h3>
+                        <p>您目前沒有取消的訂單記錄</p>
+                    </div>
+                    <div th:unless="${#lists.isEmpty(currentOrders)}">
+                        <div class="order-card" th:each="order : ${currentOrders}" th:data-order-no="${order.orderNo}">
+                            <!-- 保持你原有的订单卡片 HTML 不变 -->
+                            <div class="order-header">
+                                <div class="order-no">
+                                    <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                                    訂單編號：<span th:text="${order.orderNo}">ORD-123456</span>
+                                </div>
+                                <div class="order-time">
+                                    <i class="far fa-clock"></i>
+                                    <span
+                                        th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-01
+                                        12:00:00</span>
+                                </div>
+                                <button class="btn-delete-order" th:data-order-no="${order.orderNo}"
+                                    onclick="openDeleteOrderModal(this)">
+                                    <i class="fas fa-trash-alt"></i> 刪除
+                                </button>
                             </div>
-                            <div class="order-time">
-                                <i class="far fa-clock"></i>
-                                <span th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-01 12:00:00</span>
-                            </div>
-                            <button class="btn-delete-order" th:data-order-no="${order.orderNo}" onclick="openDeleteOrderModal(this)">
-                                <i class="fas fa-trash-alt"></i> 刪除
-                            </button>
-                        </div>
-                        <div class="order-body">
-                            <div style="margin-bottom: 1rem;">
-                        <span class="status-badge status-CANCELLED">
-                            <i class="fas fa-times-circle"></i> <span>已取消</span>
-                        </span>
-                            </div>
-                            <div class="order-items-list">
-                                <div class="order-item" th:each="item : ${order.items}">
-                                    <!-- 保持原有商品明细 HTML 不变 -->
-                                    <div class="order-item-image">
-                                        <img th:src="@{/images/products/{img}(img=${item.product.image})}" th:alt="${item.product.description}" onerror="this.src='/images/placeholder.png'">
-                                    </div>
-                                    <div class="order-item-info">
-                                        <div class="order-item-name" th:text="${item.product.description}">商品名稱</div>
-                                        <div class="order-item-meta"><i class="fas fa-tag"></i> <span th:text="${item.product.category}">手錶</span></div>
-                                        <div class="order-item-meta"><i class="fas fa-box"></i> 數量：<span th:text="${item.quantity}">1</span></div>
-                                        <div class="order-item-price">HK$ <span th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span></div>
+                            <div class="order-body">
+                                <div style="margin-bottom: 1rem;">
+                                    <span class="status-badge status-CANCELLED">
+                                        <i class="fas fa-times-circle"></i> <span>已取消</span>
+                                    </span>
+                                </div>
+                                <div class="order-items-list">
+                                    <div class="order-item" th:each="item : ${order.items}">
+                                        <!-- 保持原有商品明细 HTML 不变 -->
+                                        <div class="order-item-image">
+                                            <img th:src="@{/images/products/{img}(img=${item.product.image})}"
+                                                th:alt="${item.product.description}"
+                                                onerror="this.src='/images/placeholder.png'">
+                                        </div>
+                                        <div class="order-item-info">
+                                            <div class="order-item-name" th:text="${item.product.description}">商品名稱
+                                            </div>
+                                            <div class="order-item-meta"><i class="fas fa-tag"></i> <span
+                                                    th:text="${item.product.category}">手錶</span></div>
+                                            <div class="order-item-meta"><i class="fas fa-box"></i> 數量：<span
+                                                    th:text="${item.quantity}">1</span></div>
+                                            <div class="order-item-price">HK$ <span
+                                                    th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                <!-- ========================================== -->
+                <!-- 智能分页导航 (引用 Fragment) -->
+                <!-- ========================================== -->
+                <div th:replace="~{fragments/pagination :: smartPagination(
+    ${currentPage},
+    ${totalPages},
+    ${smartPages},
+    'changePage'
+)}"></div>
             </div>
-        </div>
 
-        <!-- 退貨訂單 Tab -->
-        <div id="returned-tab" th:classappend="${currentTab == 'returned'} ? 'tab-content active' : 'tab-content'">
-            <div th:if="${currentTab == 'returned'}">
-                <div th:if="${#lists.isEmpty(currentOrders)}" class="empty-state">
-                    <i class="fas fa-box-open"></i>
-                    <h3>暫無退貨訂單</h3>
-                    <p>您目前沒有退貨的訂單記錄</p>
-                </div>
-                <div th:unless="${#lists.isEmpty(currentOrders)}">
-                    <div class="order-card" th:each="order : ${currentOrders}" th:data-order-no="${order.orderNo}">
-                        <!-- 保持你原有的订单卡片 HTML 不变 -->
-                        <div class="order-header">
-                            <div class="order-no">
-                                <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                                訂單編號：<span th:text="${order.orderNo}">ORD-123456</span>
+            <!-- 退貨訂單 Tab -->
+            <div id="returned-tab" th:classappend="${currentTab == 'returned'} ? 'tab-content active' : 'tab-content'">
+                <div th:if="${currentTab == 'returned'}">
+                    <div th:if="${#lists.isEmpty(currentOrders)}" class="empty-state">
+                        <i class="fas fa-box-open"></i>
+                        <h3>暫無退貨訂單</h3>
+                        <p>您目前沒有退貨的訂單記錄</p>
+                    </div>
+                    <div th:unless="${#lists.isEmpty(currentOrders)}">
+                        <div class="order-card" th:each="order : ${currentOrders}" th:data-order-no="${order.orderNo}">
+                            <!-- 保持你原有的订单卡片 HTML 不变 -->
+                            <div class="order-header">
+                                <div class="order-no">
+                                    <i class="fas fa-receipt" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                                    訂單編號：<span th:text="${order.orderNo}">ORD-123456</span>
+                                </div>
+                                <div class="order-time">
+                                    <i class="far fa-clock"></i>
+                                    <span
+                                        th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-01
+                                        12:00:00</span>
+                                </div>
+                                <button class="btn-delete-order" th:data-order-no="${order.orderNo}"
+                                    onclick="openDeleteOrderModal(this)">
+                                    <i class="fas fa-trash-alt"></i> 刪除
+                                </button>
                             </div>
-                            <div class="order-time">
-                                <i class="far fa-clock"></i>
-                                <span th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-01 12:00:00</span>
-                            </div>
-                            <button class="btn-delete-order" th:data-order-no="${order.orderNo}" onclick="openDeleteOrderModal(this)">
-                                <i class="fas fa-trash-alt"></i> 刪除
-                            </button>
-                        </div>
-                        <div class="order-body">
-                            <div style="margin-bottom: 1rem;">
-                        <span class="status-badge status-RETURNED">
-                            <i class="fas fa-undo"></i> <span>已退貨</span>
-                        </span>
-                            </div>
-                            <div class="order-items-list">
-                                <div class="order-item" th:each="item : ${order.items}">
-                                    <!-- 保持原有商品明细 HTML 不变 -->
-                                    <div class="order-item-image">
-                                        <img th:src="@{/images/products/{img}(img=${item.product.image})}" th:alt="${item.product.description}" onerror="this.src='/images/placeholder.png'">
-                                    </div>
-                                    <div class="order-item-info">
-                                        <div class="order-item-name" th:text="${item.product.description}">商品名稱</div>
-                                        <div class="order-item-meta"><i class="fas fa-tag"></i> <span th:text="${item.product.category}">手錶</span></div>
-                                        <div class="order-item-meta"><i class="fas fa-box"></i> 數量：<span th:text="${item.quantity}">1</span></div>
-                                        <div class="order-item-price">HK$ <span th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span></div>
+                            <div class="order-body">
+                                <div style="margin-bottom: 1rem;">
+                                    <span class="status-badge status-RETURNED">
+                                        <i class="fas fa-undo"></i> <span>已退貨</span>
+                                    </span>
+                                </div>
+                                <div class="order-items-list">
+                                    <div class="order-item" th:each="item : ${order.items}">
+                                        <!-- 保持原有商品明细 HTML 不变 -->
+                                        <div class="order-item-image">
+                                            <img th:src="@{/images/products/{img}(img=${item.product.image})}"
+                                                th:alt="${item.product.description}"
+                                                onerror="this.src='/images/placeholder.png'">
+                                        </div>
+                                        <div class="order-item-info">
+                                            <div class="order-item-name" th:text="${item.product.description}">商品名稱
+                                            </div>
+                                            <div class="order-item-meta"><i class="fas fa-tag"></i> <span
+                                                    th:text="${item.product.category}">手錶</span></div>
+                                            <div class="order-item-meta"><i class="fas fa-box"></i> 數量：<span
+                                                    th:text="${item.quantity}">1</span></div>
+                                            <div class="order-item-price">HK$ <span
+                                                    th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <!-- ========================================== -->
-            <!-- 智能分页导航 (引用 Fragment) -->
-            <!-- ========================================== -->
-            <div th:replace="~{fragments/pagination :: smartPagination(
+                <!-- ========================================== -->
+                <!-- 智能分页导航 (引用 Fragment) -->
+                <!-- ========================================== -->
+                <div th:replace="~{fragments/pagination :: smartPagination(
                 ${currentPage},
                 ${totalPages},
                 ${smartPages},
                 'changePage'
             )}"></div>
-        </div>
-    </main>
-</div>
+            </div>
+        </main>
+    </div>
 
-<!-- 3. 在页面底部添加删除确认弹窗 HTML -->
-<div id="deleteOrderModal" class="delete-modal-overlay">
-    <div class="delete-modal-box">
-        <div class="delete-modal-icon">
-            <i class="fas fa-exclamation-triangle"></i>
-        </div>
-        <h3 class="delete-modal-title">确认删除订单？</h3>
-        <p class="delete-modal-message">
-            您确定要删除此订单吗？<br>
-            此操作将隐藏该订单，且无法恢复。
-        </p>
-        <div class="delete-modal-actions">
-            <button class="btn-cancel-delete" onclick="closeDeleteOrderModal()">取消</button>
-            <button class="btn-confirm-delete" onclick="confirmDeleteOrder()">
-                <i class="fas fa-trash-alt"></i> 确认删除
-            </button>
+    <!-- 3. 在页面底部添加删除确认弹窗 HTML -->
+    <div id="deleteOrderModal" class="delete-modal-overlay">
+        <div class="delete-modal-box">
+            <div class="delete-modal-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h3 class="delete-modal-title">确认删除订单？</h3>
+            <p class="delete-modal-message">
+                您确定要删除此订单吗？<br>
+                此操作将隐藏该订单，且无法恢复。
+            </p>
+            <div class="delete-modal-actions">
+                <button class="btn-cancel-delete" onclick="closeDeleteOrderModal()">取消</button>
+                <button class="btn-confirm-delete" onclick="confirmDeleteOrder()">
+                    <i class="fas fa-trash-alt"></i> 确认删除
+                </button>
+            </div>
         </div>
     </div>
-</div>
 
-<footer class="footer">
-    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights Reserved.</p>
-</footer>
+    <footer class="footer">
+        <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
+            Rights Reserved.</p>
+    </footer>
 
-<!-- 引入公共弹窗 HTML -->
-<div th:replace="~{fragments/common :: modals}"></div>
+    <!-- 引入公共弹窗 HTML -->
+    <div th:replace="~{fragments/common :: modals}"></div>
 
-<!-- 注入登录状态变量 -->
-<script th:inline="javascript">
-    const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
-</script>
+    <!-- 注入登录状态变量 -->
+    <script th:inline="javascript">
+        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+    </script>
 
-<!-- 引入公共 JS -->
-<script src="/js/common.js"></script>
+    <!-- 引入公共 JS -->
+    <script src="/js/common.js"></script>
 
-<!-- 页面专属 JS -->
-<script>
-    // ==========================================
-    // 1. Tab 切換邏輯
-    // ==========================================
-    function switchTab(tabName) {
-        // 移除所有 active 類
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    <!-- 页面专属 JS -->
+    <script>
+        // ==========================================
+        // 1. Tab 切換邏輯
+        // ==========================================
+        function switchTab(tabName) {
+            // 移除所有 active 類
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-        // 添加 active 類到選中的 tab
-        event.currentTarget.classList.add('active');
-        document.getElementById(tabName + '-tab').classList.add('active');
-    }
-
-    // ==========================================
-    // 2. 分頁跳轉函數 (利用 URL 參數保持 Tab 狀態)
-    // ==========================================
-    function changePage(page) {
-        // 獲取當前 URL 中的 tab 參數，默認為 'cancelled'
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentTab = urlParams.get('tab') || 'cancelled';
-
-        // 跳轉到新的頁碼，保持 tab 不變
-        window.location.href = `/account/cancelled-orders?tab=${currentTab}&page=${page}`;
-    }
-
-    // ==========================================
-    // 3. 刪除訂單相關邏輯
-    // ==========================================
-    let pendingDeleteOrderNo = null;
-    let pendingDeleteOrderCard = null;
-    let pendingDeleteButton = null;
-
-    // 打開刪除確認彈窗
-    function openDeleteOrderModal(button) {
-        pendingDeleteOrderNo = button.getAttribute('data-order-no');
-        pendingDeleteOrderCard = button.closest('.order-card');
-        pendingDeleteButton = button;
-
-        document.getElementById('deleteOrderModal').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
-
-    // 關閉刪除確認彈窗
-    function closeDeleteOrderModal() {
-        document.getElementById('deleteOrderModal').style.display = 'none';
-        document.body.style.overflow = '';
-        pendingDeleteOrderNo = null;
-        pendingDeleteOrderCard = null;
-        pendingDeleteButton = null;
-    }
-
-    // 確認刪除訂單
-    async function confirmDeleteOrder() {
-        if (!pendingDeleteOrderNo) return;
-
-        const orderNo = pendingDeleteOrderNo;
-
-        // 1. 立即關閉彈窗
-        closeDeleteOrderModal();
-
-        // 2. 發送 AJAX 請求到後端
-        try {
-            const response = await fetch(`/api/order/${orderNo}/hide`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                // 3. AJAX 成功後，顯示成功提示
-                showNotification('✅ 訂單已成功刪除');
-
-                // 4. 延遲 800 毫秒刷新網頁，讓用戶能看清成功提示，同時確保後端數據與前端完美同步
-                setTimeout(() => {
-                    location.reload();
-                }, 800);
-            } else {
-                showNotification('❌ ' + (result.message || '刪除訂單失敗'), true);
-            }
-        } catch (error) {
-            console.error('刪除訂單錯誤:', error);
-            showNotification('❌ 網絡錯誤，請稍後重試', true);
+            // 添加 active 類到選中的 tab
+            event.currentTarget.classList.add('active');
+            document.getElementById(tabName + '-tab').classList.add('active');
         }
-    }
 
-    // ==========================================
-    // 4. 彈窗全局事件監聽 (遮罩層點擊與 ESC 鍵)
-    // ==========================================
-    // 點擊遮罩層關閉彈窗
-    document.getElementById('deleteOrderModal')?.addEventListener('click', function (e) {
-        if (e.target === this) {
+        // ==========================================
+        // 2. 分頁跳轉函數 (利用 URL 參數保持 Tab 狀態)
+        // ==========================================
+        function changePage(page) {
+            // 獲取當前 URL 中的 tab 參數，默認為 'cancelled'
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentTab = urlParams.get('tab') || 'cancelled';
+
+            // 跳轉到新的頁碼，保持 tab 不變
+            window.location.href = `/account/cancelled-orders?tab=${currentTab}&page=${page}`;
+        }
+
+        // ==========================================
+        // 3. 刪除訂單相關邏輯
+        // ==========================================
+        let pendingDeleteOrderNo = null;
+        let pendingDeleteOrderCard = null;
+        let pendingDeleteButton = null;
+
+        // 打開刪除確認彈窗
+        function openDeleteOrderModal(button) {
+            pendingDeleteOrderNo = button.getAttribute('data-order-no');
+            pendingDeleteOrderCard = button.closest('.order-card');
+            pendingDeleteButton = button;
+
+            document.getElementById('deleteOrderModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 關閉刪除確認彈窗
+        function closeDeleteOrderModal() {
+            document.getElementById('deleteOrderModal').style.display = 'none';
+            document.body.style.overflow = '';
+            pendingDeleteOrderNo = null;
+            pendingDeleteOrderCard = null;
+            pendingDeleteButton = null;
+        }
+
+        // 確認刪除訂單
+        async function confirmDeleteOrder() {
+            if (!pendingDeleteOrderNo) return;
+
+            const orderNo = pendingDeleteOrderNo;
+
+            // 1. 立即關閉彈窗
             closeDeleteOrderModal();
-        }
-    });
 
-    // ESC鍵關閉彈窗
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-            const modal = document.getElementById('deleteOrderModal');
-            if (modal && modal.style.display === 'flex') {
+            // 2. 發送 AJAX 請求到後端
+            try {
+                const response = await fetch(`/api/order/${orderNo}/hide`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    // 3. AJAX 成功後，顯示成功提示
+                    showNotification('✅ 訂單已成功刪除');
+
+                    // 4. 延遲 800 毫秒刷新網頁，讓用戶能看清成功提示，同時確保後端數據與前端完美同步
+                    setTimeout(() => {
+                        location.reload();
+                    }, 800);
+                } else {
+                    showNotification('❌ ' + (result.message || '刪除訂單失敗'), true);
+                }
+            } catch (error) {
+                console.error('刪除訂單錯誤:', error);
+                showNotification('❌ 網絡錯誤，請稍後重試', true);
+            }
+        }
+
+        // ==========================================
+        // 4. 彈窗全局事件監聽 (遮罩層點擊與 ESC 鍵)
+        // ==========================================
+        // 點擊遮罩層關閉彈窗
+        document.getElementById('deleteOrderModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
                 closeDeleteOrderModal();
             }
-        }
-    });
-</script>
+        });
+
+        // ESC鍵關閉彈窗
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('deleteOrderModal');
+                if (modal && modal.style.display === 'flex') {
+                    closeDeleteOrderModal();
+                }
+            }
+        });
+    </script>
 </body>
+
 </html>

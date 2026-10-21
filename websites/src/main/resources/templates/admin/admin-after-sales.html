@@ -518,7 +518,6 @@
 
             <div class="content-body">
                 <!-- 篩選工具欄 -->
-                <!-- 篩選工具欄 -->
                 <div class="filter-bar"
                     style="display: flex; gap: 0.8rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;">
 
@@ -676,6 +675,8 @@
                                                 <div class="info-item"><strong>預約時間：</strong> <span
                                                         th:text="${req.appointmentDate != null ? req.appointmentDate + ' ' + req.appointmentTimeSlot : '-'}">-</span>
                                                 </div>
+                                                <div class="info-item"><strong>操作人員：</strong> <span
+                                                        th:text="${req.operatorName} ?: '-'">-</span></div>
                                             </div>
 
                                             <div>
@@ -700,6 +701,12 @@
                                                         th:style="'color: ' + ${req.stockStatusColor} + '; font-weight: 600;'">
                                                         -
                                                     </span>
+                                                </div>
+                                                <!-- 獨立的 div 2：入庫操作員 (只有當 is_stocked_in 為 true，即 stockInOperatorNames 有值時才顯示整個 div) -->
+                                                <div class="info-item"
+                                                    th:if="${req.stockInOperatorNames != null and req.stockInOperatorNames != ''}">
+                                                    <strong>入庫操作員：</strong>
+                                                    <span th:text="${req.stockInOperatorNames}">-</span>
                                                 </div>
                                             </div>
                                         </div>

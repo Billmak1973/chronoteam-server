@@ -11,8 +11,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.Result;
 import org.example.website.dto.SellApplicationDTO;
+import org.example.website.entity.OfflineStore;
 import org.example.website.entity.SellApplication;
 import org.example.website.entity.User;
+import org.example.website.repository.OfflineStoreRepository;
 import org.example.website.repository.SellApplicationRepository;
 import org.example.website.repository.UserRepository;
 import org.example.website.service.FileStorageService;
@@ -28,8 +30,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Controller
 @RequestMapping("/sell")
@@ -40,15 +45,17 @@ public class SellController {
     private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
+    private final OfflineStoreRepository offlineStoreRepository;
 
     public SellController(SellApplicationRepository sellApplicationRepository,
                           FileStorageService fileStorageService,
                           ObjectMapper objectMapper,
-                          UserRepository userRepository) {
+                          UserRepository userRepository, OfflineStoreRepository offlineStoreRepository) {
         this.sellApplicationRepository = sellApplicationRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.objectMapper = objectMapper;
+        this.offlineStoreRepository = offlineStoreRepository;
     }
 
     /**
@@ -101,6 +108,7 @@ public class SellController {
             application.setSeries(dto.getSeries());
             application.setModel(dto.getModel());
             application.setPurchaseYear(dto.getPurchaseYear());
+            application.setQuantity(dto.getQuantity() != null ? dto.getQuantity() : 1);
             application.setCondition(dto.getCondition());
             application.setFunctionStatus(dto.getFunctionStatus());
             application.setNotes(dto.getNotes());
@@ -112,6 +120,10 @@ public class SellController {
 
             // 4. 處理交易模式
             application.setTransactionMode(SellApplication.TransactionMode.valueOf(dto.getTransactionMode()));
+
+            application.setStoreId(dto.getStoreId());
+            application.setAppointmentDate(dto.getAppointmentDate());
+            application.setAppointmentTimeSlot(dto.getAppointmentTimeSlot());
 
             // 5. 上傳圖片
             Map<String, MultipartFile> imageFiles = new HashMap<>();
@@ -153,26 +165,21 @@ public class SellController {
         }
     }
 
-    /**
-     * GET: 我的出售申請列表（只顯示 BUYOUT 平台直接買斷）
-     * 使用 @Hidden 隱藏此接口，保持 Swagger 文檔純淨
-     */
     @Hidden
     @GetMapping("/my-applications")
     public String myApplications(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "20") int size,
             Model model,
             Authentication authentication) {
 
         String username = authentication.getName();
 
-        // 核心修改：使用 UserRepository 獲取 User 實體，並放入 Model 供側邊欄渲染
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
         model.addAttribute("user", user);
 
-        // 只查詢 BUYOUT（平台直接買斷）模式的申請
+        // 2. 分頁查詢當前用戶的 BUYOUT 申請
         Page<SellApplication> applications = sellApplicationRepository
                 .findByUser_UsernameAndTransactionModeOrderByCreatedAtDesc(
                         username,
@@ -180,9 +187,59 @@ public class SellController {
                         PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"))
                 );
 
+        // ==========================================
+        // 【修正】批量獲取門店名稱 (構建 Map 傳給前端)
+        // ==========================================
+        // 1. 提取當前頁面所有的 storeId 字串 (去重且過濾空值)
+        List<String> storeIdStrs = applications.getContent().stream()
+                .map(SellApplication::getStoreId)
+                .filter(id -> id != null && !id.trim().isEmpty())
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+
+        Map<String, String> storeMap = new HashMap<>();
+        if (!storeIdStrs.isEmpty()) {
+            // 2. 【關鍵】將 String 轉為 Long (因為 OfflineStore.storeId 是 Long 類型)
+            //    加上 matches("\\d+") 過濾，防止髒數據導致 NumberFormatException
+            List<Long> storeIdLongs = storeIdStrs.stream()
+                    .filter(id -> id.matches("\\d+"))
+                    .map(Long::valueOf)
+                    .collect(java.util.stream.Collectors.toList());
+
+            if (!storeIdLongs.isEmpty()) {
+                // 3. 用 Long 列表批量查詢門店
+                List<OfflineStore> stores = offlineStoreRepository.findByStoreIdIn(storeIdLongs);
+
+                // 4. Map 的 Key 轉回 String，才能與前端的 app.storeId ("1") 匹配
+                for (OfflineStore store : stores) {
+                    storeMap.put(String.valueOf(store.getStoreId()), store.getName());
+                }
+            }
+        }
+        model.addAttribute("storeMap", storeMap);
+        // ==========================================
+        // ==========================================
+        // ==========================================
+
+        // 3. 計算財務統計數據
+        List<SellApplication> completedApps = sellApplicationRepository.findByUserAndStatus(
+                user,
+                SellApplication.ApplicationStatus.COMPLETED
+        );
+
+        java.math.BigDecimal totalRevenue = completedApps.stream()
+                .map(SellApplication::getFinalPrice)
+                .filter(price -> price != null)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        long settledCount = completedApps.size();
+
+        // 4. 將數據放入 Model 供前端 Thymeleaf 渲染
         model.addAttribute("applications", applications);
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", applications.getTotalPages());
+        model.addAttribute("totalRevenue", totalRevenue);
+        model.addAttribute("settledCount", settledCount);
 
         return "my-sell-applications";
     }

@@ -147,6 +147,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             Pageable pageable
     );
 
+    // ==========================================
+    // 1. JPQL 查詢：參數必須是 Enum，以匹配實體類字段
+    // ==========================================
     @Query("SELECT o FROM Order o " +
             "LEFT JOIN o.user u " +
             "LEFT JOIN o.courier c " +
@@ -167,7 +170,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "AND (:deliveryDateEnd IS NULL OR o.estimatedDeliveryDate <= :deliveryDateEnd) " +
             "AND (:appointmentDateStart IS NULL OR o.appointmentDate >= :appointmentDateStart) " +
             "AND (:appointmentDateEnd IS NULL OR o.appointmentDate <= :appointmentDateEnd) " +
-            // ================= 【新增】：是否已過期篩選邏輯 =================
+            // ================= 是否已過期篩選邏輯 =================
             // 邏輯說明：
             // 1. 如果 isExpired 為 null，則不過濾。
             // 2. 如果 isExpired = true (已過期)：
@@ -189,7 +192,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "       :isExpired = false AND ( " +
             "           (:onlineDeadline IS NOT NULL AND o.paymentMethod = 'PAYPAL_SIM' AND o.createdAt > :onlineDeadline) OR " +
             "           (:offlineDeadline IS NOT NULL AND o.paymentMethod = 'OFFLINE_STORE' AND o.createdAt > :offlineDeadline) OR " +
-            "           (o.paymentMethod NOT IN ('PAYPAL_SIM', 'OFFLINE_STORE')) " + // 其他支付方式視為未過期
+            "           (o.paymentMethod NOT IN ('PAYPAL_SIM', 'OFFLINE_STORE')) " +
             "       ) " +
             "   ) " +
             ") " +
@@ -210,6 +213,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("storeId") Long storeId,
             @Param("needDelivery") Boolean needDelivery,
             @Param("paymentMethod") String paymentMethod,
+            // 【關鍵 1】JPQL 查詢必須保持 Enum 類型，否則會與實體類字段不匹配導致啟動報錯或 404
             @Param("paymentStatus") Order.PaymentStatus paymentStatus,
             @Param("orderStatus") Order.OrderStatus orderStatus,
             @Param("searchStartDt") LocalDateTime searchStartDt,
@@ -219,10 +223,101 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("deliveryDateEnd") LocalDate deliveryDateEnd,
             @Param("appointmentDateStart") LocalDate appointmentDateStart,
             @Param("appointmentDateEnd") LocalDate appointmentDateEnd,
-            // 【新增】：過期篩選參數
             @Param("isExpired") Boolean isExpired,
             @Param("onlineDeadline") LocalDateTime onlineDeadline,
             @Param("offlineDeadline") LocalDateTime offlineDeadline,
+            Pageable pageable
+    );
+
+    // ==========================================
+    // 2. 原生 SQL 查詢：參數必須是 String，以避開 Hibernate 6 的 null Enum 映射 Bug
+    // ==========================================
+    @Query(value = "SELECT COALESCE(SUM(" +
+            "o.total_amount - COALESCE(" +
+            "(SELECT SUM(asi.final_settle_amount) " +
+            "FROM after_sales_request asr " +
+            "JOIN after_sales_request_item asi ON asr.request_id = asi.request_id " +
+            "WHERE asr.original_order_id = o.order_id " +
+            "AND asr.status IN ('PENDING', 'COMPLETED')), " +
+            "0)" +
+            "), 0) " +
+            "FROM orders o " +
+            "LEFT JOIN users u ON o.user_id = u.user_id " +
+            "LEFT JOIN users c ON o.courier_id = c.user_id " +
+            "LEFT JOIN offline_stores s ON o.offline_store_id = s.store_id " +
+            "LEFT JOIN user_addresses ua ON o.user_address_id = ua.address_id " +
+            "WHERE o.order_status IN ('PAID', 'SHIPPED', 'COMPLETED') " +
+            "AND (:buyerUsername IS NULL OR u.username = :buyerUsername) " +
+            "AND (:courierId IS NULL OR c.user_id = :courierId) " +
+            "AND (:deliveryMethod IS NULL OR o.delivery_method = :deliveryMethod) " +
+            "AND (:storeId IS NULL OR s.store_id = :storeId) " +
+            "AND (:needDelivery IS NULL OR o.delivery = :needDelivery) " +
+            "AND (:paymentMethod IS NULL OR o.payment_method = :paymentMethod) " +
+            "AND (:paymentStatus IS NULL OR o.payment_status = :paymentStatus) " + // 直接比對字符串
+            "AND (:orderStatus IS NULL OR o.order_status = :orderStatus) " +       // 直接比對字符串
+            "AND (:searchStartDt IS NULL OR o.created_at >= :searchStartDt) " +
+            "AND (:searchEndDt IS NULL OR o.created_at <= :searchEndDt) " +
+            "AND (:addressKeyword IS NULL OR ua.full_address LIKE CONCAT('%', :addressKeyword, '%')) " +
+            "AND (:deliveryDateStart IS NULL OR o.estimated_delivery_date >= :deliveryDateStart) " +
+            "AND (:deliveryDateEnd IS NULL OR o.estimated_delivery_date <= :deliveryDateEnd) " +
+            "AND (:appointmentDateStart IS NULL OR o.appointment_date >= :appointmentDateStart) " +
+            "AND (:appointmentDateEnd IS NULL OR o.appointment_date <= :appointmentDateEnd) " +
+            "AND ( " +
+            "   :isExpired IS NULL OR " +
+            "   ( " +
+            "       :isExpired = true AND ( " +
+            "           (:onlineDeadline IS NOT NULL AND o.payment_method = 'PAYPAL_SIM' AND o.created_at <= :onlineDeadline) OR " +
+            "           (:offlineDeadline IS NOT NULL AND o.payment_method = 'OFFLINE_STORE' AND o.created_at <= :offlineDeadline) " +
+            "       ) " +
+            "   ) OR " +
+            "   ( " +
+            "       :isExpired = false AND ( " +
+            "           (:onlineDeadline IS NOT NULL AND o.payment_method = 'PAYPAL_SIM' AND o.created_at > :onlineDeadline) OR " +
+            "           (:offlineDeadline IS NOT NULL AND o.payment_method = 'OFFLINE_STORE' AND o.created_at > :offlineDeadline) OR " +
+            "           (o.payment_method NOT IN ('PAYPAL_SIM', 'OFFLINE_STORE')) " +
+            "       ) " +
+            "   ) " +
+            ") " +
+            "AND (" +
+            "   :amountMode IS NULL OR " +
+            "   (:amountMode = 'gt' AND o.total_amount > :amountVal1) OR " +
+            "   (:amountMode = 'lt' AND o.total_amount < :amountVal1) OR " +
+            "   (:amountMode = 'eq' AND o.total_amount = :amountVal1) OR " +
+            "   (:amountMode = 'between' AND o.total_amount >= :amountVal1 AND o.total_amount <= :amountVal2)" +
+            ")", nativeQuery = true)
+    BigDecimal calculateTotalSpentAmountWithAdvancedFilters(
+            @Param("buyerUsername") String buyerUsername,
+            @Param("courierId") Long courierId,
+            @Param("amountMode") String amountMode,
+            @Param("amountVal1") BigDecimal amountVal1,
+            @Param("amountVal2") BigDecimal amountVal2,
+            @Param("deliveryMethod") String deliveryMethod,
+            @Param("storeId") Long storeId,
+            @Param("needDelivery") Boolean needDelivery,
+            @Param("paymentMethod") String paymentMethod,
+            // 【關鍵 2】原生 SQL (nativeQuery=true) 必須改為 String 類型，否則傳入 null 時 Hibernate 6 會報 jdbcMapping is null 的 NPE
+            @Param("paymentStatus") String paymentStatus, //  改為 String
+            @Param("orderStatus") String orderStatus,     // 改為 String
+            @Param("searchStartDt") LocalDateTime searchStartDt,
+            @Param("searchEndDt") LocalDateTime searchEndDt,
+            @Param("addressKeyword") String addressKeyword,
+            @Param("deliveryDateStart") LocalDate deliveryDateStart,
+            @Param("deliveryDateEnd") LocalDate deliveryDateEnd,
+            @Param("appointmentDateStart") LocalDate appointmentDateStart,
+            @Param("appointmentDateEnd") LocalDate appointmentDateEnd,
+            @Param("isExpired") Boolean isExpired,
+            @Param("onlineDeadline") LocalDateTime onlineDeadline,
+            @Param("offlineDeadline") LocalDateTime offlineDeadline
+    );
+
+    // 新增查询方法：支持货物状态筛选
+    @Query("SELECT o FROM Order o WHERE o.user.username = :username " +
+            "AND o.paymentStatus IN ('PAID_SIMULATED', 'PAID_REAL', 'PAID_OFFLINE','PARTIALLY_REFUNDED') " +
+            "AND (:orderStatus IS NULL OR o.status = :orderStatus) " +
+            "ORDER BY o.createdAt DESC")
+    Page<Order> findPaidOrdersWithStatusFilter(
+            @Param("username") String username,
+            @Param("orderStatus") Order.OrderStatus orderStatus,
             Pageable pageable
     );
 }

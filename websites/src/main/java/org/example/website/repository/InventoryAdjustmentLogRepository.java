@@ -37,4 +37,6 @@ public interface InventoryAdjustmentLogRepository extends JpaRepository<Inventor
 
     // 5. 僅按倉庫類型查詢
     Page<InventoryAdjustmentLog> findByWarehouseType(InventoryAdjustmentLog.WarehouseType warehouseType, Pageable pageable);
+
+    List<InventoryAdjustmentLog> findByAfterSalesRequestId(Long afterSalesRequestId);
 }

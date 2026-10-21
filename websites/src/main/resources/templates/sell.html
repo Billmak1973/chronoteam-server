@@ -352,6 +352,108 @@
         padding: 1.5rem;
       }
     }
+
+    /* --- 新增：日期與時間輸入框樣式 (參考圖片) --- */
+    .input-icon-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .input-icon-wrapper input {
+      width: 100%;
+      padding: 0.8rem;
+      padding-right: 45px;
+      /* 為右側圖標留出空間 */
+      border: 2px solid #e9ecef;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: all 0.3s;
+      background: white;
+      /* 確保高度與其他輸入框一致 */
+      box-sizing: border-box;
+    }
+
+    .input-icon-wrapper input:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+    }
+
+    .input-icon-wrapper i {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray);
+      pointer-events: none;
+      /* 讓點擊穿透圖標觸發輸入框 */
+      z-index: 5;
+    }
+
+    /* 隱藏瀏覽器原生的日期/時間 Picker 圖標，避免與我們的圖標重疊 */
+    input[type="date"]::-webkit-calendar-picker-indicator,
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 10;
+    }
+
+    /* 針對 Firefox 的日期輸入框樣式微調 */
+    input[type="date"] {
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    /* --- 修复时间框闪烁问题 --- */
+
+    /* 1. 屏蔽浏览器原生的红色警告样式 */
+    .input-icon-wrapper input[type="time"]:invalid {
+      border-color: #e9ecef;
+      /* 恢复默认灰色边框 */
+      box-shadow: none;
+    }
+
+    /* 2. 定义我们自己的错误样式（红色） */
+    .input-icon-wrapper input.time-input-error {
+      border-color: #dc3545 !important;
+      /* 强制红色 */
+      /* 可选：加一个轻微的抖动效果提示用户 */
+      animation: shakeInput 0.3s ease-in-out;
+    }
+
+    @keyframes shakeInput {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      25% {
+        transform: translateX(-5px);
+      }
+
+      75% {
+        transform: translateX(5px);
+      }
+    }
+
+    /* --- 禁止數字輸入框的上下箭頭 --- */
+    /* Chrome, Safari, Edge, Opera */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    /* Firefox */
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
   </style>
 </head>
 
@@ -398,6 +500,11 @@
           <div class="form-group">
             <label class="required">購買年份</label>
             <input type="number" name="purchaseYear" placeholder="例如：2021" min="1950" max="2026" required>
+          </div>
+          <div class="form-group">
+            <label class="required">件數</label>
+            <input type="number" name="quantity" placeholder="例如：1" min="1" value="1" required>
+            <small style="color:var(--gray); font-size:0.8rem;">您打算出售幾隻手錶？</small>
           </div>
         </div>
       </div>
@@ -478,15 +585,66 @@
         </div>
       </div>
 
-      <!-- 4. 交易模式選擇 ( 已移除寄售，僅保留直接買斷) -->
+      <!-- 4. 交易模式選擇 (僅保留線下直接買斷) -->
       <div class="sell-card">
         <h3 class="section-title"><i class="fas fa-handshake"></i> 選擇交易模式</h3>
         <div class="mode-grid">
           <label class="mode-card selected" onclick="selectMode(this)">
             <input type="radio" name="transactionMode" value="BUYOUT" required checked>
-            <h4>平台直接買斷 <span class="mode-badge">快速收款</span></h4>
-            <p>鑑定確認後，平台直接報價收購。款項於您確認後 1 個工作日內全額打入指定帳戶，無需等待終端買家。</p>
+            <h4>線下門店直接買斷 <span class="mode-badge">當面交易，當場收款</span></h4>
+            <p>鑑定團隊初步確認後，我們將透過 網站系統通知 或 WhatsApp 提供最終報價。您確認接受後，只需預約前往線下實體門店，實物複核無誤即可<strong>當場完成交易並全額收款</strong>，安全快捷。
+            </p>
           </label>
+        </div>
+      </div>
+
+      <!-- 5. 線下預約交接資訊 (可選) -->
+      <div class="sell-card">
+        <h3 class="section-title"><i class="fas fa-calendar-check"></i> 預約門店交接資訊 (可選)</h3>
+        <p style="color:var(--gray); font-size:0.9rem; margin-bottom:1.5rem;">
+          若您已有心儀的門店或希望提前預約實物鑑定與面交時間，請填寫以下資訊。若不填寫，後續客服將透過 WhatsApp/Email 與您協調安排。
+        </p>
+        <div class="form-grid">
+          <!-- 預約門店 -->
+          <div class="form-group">
+            <label>預約門店</label>
+            <select name="storeId" id="storeIdSelect" onchange="updateStoreInfo(this.value)">
+              <option value="">請選擇門店</option>
+            </select>
+            <!-- 新增：門店營業規則提示框 -->
+            <div id="storeInfoBox"
+              style="display: none; margin-top: 0.8rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--gold); font-size: 0.9rem;">
+              <ul id="storeInfoList" style="margin: 0; padding-left: 1.2rem; color: var(--gray); line-height: 1.6;">
+              </ul>
+            </div>
+          </div>
+
+          <!-- 預約日期 (參考圖片樣式) -->
+          <div class="form-group">
+            <label class="required">預約到店日期</label>
+            <div class="input-icon-wrapper">
+              <input type="date" name="appointmentDate" id="appointmentDate" onchange="updateTimeSlots()">
+              <i class="far fa-calendar-alt"></i>
+            </div>
+          </div>
+
+          <!-- 預約時間 (參考圖片樣式) -->
+          <div class="form-group">
+            <label class="required">
+              <i class="far fa-clock"></i> 預約時間
+            </label>
+            <div class="input-icon-wrapper">
+              <!-- 【關鍵修改】添加了 oninput 事件，讓輸入時即時觸發驗證 -->
+              <input type="time" id="appointmentTimeSlot" name="appointmentTimeSlot" class="form-control" required
+                oninput="validateTimeInput()">
+              <i class="far fa-clock"></i>
+            </div>
+            <small id="appointmentTimeHint" class="form-text"
+              style="display: none; color: #6c757d; margin-top: 0.3rem;">
+              <i class="fas fa-info-circle"></i>
+              <span id="appointmentTimeHintText"></span>
+            </small>
+          </div>
         </div>
       </div>
 
@@ -495,9 +653,9 @@
         <div class="info-box">
           <h4><i class="fas fa-shield-alt"></i> 下一步說明</h4>
           <ul>
-            <li>提交後，我們的鑑定團隊將在 <strong>24小時內</strong> 透過 Email/WhatsApp 發送初步參考估價。</li>
-            <li>您收到報價後，可選擇：① <strong>預約線下門店面交</strong> ② <strong>申請平台保價物流</strong> 寄送至鑑定中心進行實物複核。</li>
-            <li>所有鑑定與諮詢服務 <strong>完全免費</strong>，若最終報價不合適，可無條件取消申請並退回手錶。</li>
+            <li>提交後，我們的鑑定團隊將在 <strong>24小時內</strong> 透過 Email 或 WhatsApp 與您聯繫，提供初步參考估價。</li>
+            <li>您收到報價後，若覺得合適，可直接預約前往我們的 <strong>線下實體門店</strong> 進行實物複核與當面交易。</li>
+            <li>所有鑑定與諮詢服務 <strong>完全免費</strong>。若最終報價不合適，您可隨時取消申請，無需承擔任何費用或風險。</li>
           </ul>
         </div>
         <div class="submit-area">
@@ -516,7 +674,7 @@
     <p>為了保障您的交易隱私與資金安全，請先登入或註冊帳戶。發佈出售申請完全免費，且無任何強制交易約束。</p>
     <div style="display:flex; gap:1rem; justify-content:center;">
       <button onclick="Auth.openLoginModal()" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> 立即登入</button>
-      <button onclick="Auth.openRegisterModal" class="btn btn-outline"><i class="fas fa-user-plus"></i> 免費註冊</button>
+      <button onclick="Auth.openRegisterModal()" class="btn btn-outline"><i class="fas fa-user-plus"></i> 免費註冊</button>
     </div>
   </div>
 
@@ -534,7 +692,277 @@
 
   <!-- 頁面專屬 JS -->
   <script>
-    // 1. 圖片預覽邏輯
+    // ==========================================
+    // 全局變量：存儲加載的門店數據
+    // ==========================================
+    let loadedStores = [];
+
+    // ==========================================
+    // 1. 頁面初始化：加載可用門店列表
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function () {
+      loadStores();
+    });
+
+    async function loadStores() {
+      try {
+        const response = await fetch('/admin/stores/api/stores/available');
+        const result = await response.json();
+        if (result.success && result.data) {
+          loadedStores = result.data;
+          const select = document.getElementById('storeIdSelect');
+          loadedStores.forEach(store => {
+            const option = document.createElement('option');
+            option.value = store.storeId;
+            option.textContent = store.name;
+            select.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('加載門店列表失敗:', error);
+      }
+    }
+
+    // ==========================================
+    // 2. 門店信息與日期限制更新
+    // ==========================================
+    window.updateStoreInfo = function (storeId) {
+      const store = loadedStores.find(s => s.storeId == storeId);
+      const infoBox = document.getElementById('storeInfoBox');
+      const infoList = document.getElementById('storeInfoList');
+      const dateInput = document.getElementById('appointmentDate');
+      const timeInput = document.getElementById('appointmentTimeSlot');
+
+      if (!store) {
+        infoBox.style.display = 'none';
+        dateInput.disabled = true;
+        dateInput.value = '';
+        timeInput.disabled = true;
+        timeInput.value = '';
+        document.getElementById('appointmentTimeHint').style.display = 'none';
+        return;
+      }
+
+      // 1. 解析營業時間
+      let hoursText = '未設置';
+      if (store.scheduleMode === 'UNIFIED') {
+        hoursText = `統一營業時間：${store.hours || '未設置'}`;
+      } else if (store.scheduleMode === 'DAILY' && store.dailyHours) {
+        try {
+          const daily = JSON.parse(store.dailyHours);
+          const today = new Date().getDay();
+          const dayKey = today === 0 ? 7 : today;
+          const dayData = daily[dayKey];
+          if (dayData && !dayData.closed) {
+            hoursText = `今日營業時間：${dayData.start} - ${dayData.end}`;
+          } else {
+            hoursText = `今日店鋪休息`;
+          }
+        } catch (e) {
+          hoursText = '營業時間解析錯誤';
+        }
+      }
+
+      // 2. 組裝提示 HTML
+      let rulesHtml = `<li><i class="fas fa-clock"></i> ${hoursText}</li>`;
+      if (store.returnAdvanceDays > 0) {
+        rulesHtml += `<li><i class="fas fa-calendar-check"></i> 需至少提前 <span style="color: #dc3545; font-style: italic; font-weight: 600;">${store.returnAdvanceDays}</span> 天預約</li>`;
+      }
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (store.returnBlackoutStartDate && store.returnBlackoutEndDate) {
+        if (todayStr >= store.returnBlackoutStartDate && todayStr <= store.returnBlackoutEndDate) {
+          rulesHtml += `<li style="color: #dc3545;"><i class="fas fa-ban"></i> 暫停預約： ${store.returnBlackoutStartDate} 至 ${store.returnBlackoutEndDate} (${store.returnBlackoutReason || '店鋪盤點/假期'})</li>`;
+        }
+      }
+
+      infoList.innerHTML = rulesHtml;
+      infoBox.style.display = 'block';
+
+      // 3. 設置日期輸入限制
+      dateInput.disabled = false;
+      timeInput.disabled = true;
+      dateInput.value = '';
+      document.getElementById('appointmentTimeHint').style.display = 'none';
+
+      const minDate = new Date();
+      minDate.setDate(minDate.getDate() + (store.returnAdvanceDays || 0));
+      dateInput.min = minDate.toISOString().split('T')[0];
+    };
+
+    // ==========================================
+    // 3. 時間槽動態驗證與限制
+    // ==========================================
+    window.updateTimeSlots = function () {
+      const storeId = document.getElementById('storeIdSelect').value;
+      const selectedDateStr = document.getElementById('appointmentDate').value;
+      const timeInput = document.getElementById('appointmentTimeSlot');
+      const hintBox = document.getElementById('appointmentTimeHint');
+      const hintText = document.getElementById('appointmentTimeHintText');
+
+      if (!storeId || !selectedDateStr) {
+        timeInput.disabled = true;
+        timeInput.value = '';
+        hintBox.style.display = 'none';
+        return;
+      }
+
+      const store = loadedStores.find(s => s.storeId == storeId);
+      const selectedDate = new Date(selectedDateStr);
+      const dayOfWeek = selectedDate.getDay() === 0 ? 7 : selectedDate.getDay(); // 1-7 (周一到周日)
+
+      // 【核心修復 1】：檢查店鋪在該星期幾是否營業
+      let isStoreOpenOnThisDay = false;
+      let daySchedule = null;
+
+      if (store.scheduleMode === 'DAILY' && store.dailyHours) {
+        try {
+          const daily = JSON.parse(store.dailyHours);
+          daySchedule = daily[dayOfWeek];
+
+          if (daySchedule && !daySchedule.closed) {
+            isStoreOpenOnThisDay = true;
+          } else {
+            timeInput.disabled = true;
+            timeInput.value = '';
+            hintBox.style.display = 'block';
+            hintText.innerHTML = `⚠️ 店鋪在星期${dayOfWeek}休息，無法預約。`;
+            hintText.style.color = '#dc3545';
+            return;
+          }
+        } catch (e) {
+          console.error('解析每日營業時間失敗:', e);
+        }
+      } else if (store.scheduleMode === 'UNIFIED' && store.hours) {
+        isStoreOpenOnThisDay = true;
+      } else {
+        timeInput.disabled = true;
+        timeInput.value = '';
+        hintBox.style.display = 'block';
+        hintText.innerHTML = `⚠️ 店鋪未設置營業時間，無法預約。`;
+        hintText.style.color = '#dc3545';
+        return;
+      }
+
+      // 【核心修復 2】：檢查是否在 returnClosedDaysOfWeek 中
+      if (store.returnClosedDaysOfWeek) {
+        const closedDays = String(store.returnClosedDaysOfWeek).split(',').map(d => parseInt(d.trim()));
+        if (closedDays.includes(dayOfWeek)) {
+          timeInput.disabled = true;
+          timeInput.value = '';
+          hintBox.style.display = 'block';
+          hintText.innerHTML = `⚠️ 該日為店鋪固定休息日（星期${dayOfWeek}），無法預約。`;
+          hintText.style.color = '#dc3545';
+          return;
+        }
+      }
+
+      // 【核心修復 3】：檢查是否處於暫停售後期間
+      if (store.returnBlackoutStartDate && store.returnBlackoutEndDate) {
+        if (selectedDateStr >= store.returnBlackoutStartDate && selectedDateStr <= store.returnBlackoutEndDate) {
+          timeInput.disabled = true;
+          timeInput.value = '';
+          hintBox.style.display = 'block';
+          const reasonText = store.returnBlackoutReason ? ` (原因: ${store.returnBlackoutReason})` : '';
+          hintText.innerHTML = `⚠️ 該日期為暫停預約期間${reasonText}，無法預約。`;
+          hintText.style.color = '#dc3545';
+          return;
+        }
+      }
+
+      // 【核心修復 4】：獲取該日的營業時間並轉換為 24 小時制
+      let startTime = '09:00', endTime = '19:00'; // 默認值
+
+      if (store.scheduleMode === 'UNIFIED' && store.hours) {
+        const times = parseBusinessHours(store.hours);
+        if (times) {startTime = times.start; endTime = times.end;}
+      } else if (store.scheduleMode === 'DAILY' && daySchedule) {
+        const times = parseBusinessHours(`${daySchedule.start} - ${daySchedule.end}`);
+        if (times) {startTime = times.start; endTime = times.end;}
+      }
+
+      // 【核心驗證】設置 input type="time" 的 min 和 max 屬性
+      timeInput.disabled = false;
+      timeInput.min = startTime;  // 設置最早可選時間
+      timeInput.max = endTime;    // 設置最晚可選時間
+
+      // 觸發一次實時驗證以顯示提示
+      validateTimeInput();
+    };
+
+    window.validateTimeInput = function () {
+      const timeInput = document.getElementById('appointmentTimeSlot');
+      const hintBox = document.getElementById('appointmentTimeHint');
+      const hintText = document.getElementById('appointmentTimeHintText');
+      const startTime = timeInput.min;
+      const endTime = timeInput.max;
+
+      // 先移除错误类（重置状态）
+      timeInput.classList.remove('time-input-error');
+
+      if (!timeInput.value) {
+        hintBox.style.display = 'block';
+        hintText.innerHTML = `营业时间：${formatTimeDisplay(startTime)} 至 ${formatTimeDisplay(endTime)}`;
+        hintText.style.color = '#6c757d';
+        return;
+      }
+
+      // 检查时间是否超出范围
+      if (timeInput.value < startTime || timeInput.value > endTime) {
+        // 【关键修改】添加红色样式类，而不是自动改值
+        timeInput.classList.add('time-input-error');
+
+        hintBox.style.display = 'block';
+        hintText.innerHTML = `⚠️ 预约时间不得早于 ${formatTimeDisplay(startTime)} 或晚于 ${formatTimeDisplay(endTime)}！`;
+        hintText.style.color = '#dc3545';
+
+        // 【删除了】原本这里会自动把 timeInput.value 改成 startTime 或 endTime，导致闪烁。
+        // 现在只变红提示，让用户自己改，体验更流畅。
+
+      } else {
+        // 时间合法
+        hintBox.style.display = 'block';
+        hintText.innerHTML = `✓ 有效时间：${formatTimeDisplay(startTime)} 至 ${formatTimeDisplay(endTime)}`;
+        hintText.style.color = '#28a745';
+      }
+    };
+
+    // ==========================================
+    // 4. 輔助函數：時間格式轉換
+    // ==========================================
+    function parseBusinessHours(hoursStr) {
+      const parts = hoursStr.split('-');
+      if (parts.length === 2) {
+        return {
+          start: convertTo24Hour(parts[0].trim()),
+          end: convertTo24Hour(parts[1].trim())
+        };
+      }
+      return null;
+    }
+
+    function convertTo24Hour(timeStr) {
+      const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!match) return "10:00";
+      let hours = parseInt(match[1]);
+      const mins = match[2];
+      const period = match[3].toUpperCase();
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return `${String(hours).padStart(2, '0')}:${mins}`;
+    }
+
+    function formatTimeDisplay(time24) {
+      const [hours, minutes] = time24.split(':');
+      let h = parseInt(hours);
+      const period = h >= 12 ? 'P.M.' : 'A.M.';
+      h = h % 12 || 12;
+      return `${String(h).padStart(2, '0')}:${minutes} ${period}`;
+    }
+
+    // ==========================================
+    // 5. 原有表單邏輯 (圖片預覽、模式選擇、提交)
+    // =================================
     function previewImage(input) {
       const box = input.closest('.upload-box');
       const img = box.querySelector('img');
@@ -551,49 +979,50 @@
       }
     }
 
-    // 2. 交易模式卡片選中效果 (保留以維持 UI 互動感)
     function selectMode(card) {
       document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       card.querySelector('input').checked = true;
     }
 
-    // 3. 表單提交處理 (對接後端 /sell/submit)
     document.getElementById('sellForm').addEventListener('submit', async function (e) {
       e.preventDefault();
 
       const btn = document.getElementById('submitBtn');
       const originalText = btn.innerHTML;
-
-      // 準備 FormData（支持文件上傳）
       const formData = new FormData(this);
 
       try {
         const response = await fetch('/sell/submit', {
           method: 'POST',
-          body: formData  // FormData 會自動設置 Content-Type 為 multipart/form-data
+          body: formData
         });
 
         const result = await response.json();
 
         if (response.ok && result.success) {
           showNotification('✅ ' + result.message);
-
-          //  統一跳轉到「我的出售申請」
           setTimeout(() => {
             window.location.href = '/sell/my-applications';
           }, 2000);
-
         } else {
           showNotification('❌ ' + (result.message || '提交失敗'), true);
           btn.innerHTML = originalText;
         }
-
       } catch (error) {
         console.error('提交錯誤:', error);
         showNotification('❌ 網絡錯誤，請檢查連接', true);
         btn.innerHTML = originalText;
       }
+    });
+
+    // ==========================================
+    // 6. 禁止數字輸入框的鼠標滾輪事件
+    // ==========================================
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+      input.addEventListener('wheel', function (e) {
+        e.preventDefault(); // 阻止默認滾輪行為
+      }, {passive: false});
     });
   </script>
 </body>

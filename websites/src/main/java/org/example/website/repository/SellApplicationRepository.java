@@ -1,6 +1,7 @@
 package org.example.website.repository;
 
 import org.example.website.entity.SellApplication;
+import org.example.website.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -46,4 +47,7 @@ public interface SellApplicationRepository extends JpaRepository<SellApplication
             SellApplication.TransactionMode transactionMode,
             Pageable pageable
     );
+
+    List<SellApplication> findByUserAndStatus(User user, SellApplication.ApplicationStatus status);
+
 }

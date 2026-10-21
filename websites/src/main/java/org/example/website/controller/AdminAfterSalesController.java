@@ -10,8 +10,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.entity.AfterSalesRequest;
 import org.example.website.entity.AfterSalesRequestItem;
+import org.example.website.entity.InventoryAdjustmentLog;
 import org.example.website.entity.Product;
 import org.example.website.repository.AfterSalesRequestRepository;
+import org.example.website.repository.InventoryAdjustmentLogRepository;
 import org.example.website.repository.OfflineStoreRepository;
 import org.example.website.service.AfterSalesRequestService;
 import org.example.website.service.ProductService;
@@ -40,12 +42,14 @@ public class AdminAfterSalesController {
     private final OfflineStoreRepository  offlineStoreRepository;
     private final AfterSalesRequestService afterSalesRequestService;
     private final ProductService productService;
+    private final InventoryAdjustmentLogRepository adjustmentLogRepository;
 
-    public AdminAfterSalesController(AfterSalesRequestRepository afterSalesRequestRepository, OfflineStoreRepository offlineStoreRepository, AfterSalesRequestService afterSalesRequestService, ProductService productService) {
+    public AdminAfterSalesController(AfterSalesRequestRepository afterSalesRequestRepository, OfflineStoreRepository offlineStoreRepository, AfterSalesRequestService afterSalesRequestService, ProductService productService, InventoryAdjustmentLogRepository adjustmentLogRepository) {
         this.afterSalesRequestRepository = afterSalesRequestRepository;
         this.offlineStoreRepository = offlineStoreRepository;
         this.afterSalesRequestService = afterSalesRequestService;
         this.productService = productService;
+        this.adjustmentLogRepository = adjustmentLogRepository;
     }
 
     /**
@@ -126,6 +130,7 @@ public class AdminAfterSalesController {
 
         // 執行查詢
         Page<AfterSalesRequest> requestsPage = afterSalesRequestRepository.findAll(spec, pageable);
+
         // ==========================================
         // 【核心重構】：數據清洗，將 Entity 轉為 Map，避免前端 Thymeleaf 觸發懶加載報錯
         // ==========================================
@@ -144,8 +149,11 @@ public class AdminAfterSalesController {
             map.put("username", req.getUser() != null ? req.getUser().getUsername() : null);
             map.put("orderNo", req.getOriginalOrder() != null ? req.getOriginalOrder().getOrderNo() : null);
             map.put("newOrderNo", req.getNewOrder() != null ? req.getNewOrder().getOrderNo() : null);
+            map.put("operatorName", req.getOperator() != null ? req.getOperator().getUsername() : null);
 
-            // 1. 構建 items 列表 (包含 originalPrice，防止懶加載)
+            // ==========================================
+            // 【核心修改處】：構建 items 列表並關聯入庫操作員名稱
+            // ==========================================
             List<Map<String, Object>> itemsList = new ArrayList<>();
             if (req.getItems() != null && !req.getItems().isEmpty()) {
                 for (AfterSalesRequestItem item : req.getItems()) {
@@ -171,6 +179,7 @@ public class AdminAfterSalesController {
             // 2. 計算入庫狀態
             String stockStatusText = "-";
             String stockStatusColor = "#6c757d"; // 默認灰色
+            String stockInOperatorNames = "";    // 用於記錄入庫操作員名稱
 
             if (req.getStatus() == AfterSalesRequest.RequestStatus.WAITING_PAYMENT ||
                     req.getStatus() == AfterSalesRequest.RequestStatus.COMPLETED) {
@@ -183,6 +192,17 @@ public class AdminAfterSalesController {
                             break;
                         }
                     }
+
+                    List<InventoryAdjustmentLog> logs = adjustmentLogRepository.findByAfterSalesRequestId(req.getRequestId());
+
+                    // 使用 LinkedHashSet 去重並保持順序
+                    java.util.Set<String> operators = new java.util.LinkedHashSet<>();
+                    for (InventoryAdjustmentLog log : logs) {
+                        if (log.getOperator() != null) {
+                            operators.add(log.getOperator().getUsername());
+                        }
+                    }
+                    stockInOperatorNames = String.join(", ", operators);
 
                     if (allStocked) {
                         stockStatusText = "已入庫";
@@ -197,6 +217,7 @@ public class AdminAfterSalesController {
             }
             map.put("stockStatusText", stockStatusText);
             map.put("stockStatusColor", stockStatusColor);
+            map.put("stockInOperatorNames", stockInOperatorNames);
 
             // 3. 提取商品明細摘要
             if (!itemsList.isEmpty()) {

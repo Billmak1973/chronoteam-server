@@ -369,62 +369,6 @@ public class PageController {
         return "favorites";
     }
 
-    /**
-     *  新增：我的結算記錄頁面路由 (財務中心)
-     */
-    @GetMapping("/account/settlement")
-    public String mySettlement(Model model, Authentication authentication) {
-        String username = authentication.getName();
-
-        // 【修改處 1】：使用 UserService 獲取 User 實體
-        User user = userService.findByUsername(username);
-
-        // 1. 查詢該用戶所有「已完成」的出售申請（包含買斷和寄售）
-        List<SellApplication> allApps = sellApplicationRepository.findByUser_UsernameOrderByCreatedAtDesc(username);
-        List<SellApplication> completedApps = allApps.stream()
-                .filter(app -> app.getStatus() == SellApplication.ApplicationStatus.COMPLETED)
-                .collect(Collectors.toList());
-
-        // 2. 計算財務統計數據
-        BigDecimal totalRevenue = BigDecimal.ZERO;   // 總成交額
-        BigDecimal totalServiceFee = BigDecimal.ZERO; // 總服務費
-        BigDecimal totalProfit = BigDecimal.ZERO;     // 實際淨收益
-
-        for (SellApplication app : completedApps) {
-            // 優先使用最終報價，如果沒有則使用預估價
-            BigDecimal price = app.getFinalPrice() != null ? app.getFinalPrice() : app.getEstimatedPrice();
-            app.setDisplayPrice(price);
-
-            if (price != null) {
-                totalRevenue = totalRevenue.add(price);
-
-                // 計算 5% 服務費 (四捨五入到整數)
-                BigDecimal fee = price.multiply(new BigDecimal("0.05")).setScale(0, RoundingMode.HALF_UP);
-                BigDecimal profit = price.subtract(fee);
-
-                totalServiceFee = totalServiceFee.add(fee);
-                totalProfit = totalProfit.add(profit);
-
-                // 設置到 Transient 字段供前端顯示
-                app.setServiceFee(fee);
-                app.setProfit(profit);
-
-                // 設置交易模式文本
-                app.setStatusText(app.getTransactionMode() == SellApplication.TransactionMode.BUYOUT ? "平台買斷" : "寄售成交");
-            }
-        }
-
-        // 3. 將數據傳遞給前端
-        // 【修改處 2】：將屬性名從 customer 改為 user，以匹配側邊欄 fragment 的需求
-        model.addAttribute("user", user);
-        model.addAttribute("settlements", completedApps);
-        model.addAttribute("totalRevenue", totalRevenue);
-        model.addAttribute("totalServiceFee", totalServiceFee);
-        model.addAttribute("totalProfit", totalProfit);
-
-        return "settlement";
-    }
-
 
     /**
      * 渲染通知頁面骨架 (不再加載任何數據，交由前端 AJAX 處理)

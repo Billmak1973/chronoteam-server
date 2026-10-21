@@ -86,6 +86,15 @@ public class AfterSalesRequest {
     private BigDecimal totalRefundAmount = BigDecimal.ZERO;
 
     /**
+     * 最後處理此售後申請的操作員 (店員或管理員)
+     * 在狀態變更為 APPRAISING, COMPLETED, REJECTED 時由後端賦值，用於審計追蹤。
+     * 允許為 null (因為剛提交 PENDING 時尚未有人處理)
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "operator_id")
+    private User operator;
+
+    /**
      * 實際處理完成時間 (店員核實商品並執行退款/發出新貨的時間)
      */
     @Column(name = "completed_at")

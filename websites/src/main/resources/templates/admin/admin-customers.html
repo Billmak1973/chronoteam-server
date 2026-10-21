@@ -822,8 +822,15 @@
         }
 
         // 操作按鈕跳轉邏輯 (保持不變)
-        function viewUserReviews(username) {window.open(`/admin/reviews?username=${encodeURIComponent(username)}`, '_blank');}
-        function viewUserOrders(username) {showNotification(`📦 正在查詢 ${username} 的訂單記錄... (開發中)`);}
+        function viewUserReviews(username) {
+            window.open(`/admin/reviews?username=${encodeURIComponent(username)}`, '_blank');
+        }
+
+        function viewUserOrders(username) {
+            // 【核心修改】：在新窗口打開訂單管理頁，並通過 URL 參數傳遞買家用戶名
+            window.open(`/admin/orders?buyerUsername=${encodeURIComponent(username)}`, '_blank');
+        }
+
         function viewUserPenalties(username) {
             // 打開到处罚管理页面，并传递用户名参数
             //window.location.href = `/admin/penalties?username=${encodeURIComponent(username)}`;

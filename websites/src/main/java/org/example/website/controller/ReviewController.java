@@ -47,6 +47,7 @@ public class ReviewController {
     private final AdminPenaltyService adminPenaltyService;
     private final NotificationService notificationService;
     private final NotificationPushService pushService;
+    private final AfterSalesRequestItemRepository afterSalesRequestItemRepository; // 新增字段
 
     //  構造函數注入所有依賴
     public ReviewController(ReviewRepository reviewRepository,
@@ -59,7 +60,7 @@ public class ReviewController {
                             UserBlockService userBlockService,
                             UserBlockRepository userBlockRepository,
                             ReviewArchiveRepository reviewArchiveRepository,
-                            AdminPenaltyService adminPenaltyService, NotificationService notificationService, NotificationPushService pushService
+                            AdminPenaltyService adminPenaltyService, NotificationService notificationService, NotificationPushService pushService, AfterSalesRequestItemRepository afterSalesRequestItemRepository
     ) {
         this.reviewRepository = reviewRepository;
         this.orderRepository = orderRepository;
@@ -74,6 +75,7 @@ public class ReviewController {
         this.adminPenaltyService = adminPenaltyService;
         this.notificationService = notificationService;
         this.pushService = pushService;
+        this.afterSalesRequestItemRepository = afterSalesRequestItemRepository;
     }
 
 
@@ -651,12 +653,9 @@ public class ReviewController {
         }
     }
 
-    /**
-     * 檢查是否可以評價
-     */
     @Operation(
             summary = "檢查是否具備評價資格",
-            description = "驗證當前登入用戶是否購買並付款了該商品，且尚未發表過評價。"
+            description = "驗證當前登入用戶是否購買並付款了該商品，且該商品未被完全退貨或換貨，且尚未發表過評價。"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "檢查完成，返回 canReview 布爾值與 message")
@@ -671,25 +670,51 @@ public class ReviewController {
 
         Map<String, Object> response = new HashMap<>();
         String username = authentication.getName();
+
         try {
+            // 1. 獲取訂單並校驗權限
             Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username).orElse(null);
             if (order == null) {
                 response.put("canReview", false);
-                response.put("message", "訂單不存在");
+                response.put("message", "訂單不存在或無權查看");
+                return ResponseEntity.ok(response);
+            }
+
+            // 2. 基礎狀態校驗：訂單不能是取消狀態，且必須已付款（或處於部分退款狀態）
+            // 注意：這裡不再直接攔截 PARTIALLY_REFUNDED，而是交給後面的商品邏輯判斷
+            if (order.getStatus() == Order.OrderStatus.CANCELLED) {
+                response.put("canReview", false);
+                response.put("message", "訂單已取消，無法評價");
                 return ResponseEntity.ok(response);
             }
 
             Order.PaymentStatus paymentStatus = order.getPaymentStatus();
-            boolean isPaid = (paymentStatus == Order.PaymentStatus.PAID_SIMULATED ||
+            boolean isPaidOrPartiallyRefunded = (paymentStatus == Order.PaymentStatus.PAID_SIMULATED ||
                     paymentStatus == Order.PaymentStatus.PAID_REAL ||
-                    paymentStatus == Order.PaymentStatus.PAID_OFFLINE);
+                    paymentStatus == Order.PaymentStatus.PAID_OFFLINE ||
+                    paymentStatus == Order.PaymentStatus.PARTIALLY_REFUNDED);
 
-            if (!isPaid) {
+            // 如果是全額退款 (REFUNDED)，理論上所有商品都退了，但為了嚴謹，我們也放入下面的商品級檢查邏輯
+            // 如果是未付款，直接拒絕
+            if (paymentStatus == Order.PaymentStatus.UNPAID || paymentStatus == Order.PaymentStatus.PENDING_OFFLINE) {
                 response.put("canReview", false);
                 response.put("message", "訂單未付款，不能評價");
                 return ResponseEntity.ok(response);
             }
 
+            // 3. 在訂單中找到對應的商品明細 (OrderItem)
+            OrderItem targetItem = order.getItems().stream()
+                    .filter(item -> item.getProduct().getProductId().equals(productId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (targetItem == null) {
+                response.put("canReview", false);
+                response.put("message", "該訂單中未找到此商品");
+                return ResponseEntity.ok(response);
+            }
+
+            // 4. 檢查是否已經評價過 (防止重複評價)
             Review existingReview = reviewRepository.findByOrderNoAndProduct_ProductId(orderNo, productId);
             if (existingReview != null) {
                 response.put("canReview", false);
@@ -698,12 +723,27 @@ public class ReviewController {
                 return ResponseEntity.ok(response);
             }
 
+            // 5. 【核心邏輯】檢查該商品的售後狀態
+            // 計算該 OrderItem 已經成功完成 (COMPLETED) 的退貨或換貨總數量
+            Integer completedReturnQty = afterSalesRequestItemRepository
+                    .sumCompletedReturnQuantityByOrderItemId(targetItem.getOrderItemId());
+
+            // 如果 已退/換數量 >= 購買總數量，說明該商品已經全部處理完了，不能評價
+            if (completedReturnQty >= targetItem.getQuantity()) {
+                response.put("canReview", false);
+                response.put("message", "該商品已全額退貨或換貨，無法評價");
+                return ResponseEntity.ok(response);
+            }
+
+            // 6. 通過所有檢查
             response.put("canReview", true);
             response.put("message", "可以評價");
             return ResponseEntity.ok(response);
+
         } catch (Exception e) {
             response.put("canReview", false);
             response.put("message", "檢查失敗: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.ok(response);
         }
     }
