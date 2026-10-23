@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出售申請管理 - ChronoTeam 管理中心</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <style>
+        /* ==========================================
+           1. 篩選工具欄 (本頁自包含)
+           ========================================== */
+        .filter-bar {
+            display: flex;
+            gap: 1.2rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1.3rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            align-items: flex-end;
+            flex-wrap: wrap;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            min-width: 180px;
+            flex: 1;
+        }
+
+        .filter-label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .filter-label i {
+            color: var(--gold);
+        }
+
+        .filter-input,
+        .filter-select {
+            padding: 0.7rem 0.9rem;
+            border: 2px solid #edf2f9;
+            border-radius: 10px;
+            font-size: 0.92rem;
+            background: #f8fafc;
+            width: 100%;
+            color: var(--primary);
+            font-weight: 500;
+            transition: all 0.25s;
+            font-family: inherit;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--gold);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
+        }
+
+        .btn-filter {
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.92rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            transition: all 0.25s;
+            height: 44px;
+        }
+
+        .btn-search {
+            background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4);
+        }
+
+        .btn-reset {
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-reset:hover {
+            background: #cbd5e1;
+            color: #1e293b;
+        }
+
+        /* ==========================================
+           2. 表格容器
+           ========================================== */
+        .table-container {
+            background: white;
+            border-radius: 14px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .table-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f3f5;
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 4px;
+        }
+
+        .data-table {
+            width: 100%;
+            min-width: 1100px;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        .data-table thead {
+            background: #f8f9fa;
+            border-bottom: 2px solid #edf2f9;
+        }
+
+        .data-table th {
+            padding: 1.05rem 1.2rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 1.05rem 1.2rem;
+            border-bottom: 1px solid #f1f3f5;
+            color: #334155;
+            vertical-align: middle;
+            font-size: 0.92rem;
+        }
+
+        .data-table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(212, 175, 55, 0.04);
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .user-info-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .user-name {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.95rem;
+        }
+
+        .user-email {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        /* 操作按鈕 */
+        .btn-action-sm {
+            padding: 0.45rem 0.9rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: white;
+            transition: all 0.2s;
+            white-space: nowrap;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-action-sm:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        .btn-review {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* ==========================================
+           3. 狀態 / 模式徽章
+           ========================================== */
+        .status-badge,
+        .mode-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .status-PENDING {
+            background: rgba(255, 193, 7, 0.15);
+            color: #856404;
+        }
+
+        .status-APPRAISING {
+            background: rgba(23, 162, 184, 0.15);
+            color: #0c5460;
+        }
+
+        .status-QUOTED {
+            background: rgba(111, 66, 193, 0.15);
+            color: #5a32a3;
+        }
+
+        .status-ACCEPTED {
+            background: rgba(40, 167, 69, 0.15);
+            color: #155724;
+        }
+
+        .status-REJECTED {
+            background: rgba(220, 53, 69, 0.15);
+            color: #721c24;
+        }
+
+        .status-COMPLETED {
+            background: rgba(0, 123, 255, 0.15);
+            color: #004085;
+        }
+
+        .status-CANCELLED {
+            background: rgba(108, 117, 125, 0.15);
+            color: #383d41;
+        }
+
+        .mode-BUYOUT {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+
+        .mode-CONSIGNMENT {
+            background: rgba(0, 123, 255, 0.1);
+            color: #007bff;
+        }
+
+        .watch-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .watch-brand {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 1rem;
+        }
+
+        .watch-series {
+            color: var(--gold);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .watch-model {
+            color: var(--gray);
+            font-size: 0.85rem;
+        }
+
+        /* ==========================================
+           4. 【核心修復】詳情彈窗 (fixed 定位 + 居中)
+           ========================================== */
+        .modal-overlay {
+            position: fixed;
+            /* ⭐ 關鍵：脫離文档流，覆蓋全螢幕 */
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            /* 預設隱藏，JS 切換為 flex */
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-box {
+            background: white;
+            width: 90%;
+            max-width: 800px;
+            max-height: 88vh;
+            border-radius: 16px;
+            border-top: 5px solid var(--gold);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            text-align: left;
+            animation: slideUp 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-header {
+            padding: 1.4rem 1.8rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .modal-title i {
+            color: var(--gold);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+            transition: color 0.2s;
+            padding: 0.2rem;
+        }
+
+        .close-modal:hover {
+            color: var(--accent);
+        }
+
+        .modal-body {
+            padding: 1.6rem 1.8rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 3px;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.8rem;
+            border-top: 1px solid #eee;
+            background: #fafafa;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .btn-modal {
+            padding: 0.7rem 1.6rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            transition: all 0.25s;
+        }
+
+        .btn-cancel {
+            background: #e9ecef;
+            color: var(--primary);
+        }
+
+        .btn-cancel:hover {
+            background: #dee2e6;
+            transform: translateY(-2px);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ==========================================
+           5. 彈窗內部內容樣式
+           ========================================== */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.2rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .info-label {
+            font-size: 0.78rem;
+            color: var(--gray);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 0.98rem;
+            color: var(--primary);
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        .notes-box {
+            background: #f8f9fa;
+            padding: 0.9rem 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--gold);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .section-divider {
+            border: none;
+            border-top: 1px dashed #dee2e6;
+            margin: 1.5rem 0;
+        }
+
+        .section-title-sm {
+            margin: 0 0 1rem 0;
+            color: var(--primary);
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title-sm i {
+            color: var(--gold);
+        }
+
+        .thumb-gallery {
+            display: flex;
+            gap: 0.9rem;
+            flex-wrap: wrap;
+        }
+
+        .image-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .thumb-img {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8f9fa;
+        }
+
+        .thumb-img:hover {
+            transform: scale(1.06);
+            border-color: var(--gold);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .image-label {
+            font-size: 0.75rem;
+            color: var(--gray);
+            font-weight: 600;
+        }
+
+        .accessory-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: rgba(212, 175, 55, 0.1);
+            color: #856404;
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            padding: 0.25rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 0 0.4rem 0.4rem 0;
+        }
+
+        .empty-hint {
+            color: #adb5bd;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-box {
+                width: 95%;
+            }
+        }
+
+        /* 重新編輯按鈕 (青碧翠綠漸層) */
+        .btn-edit {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);
+        }
+
+        .btn-edit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(17, 153, 142, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .btn-edit:active {
+            transform: translateY(0);
+        }
+
+        /* ==========================================
+   6. 品牌 Autocomplete 下拉框樣式
+   ========================================== */
+        .autocomplete-wrapper {
+            position: relative;
+            flex: 1;
+        }
+
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 1050;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            display: none;
+            margin-top: 6px;
+        }
+
+        .autocomplete-list.active {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 0.7rem 1rem;
+            cursor: pointer;
+            font-size: 0.92rem;
+            color: var(--primary);
+            transition: all 0.15s;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover,
+        .autocomplete-item.active {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        .autocomplete-empty {
+            padding: 1rem;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        /* ==========================================
+   隱藏數字輸入框的上下箭頭 (Spinner)
+   ========================================== */
+        .no-spin::-webkit-outer-spin-button,
+        .no-spin::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .no-spin {
+            -moz-appearance: textfield;
+            /* Firefox */
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 引入公共導航欄 -->
+    <div th:replace="~{fragments/common :: navbar}"></div>
+
+    <div class="admin-layout">
+        <!-- 引入左側邊欄 -->
+        <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='sell-app')}"></div>
+
+        <main class="admin-main">
+            <div class="content-header">
+                <h2><i class="fas fa-hand-holding-usd" style="color: var(--gold);"></i> 出售申請管理</h2>
+                <div class="breadcrumb">
+                    <a href="/admin/dashboard">管理中心</a> / <span>名錶平台特色 / 出售申請</span>
+                </div>
+            </div>
+
+            <div class="content-body">
+                <!-- 篩選工具欄 -->
+                <div class="filter-bar">
+                    <div class="filter-item">
+                        <label class="filter-label"><i class="fas fa-search"></i> 關鍵字搜索</label>
+                        <input type="text" id="keywordInput" class="filter-input" placeholder="品牌 / 系列 / 用戶名...">
+                    </div>
+                    <div class="filter-item">
+                        <label class="filter-label"><i class="fas fa-exchange-alt"></i> 交易模式</label>
+                        <select id="modeFilter" class="filter-select">
+                            <option value="">全部模式</option>
+                            <option value="BUYOUT">平台買斷 (BUYOUT)</option>
+                            <option value="CONSIGNMENT">平台寄賣 (CONSIGNMENT)</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label class="filter-label"><i class="fas fa-flag"></i> 申請狀態</label>
+                        <select id="statusFilter" class="filter-select">
+                            <option value="">全部狀態</option>
+                            <option value="PENDING">待處理</option>
+                            <option value="APPRAISING">鑑定中</option>
+                            <option value="QUOTED">已報價</option>
+                            <option value="ACCEPTED">已接受</option>
+                            <option value="REJECTED">已拒絕</option>
+                            <option value="COMPLETED">已完成</option>
+                            <option value="CANCELLED">已取消</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 0.8rem; align-items: flex-end;">
+                        <button class="btn-filter btn-search" onclick="searchApplications()"><i
+                                class="fas fa-search"></i> 查詢</button>
+                        <button class="btn-filter btn-reset" onclick="resetFilters()"><i class="fas fa-redo-alt"></i>
+                            重置</button>
+                        <button class="btn-filter"
+                            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);"
+                            onclick="openCreateAppModal()">
+                            <i class="fas fa-plus-circle"></i> 創建申請
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 數據表格 -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60px;">ID</th>
+                                <th style="width: 140px;">申請人</th>
+                                <th style="min-width: 220px;">手錶資訊</th>
+                                <th style="width: 100px;">交易模式</th>
+                                <th style="width: 120px;">預約門店</th>
+                                <th style="width: 150px;">預約交接</th>
+                                <th style="width: 100px;">狀態</th>
+                                <th style="width: 100px; text-align: center;">是否入庫</th>
+                                <th style="width: 150px;">提交時間</th>
+                                <th style="width: 90px; text-align: center;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sellTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="sell-pagination" style="margin-top: 2rem;"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== 詳情彈窗 (已修復定位) ==================== -->
+    <div id="detailModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-file-invoice"></i> 出售申請詳情
+                    <span id="detailId" style="color: var(--gray); font-size: 0.9rem; font-weight: 500;"></span>
+                </h3>
+                <button class="close-modal" onclick="closeDetailModal()" aria-label="關閉">&times;</button>
+            </div>
+            <div id="detailContent" class="modal-body">
+                <div style="text-align: center; padding: 3rem; color: var(--gray);">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal btn-edit" onclick="reEditApplication()" style="margin-right: auto;">
+                    <i class="fas fa-edit"></i> 重新編輯
+                </button>
+                <button class="btn-modal btn-cancel" onclick="closeDetailModal()">
+                    <i class="fas fa-times"></i> 關閉
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 創建申請 - 查找用戶 Modal -->
+    <div id="createAppUserModal" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal-box" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-user-plus" style="color: var(--gold);"></i> 創建申請 - 查找用戶</h3>
+                <button class="modal-close" onclick="closeCreateAppModal()" aria-label="關閉">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <!-- 選擇查找方式 -->
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">請選擇查找方式：</label>
+                    <div style="display: flex; gap: 1.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="searchType" value="phone" checked
+                                onchange="toggleSearchType('phone')">
+                            <span>透過電話號碼</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                            <input type="radio" name="searchType" value="username"
+                                onchange="toggleSearchType('username')">
+                            <span>透過用戶名</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 一行過佈局：標籤 + 輸入框 + 按鈕 -->
+                <div class="form-group" style="margin-bottom: 1.5rem; position: relative;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <!-- 標籤 -->
+                        <label id="searchInputLabel"
+                            style="font-weight: 600; white-space: nowrap; min-width: 80px;">電話號碼</label>
+
+                        <!-- 輸入框 -->
+                        <input type="text" id="searchInput" class="form-control" placeholder="請輸入用戶電話號碼"
+                            autocomplete="off"
+                            style="flex: 1; height: 45px; font-size: 1rem; padding: 0.5rem 1rem; border: 2px solid #e9ecef; border-radius: 8px;">
+
+                        <!-- 查找按鈕 (僅電話模式顯示) -->
+                        <button type="button" id="searchBtn" class="btn btn-primary"
+                            style="white-space: nowrap; flex-shrink: 0; height: 45px; padding: 0 1.5rem;"
+                            onclick="searchUserForApp()">
+                            <i class="fas fa-search"></i> 查找用戶
+                        </button>
+                    </div>
+
+                    <!-- 【新增】用戶名自動完成結果容器 (絕對定位，浮在輸入框下方) -->
+                    <div id="usernameSearchResult"
+                        style="display: none; position: absolute; top: 100%; left: 90px; right: 0; margin-top: 4px; background: white; border: 1px solid #e9ecef; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-height: 180px; overflow-y: auto; z-index: 100;">
+                    </div>
+                </div>
+
+                <!-- 查找結果 (綠色成功框) -->
+                <div id="searchResult"
+                    style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem;">
+                    <label style="font-weight: 600; color: #166534; margin-bottom: 0.5rem; display: block;">
+                        <i class="fas fa-check-circle"></i> 找到用戶：
+                    </label>
+                    <input type="text" id="foundUsername" class="form-control" readonly
+                        style="background: #ffffff; color: #166534; font-weight: 600; cursor: not-allowed; height: 45px;">
+                    <input type="hidden" id="foundPhone">
+                    <input type="hidden" id="foundName">
+                </div>
+
+                <!-- 品牌和商品选择区域（找到用户后显示）-->
+                <div id="productSelectionArea"
+                    style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e9ecef;">
+                    <label style="font-weight: 600; color: var(--primary); margin-bottom: 0.5rem; display: block;">
+                        <i class="fas fa-link"></i> 关联平台商品
+                    </label>
+
+                    <div class="info-grid" style="grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0;">
+                        <!-- 搜寻品牌 -->
+                        <div class="info-item">
+                            <label class="info-label">搜寻品牌</label>
+                            <div class="autocomplete-wrapper" style="margin-top: 0.5rem;">
+                                <input type="text" id="createBrandInput" class="filter-input"
+                                    placeholder="输入或选择品牌 (如 Rolex)" autocomplete="off">
+                                <div id="createBrandAutocompleteList" class="autocomplete-list"></div>
+                            </div>
+                        </div>
+
+                        <!-- 选择商品 -->
+                        <div class="info-item">
+                            <label class="info-label">选择商品</label>
+                            <select id="createProductSelect" class="filter-select" style="margin-top: 0.5rem;">
+                                <option value="">请先选择品牌</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <small style="color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.5rem;">
+                        <i class="fas fa-info-circle"></i> 选择品牌后会自动加载该品牌下的商品列表
+                    </small>
+                </div>
+            </div>
+            <div class="modal-actions"
+                style="padding: 1rem 1.5rem; border-top: 1px solid #eee; display: flex; justify-content: flex-end;">
+                <button type="button" class="btn-modal-cancel" onclick="closeCreateAppModal()">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入公共彈窗與 JS -->
+    <div th:replace="~{fragments/common :: modals}"></div>
+    <script src="/js/common.js"></script>
+    <script src="/js/admin.js"></script>
+    <script src="/js/admin-table.js"></script>
+
+    <script>
+        // ==========================================
+        // 0. 中文映射表 (提升可讀性)
+        // ==========================================
+        const STATUS_MAP = {
+            'PENDING': {text: '待處理', cls: 'status-PENDING'},
+            'APPRAISING': {text: '鑑定中', cls: 'status-APPRAISING'},
+            'QUOTED': {text: '已報價', cls: 'status-QUOTED'},
+            'ACCEPTED': {text: '已接受', cls: 'status-ACCEPTED'},
+            'REJECTED': {text: '已拒絕', cls: 'status-REJECTED'},
+            'COMPLETED': {text: '已完成', cls: 'status-COMPLETED'},
+            'CANCELLED': {text: '已取消', cls: 'status-CANCELLED'}
+        };
+        const MODE_MAP = {
+            'BUYOUT': {text: '平台買斷', cls: 'mode-BUYOUT'},
+            'CONSIGNMENT': {text: '平台寄賣', cls: 'mode-CONSIGNMENT'}
+        };
+        const ACCESSORY_MAP = {'box': '原裝錶盒', 'card': '原廠保卡', 'receipt': '購買發票', 'manual': '說明書/吊牌'};
+        const CONDITION_MAP = {'mint': '近全新', 'excellent': '極佳', 'good': '良好', 'fair': '正常使用痕跡', 'poor': '需維修/明顯瑕疵'};
+        const FUNCTION_MAP = {'perfect': '一切正常', 'minor_issue': '輕微異常', 'needs_service': '需全面保養/維修'};
+        const IMAGE_LABEL_MAP = {'dial': '錶面', 'caseback': '錶背/機芯', 'card': '保卡/發票', 'flaws': '瑕疵特寫', 'extra': '其他照片'};
+
+        // ==========================================
+        // 【新增】圖片編輯狀態管理 (重新編輯專用)
+        // ==========================================
+        const IMAGE_SLOTS = ['dial', 'caseback', 'card', 'flaws', 'extra'];
+        let pendingImages = {}; // slot -> {kind:'existing', path} 或 {kind:'new', file, previewUrl}
+
+        // 從當前申請資料初始化圖片狀態
+        function initPendingImages(app) {
+            pendingImages = {};
+            if (app.imagePaths) {
+                try {
+                    Object.entries(JSON.parse(app.imagePaths)).forEach(([k, v]) => {
+                        pendingImages[k] = {kind: 'existing', path: v};
+                    });
+                } catch (e) {console.error('解析 imagePaths 失敗:', e);}
+            }
+        }
+
+        // 渲染 5 格圖片管理器
+        function renderImageManager() {
+            const grid = document.getElementById('imageManagerGrid');
+            if (!grid) return;
+            grid.innerHTML = IMAGE_SLOTS.map(slot => {
+                const entry = pendingImages[slot];
+                const preview = entry
+                    ? `<img src="${entry.kind === 'new' ? entry.previewUrl : entry.path}"
+                        style="width:100%;height:110px;object-fit:cover;border-radius:8px;border:2px solid var(--gold);cursor:pointer;"
+                        onclick="window.open(this.src,'_blank')" title="點擊放大">`
+                    : `<div style="height:110px;border:2px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#94a3b8;background:#f8fafc;">
+                     <i class="fas fa-image fa-2x"></i>
+                   </div>`;
+                const moveOptions = IMAGE_SLOTS.filter(s => s !== slot)
+                    .map(s => `<option value="${s}">${IMAGE_LABEL_MAP[s]}</option>`).join('');
+                return `
+            <div style="background:#f8fafc;border:1px solid #e9ecef;border-radius:10px;padding:0.8rem;display:flex;flex-direction:column;gap:0.5rem;">
+                <div style="font-weight:700;font-size:0.85rem;color:var(--primary);display:flex;justify-content:space-between;align-items:center;">
+                    <span><i class="fas fa-tag" style="color:var(--gold);margin-right:4px;"></i>${IMAGE_LABEL_MAP[slot]}</span>
+                    ${entry && entry.kind === 'new' ? '<span style="font-size:0.7rem;background:#fff3cd;color:#856404;padding:2px 6px;border-radius:4px;">待上傳</span>' : ''}
+                </div>
+                ${preview}
+                <input type="file" accept="image/*" id="imgFile_${slot}" style="display:none;" onchange="handleImageFileChange('${slot}', this)">
+                <button type="button" class="btn-modal btn-cancel" style="padding:0.4rem;font-size:0.8rem;justify-content:center;"
+                        onclick="document.getElementById('imgFile_${slot}').click()">
+                    <i class="fas fa-upload"></i> ${entry ? '更換圖片' : '上傳圖片'}
+                </button>
+                ${entry ? `
+                <select class="filter-select" style="padding:0.4rem;font-size:0.8rem;" onchange="handleImageMove('${slot}', this.value)">
+                    <option value="">移動到...</option>
+                    ${moveOptions}
+                </select>
+                <button type="button" onclick="handleImageDelete('${slot}')"
+                        style="padding:0.4rem;font-size:0.8rem;border:none;border-radius:6px;background:#f8d7da;color:#721c24;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:0.3rem;">
+                    <i class="fas fa-trash-alt"></i> 刪除圖片
+                </button>` : ''}
+            </div>`;
+            }).join('');
+        }
+
+        // 選擇新檔案 (更換/新增)
+        function handleImageFileChange(slot, input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (pendingImages[slot] && pendingImages[slot].kind === 'new') {
+                URL.revokeObjectURL(pendingImages[slot].previewUrl);
+            }
+            pendingImages[slot] = {kind: 'new', file: file, previewUrl: URL.createObjectURL(file)};
+            renderImageManager();
+        }
+
+        // 刪除圖片
+        function handleImageDelete(slot) {
+            if (pendingImages[slot] && pendingImages[slot].kind === 'new') {
+                URL.revokeObjectURL(pendingImages[slot].previewUrl);
+            }
+            delete pendingImages[slot];
+            renderImageManager();
+        }
+
+        // 移動分類 (若目標已有圖片則兩者互換，避免圖片遺失)
+        function handleImageMove(from, to) {
+            if (!to || from === to) {renderImageManager(); return;}
+            const tmp = pendingImages[to];
+            pendingImages[to] = pendingImages[from];
+            if (tmp) pendingImages[from] = tmp;
+            else delete pendingImages[from];
+            renderImageManager();
+        }
+
+        // ==========================================
+        // 1. AdminTable 配置
+        // ==========================================
+        const tableConfig = {
+            apiUrl: '/admin/api/sell-applications/list',
+            params: {page: 1, size: 25, keyword: '', status: '', mode: ''},
+            tbodySelector: '#sellTableBody',
+            paginationId: 'sell-pagination',
+            renderRow: renderSellRow,
+            emptyText: '暫無出售申請記錄'
+        };
+
+        function searchApplications() {
+            tableConfig.params.keyword = document.getElementById('keywordInput').value.trim();
+            tableConfig.params.mode = document.getElementById('modeFilter').value;
+            tableConfig.params.status = document.getElementById('statusFilter').value;
+            tableConfig.params.page = 1;
+            AdminTable.loadData(tableConfig);
+        }
+
+        function resetFilters() {
+            document.getElementById('keywordInput').value = '';
+            document.getElementById('modeFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            tableConfig.params = {page: 1, size: 25, keyword: '', status: '', mode: ''};
+            AdminTable.loadData(tableConfig);
+        }
+
+        // ==========================================
+        // 2. 行渲染邏輯
+        // ==========================================
+        function renderSellRow(app) {
+            const st = STATUS_MAP[app.status] || {text: app.status, cls: ''};
+            const md = MODE_MAP[app.transactionMode] || {text: app.transactionMode, cls: ''};
+            const appointment = app.appointmentDate
+                ? `${app.appointmentDate}<br><span style="color:#64748b;">${app.appointmentTimeSlot || ''}</span>`
+                : '<span style="color:#94a3b8;">未預約 / 線上</span>';
+
+            return `
+            <tr>
+                <td style="color: #94a3b8; font-weight: 600;">#${app.applicationId}</td>
+                <td>
+                    <div class="user-info-cell">
+                        <span class="user-name">${app.user?.username || '未知'}</span>
+                    </div>
+                </td>
+                <td>
+                    <div class="watch-info">
+                        <span class="watch-brand">${app.brand}</span>
+                        <span class="watch-series">${app.series}</span>
+                        <span class="watch-model">${app.model || '-'} ${app.purchaseYear ? '(' + app.purchaseYear + '年)' : ''}</span>
+                    </div>
+                </td>
+                <td><span class="mode-badge ${md.cls}">${md.text}</span></td>
+                <td style="font-size: 0.85rem; color: #334155; font-weight: 500;">
+                ${app.storeName || '未指定'}
+            </td>
+                <td style="font-size: 0.85rem; line-height: 1.5;">${appointment}</td>
+                <td><span class="status-badge ${st.cls}">${st.text}</span></td>
+                <td style="text-align: center; vertical-align: middle;">
+                    ${app.status === 'COMPLETED'
+                    ? (app.isStockedIn
+                        ? '<span style="color: #28a745; font-weight: 600;"><i class="fas fa-check-circle"></i> 已入庫</span>'
+                        : '<span style="color: #fd7e14; font-weight: 600;"><i class="fas fa-box-open"></i> 尚未入庫</span>')
+                    : '<span style="color: #adb5bd; font-weight: 500;">-</span>'}
+                </td>
+                <td style="font-size: 0.85rem; color: #64748b; font-family: monospace; white-space: nowrap;">${formatDate(app.createdAt)}</td>
+                <td style="text-align: center;">
+                    <button class="btn-action-sm btn-review" onclick="openSellDetailModal(${app.applicationId})" title="查看詳情">
+                        <i class="fas fa-eye"></i> 詳情
+                    </button>
+                </td>
+            </tr>
+        `;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return '-';
+            return d.toLocaleString('zh-TW', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false});
+        }
+
+        // ==========================================
+        // 3. 詳情彈窗邏輯
+        // ==========================================
+        async function openSellDetailModal(id) {
+            const modal = document.getElementById('detailModal');
+            document.getElementById('detailId').textContent = `# ${id}`;
+            document.getElementById('detailContent').innerHTML =
+                '<div style="text-align: center; padding: 3rem; color: var(--gray);"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:1rem;">加載中...</p></div>';
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            try {
+                const res = await fetch(`/admin/api/sell-applications/${id}`);
+                const result = await res.json();
+                if (result.success) {
+                    renderDetailContent(result.data);
+                } else {
+                    document.getElementById('detailContent').innerHTML =
+                        `<p style="color: var(--accent); text-align:center; padding:2rem;">❌ ${result.message || '加載失敗'}</p>`;
+                }
+            } catch (e) {
+                console.error('獲取詳情失敗:', e);
+                document.getElementById('detailContent').innerHTML =
+                    '<p style="color: var(--accent); text-align:center; padding:2rem;">❌ 網絡錯誤，請稍後重試</p>';
+            }
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+            document.body.style.overflow = '';
+            // 【關鍵修復】確保關閉彈窗時，底部的 Footer 按鈕恢復顯示
+            const footer = document.querySelector('.modal-footer');
+            if (footer) footer.style.display = 'flex';
+        }
+
+        function renderDetailContent(app) {
+            // 【核心新增】：將當前資料暫存到全局，供「重新編輯」功能使用
+            window.currentEditingApp = app;
+
+            // --- 配件標籤 ---
+            let accessoriesHtml = '<span class="empty-hint">無附件</span>';
+            if (app.accessories) {
+                try {
+                    const list = JSON.parse(app.accessories);
+                    if (Array.isArray(list) && list.length > 0) {
+                        accessoriesHtml = list.map(key =>
+                            `<span class="accessory-tag"><i class="fas fa-check-circle"></i> ${ACCESSORY_MAP[key] || key}</span>`
+                        ).join('');
+                    }
+                } catch (e) {
+                    accessoriesHtml = `<span class="info-value">${app.accessories}</span>`;
+                }
+            }
+
+            // --- 圖片縮略圖 ---
+            let imagesHtml = '<p class="empty-hint">未上傳圖片</p>';
+            if (app.imagePaths) {
+                try {
+                    const paths = JSON.parse(app.imagePaths);
+                    const entries = Object.entries(paths);
+                    if (entries.length > 0) {
+                        imagesHtml = '<div class="thumb-gallery">' + entries.map(([key, path]) => `
+                        <div class="image-item">
+                            <img src="${path}" class="thumb-img" alt="${IMAGE_LABEL_MAP[key] || key}"
+                                 onerror="this.src='/images/placeholder.png'"
+                                 onclick="window.open('${path}', '_blank')">
+                            <span class="image-label">${IMAGE_LABEL_MAP[key] || key}</span>
+                        </div>
+                    `).join('') + '</div>';
+                    }
+                } catch (e) {
+                    imagesHtml = '<p class="empty-hint">圖片路徑解析失敗</p>';
+                }
+            }
+
+            const st = STATUS_MAP[app.status] || {text: app.status, cls: ''};
+            const md = MODE_MAP[app.transactionMode] || {text: app.transactionMode, cls: ''};
+
+            const html = `
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">申請狀態</span><span class="info-value"><span class="status-badge ${st.cls}">${st.text}</span></span></div>
+                <div class="info-item"><span class="info-label">交易模式</span><span class="info-value"><span class="mode-badge ${md.cls}">${md.text}</span></span></div>
+                <div class="info-item"><span class="info-label">品牌 / 系列</span><span class="info-value">${app.brand || '-'} / ${app.series || '-'}</span></div>
+                <div class="info-item"><span class="info-label">型號 / 年份</span><span class="info-value">${app.model || '-'} / ${app.purchaseYear || '-'}</span></div>
+                <div class="info-item"><span class="info-label">出售數量</span><span class="info-value">${app.quantity || 1} 件</span></div>
+                <div class="info-item"><span class="info-label">成色 / 功能</span><span class="info-value">${CONDITION_MAP[app.condition] || app.condition || '-'} / ${FUNCTION_MAP[app.functionStatus] || app.functionStatus || '-'}</span></div>
+                <div class="info-item"><span class="info-label">申請人</span><span class="info-value">${app.user?.username || '未知'}</span></div>
+                <div class="info-item"><span class="info-label">提交時間</span><span class="info-value">${formatDate(app.createdAt)}</span></div>
+                <div class="info-item">
+                    <span class="info-label">預約門店</span>
+                    <span class="info-value" style="color: var(--primary); font-weight: 600;">
+                        <i class="fas fa-store" style="color: var(--gold); margin-right: 5px;"></i>${app.storeName || '未指定'}
+                    </span>
+                </div>
+                <div class="info-item"><span class="info-label">預約時間</span><span class="info-value">${app.appointmentDate ? app.appointmentDate + ' ' + (app.appointmentTimeSlot || '') : '未預約'}</span></div>
+            </div>
+
+            <div class="info-item" style="margin-bottom: 1.2rem;">
+                <span class="info-label">完整附件</span>
+                <div style="margin-top: 0.5rem;">${accessoriesHtml}</div>
+            </div>
+
+            <div class="info-item" style="margin-bottom: 0.5rem;">
+                <span class="info-label">備註說明</span>
+                <div class="notes-box" style="margin-top: 0.5rem;">${app.notes || '無'}</div>
+            </div>
+
+            <hr class="section-divider">
+            <h4 class="section-title-sm"><i class="fas fa-images"></i> 實物圖片 (點擊放大)</h4>
+            ${imagesHtml}
+
+                        <hr class="section-divider">
+            <h4 class="section-title-sm"><i class="fas fa-link" style="color: #11998e;"></i> 關聯平台商品</h4>
+            <div class="info-item" style="margin-bottom: 1.2rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef;">
+                <span class="info-label">已分配商品</span>
+                <span class="info-value" style="color: var(--primary); font-weight: 600; margin-top: 0.5rem; display: block;">
+                    ${app.product
+                    ? `<i class="fas fa-check-circle" style="color: #28a745; margin-right: 5px;"></i>${app.product.description} (ID: ${app.product.productId}, HK$ ${app.product.price})`
+                    : '<span style="color: #dc3545; font-weight: 600;"><i class="fas fa-times-circle" style="margin-right: 5px;"></i>尚未分配</span>'}
+                </span>
+            </div>
+
+            <hr class="section-divider">
+            <h4 class="section-title-sm"><i class="fas fa-gavel"></i> 鑑定與報價</h4>
+            <div class="info-grid" style="margin-bottom: 0;">
+                <div class="info-item"><span class="info-label">預估價格</span><span class="info-value" style="color: var(--accent); font-weight: 700;">HK$ ${app.estimatedPrice || '待估'}</span></div>
+                <div class="info-item"><span class="info-label">最終成交價</span><span class="info-value" style="color: #28a745; font-weight: 700;">HK$ ${app.finalPrice || '待議'}</span></div>
+                <div class="info-item"><span class="info-label">負責鑑定師</span><span class="info-value">${app.appraiser?.username || '未指派'}</span></div>
+                <div class="info-item"><span class="info-label">鑑定備註</span><span class="info-value">${app.appraisalNotes || '無'}</span></div>
+            </div>
+        `;
+            document.getElementById('detailContent').innerHTML = html;
+        }
+
+        // ==========================================
+        // 4. 【核心更新】重新編輯功能 (支援修改手錶基礎資訊與圖片)
+        // ==========================================
+        // HTML 屬性跳脫輔助函數：防止原資料中的引號破壞 input 結構
+        function escAttr(v) {
+            if (v === null || v === undefined) return '';
+            return String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        async function reEditApplication() {
+            const app = window.currentEditingApp;
+            if (!app) return;
+
+            // 【新增】1. 異步加載具備鑑定權限的員工列表 (SALES, APPRAISER, ADMIN)
+            let appraisers = [];
+            try {
+                // 請確保此 API 路徑與後端一致 (例如 /api/admin/users/staff)
+                const res = await fetch('/admin/api/staff');
+                const result = await res.json();
+                if (result.success && result.data) {
+                    appraisers = result.data;
+                }
+            } catch (e) {
+                console.error('獲取鑑定師列表失敗', e);
+            }
+
+            // 申請狀態選項
+            const statusOptions = [
+                {val: 'PENDING', text: '待處理 / 待鑑定'},
+                {val: 'APPRAISING', text: '鑑定中'},
+                {val: 'QUOTED', text: '已報價 (等待用戶確認)'},
+                {val: 'ACCEPTED', text: '用戶已接受報價'},
+                {val: 'REJECTED', text: '用戶拒絕報價 或 平台拒收'},
+                {val: 'COMPLETED', text: '交易已完成 (款項已結清)'},
+                {val: 'CANCELLED', text: '用戶主動取消'}
+            ];
+            // 成色選項 (value 必須與資料庫存的小寫 key 一致)
+            const conditionOptions = [
+                {val: 'mint', text: '近全新 (98-100%)'},
+                {val: 'excellent', text: '極佳 (95-97%)'},
+                {val: 'good', text: '良好 (90-94%)'},
+                {val: 'fair', text: '正常使用痕跡 (85-89%)'},
+                {val: 'poor', text: '需維修/明顯瑕疵 (85%以下)'}
+            ];
+            // 功能狀況選項
+            const functionOptions = [
+                {val: 'perfect', text: '一切正常'},
+                {val: 'minor_issue', text: '輕微異常 (如日曆跳動稍慢)'},
+                {val: 'needs_service', text: '需全面保養/維修'}
+            ];
+
+            // 通用選項生成器：自動選中「原本資料」
+            const buildOptions = (opts, current) =>
+                opts.map(o => `<option value="${o.val}" ${current === o.val ? 'selected' : ''}>${o.text}</option>`).join('');
+
+            // 【新增】獲取當前已分配的鑑定師 ID (兼容 app.appraiser.id 或 app.appraiserId)
+            const currentAppraiserId = app.appraiser?.id || app.appraiserId || '';
+
+            const editHtml = `
+        <form id="editSellForm" onsubmit="submitEditApplication(event)">
+            <!-- ========== 區塊 1：手錶基礎資訊 (可修改，預載原資料) ========== -->
+            <h4 class="section-title-sm" style="margin-top:0;">
+                <i class="fas fa-clock" style="color: #11998e;"></i> 手錶基礎資訊 (可直接修改)
+            </h4>
+            <div class="info-grid">
+                <!-- ... (區塊 1 的 HTML 保持不變) ... -->
+                <div class="info-item">
+                    <label class="info-label">品牌 <span style="color:var(--accent)">*</span></label>
+                    <input type="text" name="brand" class="filter-input" style="margin-top:0.5rem;" value="${escAttr(app.brand)}" required>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">系列 <span style="color:var(--accent)">*</span></label>
+                    <input type="text" name="series" class="filter-input" style="margin-top:0.5rem;" value="${escAttr(app.series)}" required>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">型號 / 編號</label>
+                    <input type="text" name="model" class="filter-input" style="margin-top:0.5rem;" value="${escAttr(app.model)}" placeholder="例如：116610LN">
+                </div>
+                <div class="info-item">
+                    <label class="info-label">購買年份</label>
+                    <input type="number" name="purchaseYear" class="filter-input" style="margin-top:0.5rem;" value="${app.purchaseYear || ''}" min="1900" max="2026">
+                </div>
+                <div class="info-item">
+                    <label class="info-label">出售數量 <span style="color:var(--accent)">*</span></label>
+                    <input type="number" name="quantity" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.quantity || 1}" min="1" required>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">成色</label>
+                    <select name="condition" class="filter-select" style="margin-top:0.5rem;">
+                        ${buildOptions(conditionOptions, app.condition)}
+                    </select>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">功能狀況</label>
+                    <select name="functionStatus" class="filter-select" style="margin-top:0.5rem;">
+                        ${buildOptions(functionOptions, app.functionStatus)}
+                    </select>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">交易模式 (不可改)</label>
+                    <input type="text" class="filter-input" style="margin-top:0.5rem; background:#f1f5f9; cursor:not-allowed;" value="${MODE_MAP[app.transactionMode]?.text || app.transactionMode}" disabled>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+            <!-- ========== 區塊 2：狀態與鑑定資訊 ========== -->
+            <h4 class="section-title-sm"><i class="fas fa-edit" style="color: #11998e;"></i> 申請狀態與鑑定資訊</h4>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label class="info-label">申請狀態 <span style="color:var(--accent)">*</span></label>
+                    <select name="status" class="filter-select" style="margin-top:0.5rem;" required>
+                        ${buildOptions(statusOptions, app.status)}
+                    </select>
+                </div>
+
+                <!-- 【新增】負責鑑定師下拉框 -->
+                <div class="info-item">
+                    <label class="info-label">負責鑑定師</label>
+                    <select name="appraiserId" class="filter-select" style="margin-top:0.5rem;">
+                        <option value="">未分配</option>
+                        ${appraisers.map(u => `
+                            <option value="${u.id}" ${currentAppraiserId === u.id ? 'selected' : ''}>
+                                ${u.username} ${u.name ? '(' + u.name + ')' : ''} [${u.role}]
+                            </option>
+                        `).join('')}
+                    </select>
+                </div>
+
+                <div class="info-item">
+                    <label class="info-label">預估價格 (HK$)</label>
+                    <input type="number" name="estimatedPrice" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.estimatedPrice || ''}" step="0.01" placeholder="輸入預估價格">
+                </div>
+                <div class="info-item">
+                    <label class="info-label">最終成交價 (HK$)</label>
+                    <input type="number" name="finalPrice" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.finalPrice || ''}" step="0.01" placeholder="輸入最終成交價">
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <label class="info-label">鑑定備註</label>
+                    <textarea name="appraisalNotes" class="filter-input" style="margin-top:0.5rem; min-height: 80px; resize: vertical;" placeholder="輸入鑑定師備註...">${escAttr(app.appraisalNotes)}</textarea>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+            <!-- ========== 區塊 2.5：實物圖片管理 ========== -->
+            <h4 class="section-title-sm"><i class="fas fa-images" style="color: #11998e;"></i> 實物圖片管理 (更換 / 移動 / 刪除)</h4>
+            <div id="imageManagerGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-bottom:1rem;"></div>
+            <small style="color:var(--gray); font-size:0.8rem; display:block; margin-bottom:1rem;">
+                <i class="fas fa-info-circle"></i> 說明：點「上傳/更換」選新圖；用下拉選單可將圖片移動到其他分類（若目標已有圖片則兩者互換）；點「刪除圖片」移除。所有變更需按「儲存變更」才會生效。
+            </small>
+
+             <!-- 【核心新增】：區塊 2.6 關聯平台商品 (獨立 Div) -->
+            <hr class="section-divider">
+            <h4 class="section-title-sm"><i class="fas fa-link" style="color: #11998e;"></i> 關聯平台商品 (分配商品)</h4>
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 1rem;">
+                <div id="assignedProductDisplay" style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--gray);">
+                    ${app.product
+                    ? `當前已分配：<strong style="color: var(--primary);">${app.product.description}</strong> (ID: ${app.product.productId})`
+                    : '當前狀態：<strong style="color: #dc3545;">尚未分配</strong>'}
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+    <label class="info-label">搜尋品牌</label>
+    <div style="display: flex; gap: 0.5rem; margin-top:0.5rem;">
+        <div class="autocomplete-wrapper">
+            <input type="text" id="editBrandInput" class="filter-input" placeholder="輸入或選擇品牌 (如 Rolex)" value="${escAttr(app.brand)}" autocomplete="off">
+            <div id="brandAutocompleteList" class="autocomplete-list"></div>
+        </div>
+    </div>
+</div>
+
+                    <div class="info-item">
+                        <label class="info-label">選擇商品</label>
+                        <select name="productId" id="editProductSelect" class="filter-select" style="margin-top:0.5rem;">
+                            <option value="">尚未分配 (清空關聯)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="section-divider">
+            <!-- ========== 區塊 3：其餘原始資料 (唯讀) ========== -->
+            <h4 class="section-title-sm"><i class="fas fa-info-circle"></i> 其他原始資料 (唯讀)</h4>
+            <div class="info-grid" style="opacity: 0.8; margin-bottom: 0;">
+                <div class="info-item"><span class="info-label">申請人</span><span class="info-value">${app.user?.username || '未知'}</span></div>
+                <div class="info-item"><span class="info-label">提交時間</span><span class="info-value">${formatDate(app.createdAt)}</span></div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                <button type="button" class="btn-modal btn-cancel" onclick="cancelEditAndShowDetail()">
+                    <i class="fas fa-times"></i> 取消
+                </button>
+                <button type="submit" class="btn-modal" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);">
+                    <i class="fas fa-save"></i> 儲存變更
+                </button>
+            </div>
+        </form>
+    `;
+
+            document.getElementById('detailContent').innerHTML = editHtml;
+            document.querySelector('.modal-footer').style.display = 'none';
+
+            // 【新增】初始化並渲染圖片管理器
+            initPendingImages(app);
+            renderImageManager();
+
+            // 【新增】初始化品牌自動完成
+            initBrandAutocomplete();
+
+            if (app.brand) {
+                loadProductsForEdit();
+            }
+        }
+
+        // 【新增】載入商品列表函數 (運用現有 API)
+        let productsCache = [];
+        async function loadProductsForEdit() {
+            const brand = document.getElementById('editBrandInput').value.trim();
+            const productSelect = document.getElementById('editProductSelect');
+            if (!brand) {
+                productSelect.innerHTML = '<option value="">請先輸入品牌</option>';
+                return;
+            }
+            productSelect.innerHTML = '<option value="">載入中...</option>';
+            try {
+                const response = await fetch(`/brands/${encodeURIComponent(brand)}`);
+                const result = await response.json();
+                if (result.success && result.data) {
+                    productsCache = result.data;
+                    if (productsCache.length === 0) {
+                        productSelect.innerHTML = '<option value="">該品牌下暫無商品</option>';
+                    } else {
+                        let options = '<option value="">尚未分配 (清空關聯)</option>';
+                        productsCache.forEach(product => {
+                            options += `<option value="${product.productId}">${product.description} (HK$ ${product.price})</option>`;
+                        });
+                        productSelect.innerHTML = options;
+
+                        // 自動選中當前已分配的商品
+                        const app = window.currentEditingApp;
+                        if (app.product && app.product.productId) {
+                            productSelect.value = app.product.productId;
+                        }
+                    }
+                } else {
+                    productSelect.innerHTML = '<option value="">載入失敗</option>';
+                }
+            } catch (e) {
+                console.error('載入商品失敗', e);
+                productSelect.innerHTML = '<option value="">網絡錯誤</option>';
+            }
+        }
+
+        // 取消編輯，恢復原本的詳情視圖
+        function cancelEditAndShowDetail() {
+            document.querySelector('.modal-footer').style.display = 'flex';
+            if (window.currentEditingApp) {
+                renderDetailContent(window.currentEditingApp);
+            }
+        }
+
+        // 提交編輯表單 (文字 + 圖片一次性 multipart 提交)
+        async function submitEditApplication(e) {
+            e.preventDefault();
+            const form = e.target;
+            const fd = new FormData();
+
+            // ===== 文字欄位 =====
+            ['brand', 'series', 'model', 'purchaseYear', 'quantity', 'condition', 'functionStatus',
+                'status', 'estimatedPrice', 'finalPrice', 'appraisalNotes', 'appraiserId', 'productId'].forEach(key => {
+                    const el = form.querySelector(`[name="${key}"]`);
+                    if (el) fd.append(key, el.value);
+                });
+
+            // ===== 圖片：舊圖最終歸屬 (含移動結果) =====
+            const existingMap = {};
+            Object.entries(pendingImages).forEach(([slot, v]) => {
+                if (v.kind === 'existing') existingMap[slot] = v.path;
+            });
+            fd.append('imageMapJson', JSON.stringify(existingMap));
+
+            // ===== 圖片：新上傳/更換的檔案 (key = 欄位名) =====
+            Object.entries(pendingImages).forEach(([slot, v]) => {
+                if (v.kind === 'new') fd.append(slot, v.file);
+            });
+
+            try {
+                // 注意：不要手動設 Content-Type，瀏覽器會自動帶 multipart boundary
+                const res = await fetch(`/admin/api/sell-applications/${window.currentEditingApp.applicationId}`, {
+                    method: 'PUT',
+                    body: fd
+                });
+                const result = await res.json();
+                if (result.success) {
+                    if (typeof showNotification === 'function') showNotification('✅ 儲存成功！');
+                    else alert('✅ 儲存成功！');
+                    AdminTable.loadData(tableConfig);
+                    closeDetailModal();
+                } else {
+                    if (typeof showNotification === 'function') showNotification('❌ ' + (result.message || '儲存失敗'), true);
+                    else alert('❌ ' + (result.message || '儲存失敗'));
+                }
+            } catch (err) {
+                console.error(err);
+                if (typeof showNotification === 'function') showNotification('❌ 網絡錯誤', true);
+                else alert('❌ 網絡錯誤');
+            }
+        }
+
+        // ==========================================
+        // 【新增】品牌 Autocomplete 邏輯
+        // ==========================================
+        let brandSearchTimeout = null;
+
+        function initBrandAutocomplete() {
+            const input = document.getElementById('editBrandInput');
+            const list = document.getElementById('brandAutocompleteList');
+            if (!input || !list) return;
+
+            const fetchAndShowBrands = async () => {
+                const keyword = input.value.trim();
+                if (brandSearchTimeout) clearTimeout(brandSearchTimeout);
+
+                // 300ms 防抖，避免頻繁請求
+                brandSearchTimeout = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/admin/api/brands/autocomplete?keyword=${encodeURIComponent(keyword)}`);
+                        const result = await res.json();
+                        if (result.success && result.data) {
+                            renderBrandList(result.data, list, input);
+                        }
+                    } catch (e) {
+                        console.error('獲取品牌失敗', e);
+                    }
+                }, 300);
+            };
+
+            // 聚焦與輸入時觸發
+            input.addEventListener('focus', fetchAndShowBrands);
+            input.addEventListener('input', fetchAndShowBrands);
+
+            // 失去焦點時隱藏 (延遲 200ms 是為了讓 mousedown 事件能先被觸發)
+            input.addEventListener('blur', () => {
+                setTimeout(() => {list.classList.remove('active');}, 200);
+            });
+        }
+
+        function renderBrandList(brands, list, input) {
+            if (!brands || brands.length === 0) {
+                list.innerHTML = '<div class="autocomplete-empty">無匹配品牌</div>';
+                list.classList.add('active');
+                return;
+            }
+
+            list.innerHTML = brands.map(b => `<div class="autocomplete-item" data-value="${b}">${b}</div>`).join('');
+            list.classList.add('active');
+
+            // 使用 mousedown 而非 click，防止 input 的 blur 事件優先觸發導致下拉框消失而無法點擊
+            list.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    input.value = item.dataset.value;
+                    list.classList.remove('active');
+                    loadProductsForEdit(); // 【核心】選中後自動觸發載入商品
+                });
+            });
+        }
+
+
+        // 當前選擇的查找類型 (默認為 phone)
+        let currentSearchType = 'phone';
+        let usernameSearchTimeout = null;
+
+        /**
+         * 切換查找類型 (Phone / Username)
+         */
+        function toggleSearchType(type) {
+            currentSearchType = type;
+            const searchInput = document.getElementById('searchInput');
+            const searchLabel = document.getElementById('searchInputLabel');
+            const searchBtn = document.getElementById('searchBtn');
+            const usernameResult = document.getElementById('usernameSearchResult');
+
+            if (type === 'phone') {
+                searchLabel.textContent = '電話號碼';
+                searchInput.placeholder = '請輸入用戶電話號碼';
+                searchBtn.style.display = 'inline-flex'; // ✅ 顯示按鈕
+                if (usernameResult) usernameResult.style.display = 'none'; // 隱藏自動完成框
+            } else {
+                searchLabel.textContent = '用戶名';
+                searchInput.placeholder = '請輸入用戶名';
+                searchBtn.style.display = 'none'; // ✅ 隱藏按鈕
+            }
+
+            // 清空之前的輸入和結果
+            searchInput.value = '';
+            document.getElementById('searchResult').style.display = 'none';
+            document.getElementById('foundUsername').value = '';
+            document.getElementById('foundPhone').value = '';
+            document.getElementById('foundName').value = '';
+        }
+
+        /**
+         * 【新增】用戶名輸入防抖與自動完成邏輯
+         */
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    // 只有在用戶名模式下才觸發自動完成
+                    if (currentSearchType !== 'username') return;
+
+                    const keyword = this.value.trim();
+                    const resultContainer = document.getElementById('usernameSearchResult');
+
+                    if (!keyword) {
+                        resultContainer.style.display = 'none';
+                        return;
+                    }
+
+                    // 清除之前的定時器
+                    clearTimeout(usernameSearchTimeout);
+
+                    // 顯示加載中
+                    resultContainer.innerHTML = '<div style="padding: 0.6rem 1rem; color: #6c757d;"><i class="fas fa-spinner fa-spin"></i> 搜索中...</div>';
+                    resultContainer.style.display = 'block';
+
+                    // 300ms 防抖
+                    usernameSearchTimeout = setTimeout(async () => {
+                        try {
+                            const res = await fetch(`/admin/api/users/search-username?keyword=${encodeURIComponent(keyword)}`);
+                            const result = await res.json();
+
+                            if (result.success && result.data && result.data.length > 0) {
+                                // 有匹配項：渲染下拉列表
+                                let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                                result.data.forEach(user => {
+                                    // 轉義單引號防止 XSS 或語法錯誤
+                                    const safeUsername = user.username.replace(/'/g, "\\'");
+                                    const safeName = (user.name || '').replace(/'/g, "\\'");
+                                    const safePhone = (user.phone || '').replace(/'/g, "\\'");
+
+                                    html += `<li style="padding: 0.6rem 1rem; cursor: pointer; transition: background 0.2s; border-bottom: 1px solid #f0f0f0;"
+                                         onmouseover="this.style.background='#f0f0f0'"
+                                         onmouseout="this.style.background='transparent'"
+                                         onclick="selectUsernameFromList('${safeUsername}', '${safeName}', '${safePhone}')">
+                                         <strong>${user.username}</strong>
+                                         <span style="color: #6c757d; font-size: 0.85rem; margin-left: 0.5rem;">(${user.name || '無姓名'})</span>
+                                         </li>`;
+                                });
+                                html += '</ul>';
+                                resultContainer.innerHTML = html;
+                            } else {
+                                // 沒有找到匹配項：顯示紅色提示文字
+                                resultContainer.innerHTML = '<div style="padding: 0.6rem 1rem; color: #dc3545; font-weight: 500;"><i class="fas fa-exclamation-circle"></i> 暫時沒有匹配到該用戶名，請重試！</div>';
+                            }
+                        } catch (error) {
+                            resultContainer.innerHTML = '<div style="padding: 0.6rem 1rem; color: #dc3545;">網絡錯誤，請稍後重試</div>';
+                        }
+                    }, 300);
+                });
+
+                // 點擊頁面其他地方時，隱藏下拉列表
+                document.addEventListener('click', function (e) {
+                    if (!searchInput.contains(e.target) && !document.getElementById('usernameSearchResult').contains(e.target)) {
+                        document.getElementById('usernameSearchResult').style.display = 'none';
+                    }
+                });
+            }
+        });
+
+        /**
+         * 【新增】從下拉列表中選擇用戶名
+         */
+        function selectUsernameFromList(username, name, phone) {
+            // 1. 填入輸入框
+            document.getElementById('searchInput').value = username;
+            // 2. 隱藏下拉列表
+            document.getElementById('usernameSearchResult').style.display = 'none';
+
+            if (typeof showNotification === 'function') {
+                showNotification('✅ 查找成功');
+            }
+        }
+
+        /**
+         * 執行查找用戶 API (僅供「電話號碼」模式使用)
+         */
+        async function searchUserForApp() {
+            if (currentSearchType !== 'phone') return;
+
+            const searchValue = document.getElementById('searchInput').value.trim();
+            if (!searchValue) {
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 請輸入電話號碼', true);
+                } else {
+                    alert('請輸入電話號碼');
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch(`/admin/api/users/search?phone=${encodeURIComponent(searchValue)}`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    document.getElementById('foundUsername').value = result.data.username;
+                    document.getElementById('foundPhone').value = result.data.phone;
+                    document.getElementById('foundName').value = result.data.name;
+                    document.getElementById('searchResult').style.display = 'block';
+
+                    if (typeof showNotification === 'function') {
+                        showNotification('✅ 查找成功');
+                    }
+                } else {
+                    document.getElementById('searchResult').style.display = 'none';
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + (result.message || '未找到該用戶'), true);
+                    } else {
+                        alert('❌ ' + (result.message || '未找到該用戶'));
+                    }
+                }
+            } catch (error) {
+                console.error('查找用戶錯誤:', error);
+                document.getElementById('searchResult').style.display = 'none';
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 網絡錯誤，請稍後重試', true);
+                } else {
+                    alert('❌ 網絡錯誤，請稍後重試');
+                }
+            }
+        }
+
+
+        function openCreateAppModal() {
+            const modal = document.getElementById("createAppUserModal")
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';//禁止背景活動
+                //重置表單狀態
+                toggleSearchType('phone');
+                document.getElementById('searchResult').style.display = 'none';
+            }
+        }
+
+
+        /**
+         * 關閉創建申請 Modal (更新清空邏輯)
+         */
+        function closeCreateAppModal() {
+            const modal = document.getElementById('createAppUserModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = ''; // 恢復背景活動
+
+                // 重置 Radio Button 選項
+                const phoneRadio = document.querySelector('input[name="searchType"][value="phone"]');
+                if (phoneRadio) phoneRadio.checked = true;
+
+                // 重置輸入框內容
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.placeholder = '請輸入用戶電話號碼';
+                }
+
+                // 重置標籤文字
+                const searchInputLabel = document.getElementById('searchInputLabel');
+                if (searchInputLabel) searchInputLabel.textContent = '電話號碼';
+
+                // 隱藏查找結果與自動完成框
+                const searchResult = document.getElementById('searchResult');
+                if (searchResult) searchResult.style.display = 'none';
+
+                const usernameResult = document.getElementById('usernameSearchResult');
+                if (usernameResult) usernameResult.style.display = 'none';
+
+                // 清空隱藏字段
+                document.getElementById('foundUsername').value = '';
+                document.getElementById('foundPhone').value = '';
+                document.getElementById('foundName').value = '';
+            }
+        }
+
+        // 點擊遮罩層關閉 Modal
+        document.getElementById('createAppUserModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeCreateAppModal();
+            }
+        });
+
+        // ESC 鍵關閉 Modal
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('createAppUserModal');
+                if (modal && modal.style.display === 'flex') {
+                    closeCreateAppModal();
+                }
+            }
+        });
+        // ==========================================
+        // 5. 全局事件：遮罩點擊 + ESC 關閉彈窗
+        // ==========================================
+        document.getElementById('detailModal').addEventListener('click', function (e) {
+            if (e.target === this) closeDetailModal();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('detailModal');
+                if (modal && modal.style.display === 'flex') closeDetailModal();
+            }
+        });
+
+        // ==========================================
+        // 6. 頁面初始化
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化 AdminTable
+            AdminTable.loadData(tableConfig);
+        });
+
+        // ==========================================
+        // 【核心修復】：使用事件委託阻止數字輸入框響應鼠標滾輪
+        // 這樣無論 input 是何時動態生成的，都能被成功攔截
+        // ==========================================
+        document.addEventListener('wheel', function (e) {
+            // 檢查觸發事件的目標元素是否是帶有 .no-spin 類的數字輸入框
+            if (e.target && e.target.matches('input[type="number"].no-spin')) {
+                e.preventDefault(); // 阻止滾輪默認的加減行為
+            }
+        }, {passive: false}); // 必須設置為 false 才能調用 preventDefault()
+    </script>
+</body>
+
+</html>

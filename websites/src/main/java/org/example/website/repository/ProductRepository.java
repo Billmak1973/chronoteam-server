@@ -232,4 +232,14 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     @Query("SELECT p FROM Product p WHERE p.brand = :brand ORDER BY p.description ASC")
     List<Product> findByBrand(@Param("brand") String brand);
+
+
+    /**
+     * 【自動完成專用】獲取去重後的品牌列表，支援可選的關鍵字前綴匹配 (忽略大小寫)
+     */
+    @Query("SELECT DISTINCT p.brand FROM Product p " +
+            "WHERE p.brand IS NOT NULL " +
+            "AND (:keyword IS NULL OR LOWER(p.brand) LIKE LOWER(CONCAT(:keyword, '%'))) " +
+            "ORDER BY p.brand ASC")
+    List<String> findDistinctBrandsByKeyword(@Param("keyword") String keyword);
 }

@@ -108,6 +108,9 @@ public class SellApplication {
     @Column(name = "appointment_time_slot", length = 50)
     private String appointmentTimeSlot;
 
+    @Column(name = "is_stocked_in", nullable = false)
+    private Boolean isStockedIn = false; // 建議給予預設值，防止歷史數據為 null
+
     // ================= 時間戳 =================
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

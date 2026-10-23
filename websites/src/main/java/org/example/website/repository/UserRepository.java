@@ -123,4 +123,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return 匹配的用戶實體列表
      */
     List<User> findByUsernameIn(List<String> usernames);
+
+    @Query("SELECT u FROM User u WHERE u.username LIKE %:keyword% ORDER BY u.username ASC")
+    List<User> findByUsernameContainingOrderByUsernameAsc(@Param("keyword") String keyword);
 }

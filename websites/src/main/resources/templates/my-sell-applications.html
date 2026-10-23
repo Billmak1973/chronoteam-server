@@ -392,6 +392,14 @@
                             <span class="status-badge" th:classappend="'status-' + ${app.status}"
                                 th:text="${app.status}">PENDING</span>
 
+                            <a th:href="@{/sell/edit/{id}(id=${app.applicationId})}"
+                                th:if="${app.status.name() == 'PENDING'}"
+                                style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #e7f3ff; color: #0056b3; border: 1px solid #b8daff; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; transition: all 0.2s;"
+                                onmouseover="this.style.background='#cce5ff'"
+                                onmouseout="this.style.background='#e7f3ff'">
+                                <i class="fas fa-edit"></i> 修改資料
+                            </a>
+
                             <button th:if="${app.status.name() == 'PENDING'}"
                                 th:onclick="|cancelApplication(${app.applicationId})|"
                                 style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
@@ -409,7 +417,7 @@
                             <span style="color: var(--gold); font-weight: 600;">平台直接買斷</span>
                         </div>
                         <div>提交時間：<span th:text="${#temporals.format(app.createdAt, 'yyyy-MM-dd HH:mm')}">-</span></div>
-                        <!-- 【新增】線下預約交接資訊 (僅在有預約日期時顯示) -->
+                        <!-- 線下預約交接資訊 (僅在有預約日期時顯示) -->
                         <div th:if="${app.appointmentDate != null}"
                             style="grid-column: 1 / -1; margin-top: 0.8rem; padding-top: 1rem; border-top: 1px dashed #e9ecef;">
                             <div
@@ -427,6 +435,10 @@
                             </div>
                         </div>
                     </div>
+                </div>
+                <!-- 分頁組件 -->
+                <div style="margin-top: 2rem;"
+                    th:replace="~{fragments/pagination :: smartPagination(${currentPage}, ${totalPages}, ${smartPages}, 'changePage')}">
                 </div>
             </div>
 
@@ -470,6 +482,11 @@
     <script>
         // 暫存等待取消的申請 ID
         let pendingCancelId = null;
+
+        // 分頁跳轉函數
+        function changePage(page) {
+            window.location.href = `/sell/my-applications?page=` + page;
+        }
 
         // 打開自定義彈窗 (不再使用原生 confirm)
         function cancelApplication(applicationId) {

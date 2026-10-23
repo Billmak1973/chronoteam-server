@@ -1,5 +1,6 @@
 package org.example.website.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,10 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @Controller
 @RequestMapping("/sell")
@@ -217,9 +215,6 @@ public class SellController {
             }
         }
         model.addAttribute("storeMap", storeMap);
-        // ==========================================
-        // ==========================================
-        // ==========================================
 
         // 3. 計算財務統計數據
         List<SellApplication> completedApps = sellApplicationRepository.findByUserAndStatus(
@@ -240,7 +235,8 @@ public class SellController {
         model.addAttribute("totalPages", applications.getTotalPages());
         model.addAttribute("totalRevenue", totalRevenue);
         model.addAttribute("settledCount", settledCount);
-
+        model.addAttribute("totalElements", applications.getTotalElements()); // 👈 新增：總元素數量
+        model.addAttribute("smartPages", org.example.website.util.PaginationUtils.generateSmartPagination(page - 1, applications.getTotalPages()));
         return "my-sell-applications";
     }
 
@@ -355,6 +351,162 @@ public class SellController {
             return ResponseEntity.ok(Result.ok("申請記錄已徹底刪除"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Result.error("系統錯誤：" + e.getMessage()));
+        }
+    }
+
+    // ==========================================
+    //  渲染編輯頁面 (加載現有數據)
+    // ==========================================
+    @Hidden
+    @GetMapping("/edit/{id}")
+    public String editApplication(@PathVariable Long id, Model model, Authentication authentication) {
+        // 1. 查找申請記錄
+        SellApplication app = sellApplicationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("申請不存在"));
+
+        // 2. 權限校驗
+        if (!app.getUser().getUsername().equals(authentication.getName())) {
+            return "redirect:/sell/my-applications";
+        }
+
+        // 3. 狀態校驗
+        if (app.getStatus() != SellApplication.ApplicationStatus.PENDING) {
+            return "redirect:/sell/my-applications";
+        }
+
+        // 4. 設置編輯模式標誌
+        model.addAttribute("isEditMode", true);
+        // 【修正】属性名从 "application" 改为 "sellApp"。
+// 【原因】application 是 Thymeleaf Web 上下文保留字（param / session / application 三者之一，
+//         映射 ServletContext 属性），Model 中使用该键名会被内置对象遮蔽，
+//         前端 ${application.xxx} 实际取到的是 ServletContext 包装对象而非 SellApplication 实体。
+// 【症状】不改则编辑页所有依赖 application 的 th:value / th:selected / JS 内联全部解析失败，
+//         表现为文本框与下拉框无回填（而 accessoriesList、imagePathsMap 因独立命名不受影响）。
+        model.addAttribute("sellApp", app);
+
+        // 5. 解析附件 JSON 為 List
+        List<String> accessoriesList = new ArrayList<>();
+        if (app.getAccessories() != null) {
+            try {
+                accessoriesList = objectMapper.readValue(app.getAccessories(),
+                        new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+            } catch (Exception e) {
+                // 忽略解析錯誤
+            }
+        }
+        model.addAttribute("accessoriesList", accessoriesList);
+
+        // 6. 解析圖片路徑 JSON 為 Map
+        Map<String, String> imagePathsMap = new HashMap<>();
+        if (app.getImagePaths() != null) {
+            try {
+                imagePathsMap = objectMapper.readValue(app.getImagePaths(),
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+            } catch (Exception e) {
+                // 忽略解析錯誤
+            }
+        }
+        model.addAttribute("imagePathsMap", imagePathsMap);
+
+        // ==========================================
+        // 【新增】數據格式轉換，確保前端能正確匹配
+        // ==========================================
+
+        // 轉換品牌為小寫（匹配 HTML 選項值）
+        String brandForSelect = app.getBrand() != null ? app.getBrand().toLowerCase() : "";
+        model.addAttribute("brandForSelect", brandForSelect);
+
+        // 轉換成色為小寫（匹配 HTML 選項值）
+        String conditionForSelect = app.getCondition() != null ? app.getCondition().toLowerCase() : "";
+        model.addAttribute("conditionForSelect", conditionForSelect);
+
+        // 轉換功能狀況為小寫（匹配 HTML 選項值）
+        String functionStatusForSelect = app.getFunctionStatus() != null ?
+                app.getFunctionStatus().toLowerCase().replace(" ", "_") : "";
+        model.addAttribute("functionStatusForSelect", functionStatusForSelect);
+
+        // ==========================================
+
+        return "sell";
+    }
+
+    // ==========================================
+    //  處理更新請求 (PUT)
+    // ==========================================
+    @PutMapping("/update/{id}")
+    @ResponseBody
+    public ResponseEntity<Result> updateApplication(
+            @PathVariable Long id,
+            @ModelAttribute @Valid SellApplicationDTO dto,
+            Authentication authentication) {
+        try {
+            // 1. 查找申請記錄
+            SellApplication app = sellApplicationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("申請不存在"));
+
+            // 2. 權限校驗
+            if (!app.getUser().getUsername().equals(authentication.getName())) {
+                return ResponseEntity.status(403).body(Result.error("無權操作"));
+            }
+
+            // 3. 狀態校驗
+            if (app.getStatus() != SellApplication.ApplicationStatus.PENDING) {
+                return ResponseEntity.badRequest().body(Result.error("該申請已在處理中，無法修改"));
+            }
+
+            // 4. 更新基礎文本字段
+            app.setBrand(dto.getBrand());
+            app.setSeries(dto.getSeries());
+            app.setModel(dto.getModel());
+            app.setPurchaseYear(dto.getPurchaseYear());
+            app.setQuantity(dto.getQuantity() != null ? dto.getQuantity() : 1);
+            app.setCondition(dto.getCondition());
+            app.setFunctionStatus(dto.getFunctionStatus());
+            app.setNotes(dto.getNotes());
+
+            // 5. 更新附件 (如果前端有傳)
+            if (dto.getAccessories() != null) {
+                app.setAccessories(objectMapper.writeValueAsString(dto.getAccessories()));
+            }
+
+            // 6. 更新預約資訊
+            app.setStoreId(dto.getStoreId());
+            app.setAppointmentDate(dto.getAppointmentDate());
+            app.setAppointmentTimeSlot(dto.getAppointmentTimeSlot());
+
+            // 7. 處理圖片更新 (僅當用戶上傳了新圖片時才覆蓋)
+            Map<String, MultipartFile> imageFiles = new HashMap<>();
+            if (dto.getImgDial() != null && !dto.getImgDial().isEmpty()) imageFiles.put("dial", dto.getImgDial());
+            if (dto.getImgCaseback() != null && !dto.getImgCaseback().isEmpty()) imageFiles.put("caseback", dto.getImgCaseback());
+            if (dto.getImgCard() != null && !dto.getImgCard().isEmpty()) imageFiles.put("card", dto.getImgCard());
+            if (dto.getImgFlaws() != null && !dto.getImgFlaws().isEmpty()) imageFiles.put("flaws", dto.getImgFlaws());
+            if (dto.getImgExtra() != null && !dto.getImgExtra().isEmpty()) imageFiles.put("extra", dto.getImgExtra());
+
+            if (!imageFiles.isEmpty()) {
+                // 解析舊路徑
+                Map<String, String> oldPaths = new HashMap<>();
+                if (app.getImagePaths() != null) {
+                    oldPaths = objectMapper.readValue(app.getImagePaths(), new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                }
+
+                // 上傳新圖片
+                String tempId = System.currentTimeMillis() + "_" + authentication.getName();
+                Map<String, String> newPaths = fileStorageService.uploadMultipleImages(imageFiles, tempId);
+
+                // 新圖片覆蓋舊圖片路徑 (保留未上傳的舊圖片路徑)
+                oldPaths.putAll(newPaths);
+                app.setImagePaths(objectMapper.writeValueAsString(oldPaths));
+            }
+
+            // 8. 保存到數據庫
+            sellApplicationRepository.save(app);
+
+            return ResponseEntity.ok(Result.ok("申請資料更新成功"));
+
+        } catch (IOException e) {
+            return ResponseEntity.badRequest().body(Result.error("文件處理失敗：" + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Result.error("系統錯誤，請稍後重試"));
         }
     }
 }

@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.example.website.dto.Result;
 import org.example.website.entity.User;
 import org.example.website.entity.UserAddress;
 import org.example.website.repository.UserAddressRepository;
@@ -34,7 +35,7 @@ public class AdminCustomerController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final UserAddressRepository userAddressRepository; // 2. 新增注入
+    private final UserAddressRepository userAddressRepository;
 
     public AdminCustomerController(UserRepository userRepository, PasswordEncoder passwordEncoder, UserAddressRepository userAddressRepository) {
         this.userRepository = userRepository;
@@ -292,4 +293,55 @@ public class AdminCustomerController {
         }
     }
 
+    /**
+     * 根據電話或用戶名查找用戶 (用於創建申請時的用戶查找)
+     */
+    @GetMapping("/api/users/search")
+    public ResponseEntity<?> searchUser(
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String username) {
+
+        Optional<User> userOpt = Optional.empty();
+
+        if (phone != null && !phone.trim().isEmpty()) {
+            userOpt = userRepository.findByPhone(phone.trim());
+        } else if (username != null && !username.trim().isEmpty()) {
+            userOpt = userRepository.findByUsername(username.trim());
+        } else {
+            return ResponseEntity.badRequest().body(Result.error("請提供電話或用戶名"));
+        }
+
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            Map<String, Object> data = new HashMap<>();
+            data.put("username", user.getUsername());
+            data.put("phone", user.getPhone());
+            data.put("name", user.getName());
+            return ResponseEntity.ok(Result.okWithData("查找成功", data));
+        } else {
+            return ResponseEntity.status(404).body(Result.error("未找到匹配的用戶，請檢查輸入是否正確"));
+        }
+    }
+
+    @Operation(summary = "用戶名自動完成搜索", description = "根據輸入的關鍵字模糊匹配用戶名，返回匹配的用戶列表（用於下拉提示）")
+    @GetMapping("/api/users/search-username")
+    @ResponseBody
+    public ResponseEntity<?> searchUsernamesAutocomplete(@RequestParam String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return ResponseEntity.ok(Result.okWithData("成功", new ArrayList<>()));
+        }
+        // 調用 Repository 進行模糊查詢
+        List<User> users = userRepository.findByUsernameContainingOrderByUsernameAsc(keyword.trim());
+
+        // 轉換為前端需要的簡單 Map 結構
+        List<Map<String, String>> result = users.stream().map(u -> {
+            Map<String, String> map = new HashMap<>();
+            map.put("username", u.getUsername());
+            map.put("name", u.getName() != null ? u.getName() : "");
+            map.put("phone", u.getPhone() != null ? u.getPhone() : "");
+            return map;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(Result.okWithData("成功", result));
+    }
 }
