@@ -21,6 +21,7 @@ import org.example.website.repository.UserRepository;
 import org.example.website.service.FileStorageService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -32,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.*;
 
 @Controller
@@ -168,75 +170,106 @@ public class SellController {
     public String myApplications(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String storeId,
+            @RequestParam(required = false) String status,
+            // 【新增】日期篩選參數
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(pattern = "yyyy-MM-dd") java.time.LocalDate completedAtStart,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(pattern = "yyyy-MM-dd") java.time.LocalDate completedAtEnd,
+            // 【新增】價格篩選參數
+            @RequestParam(required = false) String finalPriceMode,
+            @RequestParam(required = false) java.math.BigDecimal finalPriceVal1,
+            @RequestParam(required = false) java.math.BigDecimal finalPriceVal2,
             Model model,
             Authentication authentication) {
 
         String username = authentication.getName();
-
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
         model.addAttribute("user", user);
 
-        // 2. 分頁查詢當前用戶的 BUYOUT 申請
-        Page<SellApplication> applications = sellApplicationRepository
-                .findByUser_UsernameAndTransactionModeOrderByCreatedAtDesc(
-                        username,
-                        SellApplication.TransactionMode.BUYOUT,
-                        PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"))
-                );
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // ==========================================
-        // 【修正】批量獲取門店名稱 (構建 Map 傳給前端)
-        // ==========================================
-        // 1. 提取當前頁面所有的 storeId 字串 (去重且過濾空值)
-        List<String> storeIdStrs = applications.getContent().stream()
-                .map(SellApplication::getStoreId)
-                .filter(id -> id != null && !id.trim().isEmpty())
-                .distinct()
-                .collect(java.util.stream.Collectors.toList());
+        SellApplication.ApplicationStatus statusEnum = null;
+        if (status != null && !status.trim().isEmpty()) {
+            try {
+                statusEnum = SellApplication.ApplicationStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) { /* 忽略 */ }
+        }
 
+        // 將 LocalDate 轉換為 LocalDateTime (開始為 00:00:00, 結束為 23:59:59)
+        java.time.LocalDateTime completedAtStartDt = (completedAtStart != null) ? completedAtStart.atStartOfDay() : null;
+        java.time.LocalDateTime completedAtEndDt = (completedAtEnd != null) ? completedAtEnd.atTime(23, 59, 59) : null;
+
+        // 2. 調用支持動態篩選的 Repository 方法
+        Page<SellApplication> applications = sellApplicationRepository.findByFilters(
+                username,
+                SellApplication.TransactionMode.BUYOUT,
+                storeId,
+                statusEnum,
+                completedAtStartDt,
+                completedAtEndDt,
+                finalPriceMode,
+                finalPriceVal1,
+                finalPriceVal2,
+                pageable
+        );
+
+        // 3. 構建門店 Map 和 Options
         Map<String, String> storeMap = new HashMap<>();
-        if (!storeIdStrs.isEmpty()) {
-            // 2. 【關鍵】將 String 轉為 Long (因為 OfflineStore.storeId 是 Long 類型)
-            //    加上 matches("\\d+") 過濾，防止髒數據導致 NumberFormatException
-            List<Long> storeIdLongs = storeIdStrs.stream()
-                    .filter(id -> id.matches("\\d+"))
+        List<Map<String, Object>> storeOptions = new ArrayList<>();
+        List<String> userStoreIdStrs = sellApplicationRepository.findDistinctStoreIdsByUser_Username(username);
+
+        if (userStoreIdStrs != null && !userStoreIdStrs.isEmpty()) {
+            List<Long> storeIdLongs = userStoreIdStrs.stream()
+                    .filter(id -> id != null && id.matches("\\d+"))
                     .map(Long::valueOf)
+                    .distinct()
                     .collect(java.util.stream.Collectors.toList());
 
             if (!storeIdLongs.isEmpty()) {
-                // 3. 用 Long 列表批量查詢門店
                 List<OfflineStore> stores = offlineStoreRepository.findByStoreIdIn(storeIdLongs);
-
-                // 4. Map 的 Key 轉回 String，才能與前端的 app.storeId ("1") 匹配
                 for (OfflineStore store : stores) {
-                    storeMap.put(String.valueOf(store.getStoreId()), store.getName());
+                    String sId = String.valueOf(store.getStoreId());
+                    storeMap.put(sId, store.getName());
+                    storeOptions.add(Map.of("storeId", sId, "name", store.getName()));
                 }
             }
         }
         model.addAttribute("storeMap", storeMap);
+        model.addAttribute("storeOptions", storeOptions);
 
-        // 3. 計算財務統計數據
-        List<SellApplication> completedApps = sellApplicationRepository.findByUserAndStatus(
-                user,
-                SellApplication.ApplicationStatus.COMPLETED
+        // 4. 【核心修改】計算符合「當前篩選條件」且狀態為 COMPLETED 的總金額
+        java.math.BigDecimal filteredTotalRevenue = sellApplicationRepository.sumCompletedFinalPriceByFilters(
+                username,
+                SellApplication.TransactionMode.BUYOUT,
+                storeId,
+                completedAtStartDt,
+                completedAtEndDt,
+                finalPriceMode,
+                finalPriceVal1,
+                finalPriceVal2
         );
 
-        java.math.BigDecimal totalRevenue = completedApps.stream()
-                .map(SellApplication::getFinalPrice)
-                .filter(price -> price != null)
-                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        // 保留原有的全局已結算數量統計 (可選)
+        long settledCount = sellApplicationRepository.findByUserAndStatus(user, SellApplication.ApplicationStatus.COMPLETED).size();
 
-        long settledCount = completedApps.size();
-
-        // 4. 將數據放入 Model 供前端 Thymeleaf 渲染
+        // 5. 將數據放入 Model
         model.addAttribute("applications", applications);
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", applications.getTotalPages());
-        model.addAttribute("totalRevenue", totalRevenue);
+        model.addAttribute("filteredTotalRevenue", filteredTotalRevenue); // 👈 傳遞符合條件的總金額
+
+        // 【新增】計算全局累計總成交額（所有 COMPLETED 狀態，不受篩選影響）
+        java.math.BigDecimal totalRevenue = sellApplicationRepository.sumCompletedFinalPriceByUserAndStatus(
+                username,
+                SellApplication.TransactionMode.BUYOUT
+        );
+        model.addAttribute("totalRevenue", totalRevenue); // 👈 傳遞全局總金額
+
         model.addAttribute("settledCount", settledCount);
-        model.addAttribute("totalElements", applications.getTotalElements()); // 👈 新增：總元素數量
+        model.addAttribute("totalElements", applications.getTotalElements());
         model.addAttribute("smartPages", org.example.website.util.PaginationUtils.generateSmartPagination(page - 1, applications.getTotalPages()));
+
         return "my-sell-applications";
     }
 
@@ -508,5 +541,62 @@ public class SellController {
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Result.error("系統錯誤，請稍後重試"));
         }
+    }
+
+    /**
+     * 渲染查看頁面 (唯讀模式)
+     */
+    @Hidden
+    @GetMapping("/view/{id}")
+    public String viewApplication(@PathVariable Long id, Model model, Authentication authentication) {
+        // 1. 查找申請記錄
+        SellApplication app = sellApplicationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("申請不存在"));
+
+        // 2. 權限校驗
+        if (!app.getUser().getUsername().equals(authentication.getName())) {
+            return "redirect:/sell/my-applications";
+        }
+
+        // 3. 設置查看模式標誌 (關鍵)
+        model.addAttribute("isViewMode", true);
+        model.addAttribute("sellApp", app);
+
+        // 4. 解析附件 JSON 為 List
+        List<String> accessoriesList = new ArrayList<>();
+        if (app.getAccessories() != null) {
+            try {
+                accessoriesList = objectMapper.readValue(app.getAccessories(),
+                        new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+            } catch (Exception e) {
+                // 忽略解析錯誤
+            }
+        }
+        model.addAttribute("accessoriesList", accessoriesList);
+
+        // 5. 解析圖片路徑 JSON 為 Map
+        Map<String, String> imagePathsMap = new HashMap<>();
+        if (app.getImagePaths() != null) {
+            try {
+                imagePathsMap = objectMapper.readValue(app.getImagePaths(),
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+            } catch (Exception e) {
+                // 忽略解析錯誤
+            }
+        }
+        model.addAttribute("imagePathsMap", imagePathsMap);
+
+        // 6. 數據格式轉換，確保前端能正確匹配
+        String brandForSelect = app.getBrand() != null ? app.getBrand().toLowerCase() : "";
+        model.addAttribute("brandForSelect", brandForSelect);
+
+        String conditionForSelect = app.getCondition() != null ? app.getCondition().toLowerCase() : "";
+        model.addAttribute("conditionForSelect", conditionForSelect);
+
+        String functionStatusForSelect = app.getFunctionStatus() != null ?
+                app.getFunctionStatus().toLowerCase().replace(" ", "_") : "";
+        model.addAttribute("functionStatusForSelect", functionStatusForSelect);
+
+        return "sell"; // 復用 sell.html 模板
     }
 }

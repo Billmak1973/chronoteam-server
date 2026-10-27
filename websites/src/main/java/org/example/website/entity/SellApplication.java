@@ -14,7 +14,8 @@ import java.time.LocalDateTime;
 @Table(name = "sell_application", indexes = {
         @Index(name = "idx_sell_user", columnList = "user_id"),
         @Index(name = "idx_sell_status", columnList = "status"),
-        @Index(name = "idx_sell_appraiser", columnList = "appraiser_id") // 新增：方便按專家查詢
+        @Index(name = "idx_sell_appraiser", columnList = "appraiser_id"),
+        @Index(name = "idx_sell_operator", columnList = "operator_id") // 新增：方便按操作員查詢
 })
 @Data
 public class SellApplication {
@@ -29,12 +30,8 @@ public class SellApplication {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User user;
 
-    // ==========================================
-    // 【核心新增】：關聯平台已有的商品 (可選)
-    // 如果用戶賣的是平台已有的商品，則關聯此處；如果是全新商品，則為 null
-    // ==========================================
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "prod_id") // 對應 Product 實體的 prod_id
+    @JoinColumn(name = "prod_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Product product;
 
@@ -51,7 +48,6 @@ public class SellApplication {
     @Column(name = "purchase_year")
     private Integer purchaseYear;
 
-    // 【新增】件數
     @Column(name = "quantity")
     private Integer quantity;
 
@@ -89,27 +85,33 @@ public class SellApplication {
     @Column(name = "appraisal_notes", columnDefinition = "TEXT")
     private String appraisalNotes;
 
-    // 負責鑑定的專家
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appraiser_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User appraiser;
 
+    // ================= 【核心新增】審計與操作記錄 =================
+    /**
+     * 最後操作/處理此申請的管理員或員工
+     * 用於記錄是誰執行了狀態更新（例如：點擊「完成」或「拒絕」按鈕的人）
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "operator_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private User operator;
+
     // ================= 線下預約交接資訊 (可選) =================
-    // 預約交接/鑑定的門店 ID
     @Column(name = "store_id", length = 50)
     private String storeId;
 
-    // 預約日期
     @Column(name = "appointment_date")
     private LocalDate appointmentDate;
 
-    // 預約時間段 (例如: "14:00 - 16:00")
     @Column(name = "appointment_time_slot", length = 50)
     private String appointmentTimeSlot;
 
     @Column(name = "is_stocked_in", nullable = false)
-    private Boolean isStockedIn = false; // 建議給予預設值，防止歷史數據為 null
+    private Boolean isStockedIn = false;
 
     // ================= 時間戳 =================
     @CreationTimestamp
@@ -120,7 +122,6 @@ public class SellApplication {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // 申請完成/終結時間 (用於統計處理時效)
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 

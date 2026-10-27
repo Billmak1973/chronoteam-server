@@ -344,6 +344,55 @@
             cursor: not-allowed;
             transform: none;
         }
+
+        /* 篩選欄樣式 */
+        .filter-bar {
+            display: none; /* 預設隱藏 */
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e9ecef;
+        }
+        .filter-bar.show {
+            display: block; /* 點擊篩選後顯示 */
+        }
+        .filter-row {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 200px;
+        }
+        .filter-item label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--gray);
+        }
+        .filter-item select {
+            padding: 0.6rem;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background: white;
+        }
+        .btn-filter {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-apply { background: var(--gold); color: var(--primary); }
+        .btn-apply:hover { background: #b8972b; }
+        .btn-toggle { background: var(--light); color: var(--primary); border: 1px solid #dee2e6; }
+        .btn-toggle:hover { background: #e9ecef; }
     </style>
 </head>
 
@@ -357,19 +406,113 @@
             <h2 class="page-title"><i class="fas fa-list-alt"></i> 我的出售申請</h2>
             <p class="page-subtitle">查看您提交的手錶出售申請進度與鑑定狀態</p>
 
-            <!-- 【新增】財務統計卡片（從結算記錄頁面移過來） -->
-            <div class="finance-grid" th:if="${totalRevenue != null or settledCount != null}">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                <button id="toggleFilterBtn" class="btn-filter btn-toggle" onclick="toggleFilter()">
+                    <i class="fas fa-filter"></i> <span id="filterBtnText">篩選</span>
+                </button>
+            </div>
+
+            <!-- 篩選欄 (預設隱藏) -->
+            <div id="filterBar" class="filter-bar">
+                <form id="filterForm" onsubmit="event.preventDefault(); applyFilter();">
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label>預約門店</label>
+                            <select name="storeId" id="filterStoreId">
+                                <option value="">全部門店</option>
+                                <option th:each="store : ${storeOptions}" th:value="${store.storeId}" th:text="${store.name}">門店名稱</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>申請狀態</label>
+                            <select name="status" id="filterStatus" onchange="toggleAmountFilter()">
+                                <option value="">全部狀態</option>
+                                <option value="PENDING">待處理</option>
+                                <option value="APPRAISING">鑑定中</option>
+                                <option value="QUOTED">已報價</option>
+                                <option value="ACCEPTED">已接受</option>
+                                <option value="REJECTED">已拒絕</option>
+                                <option value="COMPLETED">已完成</option>
+                                <option value="CANCELLED">已取消</option>
+                            </select>
+                        </div>
+
+                        <!-- 日期篩選 -->
+                        <div class="filter-item">
+                            <label>交易完成日期</label>
+                            <select id="filterDateMode" onchange="toggleDateInputs()">
+                                <option value="all">全部</option>
+                                <option value="specific">特定某一天</option>
+                                <option value="range">開始和結束時間</option>
+                            </select>
+                            <div id="dateSpecificInput" style="display: none; margin-top: 0.5rem;">
+                                <input type="date" id="filterDateSpecific" style="width: 100%; padding: 0.6rem; border: 1px solid #ced4da; border-radius: 6px;">
+                            </div>
+                            <div id="dateRangeInputs" style="display: none; margin-top: 0.5rem; display: flex; gap: 0.5rem; align-items: center;">
+                                <input type="date" id="filterDateStart" style="flex: 1; padding: 0.6rem; border: 1px solid #ced4da; border-radius: 6px;">
+                                <span style="color: #6c757d; font-size: 0.9rem;">至</span>
+                                <input type="date" id="filterDateEnd" style="flex: 1; padding: 0.6rem; border: 1px solid #ced4da; border-radius: 6px;">
+                            </div>
+                        </div>
+
+                        <!-- 交易價格篩選 (預設隱藏，僅 COMPLETED 顯示) -->
+                        <div class="filter-item" id="amountFilterGroup" style="display: none;">
+                            <label>交易價格</label>
+                            <select id="filterAmountMode" onchange="toggleAmountInput()">
+                                <option value="all">全部金額</option>
+                                <option value="gt">大於</option>
+                                <option value="lt">小於</option>
+                                <option value="eq">等於</option>
+                                <option value="between">區間 (Min ~ Max)</option>
+                            </select>
+                            <div class="amount-inputs" style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                                <input type="number" id="filterAmountVal1" style="display: none; flex: 1; padding: 0.6rem; border: 1px solid #ced4da; border-radius: 6px;" placeholder="金額">
+                                <span id="filterAmountSeparator" style="display: none; color: #6c757d;">至</span>
+                                <input type="number" id="filterAmountVal2" style="display: none; flex: 1; padding: 0.6rem; border: 1px solid #ced4da; border-radius: 6px;" placeholder="金額">
+                            </div>
+                        </div>
+
+                        <!-- 符合條件總成交額統計（只在 COMPLETED 狀態時顯示） -->
+                        <div id="filteredAmountStats" style="display: none;">
+                            <div style="background: #e8f5e9; padding: 0.6rem 1rem; border-radius: 6px; border: 1px solid #c8e6c9; text-align: center;">
+                                <div style="font-size: 0.8rem; color: #2e7d32; font-weight: 600;">
+                                    <i class="fas fa-coins"></i> 符合條件總成交額
+                                </div>
+                                <div style="font-size: 1.3rem; font-weight: 800; color: #2e7d32;"
+                                     th:text="${filteredTotalRevenue != null ? 'HK$ ' + #numbers.formatDecimal(filteredTotalRevenue, 1, 'COMMA', 0, 'POINT') : 'HK$ 0'}">
+                                    HK$ 0
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 按鈕與統計區塊 (放在價格 Filter 隔壁) -->
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; min-width: 260px;">
+
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button type="submit" class="btn-filter btn-apply" style="flex: 1;">
+                                    <i class="fas fa-search"></i> 應用
+                                </button>
+                                <button type="button" class="btn-filter" style="background:#f8d7da; color:#721c24; flex: 1;" onclick="clearFilter()">
+                                    <i class="fas fa-times"></i> 清空
+                                </button>
+                            </div>
+                            </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 財務統計卡片（從結算記錄頁面移過來） -->
+            <div class="finance-grid" id="financeGrid" th:if="${totalRevenue != null}">
                 <div class="finance-card">
                     <i class="fas fa-coins"></i>
                     <div class="finance-info">
-                        <!-- 後端已保證 totalRevenue 不為 null，直接格式化即可，不會報錯 -->
-                        <h4 th:text="'HK$ ' + ${#numbers.formatDecimal(totalRevenue, 1, 'COMMA', 0, 'POINT')}">HK$ 0
-                        </h4>
+                        <!-- 使用 totalRevenue，確保不為 null -->
+                        <h4 th:text="'HK$ ' + ${#numbers.formatDecimal(totalRevenue != null ? totalRevenue : 0, 1, 'COMMA', 0, 'POINT')}">HK$ 0</h4>
                         <p>累計總成交額</p>
                     </div>
                 </div>
 
-                <!-- 已結算申請數量（替換了原本的實際淨收益） -->
+                <!-- 已結算申請數量 -->
                 <div class="finance-card" style="background: linear-gradient(135deg, #155724 0%, #28a745 100%);">
                     <i class="fas fa-check-circle" style="color: white; background: rgba(255,255,255,0.2);"></i>
                     <div class="finance-info">
@@ -389,8 +532,27 @@
                         </div>
 
                         <div style="display: flex; align-items: center; gap: 1rem;">
-                            <span class="status-badge" th:classappend="'status-' + ${app.status}"
-                                th:text="${app.status}">PENDING</span>
+                            <span class="status-badge" th:classappend="'status-' + ${app.status}">
+                                <span th:switch="${app.status.name()}">
+                                    <span th:case="'PENDING'">待處理</span>
+                                    <span th:case="'APPRAISING'">鑑定中</span>
+                                    <span th:case="'QUOTED'">已報價</span>
+                                    <span th:case="'ACCEPTED'">已接受</span>
+                                    <span th:case="'REJECTED'">已拒絕</span>
+                                    <span th:case="'COMPLETED'">已完成</span>
+                                    <span th:case="'CANCELLED'">已取消</span>
+                                    <span th:case="*">未知狀態</span>
+                                </span>
+
+                            </span>
+
+
+                            <a th:href="@{/sell/view/{id}(id=${app.applicationId})}"
+                                style="padding: 0.3rem 0.8rem; font-size: 0.8rem; background: #f1f3f5; color: #495057; border: 1px solid #dee2e6; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; transition: all 0.2s;"
+                                onmouseover="this.style.background='#e9ecef'"
+                                onmouseout="this.style.background='#f1f3f5'">
+                                <i class="fas fa-eye"></i> 查看資料
+                            </a>
 
                             <a th:href="@{/sell/edit/{id}(id=${app.applicationId})}"
                                 th:if="${app.status.name() == 'PENDING'}"
@@ -417,21 +579,53 @@
                             <span style="color: var(--gold); font-weight: 600;">平台直接買斷</span>
                         </div>
                         <div>提交時間：<span th:text="${#temporals.format(app.createdAt, 'yyyy-MM-dd HH:mm')}">-</span></div>
+
+                        <div th:if="${app.status.name() == 'COMPLETED'}" style="grid-column: span 2;">
+                            最終成交價格：
+                            <span style="color: #28a745; font-weight: 700; font-size: 1.1rem;"
+                                th:text="${app.finalPrice != null ? 'HK$ ' + #numbers.formatDecimal(app.finalPrice, 1, 'COMMA', 0, 'POINT') : '待定'}">
+                                HK$ 0
+                            </span>
+                        </div>
                         <!-- 線下預約交接資訊 (僅在有預約日期時顯示) -->
-                        <div th:if="${app.appointmentDate != null}"
+                        <!-- 線下預約/交易資訊 -->
+                        <div th:if="${app.appointmentDate != null or app.status.name() == 'COMPLETED'}"
                             style="grid-column: 1 / -1; margin-top: 0.8rem; padding-top: 1rem; border-top: 1px dashed #e9ecef;">
                             <div
                                 style="color: var(--primary); font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
-                                <i class="fas fa-store" style="color: var(--gold);"></i> 線下預約交接資訊
+                                <i class="fas fa-store" style="color: var(--gold);"></i>
+                                <span th:text="${app.status.name() == 'COMPLETED'} ? '交易門店資訊' : '線下預約交接資訊'">
+                                    線下預約交接資訊
+                                </span>
                             </div>
                             <div
                                 style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; color: var(--gray); font-size: 0.9rem;">
-                                <div>預約門店：<span style="color: var(--primary);"
-                                        th:text="${storeMap[app.storeId]} ?: '未指定'">-</span></div>
-                                <div>預約日期：<span style="color: var(--primary);"
-                                        th:text="${#temporals.format(app.appointmentDate, 'yyyy-MM-dd')}">-</span></div>
-                                <div>預約時間：<span style="color: var(--primary);"
-                                        th:text="${app.appointmentTimeSlot} ?: '未指定'">-</span></div>
+                                <!-- 門店資訊 -->
+                                <div>
+                                    <span th:text="${app.status.name() == 'COMPLETED'} ? '交易門店：' : '預約門店：'">門店：</span>
+                                    <span style="color: var(--primary);"
+                                        th:text="${storeMap[app.storeId]} ?: '未指定'">-</span>
+                                </div>
+
+                                <!-- 預約日期（僅在非 COMPLETED 狀態顯示） -->
+                                <div th:if="${app.status.name() != 'COMPLETED' and app.appointmentDate != null}">
+                                    預約日期：
+                                    <span style="color: var(--primary);"
+                                        th:text="${#temporals.format(app.appointmentDate, 'yyyy-MM-dd')}">-</span>
+                                </div>
+
+                                <!-- 預約時間（僅在非 COMPLETED 狀態顯示）-->
+                                <div th:if="${app.status.name() != 'COMPLETED' and app.appointmentTimeSlot != null}">
+                                    預約時間：
+                                    <span style="color: var(--primary);" th:text="${app.appointmentTimeSlot}">-</span>
+                                </div>
+
+                                <!-- 交易完成時間（僅在 COMPLETED 狀態顯示）-->
+                                <div th:if="${app.status.name() == 'COMPLETED' and app.completedAt != null}">
+                                    交易完成時間：
+                                    <span style="color: #28a745; font-weight: 600;"
+                                        th:text="${#temporals.format(app.completedAt, 'yyyy-MM-dd HH:mm')}">-</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -483,37 +677,30 @@
         // 暫存等待取消的申請 ID
         let pendingCancelId = null;
 
-        // 分頁跳轉函數
         function changePage(page) {
             window.location.href = `/sell/my-applications?page=` + page;
         }
 
-        // 打開自定義彈窗 (不再使用原生 confirm)
         function cancelApplication(applicationId) {
             pendingCancelId = applicationId;
             document.getElementById('cancelModalOverlay').classList.add('show');
-            document.body.style.overflow = 'hidden'; // 鎖定背景滾動
+            document.body.style.overflow = 'hidden';
         }
 
-        // 關閉彈窗
         function closeCancelModal() {
             pendingCancelId = null;
             document.getElementById('cancelModalOverlay').classList.remove('show');
-            document.body.style.overflow = ''; // 恢復背景滾動
+            document.body.style.overflow = '';
         }
 
-        // 點擊「確認取消」後才真正發送請求
         async function confirmCancel() {
             if (pendingCancelId === null) return;
-
             try {
                 const response = await fetch(`/sell/cancel/${pendingCancelId}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'}
                 });
-
                 const result = await response.json();
-
                 if (response.ok && result.success) {
                     closeCancelModal();
                     showNotification('✅ 申請已取消');
@@ -527,7 +714,194 @@
             }
         }
 
-        // 支援按 ESC 鍵關閉彈窗
+        // ==========================================
+        // 篩選欄互動邏輯
+        // ==========================================
+        function toggleFilter() {
+            const filterBar = document.getElementById('filterBar');
+            const financeGrid = document.getElementById('financeGrid');
+            const btnText = document.getElementById('filterBtnText');
+
+            if (filterBar.classList.contains('show')) {
+                // 關閉篩選：隱藏篩選欄，顯示財務卡片
+                filterBar.classList.remove('show');
+                if (financeGrid) financeGrid.style.display = 'grid';
+                btnText.textContent = '篩選';
+
+                // 跳轉回無篩選頁面
+                window.location.href = '/sell/my-applications';
+            } else {
+                // 打開篩選：顯示篩選欄，隱藏財務卡片
+                filterBar.classList.add('show');
+                if (financeGrid) financeGrid.style.display = 'none';
+                btnText.textContent = '關閉篩選';
+            }
+        }
+
+        // 監聽狀態變化：只有選擇 COMPLETED 時才顯示價格篩選和統計
+        function toggleAmountFilter() {
+            const status = document.getElementById('filterStatus').value;
+            const amountGroup = document.getElementById('amountFilterGroup');
+            const filteredStats = document.getElementById('filteredAmountStats');
+
+            if (status === 'COMPLETED') {
+                amountGroup.style.display = 'flex';
+                filteredStats.style.display = 'block';  // 顯示符合條件統計
+            } else {
+                amountGroup.style.display = 'none';
+                filteredStats.style.display = 'none';   // 隱藏符合條件統計
+                // 隱藏時清空價格篩選值
+                document.getElementById('filterAmountMode').value = 'all';
+                toggleAmountInput();
+            }
+        }
+
+        // 切換金額輸入框顯示
+        function toggleAmountInput() {
+            const mode = document.getElementById('filterAmountMode').value;
+            const val1 = document.getElementById('filterAmountVal1');
+            const val2 = document.getElementById('filterAmountVal2');
+            const sep = document.getElementById('filterAmountSeparator');
+
+            val1.style.display = 'none';
+            val2.style.display = 'none';
+            sep.style.display = 'none';
+            val1.value = '';
+            val2.value = '';
+
+            if (mode === 'gt' || mode === 'lt' || mode === 'eq') {
+                val1.style.display = 'block';
+            } else if (mode === 'between') {
+                val1.style.display = 'block';
+                val2.style.display = 'block';
+                sep.style.display = 'block';
+            }
+        }
+
+        // 切換日期輸入框顯示
+        function toggleDateInputs() {
+            const mode = document.getElementById('filterDateMode').value;
+            const specific = document.getElementById('dateSpecificInput');
+            const range = document.getElementById('dateRangeInputs');
+
+            specific.style.display = 'none';
+            range.style.display = 'none';
+            document.getElementById('filterDateSpecific').value = '';
+            document.getElementById('filterDateStart').value = '';
+            document.getElementById('filterDateEnd').value = '';
+
+            if (mode === 'specific') {
+                specific.style.display = 'block';
+            } else if (mode === 'range') {
+                range.style.display = 'flex';
+            }
+        }
+
+        // 應用篩選條件
+        function applyFilter() {
+            const storeId = document.getElementById('filterStoreId').value;
+            const status = document.getElementById('filterStatus').value;
+            const dateMode = document.getElementById('filterDateMode').value;
+            const amountMode = document.getElementById('filterAmountMode').value;
+
+            let url = '/sell/my-applications?';
+            const params = [];
+
+            if (storeId) params.push('storeId=' + encodeURIComponent(storeId));
+            if (status) params.push('status=' + encodeURIComponent(status));
+
+            // 處理日期參數
+            if (dateMode === 'specific') {
+                const d = document.getElementById('filterDateSpecific').value;
+                if (d) { params.push('completedAtStart=' + d); params.push('completedAtEnd=' + d); }
+            } else if (dateMode === 'range') {
+                const start = document.getElementById('filterDateStart').value;
+                const end = document.getElementById('filterDateEnd').value;
+                if (start) params.push('completedAtStart=' + start);
+                if (end) params.push('completedAtEnd=' + end);
+            }
+
+            // 處理價格參數 (僅在 COMPLETED 時有效)
+            if (status === 'COMPLETED' && amountMode !== 'all') {
+                params.push('finalPriceMode=' + amountMode);
+                const val1 = document.getElementById('filterAmountVal1').value;
+                const val2 = document.getElementById('filterAmountVal2').value;
+                if (val1) params.push('finalPriceVal1=' + val1);
+                if (amountMode === 'between' && val2) params.push('finalPriceVal2=' + val2);
+            }
+
+            window.location.href = url + params.join('&');
+        }
+
+        function clearFilter() {
+            window.location.href = '/sell/my-applications';
+        }
+
+        // 頁面加載時，自動展開篩選欄並回填值
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const financeGrid = document.getElementById('financeGrid');
+
+            // 判斷 URL 中是否帶有篩選參數
+            if (urlParams.has('storeId') || urlParams.has('status') || urlParams.has('completedAtStart') || urlParams.has('finalPriceMode')) {
+
+                // 1. 展開篩選欄並修改按鈕文字
+                document.getElementById('filterBar').classList.add('show');
+                document.getElementById('filterBtnText').textContent = '關閉篩選';
+
+                // 2. 【核心修改】：篩選時隱藏財務卡片
+                if (financeGrid) {
+                    financeGrid.style.display = 'none';
+                }
+
+                // 3. 回填門店
+                if (urlParams.has('storeId')) {
+                    document.getElementById('filterStoreId').value = urlParams.get('storeId');
+                }
+
+                // 4. 回填狀態並觸發相關邏輯
+                const status = urlParams.get('status');
+                if (status) {
+                    document.getElementById('filterStatus').value = status;
+                    toggleAmountFilter(); // 觸發價格篩選框的顯示邏輯
+                }
+
+                // 5. 回填日期
+                if (urlParams.has('completedAtStart')) {
+                    document.getElementById('filterDateMode').value = urlParams.has('completedAtEnd') && urlParams.get('completedAtStart') !== urlParams.get('completedAtEnd') ? 'range' : 'specific';
+                    toggleDateInputs();
+                    document.getElementById('filterDateSpecific').value = urlParams.get('completedAtStart');
+                    document.getElementById('filterDateStart').value = urlParams.get('completedAtStart');
+                    document.getElementById('filterDateEnd').value = urlParams.get('completedAtEnd');
+                }
+
+                // 6. 回填金額
+                if (urlParams.has('finalPriceMode')) {
+                    const fMode = urlParams.get('finalPriceMode');
+                    document.getElementById('filterAmountMode').value = fMode;
+                    toggleAmountInput();
+                    if (urlParams.has('finalPriceVal1')) {
+                        document.getElementById('filterAmountVal1').value = urlParams.get('finalPriceVal1');
+                    }
+                    if (urlParams.has('finalPriceVal2')) {
+                        document.getElementById('filterAmountVal2').value = urlParams.get('finalPriceVal2');
+                    }
+                }
+
+                // 7. 【核心修改】：如果狀態是 COMPLETED，顯示符合條件的統計區塊 (需確保 HTML 中有 id="filteredAmountStats")
+                const filteredAmountStats = document.getElementById('filteredAmountStats');
+                if (status === 'COMPLETED' && filteredAmountStats) {
+                    filteredAmountStats.style.display = 'block';
+                }
+
+            } else {
+                // 8. 無篩選參數時，確保財務卡片正常顯示
+                if (financeGrid) {
+                    financeGrid.style.display = 'grid';
+                }
+            }
+        });
+
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') closeCancelModal();
         });

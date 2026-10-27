@@ -39,4 +39,11 @@ public interface InventoryAdjustmentLogRepository extends JpaRepository<Inventor
     Page<InventoryAdjustmentLog> findByWarehouseType(InventoryAdjustmentLog.WarehouseType warehouseType, Pageable pageable);
 
     List<InventoryAdjustmentLog> findByAfterSalesRequestId(Long afterSalesRequestId);
+
+    /**
+     * 【新增】獲取庫存調整日誌中所有出現過的操作員用戶名 (去重)
+     * 透過關聯的 operator 實體直接獲取 username
+     */
+    @Query("SELECT DISTINCT log.operator.username FROM InventoryAdjustmentLog log WHERE log.operator IS NOT NULL")
+    List<String> findDistinctOperatorUsernames();
 }

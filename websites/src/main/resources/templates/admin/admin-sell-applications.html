@@ -658,6 +658,603 @@
             -moz-appearance: textfield;
             /* Firefox */
         }
+
+        /* ==========================================
+   ChronoTeam 專屬：手動建立接收申請 Modal 美化
+   ========================================== */
+        /* 1. Modal 容器與滾動優化 */
+        #receiveItemModal .custom-modal-overlay {
+            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        #receiveItemModal .custom-modal-box {
+            max-width: 750px;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-top: 4px solid var(--gold);
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUpModal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes slideUpModal {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 2. 頭部與底部固定區 */
+        #receiveItemModal .modal-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-bottom: 1px solid #e9ecef;
+            padding: 1.2rem 1.5rem;
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #receiveItemModal .modal-title {
+            font-size: 1.25rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin: 0;
+            font-weight: 700;
+        }
+
+        #receiveItemModal .modal-title i {
+            color: var(--gold);
+            font-size: 1.3rem;
+        }
+
+        #receiveItemModal .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.6rem;
+            color: #adb5bd;
+            cursor: pointer;
+            transition: all 0.2s;
+            line-height: 1;
+        }
+
+        #receiveItemModal .modal-close:hover {
+            color: var(--accent);
+            transform: rotate(90deg);
+        }
+
+        #receiveItemModal .modal-footer {
+            padding: 1rem 1.5rem;
+            background: #fff;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            flex-shrink: 0;
+        }
+
+        #receiveItemModal .btn-modal-cancel {
+            padding: 0.6rem 1.5rem;
+            background: #f1f3f5;
+            color: #495057;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #receiveItemModal .btn-modal-cancel:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+        }
+
+        /* 3. 內容區滾動與背景 */
+        #receiveItemModal .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: #fcfcfc;
+        }
+
+        #receiveItemModal .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #receiveItemModal .modal-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #receiveItemModal .modal-body::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 3px;
+        }
+
+        /* 4. 區塊卡片 (覆蓋原有的 sell-card) */
+        #receiveItemModal .sell-card,
+        #receiveItemModal .form-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            border: 1px solid #f1f3f5;
+            transition: all 0.3s;
+        }
+
+        #receiveItemModal .sell-card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border-color: rgba(212, 175, 55, 0.3);
+        }
+
+        #receiveItemModal .section-title {
+            font-size: 1.05rem;
+            color: var(--primary);
+            margin: 0 0 1.2rem 0;
+            padding-bottom: 0.8rem;
+            border-bottom: 2px dashed #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 700;
+        }
+
+        #receiveItemModal .section-title i {
+            color: var(--gold);
+        }
+
+        /* 5. 表單控件統一美化 */
+        #receiveItemModal .form-control,
+        #receiveItemModal .filter-input,
+        #receiveItemModal select,
+        #receiveItemModal textarea {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border: 1.5px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        #receiveItemModal .form-control:focus,
+        #receiveItemModal .filter-input:focus,
+        #receiveItemModal select:focus,
+        #receiveItemModal textarea:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        #receiveItemModal textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        #receiveItemModal label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.9rem;
+            margin-bottom: 0.4rem;
+            display: block;
+        }
+
+        #receiveItemModal .required::after {
+            content: " *";
+            color: var(--accent);
+        }
+
+        #receiveItemModal .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* 6. 查找方式 Radio 卡片化 */
+        #receiveItemModal .search-type-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        #receiveItemModal .search-type-item {
+            flex: 1;
+            position: relative;
+        }
+
+        #receiveItemModal .search-type-item input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        #receiveItemModal .search-type-item label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.8rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 0;
+        }
+
+        #receiveItemModal .search-type-item input[type="radio"]:checked+label {
+            border-color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+            color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+        }
+
+        /* 7. 附件 Checkbox 網格化 */
+        #receiveItemModal .accessory-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.8rem;
+            margin-bottom: 1.2rem;
+        }
+
+        #receiveItemModal .accessory-item {
+            position: relative;
+        }
+
+        #receiveItemModal .accessory-item input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        #receiveItemModal .accessory-item label {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.7rem 1rem;
+            border: 1.5px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fff;
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 0;
+        }
+
+        #receiveItemModal .accessory-item label i {
+            color: var(--gold);
+        }
+
+        #receiveItemModal .accessory-item input[type="checkbox"]:checked+label {
+            border-color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 8. 圖片上傳區 */
+        #receiveItemModal .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 1rem;
+        }
+
+        #receiveItemModal .upload-box {
+            aspect-ratio: 1;
+            border: 2px dashed #ced4da;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9fa;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #receiveItemModal .upload-box:hover {
+            border-color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+            transform: translateY(-2px);
+        }
+
+        #receiveItemModal .upload-box i {
+            font-size: 1.5rem;
+            color: #adb5bd;
+            margin-bottom: 0.3rem;
+            transition: all 0.3s;
+        }
+
+        #receiveItemModal .upload-box:hover i {
+            color: var(--gold);
+        }
+
+        #receiveItemModal .upload-box span {
+            font-size: 0.8rem;
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        #receiveItemModal .upload-box input[type="file"] {
+            display: none;
+        }
+
+        /* 9. 交易模式卡片 */
+        #receiveItemModal .mode-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        #receiveItemModal .mode-card {
+            position: relative;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #fff;
+        }
+
+        #receiveItemModal .mode-card:hover {
+            border-color: var(--gold);
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.1);
+        }
+
+        #receiveItemModal .mode-card.selected {
+            border-color: var(--gold);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.02) 0%, rgba(212, 175, 55, 0.08) 100%);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+        }
+
+        #receiveItemModal .mode-card input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+        }
+
+        #receiveItemModal .mode-card h4 {
+            font-size: 1rem;
+            color: var(--primary);
+            margin: 0 0 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        #receiveItemModal .mode-badge {
+            font-size: 0.7rem;
+            background: var(--gold);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        #receiveItemModal .mode-card p {
+            color: #6c757d;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        /* 10. 自動完成與自定義下拉框 */
+        #receiveItemModal .autocomplete-wrapper {
+            position: relative;
+        }
+
+        #receiveItemModal .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1050;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            display: none;
+            margin-top: 4px;
+        }
+
+        #receiveItemModal .autocomplete-list.active {
+            display: block;
+        }
+
+        #receiveItemModal .autocomplete-item {
+            padding: 0.6rem 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.15s;
+        }
+
+        #receiveItemModal .autocomplete-item:hover {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+        }
+
+        #receiveItemModal .custom-dropdown-wrapper {
+            position: relative;
+        }
+
+        #receiveItemModal .custom-dropdown-trigger {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #receiveItemModal .custom-dropdown-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            margin-top: 4px;
+            z-index: 9999;
+            padding: 5px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        #receiveItemModal .custom-dropdown-option {
+            padding: 0.6rem 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        #receiveItemModal .custom-dropdown-option:hover {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        /* 11. 響應式調整 */
+        @media (max-width: 576px) {
+            #receiveItemModal .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #receiveItemModal .accessory-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #receiveItemModal .upload-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            #receiveItemModal .search-type-group {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+
+        /* ==========================================
+   【新增】優化購買年份和件數輸入框
+   ========================================== */
+        /* 針對手錶基礎資訊區塊中的特定輸入框 */
+        .sell-card:has(.section-title:has(i.fa-info-circle)) .form-group input[type="number"] {
+            width: 100% !important;
+            height: 48px !important;
+            padding: 0.8rem 1rem !important;
+            font-size: 1rem !important;
+        }
+
+        /* 調整 form-grid 的列寬，讓兩個輸入框各佔一半但更寬鬆 */
+        .sell-card:has(.section-title:has(i.fa-info-circle)) .form-grid {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 1.2rem !important;
+        }
+
+        /* 或者直接針對 name 屬性進行精確選擇 */
+        input[name="purchaseYear"],
+        input[name="quantity"] {
+            width: 100% !important;
+            height: 48px !important;
+            padding: 0.8rem 1rem !important;
+            font-size: 1rem !important;
+            box-sizing: border-box;
+        }
+
+        /* ==========================================
+   自定義下拉框通用樣式 (適用於兩個彈窗)
+   ========================================== */
+        .autocomplete-wrapper {
+            position: relative;
+        }
+
+        .custom-dropdown-wrapper {
+            position: relative;
+        }
+
+        .custom-dropdown-trigger {
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.7rem 1rem;
+            border: 1.5px solid #e9ecef;
+            border-radius: 8px;
+            background: #fff;
+            transition: all 0.3s;
+        }
+
+        .custom-dropdown-trigger:hover {
+            border-color: var(--gold);
+        }
+
+        .custom-dropdown-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            margin-top: 4px;
+            z-index: 9999;
+            padding: 5px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .custom-dropdown-option {
+            padding: 0.6rem 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .custom-dropdown-option:last-child {
+            border-bottom: none;
+        }
+
+        .custom-dropdown-option:hover {
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold);
+            font-weight: 600;
+        }
+
+        /* 滾動條美化 */
+        .custom-dropdown-options::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-dropdown-options::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .custom-dropdown-options::-webkit-scrollbar-thumb {
+            background: var(--gold);
+            border-radius: 3px;
+        }
     </style>
 </head>
 
@@ -712,7 +1309,7 @@
                             重置</button>
                         <button class="btn-filter"
                             style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);"
-                            onclick="openCreateAppModal()">
+                            onclick="openReceiveItemModal()">
                             <i class="fas fa-plus-circle"></i> 創建申請
                         </button>
                     </div>
@@ -770,104 +1367,307 @@
     </div>
 
 
-    <!-- 創建申請 - 查找用戶 Modal -->
-    <div id="createAppUserModal" class="custom-modal-overlay" style="display: none;">
-        <div class="custom-modal-box" style="max-width: 600px;">
+    <div id="receiveItemModal" class="custom-modal-overlay" style="display: none;">
+        <div class="custom-modal-box">
+            <!-- 頭部 -->
             <div class="modal-header">
-                <h3 class="modal-title"><i class="fas fa-user-plus" style="color: var(--gold);"></i> 創建申請 - 查找用戶</h3>
-                <button class="modal-close" onclick="closeCreateAppModal()" aria-label="關閉">&times;</button>
+                <h3 class="modal-title"><i class="fas fa-user-plus"></i> 手動建立接收申請</h3>
+                <button class="modal-close" onclick="closeReceiveItemModal()" aria-label="關閉">&times;</button>
             </div>
-            <div class="modal-body" style="padding: 1.5rem;">
-                <!-- 選擇查找方式 -->
-                <div style="margin-bottom: 1.5rem;">
-                    <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">請選擇查找方式：</label>
-                    <div style="display: flex; gap: 1.5rem;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input type="radio" name="searchType" value="phone" checked
+
+            <!-- 滾動內容區 -->
+            <div class="modal-body">
+
+                <!-- 區塊 1: 查找用戶 -->
+                <div class="form-section">
+                    <h3 class="section-title"><i class="fas fa-search"></i> 查找用戶</h3>
+
+                    <!-- 查找方式切換 (卡片化 Radio) -->
+                    <div class="search-type-group">
+                        <div class="search-type-item">
+                            <input type="radio" name="searchType" value="phone" id="searchTypePhone" checked
                                 onchange="toggleSearchType('phone')">
-                            <span>透過電話號碼</span>
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                            <input type="radio" name="searchType" value="username"
+                            <label for="searchTypePhone"><i class="fas fa-phone"></i> 透過電話號碼</label>
+                        </div>
+                        <div class="search-type-item">
+                            <input type="radio" name="searchType" value="username" id="searchTypeUsername"
                                 onchange="toggleSearchType('username')">
-                            <span>透過用戶名</span>
-                        </label>
+                            <label for="searchTypeUsername"><i class="fas fa-user"></i> 透過用戶名</label>
+                        </div>
+                    </div>
+
+                    <!-- 輸入區 -->
+                    <div style="margin-bottom: 1rem; position: relative;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <label id="searchInputLabel"
+                                style="font-weight: 600; white-space: nowrap; min-width: 80px; margin-bottom: 0;">電話號碼</label>
+                            <input type="text" id="searchInput" class="form-control" placeholder="請輸入用戶電話號碼"
+                                autocomplete="off" style="flex: 1; height: 45px;">
+                            <button type="button" id="searchBtn" class="btn btn-primary"
+                                style="white-space: nowrap; flex-shrink: 0; height: 45px; padding: 0 1.5rem; background: var(--gold); color: var(--primary); border: none; border-radius: 8px; font-weight: 600; cursor: pointer;"
+                                onclick="searchUserForApp()">
+                                <i class="fas fa-search"></i> 查找
+                            </button>
+                        </div>
+                        <div id="usernameSearchResult"
+                            style="display: none; position: absolute; top: 100%; left: 90px; right: 0; margin-top: 4px; background: white; border: 1px solid #e9ecef; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-height: 180px; overflow-y: auto; z-index: 100;">
+                        </div>
+                    </div>
+
+                    <!-- 關聯顯示框 -->
+                    <div id="phoneTabUsernameField" style="margin-bottom: 0;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <label
+                                style="font-weight: 600; white-space: nowrap; min-width: 80px; margin-bottom: 0;">用戶名</label>
+                            <input type="text" id="foundUsernameDisplay" class="form-control" readonly
+                                placeholder="查找成功後自動顯示"
+                                style="flex: 1; height: 45px; background-color: #f8f9fa; cursor: not-allowed;">
+                        </div>
+                    </div>
+                    <div id="usernameTabPhoneField" style="display: none;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <label
+                                style="font-weight: 600; white-space: nowrap; min-width: 80px; margin-bottom: 0;">電話號碼</label>
+                            <input type="text" id="foundPhoneDisplay" class="form-control" readonly
+                                placeholder="查找成功後自動顯示"
+                                style="flex: 1; height: 45px; background-color: #f8f9fa; cursor: not-allowed;">
+                        </div>
                     </div>
                 </div>
 
-                <!-- 一行過佈局：標籤 + 輸入框 + 按鈕 -->
-                <div class="form-group" style="margin-bottom: 1.5rem; position: relative;">
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        <!-- 標籤 -->
-                        <label id="searchInputLabel"
-                            style="font-weight: 600; white-space: nowrap; min-width: 80px;">電話號碼</label>
-
-                        <!-- 輸入框 -->
-                        <input type="text" id="searchInput" class="form-control" placeholder="請輸入用戶電話號碼"
-                            autocomplete="off"
-                            style="flex: 1; height: 45px; font-size: 1rem; padding: 0.5rem 1rem; border: 2px solid #e9ecef; border-radius: 8px;">
-
-                        <!-- 查找按鈕 (僅電話模式顯示) -->
-                        <button type="button" id="searchBtn" class="btn btn-primary"
-                            style="white-space: nowrap; flex-shrink: 0; height: 45px; padding: 0 1.5rem;"
-                            onclick="searchUserForApp()">
-                            <i class="fas fa-search"></i> 查找用戶
-                        </button>
-                    </div>
-
-                    <!-- 【新增】用戶名自動完成結果容器 (絕對定位，浮在輸入框下方) -->
-                    <div id="usernameSearchResult"
-                        style="display: none; position: absolute; top: 100%; left: 90px; right: 0; margin-top: 4px; background: white; border: 1px solid #e9ecef; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-height: 180px; overflow-y: auto; z-index: 100;">
-                    </div>
-                </div>
-
-                <!-- 查找結果 (綠色成功框) -->
-                <div id="searchResult"
-                    style="display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem;">
-                    <label style="font-weight: 600; color: #166534; margin-bottom: 0.5rem; display: block;">
-                        <i class="fas fa-check-circle"></i> 找到用戶：
-                    </label>
-                    <input type="text" id="foundUsername" class="form-control" readonly
-                        style="background: #ffffff; color: #166534; font-weight: 600; cursor: not-allowed; height: 45px;">
-                    <input type="hidden" id="foundPhone">
-                    <input type="hidden" id="foundName">
-                </div>
-
-                <!-- 品牌和商品选择区域（找到用户后显示）-->
-                <div id="productSelectionArea"
-                    style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e9ecef;">
-                    <label style="font-weight: 600; color: var(--primary); margin-bottom: 0.5rem; display: block;">
-                        <i class="fas fa-link"></i> 关联平台商品
-                    </label>
-
-                    <div class="info-grid" style="grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0;">
-                        <!-- 搜寻品牌 -->
-                        <div class="info-item">
-                            <label class="info-label">搜寻品牌</label>
-                            <div class="autocomplete-wrapper" style="margin-top: 0.5rem;">
+                <!-- 區塊 2: 關聯平台商品 -->
+                <div id="productSelectionArea" class="form-section" style="margin-top: 0;">
+                    <h3 class="section-title"><i class="fas fa-link"></i> 關聯平台商品</h3>
+                    <div class="form-grid">
+                        <div>
+                            <label>搜尋品牌</label>
+                            <div class="autocomplete-wrapper">
                                 <input type="text" id="createBrandInput" class="filter-input"
-                                    placeholder="输入或选择品牌 (如 Rolex)" autocomplete="off">
+                                    placeholder="輸入或選擇品牌 (如 Rolex)" autocomplete="off">
                                 <div id="createBrandAutocompleteList" class="autocomplete-list"></div>
                             </div>
                         </div>
+                        <div>
+                            <label>選擇商品</label>
+                            <input type="hidden" id="createProductValue" value="">
+                            <div class="custom-dropdown-wrapper">
+                                <div class="custom-dropdown-trigger filter-input" id="createProductDropdownTrigger"
+                                    onclick="toggleCreateProductDropdown()">
+                                    <span id="createProductDropdownText">請先選擇品牌</span>
+                                    <i class="fas fa-chevron-down" style="color: var(--gold);"></i>
+                                </div>
+                                <div class="custom-dropdown-options" id="createProductDropdownOptions"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <small style="color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.5rem;">
+                        <i class="fas fa-info-circle"></i> 選擇品牌後會自動加載該品牌下的商品列表
+                    </small>
+                </div>
 
-                        <!-- 选择商品 -->
-                        <div class="info-item">
-                            <label class="info-label">选择商品</label>
-                            <select id="createProductSelect" class="filter-select" style="margin-top: 0.5rem;">
-                                <option value="">请先选择品牌</option>
-                            </select>
+                <!-- 區塊 3: 手錶基礎資訊 -->
+                <div class="sell-card">
+                    <h3 class="section-title"><i class="fas fa-info-circle"></i> 手錶基礎資訊</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="required">購買年份</label>
+                            <input type="number" name="purchaseYear" placeholder="例如：2021" min="1950" required
+                                class="no-spin">
+                        </div>
+                        <div class="form-group">
+                            <label class="required">件數</label>
+                            <input type="number" name="quantity" placeholder="例如：1" min="1" required class="no-spin">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 區塊 4: 附件與成色 -->
+                <div class="sell-card">
+                    <h3 class="section-title"><i class="fas fa-box-open"></i> 附件狀態與手錶現況</h3>
+                    <label style="margin-bottom:0.8rem; font-weight:600; color:var(--primary);">完整附件勾選（齊全可提升估價）</label>
+                    <div class="accessory-grid">
+                        <div class="accessory-item">
+                            <input type="checkbox" name="accessories" id="modal-acc-box" value="box">
+                            <label for="modal-acc-box"><i class="fas fa-box"></i> 原裝錶盒</label>
+                        </div>
+                        <div class="accessory-item">
+                            <input type="checkbox" name="accessories" id="modal-acc-card" value="card">
+                            <label for="modal-acc-card"><i class="fas fa-id-card"></i> 原廠保卡</label>
+                        </div>
+                        <div class="accessory-item">
+                            <input type="checkbox" name="accessories" id="modal-acc-receipt" value="receipt">
+                            <label for="modal-acc-receipt"><i class="fas fa-file-invoice"></i> 購買發票</label>
+                        </div>
+                        <div class="accessory-item">
+                            <input type="checkbox" name="accessories" id="modal-acc-manual" value="manual">
+                            <label for="modal-acc-manual"><i class="fas fa-book"></i> 說明書/吊牌</label>
                         </div>
                     </div>
 
-                    <small style="color: var(--gray); font-size: 0.8rem; display: block; margin-top: 0.5rem;">
-                        <i class="fas fa-info-circle"></i> 选择品牌后会自动加载该品牌下的商品列表
-                    </small>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="required">整體成色</label>
+                            <select name="condition" required>
+                                <option value="">請選擇</option>
+                                <option value="mint">近全新 (98-100%)</option>
+                                <option value="excellent">極佳 (95-97%)</option>
+                                <option value="good">良好 (90-94%)</option>
+                                <option value="fair">正常使用痕跡 (85-89%)</option>
+                                <option value="poor">需維修/明顯瑕疵 (85%以下)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>走時與功能狀況</label>
+                            <select name="functionStatus">
+                                <option value="perfect">一切正常</option>
+                                <option value="minor_issue">輕微異常 (如日曆跳動稍慢)</option>
+                                <option value="needs_service">需全面保養/維修</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>瑕疵描述 / 補充說明</label>
+                        <textarea name="notes" placeholder="請如實描述劃痕..."></textarea>
+                    </div>
+                </div>
+
+                <!-- 區塊 5: 圖片上傳 -->
+                <div class="sell-card">
+                    <h3 class="section-title"><i class="fas fa-camera"></i> 上傳手錶照片</h3>
+                    <p style="color:var(--gray); font-size:0.9rem; margin-bottom:1rem;">
+                        請確保光線充足、對焦清晰。建議拍攝：錶面、錶背、機芯、保卡/附件、瑕疵特寫。</p>
+                    <div class="upload-grid">
+                        <div class="upload-box" onclick="this.querySelector('input').click()">
+                            <i class="fas fa-clock"></i><span>錶面</span>
+                            <input type="file" name="imgDial" accept="image/*" onchange="previewImage(this)"
+                                onclick="event.stopPropagation()">
+                        </div>
+                        <div class="upload-box" onclick="this.querySelector('input').click()">
+                            <i class="fas fa-circle-notch"></i><span>錶背/機芯</span>
+                            <input type="file" name="imgCaseback" accept="image/*" onchange="previewImage(this)"
+                                onclick="event.stopPropagation()">
+                        </div>
+                        <div class="upload-box" onclick="this.querySelector('input').click()">
+                            <i class="fas fa-id-card-alt"></i><span>保卡/發票</span>
+                            <input type="file" name="imgCard" accept="image/*" onchange="previewImage(this)"
+                                onclick="event.stopPropagation()">
+                        </div>
+                        <div class="upload-box" onclick="this.querySelector('input').click()">
+                            <i class="fas fa-exclamation-circle"></i><span>瑕疵特寫</span>
+                            <input type="file" name="imgFlaws" accept="image/*" onchange="previewImage(this)"
+                                onclick="event.stopPropagation()">
+                        </div>
+                        <div class="upload-box" onclick="this.querySelector('input').click()">
+                            <i class="fas fa-plus"></i><span>其他照片</span>
+                            <input type="file" name="imgExtra" accept="image/*" onchange="previewImage(this)"
+                                onclick="event.stopPropagation()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 區塊 6: 交易模式 -->
+                <div class="sell-card">
+                    <h3 class="section-title"><i class="fas fa-handshake"></i> 選擇交易模式</h3>
+                    <div class="mode-grid">
+                        <label class="mode-card selected" onclick="selectMode(this)">
+                            <input type="radio" name="transactionMode" value="BUYOUT" required checked>
+                            <h4>線下門店直接買斷 <span class="mode-badge">當面交易，當場收款</span></h4>
+                            <p>鑑定團隊初步確認後，我們將透過 網站系統通知 或 WhatsApp
+                                提供最終報價。您確認接受後，只需預約前往線下實體門店，實物複核無誤即可<strong>當場完成交易並全額收款</strong>，安全快捷。</p>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 區塊 7: 預約交接 -->
+                <div class="sell-card" style="margin-bottom: 0;">
+                    <h3 class="section-title"><i class="fas fa-calendar-check"></i> 預約門店交接資訊 (可選)</h3>
+                    <p style="color:var(--gray); font-size:0.9rem; margin-bottom:1.5rem;">
+                        若您已有心儀的門店或希望提前預約實物鑑定與面交時間，請填寫以下資訊。</p>
+                    <div class="form-grid">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>預約門店</label>
+                            <select name="storeId" id="modalStoreIdSelect" onchange="updateStoreInfo(this.value)">
+                                <option value="">請選擇門店</option>
+                            </select>
+                            <div id="modalStoreInfoBox"
+                                style="display: none; margin-top: 0.8rem; padding: 1rem; background: #fff9f0; border-radius: 8px; border-left: 4px solid var(--gold); font-size: 0.9rem;">
+                                <ul id="modalStoreInfoList"
+                                    style="margin: 0; padding-left: 1.2rem; color: #856404; line-height: 1.6;"></ul>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="required">預約到店日期</label>
+                            <input type="date" name="appointmentDate" id="modalAppointmentDate" class="form-control"
+                                onchange="updateTimeSlots()">
+                        </div>
+                        <div class="form-group">
+                            <label class="required"><i class="far fa-clock"></i> 預約時間</label>
+                            <input type="time" id="modalAppointmentTimeSlot" name="appointmentTimeSlot"
+                                class="form-control" required oninput="validateTimeInput()">
+                            <small id="modalAppointmentTimeHint"
+                                style="display: none; color: #6c757d; margin-top: 0.3rem;">
+                                <i class="fas fa-info-circle"></i> <span id="modalAppointmentTimeHintText"></span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 區塊 8: 申請狀態與鑑定資訊 (新增) -->
+                <div class="sell-card" id="appraisalInfoSection">
+                    <h3 class="section-title"><i class="fas fa-edit" style="color: #11998e;"></i> 申請狀態與鑑定資訊</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="required">申請狀態</label>
+                            <select name="status" id="modalStatusSelect" class="filter-select" required>
+                                <option value="PENDING">待處理 / 待鑑定</option>
+                                <option value="APPRAISING">鑑定中</option>
+                                <option value="QUOTED">已報價 (等待用戶確認)</option>
+                                <option value="ACCEPTED">用戶已接受報價</option>
+                                <option value="REJECTED">用戶拒絕報價 或 平台拒收</option>
+                                <option value="COMPLETED">交易已完成 (款項已結清)</option>
+                                <option value="CANCELLED">用戶主動取消</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>負責鑑定師</label>
+                            <select name="appraiserId" id="modalAppraiserSelect" class="filter-select">
+                                <option value="">未分配</option>
+                                <!-- JS 會動態填充 -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>預估價格 (HK$)</label>
+                            <input type="number" name="estimatedPrice" id="modalEstimatedPrice"
+                                class="filter-input no-spin" step="0.01" placeholder="輸入預估價格">
+                        </div>
+                        <div class="form-group">
+                            <label>最終成交價 (HK$)</label>
+                            <input type="number" name="finalPrice" id="modalFinalPrice" class="filter-input no-spin"
+                                step="0.01" placeholder="輸入最終成交價">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>鑑定備註</label>
+                            <textarea name="appraisalNotes" id="modalAppraisalNotes" class="filter-input"
+                                style="min-height: 80px; resize: vertical;" placeholder="輸入鑑定師備註..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 新增：確認申請按鈕區塊 -->
+                <div class="form-group"
+                    style="grid-column: 1 / -1; margin-top: 1.5rem; text-align: center; border-top: 1px solid #e9ecef; padding-top: 1.5rem;">
+                    <button type="button" id="btnConfirmApplication" class="btn btn-primary"
+                        style="background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%); color: white; border: none; padding: 0.8rem 3rem; border-radius: 8px; font-weight: 700; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); transition: all 0.3s;">
+                        <i class="fas fa-check-circle"></i> 確認申請
+                    </button>
                 </div>
             </div>
-            <div class="modal-actions"
-                style="padding: 1rem 1.5rem; border-top: 1px solid #eee; display: flex; justify-content: flex-end;">
-                <button type="button" class="btn-modal-cancel" onclick="closeCreateAppModal()">關閉</button>
+
+            <!-- 底部固定按鈕區 -->
+            <div class="modal-footer">
+                <button type="button" class="btn-modal-cancel" onclick="closeReceiveItemModal()">
+                    <i class="fas fa-times"></i> 關閉
+                </button>
             </div>
         </div>
     </div>
@@ -878,7 +1678,10 @@
     <script src="/js/admin.js"></script>
     <script src="/js/admin-table.js"></script>
 
-    <script>
+    <script th:inline="javascript">
+
+        const isAdmin = /*[[${isAdmin}]]*/ false;
+
         // ==========================================
         // 0. 中文映射表 (提升可讀性)
         // ==========================================
@@ -1101,7 +1904,7 @@
         function closeDetailModal() {
             document.getElementById('detailModal').style.display = 'none';
             document.body.style.overflow = '';
-            // 【關鍵修復】確保關閉彈窗時，底部的 Footer 按鈕恢復顯示
+            // 確保關閉彈窗時，底部的 Footer 按鈕恢復顯示
             const footer = document.querySelector('.modal-footer');
             if (footer) footer.style.display = 'flex';
         }
@@ -1199,7 +2002,11 @@
                 <div class="info-item"><span class="info-label">預估價格</span><span class="info-value" style="color: var(--accent); font-weight: 700;">HK$ ${app.estimatedPrice || '待估'}</span></div>
                 <div class="info-item"><span class="info-label">最終成交價</span><span class="info-value" style="color: #28a745; font-weight: 700;">HK$ ${app.finalPrice || '待議'}</span></div>
                 <div class="info-item"><span class="info-label">負責鑑定師</span><span class="info-value">${app.appraiser?.username || '未指派'}</span></div>
-                <div class="info-item"><span class="info-label">鑑定備註</span><span class="info-value">${app.appraisalNotes || '無'}</span></div>
+                <div class="info-item"><span class="info-label">最後負責人</span><span class="info-value">${app.operator?.username || '未指定'}</span></div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+            <span class="info-label">鑑定備註</span>
+            <span class="info-value">${app.appraisalNotes || '無'}</span>
+        </div>
             </div>
         `;
             document.getElementById('detailContent').innerHTML = html;
@@ -1218,10 +2025,9 @@
             const app = window.currentEditingApp;
             if (!app) return;
 
-            // 【新增】1. 異步加載具備鑑定權限的員工列表 (SALES, APPRAISER, ADMIN)
+            // 異步加載具備鑑定權限的員工列表 (SALES, APPRAISER, ADMIN)
             let appraisers = [];
             try {
-                // 請確保此 API 路徑與後端一致 (例如 /api/admin/users/staff)
                 const res = await fetch('/admin/api/staff');
                 const result = await res.json();
                 if (result.success && result.data) {
@@ -1241,7 +2047,7 @@
                 {val: 'COMPLETED', text: '交易已完成 (款項已結清)'},
                 {val: 'CANCELLED', text: '用戶主動取消'}
             ];
-            // 成色選項 (value 必須與資料庫存的小寫 key 一致)
+            // 成色選項
             const conditionOptions = [
                 {val: 'mint', text: '近全新 (98-100%)'},
                 {val: 'excellent', text: '極佳 (95-97%)'},
@@ -1256,21 +2062,25 @@
                 {val: 'needs_service', text: '需全面保養/維修'}
             ];
 
-            // 通用選項生成器：自動選中「原本資料」
+            // 通用選項生成器
             const buildOptions = (opts, current) =>
                 opts.map(o => `<option value="${o.val}" ${current === o.val ? 'selected' : ''}>${o.text}</option>`).join('');
 
-            // 【新增】獲取當前已分配的鑑定師 ID (兼容 app.appraiser.id 或 app.appraiserId)
             const currentAppraiserId = app.appraiser?.id || app.appraiserId || '';
+
+            // 【核心修改】：區塊 2.6 關聯平台商品 改為自定義下拉框結構
+            const currentProductText = app.product
+                ? `${app.product.description} (ID: ${app.product.productId})`
+                : '尚未分配 (清空關聯>';
+            const currentProductId = app.product ? app.product.productId : '';
 
             const editHtml = `
         <form id="editSellForm" onsubmit="submitEditApplication(event)">
-            <!-- ========== 區塊 1：手錶基礎資訊 (可修改，預載原資料) ========== -->
+            <!-- ========== 區塊 1：手錶基礎資訊 ========== -->
             <h4 class="section-title-sm" style="margin-top:0;">
                 <i class="fas fa-clock" style="color: #11998e;"></i> 手錶基礎資訊 (可直接修改)
             </h4>
             <div class="info-grid">
-                <!-- ... (區塊 1 的 HTML 保持不變) ... -->
                 <div class="info-item">
                     <label class="info-label">品牌 <span style="color:var(--accent)">*</span></label>
                     <input type="text" name="brand" class="filter-input" style="margin-top:0.5rem;" value="${escAttr(app.brand)}" required>
@@ -1285,7 +2095,7 @@
                 </div>
                 <div class="info-item">
                     <label class="info-label">購買年份</label>
-                    <input type="number" name="purchaseYear" class="filter-input" style="margin-top:0.5rem;" value="${app.purchaseYear || ''}" min="1900" max="2026">
+                    <input type="number" name="purchaseYear" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.purchaseYear || ''}" min="1900" max="2026">
                 </div>
                 <div class="info-item">
                     <label class="info-label">出售數量 <span style="color:var(--accent)">*</span></label>
@@ -1319,8 +2129,6 @@
                         ${buildOptions(statusOptions, app.status)}
                     </select>
                 </div>
-
-                <!-- 【新增】負責鑑定師下拉框 -->
                 <div class="info-item">
                     <label class="info-label">負責鑑定師</label>
                     <select name="appraiserId" class="filter-select" style="margin-top:0.5rem;">
@@ -1332,7 +2140,6 @@
                         `).join('')}
                     </select>
                 </div>
-
                 <div class="info-item">
                     <label class="info-label">預估價格 (HK$)</label>
                     <input type="number" name="estimatedPrice" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.estimatedPrice || ''}" step="0.01" placeholder="輸入預估價格">
@@ -1352,34 +2159,45 @@
             <h4 class="section-title-sm"><i class="fas fa-images" style="color: #11998e;"></i> 實物圖片管理 (更換 / 移動 / 刪除)</h4>
             <div id="imageManagerGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-bottom:1rem;"></div>
             <small style="color:var(--gray); font-size:0.8rem; display:block; margin-bottom:1rem;">
-                <i class="fas fa-info-circle"></i> 說明：點「上傳/更換」選新圖；用下拉選單可將圖片移動到其他分類（若目標已有圖片則兩者互換）；點「刪除圖片」移除。所有變更需按「儲存變更」才會生效。
+                <i class="fas fa-info-circle"></i> 說明：點「上傳/更換」選新圖；用下拉選單可將圖片移動到其他分類；點「刪除圖片」移除。
             </small>
 
-             <!-- 【核心新增】：區塊 2.6 關聯平台商品 (獨立 Div) -->
+            <!-- ========== 【核心修改】區塊 2.6：關聯平台商品 (自定義滾動下拉框) ========== -->
             <hr class="section-divider">
             <h4 class="section-title-sm"><i class="fas fa-link" style="color: #11998e;"></i> 關聯平台商品 (分配商品)</h4>
             <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 1rem;">
                 <div id="assignedProductDisplay" style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--gray);">
-                    ${app.product
-                    ? `當前已分配：<strong style="color: var(--primary);">${app.product.description}</strong> (ID: ${app.product.productId})`
-                    : '當前狀態：<strong style="color: #dc3545;">尚未分配</strong>'}
+                    ${app.product ? `當前已分配：<strong style="color: var(--primary);">${app.product.description}</strong> (ID: ${app.product.productId})` : '當前狀態：<strong style="color: #dc3545;">尚未分配</strong>'}
                 </div>
                 <div class="info-grid">
                     <div class="info-item">
-    <label class="info-label">搜尋品牌</label>
-    <div style="display: flex; gap: 0.5rem; margin-top:0.5rem;">
-        <div class="autocomplete-wrapper">
-            <input type="text" id="editBrandInput" class="filter-input" placeholder="輸入或選擇品牌 (如 Rolex)" value="${escAttr(app.brand)}" autocomplete="off">
-            <div id="brandAutocompleteList" class="autocomplete-list"></div>
-        </div>
-    </div>
-</div>
+                        <label class="info-label">搜尋品牌</label>
+                        <div style="display: flex; gap: 0.5rem; margin-top:0.5rem;">
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="editBrandInput" class="filter-input" placeholder="輸入或選擇品牌 (如 Rolex)" value="${escAttr(app.brand)}" autocomplete="off">
+                                <div id="brandAutocompleteList" class="autocomplete-list"></div>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="info-item">
                         <label class="info-label">選擇商品</label>
-                        <select name="productId" id="editProductSelect" class="filter-select" style="margin-top:0.5rem;">
-                            <option value="">尚未分配 (清空關聯)</option>
-                        </select>
+                        <!-- 隱藏的 input，用於表單提交時獲取 productId -->
+                        <input type="hidden" name="productId" id="editProductSelectValue" value="${currentProductId}">
+
+                        <!-- 自定義下拉框外層 -->
+                        <div class="custom-dropdown-wrapper" style="position: relative; margin-top: 0.5rem;">
+                            <!-- 觸發器 -->
+                            <div class="custom-dropdown-trigger filter-input" id="productDropdownTrigger" onclick="toggleProductDropdown()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                                <span id="productDropdownText">${currentProductText}</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+
+                            <!-- 下拉選項列表 (核心：限制最大高度並允許滾動) -->
+                            <div class="custom-dropdown-options" id="productDropdownOptions">
+                                <!-- JS 會動態填充這裡 -->
+                           6</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1406,13 +2224,14 @@
             document.getElementById('detailContent').innerHTML = editHtml;
             document.querySelector('.modal-footer').style.display = 'none';
 
-            // 【新增】初始化並渲染圖片管理器
+            // 初始化圖片管理器
             initPendingImages(app);
             renderImageManager();
 
-            // 【新增】初始化品牌自動完成
+            // 初始化品牌自動完成
             initBrandAutocomplete();
 
+            // 如果原有品牌，則加載商品列表
             if (app.brand) {
                 loadProductsForEdit();
             }
@@ -1420,42 +2239,102 @@
 
         // 【新增】載入商品列表函數 (運用現有 API)
         let productsCache = [];
+        // 1. 切換下拉框顯示/隱藏
+        function toggleProductDropdown() {
+            const options = document.getElementById('productDropdownOptions');
+            if (options) {
+                const isHidden = options.style.display === 'none' || options.style.display === '';
+                options.style.display = isHidden ? 'block' : 'none';
+            }
+        }
+
+
+        // ==========================================
+        // 點擊選項時的處理函數 (使用 data 屬性，徹底解決引號轉義問題)
+        // ==========================================
+        function selectCustomProductByElement(el) {
+            // 從 data 屬性中安全讀取數據
+            const productId = el.getAttribute('data-product-id');
+            const displayText = el.getAttribute('data-display-text');
+
+            // 更新隱藏的 input (用於表單提交)
+            document.getElementById('editProductSelectValue').value = productId;
+            // 更新顯示的文字
+            document.getElementById('productDropdownText').textContent = displayText;
+            // 關閉下拉列表
+            document.getElementById('productDropdownOptions').style.display = 'none';
+        }
+
+        // ==========================================
+        // 3. 加載商品列表 (修改版，適配自定義下拉框)
+        // ==========================================
         async function loadProductsForEdit() {
             const brand = document.getElementById('editBrandInput').value.trim();
-            const productSelect = document.getElementById('editProductSelect');
+            const optionsContainer = document.getElementById('productDropdownOptions');
+
             if (!brand) {
-                productSelect.innerHTML = '<option value="">請先輸入品牌</option>';
+                optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray);">請先輸入品牌</div>';
                 return;
             }
-            productSelect.innerHTML = '<option value="">載入中...</option>';
+
+            optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gold);"><i class="fas fa-spinner fa-spin"></i> 載入中...</div>';
+
             try {
                 const response = await fetch(`/brands/${encodeURIComponent(brand)}`);
                 const result = await response.json();
                 if (result.success && result.data) {
                     productsCache = result.data;
                     if (productsCache.length === 0) {
-                        productSelect.innerHTML = '<option value="">該品牌下暫無商品</option>';
+                        optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray);">該品牌下暫無商品</div>';
                     } else {
-                        let options = '<option value="">尚未分配 (清空關聯)</option>';
-                        productsCache.forEach(product => {
-                            options += `<option value="${product.productId}">${product.description} (HK$ ${product.price})</option>`;
-                        });
-                        productSelect.innerHTML = options;
+                        // 生成選項 HTML (使用 data 屬性避免引號轉義問題)
+                        let html = `<div class="custom-dropdown-option"
+                             data-product-id=""
+                             data-display-text="尚未分配 (清空關聯)"
+                             onclick="selectCustomProductByElement(this)">
+                             尚未分配 (清空關聯)
+                         </div>`;
 
-                        // 自動選中當前已分配的商品
+                        productsCache.forEach(product => {
+                            const displayText = `${product.description} (ID: ${product.productId})`;
+
+                            // 使用 data 屬性存儲數據，只需轉義雙引號，徹底避免 onclick 裡字符串破裂
+                            html += `<div class="custom-dropdown-option"
+                                 data-product-id="${product.productId}"
+                                 data-display-text="${displayText.replace(/"/g, '&quot;')}"
+                                 onclick="selectCustomProductByElement(this)">
+                                ${product.description} (HK$ ${product.price})
+                             </div>`;
+                        });
+                        optionsContainer.innerHTML = html;
+
+                        // 自動選中當前已分配的商品 (如果有的話)
                         const app = window.currentEditingApp;
-                        if (app.product && app.product.productId) {
-                            productSelect.value = app.product.productId;
+                        if (app && app.product && app.product.productId) {
+                            const matchedProduct = productsCache.find(p => p.productId === app.product.productId);
+                            if (matchedProduct) {
+                                document.getElementById('editProductSelectValue').value = matchedProduct.productId;
+                                document.getElementById('productDropdownText').textContent = `${matchedProduct.description} (ID: ${matchedProduct.productId})`;
+                            }
                         }
                     }
                 } else {
-                    productSelect.innerHTML = '<option value="">載入失敗</option>';
+                    optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray);">載入失敗</div>';
                 }
             } catch (e) {
                 console.error('載入商品失敗', e);
-                productSelect.innerHTML = '<option value="">網絡錯誤</option>';
+                optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray);">網絡錯誤</div>';
             }
         }
+
+
+        // 4. 全局點擊事件：點擊下拉框外部時，自動關閉下拉列表
+        document.addEventListener('click', function (e) {
+            const wrapper = document.querySelector('.custom-dropdown-wrapper');
+            const options = document.getElementById('productDropdownOptions');
+            if (wrapper && options && !wrapper.contains(e.target))
+                options.style.display = 'none';
+        });
 
         // 取消編輯，恢復原本的詳情視圖
         function cancelEditAndShowDetail() {
@@ -1469,6 +2348,84 @@
         async function submitEditApplication(e) {
             e.preventDefault();
             const form = e.target;
+            const originalApp = window.currentEditingApp;
+
+            // 判斷該訂單是否「原本就已經是」 COMPLETED 狀態
+            const isAlreadyCompleted = originalApp && originalApp.status === 'COMPLETED';
+
+            // ==========================================
+            // 【核心校驗 1】：如果已經是 COMPLETED 狀態，禁止修改核心字段
+            // ==========================================
+            if (isAlreadyCompleted) {
+                // 定義不能被修改的核心字段及其對應的原始值
+                const fieldsToCheck = [
+                    {key: 'brand', original: originalApp.brand},
+                    {key: 'series', original: originalApp.series},
+                    {key: 'model', original: originalApp.model},
+                    {key: 'purchaseYear', original: originalApp.purchaseYear},
+                    {key: 'quantity', original: originalApp.quantity},
+                    {key: 'condition', original: originalApp.condition},
+                    {key: 'functionStatus', original: originalApp.functionStatus},
+                    {key: 'status', original: originalApp.status},
+                    // 兼容後端可能返回 appraiser 對象或直接的 appraiserId
+                    {key: 'appraiserId', original: originalApp.appraiser ? originalApp.appraiser.id : (originalApp.appraiserId || '')},
+                    {key: 'finalPrice', original: originalApp.finalPrice}
+                ];
+
+                let isChanged = false;
+                for (const field of fieldsToCheck) {
+                    const el = form.querySelector(`[name="${field.key}"]`);
+                    const currentValue = el ? String(el.value).trim() : '';
+                    const originalValue = field.original != null ? String(field.original).trim() : '';
+
+                    // 只要有任何一個核心字段的值發生了改變，就標記為已修改
+                    if (currentValue !== originalValue) {
+                        isChanged = true;
+                        break;
+                    }
+                }
+
+                if (isChanged) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ 已完成的訂單不可修改核心資訊（品牌、型號、狀態、鑑定師、成交價等）！', true);
+                    } else {
+                        alert('❌ 已完成的訂單不可修改核心資訊！');
+                    }
+                    return; //  攔截提交，不執行後續的 fetch 請求
+                }
+            }
+
+            // ==========================================
+            // 【核心校驗 2】：狀態「變更為」 COMPLETED 時的必填檢查 (保留原有邏輯)
+            // ==========================================
+            const statusEl = form.querySelector('[name="status"]');
+            const statusValue = statusEl ? statusEl.value.trim() : '';
+            // 只有當原本不是 COMPLETED，且現在要改成 COMPLETED 時，才觸發此必填校驗
+            const isChangingToCompleted = statusValue === 'COMPLETED' && !isAlreadyCompleted;
+
+            if (isChangingToCompleted) {
+                const appraiserIdEl = form.querySelector('[name="appraiserId"]');
+                const finalPriceEl = form.querySelector('[name="finalPrice"]');
+
+                if (!appraiserIdEl || !appraiserIdEl.value.trim()) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ 狀態為「已完成」時，負責鑑定師不能為空！', true);
+                    } else {
+                        alert('❌ 狀態為「已完成」時，負責鑑定師不能為空！');
+                    }
+                    return; // 攔截提交
+                }
+
+                if (!finalPriceEl || !finalPriceEl.value.trim()) {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ 狀態為「已完成」時，最終成交價不能為空！', true);
+                    } else {
+                        alert('❌ 狀態為「已完成」時，最終成交價不能為空！');
+                    }
+                    return; // 攔截提交
+                }
+            }
+
             const fd = new FormData();
 
             // ===== 文字欄位 =====
@@ -1491,7 +2448,6 @@
             });
 
             try {
-                // 注意：不要手動設 Content-Type，瀏覽器會自動帶 multipart boundary
                 const res = await fetch(`/admin/api/sell-applications/${window.currentEditingApp.applicationId}`, {
                     method: 'PUT',
                     body: fd
@@ -1514,7 +2470,7 @@
         }
 
         // ==========================================
-        // 【新增】品牌 Autocomplete 邏輯
+        // 品牌 Autocomplete 邏輯
         // ==========================================
         let brandSearchTimeout = null;
 
@@ -1587,27 +2543,50 @@
             const searchBtn = document.getElementById('searchBtn');
             const usernameResult = document.getElementById('usernameSearchResult');
 
+            // 【新增】獲取只讀用戶名框的容器
+            const phoneTabUsernameField = document.getElementById('phoneTabUsernameField');
+            const foundUsernameDisplay = document.getElementById('foundUsernameDisplay');
+            const usernameTabPhoneField = document.getElementById('usernameTabPhoneField');
+            const foundPhoneDisplay = document.getElementById('foundPhoneDisplay');
+
             if (type === 'phone') {
                 searchLabel.textContent = '電話號碼';
                 searchInput.placeholder = '請輸入用戶電話號碼';
-                searchBtn.style.display = 'inline-flex'; // ✅ 顯示按鈕
-                if (usernameResult) usernameResult.style.display = 'none'; // 隱藏自動完成框
+                searchBtn.style.display = 'inline-flex';
+                if (usernameResult) usernameResult.style.display = 'none';
+
+                // 【核心】電話模式下：顯示只讀用戶名框
+                if (phoneTabUsernameField) phoneTabUsernameField.style.display = 'block';
+                if (usernameTabPhoneField) usernameTabPhoneField.style.display = 'none';
             } else {
                 searchLabel.textContent = '用戶名';
                 searchInput.placeholder = '請輸入用戶名';
-                searchBtn.style.display = 'none'; // ✅ 隱藏按鈕
+                searchBtn.style.display = 'none';
+
+                // 【核心】用戶名模式下：隱藏只讀用戶名框
+                if (phoneTabUsernameField) phoneTabUsernameField.style.display = 'none';
+                if (usernameTabPhoneField) usernameTabPhoneField.style.display = 'block';
             }
 
             // 清空之前的輸入和結果
             searchInput.value = '';
-            document.getElementById('searchResult').style.display = 'none';
-            document.getElementById('foundUsername').value = '';
-            document.getElementById('foundPhone').value = '';
-            document.getElementById('foundName').value = '';
+            const searchResult = document.getElementById('searchResult');
+            if (searchResult) searchResult.style.display = 'none';
+
+            const foundUsername = document.getElementById('foundUsername');
+            const foundPhone = document.getElementById('foundPhone');
+            const foundName = document.getElementById('foundName');
+            if (foundUsername) foundUsername.value = '';
+            if (foundPhone) foundPhone.value = '';
+            if (foundName) foundName.value = '';
+
+            //切換 Tab 時，清空只讀顯示框的內容
+            if (foundUsernameDisplay) foundUsernameDisplay.value = '';
+            if (foundPhoneDisplay) foundPhoneDisplay.value = '';
         }
 
         /**
-         * 【新增】用戶名輸入防抖與自動完成邏輯
+         * 用戶名輸入防抖與自動完成邏輯
          */
         document.addEventListener('DOMContentLoaded', function () {
             const searchInput = document.getElementById('searchInput');
@@ -1676,88 +2655,145 @@
         });
 
         /**
-         * 【新增】從下拉列表中選擇用戶名
+         * 查找用户（电话号码模式）
+         */
+        async function searchUserForApp() {
+            const searchInput = document.getElementById('searchInput');
+            const phone = searchInput.value.trim();
+
+            if (!phone) {
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 请输入电话号码', true);
+                }
+                return;
+            }
+
+            try {
+                const res = await fetch(`/admin/api/users/search?phone=${encodeURIComponent(phone)}`);
+                const result = await res.json();
+
+                if (result.success) {
+                    // 填充用户名到电话号码Tab的只读框
+                    const foundUsernameDisplay = document.getElementById('foundUsernameDisplay');
+                    const foundPhoneDisplay = document.getElementById('foundPhoneDisplay');
+
+                    if (foundUsernameDisplay) {
+                        foundUsernameDisplay.value = result.data.username || '';
+                    }
+                    if (foundPhoneDisplay) {
+                        foundPhoneDisplay.value = result.data.phone || '';
+                    }
+
+                    if (typeof showNotification === 'function') {
+                        showNotification('✅ 查找成功');
+                    }
+                } else {
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + (result.message || '未找到用户'), true);
+                    }
+                }
+            } catch (error) {
+                console.error('查找用户失败:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 网络错误，请稍后重试', true);
+                }
+            }
+        }
+
+        /**
+         * 从下拉列表中选择用户名
          */
         function selectUsernameFromList(username, name, phone) {
-            // 1. 填入輸入框
-            document.getElementById('searchInput').value = username;
-            // 2. 隱藏下拉列表
-            document.getElementById('usernameSearchResult').style.display = 'none';
+            // 1. 填入输入框
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = username;
+            }
+
+            // 2. 填充电话号码到用户名Tab的只读框
+            const foundPhoneDisplay = document.getElementById('foundPhoneDisplay');
+            const foundUsernameDisplay = document.getElementById('foundUsernameDisplay');
+
+            if (foundPhoneDisplay) {
+                foundPhoneDisplay.value = phone || '';
+            }
+            if (foundUsernameDisplay) {
+                foundUsernameDisplay.value = username || '';
+            }
+
+            // 3. 隐藏下拉列表
+            const usernameResult = document.getElementById('usernameSearchResult');
+            if (usernameResult) {
+                usernameResult.style.display = 'none';
+            }
 
             if (typeof showNotification === 'function') {
                 showNotification('✅ 查找成功');
             }
         }
 
-        /**
-         * 執行查找用戶 API (僅供「電話號碼」模式使用)
-         */
-        async function searchUserForApp() {
-            if (currentSearchType !== 'phone') return;
 
-            const searchValue = document.getElementById('searchInput').value.trim();
-            if (!searchValue) {
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ 請輸入電話號碼', true);
-                } else {
-                    alert('請輸入電話號碼');
-                }
-                return;
-            }
+        // ==========================================
+        // 【新增】加載鑑定師列表函數
+        // ==========================================
+        let appraisersCache = [];
 
+        async function loadAppraisersForModal() {
             try {
-                const response = await fetch(`/admin/api/users/search?phone=${encodeURIComponent(searchValue)}`);
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    document.getElementById('foundUsername').value = result.data.username;
-                    document.getElementById('foundPhone').value = result.data.phone;
-                    document.getElementById('foundName').value = result.data.name;
-                    document.getElementById('searchResult').style.display = 'block';
-
-                    if (typeof showNotification === 'function') {
-                        showNotification('✅ 查找成功');
-                    }
-                } else {
-                    document.getElementById('searchResult').style.display = 'none';
-                    if (typeof showNotification === 'function') {
-                        showNotification('❌ ' + (result.message || '未找到該用戶'), true);
-                    } else {
-                        alert('❌ ' + (result.message || '未找到該用戶'));
-                    }
+                const res = await fetch('/admin/api/staff');
+                const result = await res.json();
+                if (result.success && result.data) {
+                    appraisersCache = result.data;
+                    renderAppraisersOptions();
                 }
-            } catch (error) {
-                console.error('查找用戶錯誤:', error);
-                document.getElementById('searchResult').style.display = 'none';
-                if (typeof showNotification === 'function') {
-                    showNotification('❌ 網絡錯誤，請稍後重試', true);
-                } else {
-                    alert('❌ 網絡錯誤，請稍後重試');
-                }
+            } catch (e) {
+                console.error('獲取鑑定師列表失敗', e);
             }
         }
 
+        function renderAppraisersOptions() {
+            const select = document.getElementById('modalAppraiserSelect');
+            if (!select) return;
 
-        function openCreateAppModal() {
-            const modal = document.getElementById("createAppUserModal")
+            let html = '<option value="">未分配</option>';
+            appraisersCache.forEach(u => {
+                html += `<option value="${u.id}">${u.username} ${u.name ? '(' + u.name + ')' : ''} [${u.role}]</option>`;
+            });
+            select.innerHTML = html;
+        }
+
+        // ==========================================
+        // 【修改】打開 Modal 時初始化鑑定師列表
+        // ==========================================
+        function openReceiveItemModal() {
+            const modal = document.getElementById("receiveItemModal");
             if (modal) {
                 modal.style.display = 'flex';
-                document.body.style.overflow = 'hidden';//禁止背景活動
-                //重置表單狀態
+                document.body.style.overflow = 'hidden';
+
+                // 重置表單狀態
                 toggleSearchType('phone');
-                document.getElementById('searchResult').style.display = 'none';
+
+                // 初始化品牌自動完成
+                setTimeout(() => {
+                    initCreateBrandAutocomplete();
+                }, 100);
+
+                // 【新增】加載鑑定師列表
+                loadAppraisersForModal();
+
+                loadStores();
             }
         }
 
-
-        /**
-         * 關閉創建申請 Modal (更新清空邏輯)
-         */
-        function closeCreateAppModal() {
-            const modal = document.getElementById('createAppUserModal');
+        // ==========================================
+        // 【修改】關閉 Modal 時清空鑑定資訊
+        // ==========================================
+        function closeReceiveItemModal() {
+            const modal = document.getElementById('receiveItemModal');
             if (modal) {
                 modal.style.display = 'none';
-                document.body.style.overflow = ''; // 恢復背景活動
+                document.body.style.overflow = '';
 
                 // 重置 Radio Button 選項
                 const phoneRadio = document.querySelector('input[name="searchType"][value="phone"]');
@@ -1782,25 +2818,482 @@
                 if (usernameResult) usernameResult.style.display = 'none';
 
                 // 清空隱藏字段
-                document.getElementById('foundUsername').value = '';
-                document.getElementById('foundPhone').value = '';
-                document.getElementById('foundName').value = '';
+                const foundUsername = document.getElementById('foundUsername');
+                const foundPhone = document.getElementById('foundPhone');
+                const foundName = document.getElementById('foundName');
+                if (foundUsername) foundUsername.value = '';
+                if (foundPhone) foundPhone.value = '';
+                if (foundName) foundName.value = '';
+
+                // 清空品牌輸入框
+                const createBrandInput = document.getElementById('createBrandInput');
+                if (createBrandInput) createBrandInput.value = '';
+
+                // 清空自定義下拉框
+                const createProductDropdownText = document.getElementById('createProductDropdownText');
+                const createProductValue = document.getElementById('createProductValue');
+                const createProductDropdownOptions = document.getElementById('createProductDropdownOptions');
+
+                if (createProductDropdownText) createProductDropdownText.textContent = '請先選擇品牌';
+                if (createProductValue) createProductValue.value = '';
+                if (createProductDropdownOptions) {
+                    createProductDropdownOptions.innerHTML = '';
+                    createProductDropdownOptions.style.display = 'none';
+                }
+
+                // 【新增】清空鑑定資訊
+                const modalStatusSelect = document.getElementById('modalStatusSelect');
+                const modalAppraiserSelect = document.getElementById('modalAppraiserSelect');
+                const modalEstimatedPrice = document.getElementById('modalEstimatedPrice');
+                const modalFinalPrice = document.getElementById('modalFinalPrice');
+                const modalAppraisalNotes = document.getElementById('modalAppraisalNotes');
+
+                if (modalStatusSelect) modalStatusSelect.value = 'PENDING';
+                if (modalAppraiserSelect) modalAppraiserSelect.value = '';
+                if (modalEstimatedPrice) modalEstimatedPrice.value = '';
+                if (modalFinalPrice) modalFinalPrice.value = '';
+                if (modalAppraisalNotes) modalAppraisalNotes.value = '';
             }
         }
 
+        // ==========================================
+        // 品牌 Autocomplete 邏輯（用於創建申請）
+        // ==========================================
+        let createBrandSearchTimeout = null;
+
+        function initCreateBrandAutocomplete() {
+            const input = document.getElementById('createBrandInput');
+            const list = document.getElementById('createBrandAutocompleteList');
+            if (!input || !list) return;
+
+            const fetchAndShowBrands = async () => {
+                const keyword = input.value.trim();
+                if (createBrandSearchTimeout) clearTimeout(createBrandSearchTimeout);
+
+                // 300ms 防抖，避免頻繁請求
+                createBrandSearchTimeout = setTimeout(async () => {
+                    if (!keyword) {
+                        list.classList.remove('active');
+                        return;
+                    }
+
+                    try {
+                        const res = await fetch(`/admin/api/brands/autocomplete?keyword=${encodeURIComponent(keyword)}`);
+                        const result = await res.json();
+                        if (result.success && result.data) {
+                            renderCreateBrandList(result.data, list, input);
+                        }
+                    } catch (e) {
+                        console.error('獲取品牌失敗', e);
+                    }
+                }, 300);
+            };
+
+            // 聚焦與輸入時觸發
+            input.addEventListener('focus', fetchAndShowBrands);
+            input.addEventListener('input', fetchAndShowBrands);
+
+            // 失去焦點時隱藏 (延遲 200ms 是為了讓 mousedown 事件能先被觸發)
+            input.addEventListener('blur', () => {
+                setTimeout(() => {list.classList.remove('active');}, 200);
+            });
+        }
+
+        function renderCreateBrandList(brands, list, input) {
+            if (!brands || brands.length === 0) {
+                list.innerHTML = '<div class="autocomplete-empty">無匹配品牌</div>';
+                list.classList.add('active');
+                return;
+            }
+
+            list.innerHTML = brands.map(b => `<div class="autocomplete-item" data-value="${b}">${b}</div>`).join('');
+            list.classList.add('active');
+
+            // 使用 mousedown 而非 click，防止 input 的 blur 事件優先觸發導致下拉框消失而無法點擊
+            list.querySelectorAll('.autocomplete-item').forEach(item => {
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    input.value = item.dataset.value;
+                    list.classList.remove('active');
+                    loadCreateProducts(); // 選中後自動觸發載入商品（使用新的自定義下拉框）
+                });
+            });
+        }
+        // ==========================================
+        // 【創建申請】商品下拉框相關函數
+        // ==========================================
+
+        // 1. 切換下拉框顯示/隱藏
+        function toggleCreateProductDropdown() {
+            const options = document.getElementById('createProductDropdownOptions');
+            if (options) {
+                const isHidden = options.style.display === 'none' || options.style.display === '';
+                options.style.display = isHidden ? 'block' : 'none';
+            }
+        }
+
+        // 2. 點擊選項時的處理函數
+        function selectCreateProductByElement(el) {
+            // 從 data 屬性中安全讀取數據
+            const productId = el.getAttribute('data-product-id');
+            const displayText = el.getAttribute('data-display-text');
+
+            // 更新隱藏的 input (用於表單提交)
+            document.getElementById('createProductValue').value = productId;
+            // 更新顯示的文字
+            document.getElementById('createProductDropdownText').textContent = displayText;
+            // 關閉下拉列表
+            document.getElementById('createProductDropdownOptions').style.display = 'none';
+        }
+
+        // 3. 加載商品列表（用於創建申請）
+        async function loadCreateProducts() {
+            const brand = document.getElementById('createBrandInput').value.trim();
+            const optionsContainer = document.getElementById('createProductDropdownOptions');
+
+            if (!brand) {
+                optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray);">請先輸入品牌</div>';
+                document.getElementById('createProductDropdownText').textContent = '請先選擇品牌';
+                return;
+            }
+
+            optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gold);"><i class="fas fa-spinner fa-spin"></i> 載入中...</div>';
+
+            try {
+                const response = await fetch(`/brands/${encodeURIComponent(brand)}`);
+                const result = await response.json();
+                if (result.success && result.data) {
+                    if (result.data.length === 0) {
+                        optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray);">該品牌下暫無商品</div>';
+                        document.getElementById('createProductDropdownText').textContent = '該品牌下暫無商品';
+                    } else {
+                        // 生成選項 HTML (使用 data 屬性避免引號轉義問題)
+                        let html = `<div class="custom-dropdown-option"
+                         data-product-id=""
+                         data-display-text="尚未分配 (清空關聯)"
+                         onclick="selectCreateProductByElement(this)">
+                         尚未分配 (清空關聯)
+                     </div>`;
+
+                        result.data.forEach(product => {
+                            const displayText = `${product.description} (ID: ${product.productId})`;
+
+                            // 使用 data 屬性存儲數據，只需轉義雙引號
+                            html += `<div class="custom-dropdown-option"
+                             data-product-id="${product.productId}"
+                             data-display-text="${displayText.replace(/"/g, '&quot;')}"
+                             onclick="selectCreateProductByElement(this)">
+                            ${product.description} (HK$ ${product.price})
+                         </div>`;
+                        });
+                        optionsContainer.innerHTML = html;
+                        document.getElementById('createProductDropdownText').textContent = '請選擇商品';
+                    }
+                } else {
+                    optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray);">載入失敗</div>';
+                }
+            } catch (e) {
+                console.error('載入商品失敗', e);
+                optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray);">網絡錯誤</div>';
+            }
+        }
+
+        // 4. 全局點擊事件：點擊下拉框外部時，自動關閉下拉列表
+        document.addEventListener('click', function (e) {
+            const wrapper = document.querySelector('#productSelectionArea .custom-dropdown-wrapper');
+            const options = document.getElementById('createProductDropdownOptions');
+            if (wrapper && options && !wrapper.contains(e.target)) {
+                options.style.display = 'none';
+            }
+        });
+
+        // ==========================================
+        // 門店預約聯動驗證與回填邏輯
+        // ==========================================
+
+        // 全局變量：存儲從後端加載的門店數據
+        let loadedStores = [];
+
+        /**
+         * 1. 加載門店列表
+         */
+        async function loadStores() {
+            try {
+                const response = await fetch('/admin/stores/api/stores/available');
+                const result = await response.json();
+                if (result.success && result.data) {
+                    loadedStores = result.data;
+                    const select = document.getElementById('modalStoreIdSelect');
+                    if (select) {
+                        // 清空現有選項（保留第一個默認選項）
+                        select.innerHTML = '<option value="">請選擇門店</option>';
+
+                        // 渲染門店下拉選單
+                        loadedStores.forEach(store => {
+                            const option = document.createElement('option');
+                            option.value = store.storeId;
+                            option.textContent = store.name;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('加載門店列表失敗:', error);
+            }
+        }
+
+        /**
+         * 2. 門店信息與日期限制更新 (選擇門店時觸發)
+         */
+        window.updateStoreInfo = function (storeId) {
+            const store = loadedStores.find(s => s.storeId == storeId);
+            const infoBox = document.getElementById('modalStoreInfoBox');
+            const infoList = document.getElementById('modalStoreInfoList');
+            const dateInput = document.getElementById('modalAppointmentDate');
+            const timeInput = document.getElementById('modalAppointmentTimeSlot');
+            const hintBox = document.getElementById('modalAppointmentTimeHint');
+
+            if (!store) {
+                // 若未選擇門店，禁用並清空日期和時間
+                if (infoBox) infoBox.style.display = 'none';
+                if (dateInput) {dateInput.disabled = true; dateInput.value = '';}
+                if (timeInput) {timeInput.disabled = true; timeInput.value = '';}
+                if (hintBox) hintBox.style.display = 'none';
+                return;
+            }
+
+            // 1. 解析營業時間 (統一營業 或 每日分別設置)
+            let hoursText = '未設置';
+            if (store.scheduleMode === 'UNIFIED') {
+                hoursText = `統一營業時間：${store.hours || '未設置'}`;
+            } else if (store.scheduleMode === 'DAILY' && store.dailyHours) {
+                try {
+                    const daily = JSON.parse(store.dailyHours);
+                    const today = new Date().getDay();
+                    const dayKey = today === 0 ? 7 : today; // 將週日(0)轉為7
+                    const dayData = daily[dayKey];
+                    if (dayData && !dayData.closed) {
+                        hoursText = `今日營業時間：${dayData.start} - ${dayData.end}`;
+                    } else {
+                        hoursText = `今日店鋪休息`;
+                    }
+                } catch (e) {
+                    hoursText = '營業時間解析錯誤';
+                }
+            }
+
+            // 2. 組裝提示 HTML (已移除提前預約天數的提示)
+            let rulesHtml = `<li><i class="fas fa-clock"></i> ${hoursText}</li>`;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (store.returnBlackoutStartDate && store.returnBlackoutEndDate) {
+                if (todayStr >= store.returnBlackoutStartDate && todayStr <= store.returnBlackoutEndDate) {
+                    rulesHtml += `<li style="color: #dc3545;"><i class="fas fa-ban"></i> 暫停預約： ${store.returnBlackoutStartDate} 至 ${store.returnBlackoutEndDate} (${store.returnBlackoutReason || '店鋪盤點/假期'})</li>`;
+                }
+            }
+
+            if (infoList) infoList.innerHTML = rulesHtml;
+            if (infoBox) infoBox.style.display = 'block';
+
+            // 3. 設置日期輸入限制 (啟用日期框，並計算 min 日期為今天)
+            if (dateInput) {
+                dateInput.disabled = false;
+                dateInput.value = '';
+                // 最小日期設為今天
+                dateInput.min = todayStr;
+            }
+
+            // 先禁用時間框，等日期選好再啟用
+            if (timeInput) {
+                timeInput.disabled = true;
+                timeInput.value = '';
+            }
+            if (hintBox) hintBox.style.display = 'none';
+        };
+
+        /**
+         * 3. 時間槽動態驗證與限制 (選擇日期時觸發)
+         */
+        window.updateTimeSlots = function () {
+            const storeId = document.getElementById('modalStoreIdSelect').value;
+            const selectedDateStr = document.getElementById('modalAppointmentDate').value;
+            const timeInput = document.getElementById('modalAppointmentTimeSlot');
+            const hintBox = document.getElementById('modalAppointmentTimeHint');
+            const hintText = document.getElementById('modalAppointmentTimeHintText');
+
+            if (!storeId || !selectedDateStr) {
+                if (timeInput) {timeInput.disabled = true; timeInput.value = '';}
+                if (hintBox) hintBox.style.display = 'none';
+                return;
+            }
+
+            const store = loadedStores.find(s => s.storeId == storeId);
+            const selectedDate = new Date(selectedDateStr);
+            const dayOfWeek = selectedDate.getDay() === 0 ? 7 : selectedDate.getDay(); // 1-7
+
+            // 【校驗 1】：檢查店鋪在該星期幾是否營業
+            let isStoreOpenOnThisDay = false;
+            let daySchedule = null;
+            if (store.scheduleMode === 'DAILY' && store.dailyHours) {
+                try {
+                    const daily = JSON.parse(store.dailyHours);
+                    daySchedule = daily[dayOfWeek];
+                    if (daySchedule && !daySchedule.closed) {
+                        isStoreOpenOnThisDay = true;
+                    } else {
+                        if (hintBox && hintText) {
+                            hintBox.style.display = 'block';
+                            hintText.innerHTML = `⚠️ 該店鋪在星期${dayOfWeek === 7 ? '日' : dayOfWeek}休息，無法預約！`;
+                            hintText.style.color = '#dc3545';
+                        }
+                        if (timeInput) {timeInput.disabled = true; timeInput.value = '';}
+                        return;
+                    }
+                } catch (e) {
+                    console.error('解析每日營業時間失敗:', e);
+                }
+            } else if (store.scheduleMode === 'UNIFIED' && store.hours) {
+                isStoreOpenOnThisDay = true;
+            }
+
+            if (!isStoreOpenOnThisDay) return;
+
+            // 【校驗 2】：檢查是否在固定休息日 (returnClosedDaysOfWeek)
+            if (store.returnClosedDaysOfWeek) {
+                const closedDays = String(store.returnClosedDaysOfWeek).split(',').map(d => parseInt(d.trim()));
+                if (closedDays.includes(dayOfWeek)) {
+                    if (hintBox && hintText) {
+                        hintBox.style.display = 'block';
+                        hintText.innerHTML = `⚠️ 該日為店鋪固定休息日（星期${dayOfWeek === 7 ? '日' : dayOfWeek}），無法預約！`;
+                        hintText.style.color = '#dc3545';
+                    }
+                    if (timeInput) {timeInput.disabled = true; timeInput.value = '';}
+                    return;
+                }
+            }
+
+            // 【校驗 3】：檢查是否處於暫停售後期間
+            if (store.returnBlackoutStartDate && store.returnBlackoutEndDate) {
+                if (selectedDateStr >= store.returnBlackoutStartDate && selectedDateStr <= store.returnBlackoutEndDate) {
+                    if (hintBox && hintText) {
+                        hintBox.style.display = 'block';
+                        hintText.innerHTML = `⚠️ 該日期為暫停預約期間 (${store.returnBlackoutStartDate} 至 ${store.returnBlackoutEndDate})，無法預約！`;
+                        hintText.style.color = '#dc3545';
+                    }
+                    if (timeInput) {timeInput.disabled = true; timeInput.value = '';}
+                    return;
+                }
+            }
+
+            // 【校驗 4】：獲取該日的營業時間並轉換為 24 小時制
+            let startTime = '09:00', endTime = '19:00'; // 默認值
+            if (store.scheduleMode === 'UNIFIED' && store.hours) {
+                const times = parseBusinessHours(store.hours);
+                if (times) {startTime = times.start; endTime = times.end;}
+            } else if (store.scheduleMode === 'DAILY' && daySchedule) {
+                const times = parseBusinessHours(`${daySchedule.start} - ${daySchedule.end}`);
+                if (times) {startTime = times.start; endTime = times.end;}
+            }
+
+            // 設置 input type="time" 的 min 和 max 屬性，啟用輸入框
+            if (timeInput) {
+                timeInput.disabled = false;
+                timeInput.min = startTime;
+                timeInput.max = endTime;
+            }
+
+            // 觸發一次實時驗證以顯示提示
+            validateTimeInput();
+        };
+
+        /**
+         * 4. 實時時間驗證 (輸入時間時觸發)
+         */
+        window.validateTimeInput = function () {
+            const timeInput = document.getElementById('modalAppointmentTimeSlot');
+            const hintBox = document.getElementById('modalAppointmentTimeHint');
+            const hintText = document.getElementById('modalAppointmentTimeHintText');
+
+            if (!timeInput) return;
+
+            const startTime = timeInput.min;
+            const endTime = timeInput.max;
+
+            timeInput.classList.remove('time-input-error'); // 重置狀態
+
+            if (!timeInput.value) {
+                if (hintBox && hintText) {
+                    hintBox.style.display = 'block';
+                    hintText.innerHTML = `營業時間：${formatTimeDisplay(startTime)} 至 ${formatTimeDisplay(endTime)}`;
+                    hintText.style.color = '#6c757d';
+                }
+                return;
+            }
+
+            // 檢查時間是否超出範圍
+            if (timeInput.value < startTime || timeInput.value > endTime) {
+                timeInput.classList.add('time-input-error'); // 添加紅色邊框和抖動動畫 (需在CSS中定義 .time-input-error)
+                if (hintBox && hintText) {
+                    hintBox.style.display = 'block';
+                    hintText.innerHTML = `⚠️ 預約時間不得早於 ${formatTimeDisplay(startTime)} 或晚於 ${formatTimeDisplay(endTime)}！`;
+                    hintText.style.color = '#dc3545';
+                }
+            } else {
+                // 時間合法
+                if (hintBox && hintText) {
+                    hintBox.style.display = 'block';
+                    hintText.innerHTML = `✓ 有效時間：${formatTimeDisplay(startTime)} 至 ${formatTimeDisplay(endTime)}`;
+                    hintText.style.color = '#28a745';
+                }
+            }
+        };
+
+        /**
+         * 5. 輔助函數：時間格式轉換
+         */
+        function parseBusinessHours(hoursStr) {
+            const parts = hoursStr.split('-');
+            if (parts.length === 2) {
+                return {
+                    start: convertTo24Hour(parts[0].trim()),
+                    end: convertTo24Hour(parts[1].trim())
+                };
+            }
+            return null;
+        }
+
+        function convertTo24Hour(timeStr) {
+            const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+            if (!match) return "10:00";
+            let hours = parseInt(match[1]);
+            const mins = match[2];
+            const period = match[3].toUpperCase();
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            return `${String(hours).padStart(2, '0')}:${mins}`;
+        }
+
+        function formatTimeDisplay(time24) {
+            const [hours, minutes] = time24.split(':');
+            let h = parseInt(hours);
+            const period = h >= 12 ? 'P.M.' : 'A.M.';
+            h = h % 12 || 12;
+            return `${String(h).padStart(2, '0')}:${minutes} ${period}`;
+        }
+
         // 點擊遮罩層關閉 Modal
-        document.getElementById('createAppUserModal')?.addEventListener('click', function (e) {
+        document.getElementById('receiveItemModal')?.addEventListener('click', function (e) {
             if (e.target === this) {
-                closeCreateAppModal();
+                closeReceiveItemModal();
             }
         });
 
         // ESC 鍵關閉 Modal
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
-                const modal = document.getElementById('createAppUserModal');
+                const modal = document.getElementById('receiveItemModal');
                 if (modal && modal.style.display === 'flex') {
-                    closeCreateAppModal();
+                    closeReceiveItemModal();
                 }
             }
         });

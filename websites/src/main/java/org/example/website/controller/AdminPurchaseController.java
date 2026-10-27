@@ -374,12 +374,12 @@ public class AdminPurchaseController {
     // ==========================================
     // 4. API: 獲取篩選選項 (已修復：路徑、操作員列表、門店數據結構)
     // ==========================================
-    @Operation(summary = "獲取篩選選項")
+    @Operation(summary = "獲取採購訂單篩選選項")
     @GetMapping("/api/admin/purchases/filter-options")
-    public ResponseEntity<Result> getFilterOptions() {
+    public ResponseEntity<Result> getPurchaseFilterOptions() {
         Map<String, Object> options = new HashMap<>();
 
-        // 1. 倉庫類型選項
+        // 1. 倉庫類型選項 (採購訂單專屬)
         List<Map<String, String>> warehouseTypes = new ArrayList<>();
         for (PurchaseOrder.WarehouseType type : PurchaseOrder.WarehouseType.values()) {
             Map<String, String> option = new HashMap<>();
@@ -389,7 +389,7 @@ public class AdminPurchaseController {
         }
         options.put("warehouseTypes", warehouseTypes);
 
-        // 2. 狀態選項
+        // 2. 狀態選項 (採購訂單專屬)
         List<Map<String, String>> statuses = new ArrayList<>();
         for (PurchaseOrder.PurchaseStatus status : PurchaseOrder.PurchaseStatus.values()) {
             Map<String, String> option = new HashMap<>();
@@ -404,15 +404,16 @@ public class AdminPurchaseController {
         }
         options.put("statuses", statuses);
 
-        // 3. 供應商列表
+        // 3. 供應商列表 (採購訂單專屬)
         List<String> suppliers = purchaseOrderRepository.findDistinctSuppliers();
         options.put("suppliers", suppliers != null ? suppliers : new ArrayList<>());
 
-        // 4. 【修復 2】操作員列表 (前端 JS 需要 data.operators)
+        // 4. 操作員列表 (採購訂單專屬，嚴禁共用給庫存日誌 Tab)
         List<String> operators = purchaseOrderRepository.findDistinctOperatorUsernames();
         options.put("operators", operators != null ? operators : new ArrayList<>());
 
-        // 5. 【修復 3】門店列表 (前端 JS 期望讀取 store.storeId 和 store.name)
+        // 5. 【唯一共用項目】門店列表
+        // (前端 JS 會將此數據同時填充至 Tab 1 和 Tab 2 的門店下拉框)
         List<OfflineStore> stores = purchaseOrderRepository.findDistinctStoresInPurchases();
         List<Map<String, Object>> storeOptions = stores.stream().map(store -> {
             Map<String, Object> storeMap = new HashMap<>();
@@ -425,6 +426,31 @@ public class AdminPurchaseController {
             return storeMap;
         }).collect(Collectors.toList());
         options.put("stores", storeOptions);
+
+        return ResponseEntity.ok(Result.okWithData("獲取成功", options));
+    }
+
+    // ==========================================
+    // 【新增】API: 獲取「庫存調整日誌」專屬篩選選項
+    // ==========================================
+    @Operation(summary = "獲取庫存調整日誌篩選選項")
+    @GetMapping("/api/admin/inventory/filter-options")
+    public ResponseEntity<Result> getInventoryFilterOptions() {
+        Map<String, Object> options = new HashMap<>();
+
+        // 1. 操作員列表 (庫存調整日誌專屬，從 inventory_adjustment_log 關聯查詢)
+        List<String> logOperators = adjustmentLogRepository.findDistinctOperatorUsernames();
+        options.put("logOperators", logOperators != null ? logOperators : new ArrayList<>());
+
+        // 2. 倉庫類型選項 (線上總倉 / 線下門店)
+        List<Map<String, String>> warehouseTypes = new ArrayList<>();
+        for (InventoryAdjustmentLog.WarehouseType type : InventoryAdjustmentLog.WarehouseType.values()) {
+            Map<String, String> option = new HashMap<>();
+            option.put("value", type.name());
+            option.put("label", type == InventoryAdjustmentLog.WarehouseType.ONLINE ? "線上總倉" : "線下門店");
+            warehouseTypes.add(option);
+        }
+        options.put("warehouseTypes", warehouseTypes);
 
         return ResponseEntity.ok(Result.okWithData("獲取成功", options));
     }

@@ -255,7 +255,13 @@ public class PageController {
     }
 
     @GetMapping("/contact")
-    public String contact() {
+    public String contact(Model model) {
+        // 1. 查詢所有處於激活狀態 (isActive = true) 的線下門店
+        List<OfflineStore> activeStores = offlineStoreRepository.findByIsActiveTrue();
+
+        // 2. 將數據傳遞給前端 Thymeleaf 模板
+        model.addAttribute("activeStores", activeStores);
+
         return "contact";
     }
 

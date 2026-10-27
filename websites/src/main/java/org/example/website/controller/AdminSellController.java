@@ -5,14 +5,8 @@ import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.Result;
-import org.example.website.entity.OfflineStore;
-import org.example.website.entity.Product;
-import org.example.website.entity.SellApplication;
-import org.example.website.entity.User;
-import org.example.website.repository.OfflineStoreRepository;
-import org.example.website.repository.ProductRepository;
-import org.example.website.repository.SellApplicationRepository;
-import org.example.website.repository.UserRepository;
+import org.example.website.entity.*;
+import org.example.website.repository.*;
 import org.example.website.service.FileStorageService;
 import org.example.website.util.PaginationUtils;
 import org.springframework.data.domain.Page;
@@ -21,12 +15,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,14 +38,16 @@ public class AdminSellController {
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final StoreDailyReportRepository storeDailyReportRepository;
 
-    public AdminSellController(SellApplicationRepository sellApplicationRepository, OfflineStoreRepository offlineStoreRepository, FileStorageService fileStorageService, ObjectMapper objectMapper, UserRepository userRepository, ProductRepository productRepository) {
+    public AdminSellController(SellApplicationRepository sellApplicationRepository, OfflineStoreRepository offlineStoreRepository, FileStorageService fileStorageService, ObjectMapper objectMapper, UserRepository userRepository, ProductRepository productRepository, StoreDailyReportRepository storeDailyReportRepository) {
         this.sellApplicationRepository = sellApplicationRepository;
         this.offlineStoreRepository = offlineStoreRepository;
         this.fileStorageService = fileStorageService;
         this.objectMapper = objectMapper;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.storeDailyReportRepository = storeDailyReportRepository;
     }
 
     /**
@@ -177,6 +176,15 @@ public class AdminSellController {
             appraiserMap.put("username", app.getAppraiser().getUsername());
             data.put("appraiser", appraiserMap);
         }
+        //處理最後負責人 (Operator)
+        if(app.getOperator() != null) {
+            Map<String, Object> operatorMap = new HashMap<>();
+            operatorMap.put("id",app.getOperator().getId());
+            operatorMap.put("username", app.getOperator().getUsername());
+            data.put("operator", operatorMap);
+        }else{
+            data.put("operator", null);
+        }
         if(app.getProduct() != null) {
             Map<String,Object>productMap = new HashMap<>();
             productMap.put("productId", app.getProduct().getProductId());
@@ -188,21 +196,45 @@ public class AdminSellController {
         return ResponseEntity.ok(Result.okWithData("獲取成功", data));
     }
 
-    /**
-     * 4. 更新出售申請 (管理員「重新編輯」專用，支援圖片更換/移動/刪除)
-     * 【核心變更】：consumes 改為 multipart/form-data，才能同時接收文字欄位與新圖片檔案
-     */
     @Operation(summary = "更新出售申請", description = "管理員修改申請狀態、手錶基礎資訊、鑑定報價、關聯商品與鑑定師，並管理實物圖片")
     @PutMapping(value = "/api/sell-applications/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseBody
     public ResponseEntity<?> updateApplication(
             @PathVariable Long id,
             @RequestParam Map<String, String> form,
-            MultipartHttpServletRequest multipartRequest) {
+            MultipartHttpServletRequest multipartRequest,
+            Authentication authentication) {
+
         SellApplication app = sellApplicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("申請記錄不存在"));
 
         try {
+            // ==========================================
+            // 【核心校驗 1】：檢查是否試圖將狀態改為 COMPLETED，若是則必須填寫鑑定師和最終成交價
+            // ==========================================
+            boolean isChangingToCompleted = false;
+            if (form.get("status") != null && !form.get("status").isEmpty()) {
+                SellApplication.ApplicationStatus newStatus = SellApplication.ApplicationStatus.valueOf(form.get("status"));
+                if (newStatus == SellApplication.ApplicationStatus.COMPLETED) {
+                    isChangingToCompleted = true;
+                    //記錄交易完成時間
+                    app.setCompletedAt(java.time.LocalDateTime.now());
+                    String appraiserIdStr = form.get("appraiserId");
+                    String finalPriceStr = form.get("finalPrice");
+
+                    if (appraiserIdStr == null || appraiserIdStr.trim().isEmpty()) {
+                        return ResponseEntity.badRequest().body(Result.error("狀態為「已完成」時，負責鑑定師不能為空！"));
+                    }
+                    if (finalPriceStr == null || finalPriceStr.trim().isEmpty()) {
+                        return ResponseEntity.badRequest().body(Result.error("狀態為「已完成」時，最終成交價不能為空！"));
+                    }
+                }
+            }
+
+
+            // ==========================================
+            // 執行更新 (若未被保護，則正常更新)
+            // ==========================================
             // ===== 1. 手錶基礎資訊 =====
             String brand = emptyToNull(form.get("brand"));
             String series = emptyToNull(form.get("series"));
@@ -242,7 +274,7 @@ public class AdminSellController {
                 app.setAppraisalNotes(emptyToNull(form.get("appraisalNotes")));
             }
 
-            // ===== 4. 【新增】關聯平台商品 (productId) =====
+            // ===== 4. 關聯平台商品 (productId) =====
             if (form.containsKey("productId")) {
                 String productIdStr = form.get("productId");
                 if (productIdStr != null && !productIdStr.trim().isEmpty()) {
@@ -250,11 +282,11 @@ public class AdminSellController {
                             .orElseThrow(() -> new RuntimeException("關聯的商品不存在，ID: " + productIdStr));
                     app.setProduct(product);
                 } else {
-                    app.setProduct(null); // 若前端傳空值，則清空商品關聯
+                    app.setProduct(null);
                 }
             }
 
-            // ===== 5. 【新增】負責鑑定師 (appraiserId) =====
+            // ===== 5. 負責鑑定師 (appraiserId) =====
             if (form.containsKey("appraiserId")) {
                 String appraiserIdStr = form.get("appraiserId");
                 if (appraiserIdStr != null && !appraiserIdStr.trim().isEmpty()) {
@@ -262,9 +294,10 @@ public class AdminSellController {
                             .orElseThrow(() -> new RuntimeException("指派的鑑定師不存在，ID: " + appraiserIdStr));
                     app.setAppraiser(appraiser);
                 } else {
-                    app.setAppraiser(null); // 若前端傳空值，則清空鑑定師關聯
+                    app.setAppraiser(null);
                 }
             }
+
 
             // ===== 6. 圖片管理 (更換 / 移動 / 刪除) =====
             Map<String, String> oldMap = parseImageMap(app.getImagePaths());
@@ -285,10 +318,12 @@ public class AdminSellController {
 
             // 6.3 處理存儲與實體檔案清理
             if (!uploads.isEmpty() || imageMapJson != null) {
+                // 修改第 220-225 行左右
                 if (!uploads.isEmpty()) {
-                    String folder = app.getApplicationId() + "_edit_" + System.currentTimeMillis();
+                    //  使用固定文件夹名称，不要加时间戳
+                    String folder = "sell_app_" + app.getApplicationId();
                     Map<String, String> uploaded = fileStorageService.uploadMultipleImages(uploads, folder);
-                    finalMap.putAll(uploaded); // 新圖覆蓋同欄位舊圖
+                    finalMap.putAll(uploaded);
                 }
                 // Diff：舊路徑不在最終結果中 = 被刪除或被更換 → 清理實體檔案
                 Set<String> finalPaths = new HashSet<>(finalMap.values());
@@ -299,8 +334,50 @@ public class AdminSellController {
                 }
                 app.setImagePaths(objectMapper.writeValueAsString(finalMap));
             }
+            if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+                String operatorUsername = authentication.getName();
+                User operatorUser = userRepository.findByUsername(operatorUsername)
+                        .orElseThrow(() -> new RuntimeException("操作人不存在: " + operatorUsername));
+                app.setOperator(operatorUser); // 設置操作人
+            }
 
             sellApplicationRepository.save(app);
+
+            // ==========================================
+            // 【核心新增】：如果狀態剛剛變更為 COMPLETED，且有關聯門店，則更新門店每日報表
+            // ==========================================
+            if (isChangingToCompleted && app.getStoreId() != null && !app.getStoreId().trim().isEmpty()) {
+                try {
+                    Long storeId = Long.parseLong(app.getStoreId());
+                    LocalDate reportDate = LocalDate.now(); // 使用當前日期作為報表統計日期
+
+                    // 查找或創建當日的門店報表
+                    StoreDailyReport report = storeDailyReportRepository.findByStore_StoreIdAndReportDate(storeId, reportDate)
+                            .orElseGet(() -> {
+                                OfflineStore store = offlineStoreRepository.findById(storeId)
+                                        .orElseThrow(() -> new RuntimeException("門店不存在, ID: " + storeId));
+                                StoreDailyReport newReport = new StoreDailyReport();
+                                newReport.setStore(store);
+                                newReport.setReportDate(reportDate);
+                                return newReport;
+                            });
+
+                    BigDecimal finalPrice = app.getFinalPrice() != null ? app.getFinalPrice() : BigDecimal.ZERO;
+
+                    // 【核心邏輯】：出售申請完成 = 平台收購二手錶，計入「收購成本」
+                    BigDecimal currentCost = report.getStoreAcquisitionCost() != null ? report.getStoreAcquisitionCost() : BigDecimal.ZERO;
+                    report.setStoreAcquisitionCost(currentCost.add(finalPrice));
+
+                    // 2. 保存更新後的報表
+                    storeDailyReportRepository.save(report);
+                } catch (NumberFormatException e) {
+                    // 忽略無效的 storeId 格式，不中斷主流程
+                    System.err.println("⚠️ 無效的門店ID格式，無法更新門店每日報表: " + app.getStoreId());
+                } catch (Exception e) {
+                    // 記錄日誌，根據業務需求決定是否拋出異常。此處選擇捕獲以防影響主流程
+                    System.err.println("⚠️ 更新門店每日報表失敗: " + e.getMessage());
+                }
+            }
             return ResponseEntity.ok(Result.ok("申請資料更新成功"));
 
         } catch (IllegalArgumentException e) {

@@ -69,6 +69,8 @@ public class User {
         CUSTOMER,
         SALES,      // 一般銷售人員（門店接待、訂單處理、客戶溝通）
         COURIER,    // 送貨/快遞人員（僅能查看配送任務、更新物流狀態）
-        APPRAISER   // 【預留】鑑定師（負責手錶真偽鑑定與評級）
+        APPRAISER,   // 【預留】鑑定師（負責手錶真偽鑑定與評級）
+        ONLINE_STAFF,
+        STORE_MANAGER
     }
 }

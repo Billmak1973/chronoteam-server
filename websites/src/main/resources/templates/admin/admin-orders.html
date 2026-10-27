@@ -1106,15 +1106,11 @@
                     </div>
 
                     <!-- 篩選條件實際消費總額顯示區 -->
-                    <div
-                        style="margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #fff9f0 0%, #ffffff 100%); border-radius: 8px; border-left: 4px solid var(--gold); display: flex; align-items: center; gap: 0.8rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <div id="total-spent-container" style="margin-bottom: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #fff9f0 0%, #ffffff 100%); border-radius: 8px; border-left: 4px solid var(--gold); display: flex; align-items: center; gap: 0.8rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                         <i class="fas fa-coins" style="color: var(--gold); font-size: 1.5rem;"></i>
                         <div>
-                            <!--  如果發現訂單中有 PARTIALLY_REFUNDED（部分退款/退貨），就要用該訂單的總金額減去退/換貨的物品金額！-->
-                            <div style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">當前篩選條件實際消費總額
-                                (已扣除退/換貨)</div>
-                            <div id="filtered-total-spent-amount"
-                                style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">HK$ 0.00</div>
+                            <div style="font-size: 0.85rem; color: var(--gray); font-weight: 600;">當前篩選條件實際消費總額 (已扣除退/換貨)</div>
+                            <div id="filtered-total-spent-amount" style="font-size: 1.5rem; font-weight: 800; color: var(--accent);">HK$ 0.00</div>
                         </div>
                     </div>
 
@@ -1562,7 +1558,7 @@
             }
 
             // ==========================================
-            // 【新增】快遞狀態更新按鈕渲染邏輯
+            // 快遞狀態更新按鈕渲染邏輯
             // ==========================================
             let courierActionBtnHtml = '';
             // 條件：有快遞員 且 狀態為 PAID 或 SHIPPED
@@ -1597,7 +1593,7 @@
             const appointmentDateHtml = order.appointmentDate ? `<span style="color:#155724;">${formatDateOnly(order.appointmentDate)}</span>` : '<span class="text-muted">-</span>';
 
             // ==========================================
-            // 【新增】部分退款金額顯示邏輯
+            // 部分退款金額顯示邏輯
             // ==========================================
             let amountDisplayHtml = '';
             if (order.paymentStatus === 'PARTIALLY_REFUNDED') {
@@ -1741,17 +1737,44 @@
                 onlineOrderRetentionDays = data.onlineOrderRetentionDays;
                 offlinePaymentDays = data.offlinePaymentDays;
 
-                // 【新增】更新篩選條件下的總消費金額顯示
+                // 【新增權限判斷】更新篩選條件下的總消費金額顯示
+                const buyerMode = document.getElementById('filter-buyer-mode').value;
                 const totalSpentEl = document.getElementById('filtered-total-spent-amount');
-                if (totalSpentEl) {
-                    const amount = data.totalSpentAmount !== null ? data.totalSpentAmount : 0;
-                    totalSpentEl.textContent = 'HK$ ' + new Intl.NumberFormat('zh-HK', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    }).format(amount);
+
+                if (currentUserRole === 'ADMIN' || buyerMode === 'specific') {
+                    // 管理員 或 指定了特定買家，允許顯示金額
+                    if (totalSpentEl) {
+                        const amount = data.totalSpentAmount !== null ? data.totalSpentAmount : 0;
+                        totalSpentEl.textContent = 'HK$ ' + new Intl.NumberFormat('zh-HK', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        }).format(amount);
+                    }
+                } else {
+                    // 非管理員且為全部買家，隱藏或重置為 0 (配合 checkTotalSpentVisibility 已隱藏整個區塊)
+                    if (totalSpentEl) {
+                        totalSpentEl.textContent = 'HK$ 0.00';
+                    }
                 }
             }
         };
+
+        // ==========================================
+        // 檢查消費總額區塊的顯示權限
+        // ==========================================
+        function checkTotalSpentVisibility() {
+            const container = document.getElementById('total-spent-container');
+            if (!container) return;
+
+            const buyerMode = document.getElementById('filter-buyer-mode').value;
+
+            // 核心邏輯：如果不是管理員，且選擇了「全部買家」，則隱藏該區塊
+            if (currentUserRole !== 'ADMIN' && buyerMode === 'all') {
+                container.style.display = 'none';
+            } else {
+                container.style.display = 'flex';
+            }
+        }
 
         // ==========================================
         // 加載篩選下拉框選項
@@ -2018,6 +2041,9 @@
             //  更新 tableConfig 並重新加載
             tableConfig.params = params;
             AdminTable.loadData(tableConfig);
+
+            // 重新檢查總額顯示權限
+            checkTotalSpentVisibility();
         }
 
         function toggleStoreFilter() {
@@ -2075,6 +2101,9 @@
             // 重置參數並加載
             tableConfig.params = {page: 1, size: 25};
             AdminTable.loadData(tableConfig);
+
+            // 重新檢查總額顯示權限
+            checkTotalSpentVisibility();
         }
 
         function updateFilterVisibility() {

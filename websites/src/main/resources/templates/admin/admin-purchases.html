@@ -1571,55 +1571,78 @@
             toggleDateRange('update');
             loadPurchaseOrdersWithFilters(1);
         }
-
-        // ==========================================
-        // 7. 加載篩選選項 (Tab 1 & Tab 2 共用)
-        // ==========================================
         async function loadFilterOptions() {
             try {
-                const response = await fetch('/admin/api/admin/purchases/filter-options');
-                const result = await response.json();
-                if (result.success && result.data) {
-                    const options = result.data;
+                // ==========================================
+                // 1. 獲取「採購訂單 (Tab 1)」專屬的篩選選項
+                // ==========================================
+                const purchaseRes = await fetch('/admin/api/admin/purchases/filter-options');
+                const purchaseResult = await purchaseRes.json();
 
-                    // Tab 1: 操作員與門店
+                if (purchaseResult.success && purchaseResult.data) {
+                    const options = purchaseResult.data;
+
+                    // 【Tab 1 專屬】填充操作員下拉框
                     const opSelect1 = document.getElementById('filter-operator');
                     if (opSelect1 && options.operators) {
                         options.operators.forEach(op => {
                             const opt = document.createElement('option');
-                            opt.value = op; opt.textContent = op;
+                            opt.value = op;
+                            opt.textContent = op;
                             opSelect1.appendChild(opt);
                         });
                     }
-                    const stSelect1 = document.getElementById('filter-storeId');
-                    if (stSelect1 && options.stores) {
-                        options.stores.forEach(store => {
-                            const opt = document.createElement('option');
-                            opt.value = store.storeId; opt.textContent = store.name;
-                            stSelect1.appendChild(opt);
-                        });
-                    }
 
-                    // Tab 2: 操作員與門店 (使用新 ID)
-                    const opSelect2 = document.getElementById('log-operator');
-                    if (opSelect2 && options.operators) {
-                        options.operators.forEach(op => {
-                            const opt = document.createElement('option');
-                            opt.value = op; opt.textContent = op;
-                            opSelect2.appendChild(opt);
-                        });
-                    }
-                    const stSelect2 = document.getElementById('log-store-id');
-                    if (stSelect2 && options.stores) {
+                    // 【共用項目】填充兩個 Tab 的門店下拉框
+                    const stSelect1 = document.getElementById('filter-storeId');   // Tab 1 門店
+                    const stSelect2 = document.getElementById('log-store-id');     // Tab 2 門店
+
+                    if (options.stores) {
                         options.stores.forEach(store => {
-                            const opt = document.createElement('option');
-                            opt.value = store.storeId; opt.textContent = store.name;
-                            stSelect2.appendChild(opt);
+                            // 填充 Tab 1
+                            if (stSelect1) {
+                                const opt1 = document.createElement('option');
+                                opt1.value = store.storeId;
+                                opt1.textContent = store.name;
+                                stSelect1.appendChild(opt1);
+                            }
+                            // 填充 Tab 2
+                            if (stSelect2) {
+                                const opt2 = document.createElement('option');
+                                opt2.value = store.storeId;
+                                opt2.textContent = store.name;
+                                stSelect2.appendChild(opt2);
+                            }
                         });
                     }
                 }
+
+                // ==========================================
+                // 2. 獲取「庫存調整日誌 (Tab 2)」專屬的篩選選項 用來加載 庫存調整日誌 的操作員（AdminPurchaseController的getInventoryFilterOptions）
+                // ==========================================
+                const inventoryRes = await fetch('/admin/api/admin/inventory/filter-options');
+                const inventoryResult = await inventoryRes.json();
+
+                if (inventoryResult.success && inventoryResult.data) {
+                    const logOptions = inventoryResult.data;
+
+                    // 【Tab 2 專屬】填充操作員下拉框
+                    const logOpSelect = document.getElementById('log-operator');
+                    if (logOpSelect && logOptions.logOperators) {
+                        logOptions.logOperators.forEach(op => {
+                            const opt = document.createElement('option');
+                            opt.value = op;
+                            opt.textContent = op;
+                            logOpSelect.appendChild(opt);
+                        });
+                    }
+                }
+
             } catch (error) {
                 console.error('加載篩選選項失敗:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 加載篩選選項失敗', true);
+                }
             }
         }
 

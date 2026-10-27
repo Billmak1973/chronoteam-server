@@ -94,7 +94,7 @@
     /* 表單與資訊佈局 */
     .content-wrapper {
       display: grid;
-      grid-template-columns: 1fr 1.5fr;
+      grid-template-columns: 1fr;
       gap: 3rem;
       background: white;
       padding: 3rem;
@@ -146,65 +146,6 @@
       font-size: 0.95rem;
     }
 
-    /* 表單樣式 */
-    .contact-form h2 {
-      font-size: 1.8rem;
-      color: var(--primary);
-      margin-bottom: 1.5rem;
-      border-left: 4px solid var(--accent);
-      padding-left: 1rem;
-    }
-
-    .form-group {
-      margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 600;
-      color: var(--primary);
-      font-size: 0.95rem;
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 0.8rem 1rem;
-      border: 2px solid #e9ecef;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-family: inherit;
-      transition: border-color 0.3s, box-shadow 0.3s;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-      outline: none;
-      border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
-    }
-
-    .form-group textarea {
-      min-height: 120px;
-      resize: vertical;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
-    .submit-btn {
-      width: 100%;
-      padding: 1rem;
-      font-size: 1.05rem;
-      justify-content: center;
-    }
-
     /* FAQ 提示區 */
     .faq-hint {
       background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
@@ -240,12 +181,7 @@
     /* 響應式 */
     @media (max-width: 900px) {
       .content-wrapper {
-        grid-template-columns: 1fr;
         padding: 2rem;
-      }
-
-      .form-row {
-        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -253,152 +189,165 @@
 
 <body>
 
-  <!--  3. 引入公共导航栏 (自动包含完整的购物车下拉菜单和登录状态判断) -->
-  <div th:replace="~{fragments/common :: navbar}"></div>
+<!--  3. 引入公共导航栏 (自动包含完整的购物车下拉菜单和登录状态判断) -->
+<div th:replace="~{fragments/common :: navbar}"></div>
 
-  <!-- === 頁面主體 === -->
-  <section class="page-hero">
-    <h1><i class="fas fa-headset"></i> 聯絡我們</h1>
-    <p>無論您是關於商品諮詢、賣家支援還是技術問題，我們的專業團隊隨時準備為您提供協助。</p>
-  </section>
+<!-- === 頁面主體 === -->
+<section class="page-hero">
+  <h1><i class="fas fa-headset"></i> 聯絡我們</h1>
+  <p>無論您是對於商品諮詢、鑑定服務還是技術問題，我們的專業團隊隨時準備為您提供協助。</p>
+</section>
 
-  <div class="container">
-    <!-- 快速聯繫方式 -->
-    <div class="contact-grid">
-      <div class="contact-card">
-        <i class="fab fa-whatsapp"></i>
-        <h3>WhatsApp 客服</h3>
-        <p>最即時的溝通管道，專人在线解答</p>
-        <a href="https://wa.me/85212345678" target="_blank">+852 1234 5678</a>
-      </div>
-      <div class="contact-card">
-        <i class="fas fa-envelope"></i>
-        <h3>電子郵件</h3>
-        <p>適合發送圖片、文件或詳細需求</p>
-        <a href="mailto:support@chronoteam.com">support@chronoteam.com</a>
-      </div>
-      <div class="contact-card">
-        <i class="fas fa-map-marker-alt"></i>
-        <h3>鑑定中心地址</h3>
-        <p>歡迎預約親臨鑑賞或面交</p>
-        <a href="#" style="pointer-events: none; color: var(--gray); cursor: default;">中環皇后大道中 99 號</a>
-      </div>
-      <div class="contact-card">
-        <i class="fas fa-clock"></i>
-        <h3>營業時間</h3>
-        <p>週一至週六，公眾假期休息</p>
-        <a href="#" style="pointer-events: none; color: var(--gray); cursor: default;">10:00 AM - 7:00 PM</a>
-      </div>
+<div class="container">
+  <!-- 快速聯繫方式 -->
+  <div class="contact-grid">
+    <!-- 1. WhatsApp (可保留硬編碼或改為從系統配置讀取) -->
+    <div class="contact-card">
+      <i class="fab fa-whatsapp"></i>
+      <h3>WhatsApp 客服</h3>
+      <p>最即時的溝通管道，專人在线解答</p>
+      <a href="https://wa.me/85212345678" target="_blank">+852 1234 5678</a>
     </div>
 
-    <!-- 詳細資訊與表單 -->
-    <div class="content-wrapper">
-      <!-- 左側：平台承諾 -->
-      <div class="contact-info">
-        <h2>我們在這裡為您服務</h2>
-        <p>在 ChronoTeam，我們深知購買或出售名錶是一項重要的決定。我們的專業鐘錶顧問團隊擁有超過 10 年的行業經驗，致力於為您提供最透明、最安全的交易體驗。</p>
-        <ul class="info-list">
-          <li>
-            <i class="fas fa-shield-alt"></i>
-            <div>
-              <strong>交易安全保障</strong>
-              <span>遇到訂單或資金問題？請立即聯繫我們，我們將優先處理。</span>
-            </div>
-          </li>
-          <li>
-            <i class="fas fa-certificate"></i>
-            <div>
-              <strong>專業鑑定諮詢</strong>
-              <span>對手錶的真偽、市場行情或保養狀態有疑問？我們免費為您解答。</span>
-            </div>
-          </li>
-          <li>
-            <i class="fas fa-handshake"></i>
-            <div>
-              <strong>賣家專屬支援</strong>
-              <span>需要上門估價或安排物流取件？請透過表單或 WhatsApp 告訴我們。</span>
-            </div>
-          </li>
-        </ul>
-      </div>
-
-      <!-- 右側：留言表單 -->
-      <div class="contact-form">
-        <h2>發送留言</h2>
-        <form id="contactForm" onsubmit="handleSubmit(event)">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="name">您的姓名 *</label>
-              <input type="text" id="name" name="name" required placeholder="請輸入姓名">
-            </div>
-            <div class="form-group">
-              <label for="email">電子郵件 *</label>
-              <input type="email" id="email" name="email" required placeholder="example@email.com">
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="subject">諮詢主題 *</label>
-            <select id="subject" name="subject" required>
-              <option value="" disabled selected>請選擇主題</option>
-              <option value="buying">買家諮詢 (商品詳情/訂單)</option>
-              <option value="selling">賣家支援 (估價/寄賣流程)</option>
-              <option value="authentication">鑑定與真伪查詢</option>
-              <option value="technical">網站技術問題</option>
-              <option value="other">其他合作與建議</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="message">留言內容 *</label>
-            <textarea id="message" name="message" required placeholder="請詳細描述您的問題或需求，如果是商品諮詢，請附上商品連結或編號..."></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary submit-btn">
-            <i class="fas fa-paper-plane"></i> 提交留言
-          </button>
-        </form>
-      </div>
+    <!-- 2. 電子郵件 -->
+    <div class="contact-card">
+      <i class="fas fa-envelope"></i>
+      <h3>電子郵件</h3>
+      <p>適合發送圖片、文件或詳細需求</p>
+      <a href="mailto:support@chronoteam.com">support@chronoteam.com</a>
     </div>
 
-    <!-- FAQ 提示 -->
-    <div class="faq-hint">
-      <h3><i class="fas fa-question-circle"></i> 在聯繫我們之前...</h3>
-      <p>您遇到的問題可能已經在我們的常見問題解答中找到了答案。查看 FAQ 可以幫您節省寶貴的時間。</p>
-      <a href="/faq" class="btn btn-gold"><i class="fas fa-search"></i> 查看常見問題 (FAQ)</a>
+    <!-- 3. 動態渲染線下門店資訊 (支援多門店循環) -->
+    <!-- 在 contact.html 的聯繫方式網格中 -->
+    <!-- 在 contact.html 的聯繫方式網格中 -->
+    <div class="contact-card" th:each="store : ${activeStores}">
+      <i class="fas fa-store"></i>
+      <h3 th:text="${store.name}">門店名稱</h3>
+      <p th:text="${store.address}">門店地址</p>
+
+      <!-- 營業時間顯示區域 -->
+      <p class="today-hours-text"
+         th:data-schedule-mode="${store.scheduleMode}"
+         th:data-daily-hours="${store.dailyHours}"
+         th:data-unified-hours="${store.hours}">
+        <!-- 默認顯示統一營業時間，JS 會根據 mode 自動覆蓋它 -->
+        <span th:if="${store.scheduleMode == 'UNIFIED'}" th:text="${store.hours}">10:00 AM - 7:00 PM</span>
+        <span th:if="${store.scheduleMode == 'DAILY'}">載入中...</span>
+      </p>
+
+      <!-- 【修改處】：直接顯示電話號碼，並保留 tel: 撥號鏈接功能 -->
+      <a th:href="'tel:' + ${store.phone}"
+         th:if="${store.phone != null and !store.phone.isEmpty()}"
+         th:text="${store.phone}">
+        +852 1234 5678
+      </a>
+    </div>
+
+    <!-- 4. 容錯處理：如果數據庫中暫時沒有門店數據，顯示預設提示 -->
+    <div class="contact-card" th:if="${#lists.isEmpty(activeStores)}">
+      <i class="fas fa-info-circle"></i>
+      <h3>門店資訊</h3>
+      <p>系統暫無門店數據，請聯繫管理員在後台添加。</p>
+
     </div>
   </div>
 
-  <!-- === 頁腳 === -->
-  <footer class="footer">
-    <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights
-      Reserved.</p>
-  </footer>
+  <!-- 詳細資訊 -->
+  <div class="content-wrapper">
+    <!-- 左側：平台承諾 -->
+    <div class="contact-info">
+      <h2>我們在這裡為您服務</h2>
+      <p>在 ChronoTeam，我們深知購買或出售名錶是一項重要的決定。我們的專業鐘錶顧問團隊擁有超過 10 年的行業經驗，致力於為您提供最透明、最安全的交易體驗。</p>
+      <ul class="info-list">
+        <li>
+          <i class="fas fa-shield-alt"></i>
+          <div>
+            <strong>交易安全保障</strong>
+            <span>遇到訂單或資金問題？請立即聯繫我們，我們將優先處理。</span>
+          </div>
+        </li>
+        <li>
+          <i class="fas fa-certificate"></i>
+          <div>
+            <strong>專業鑑定諮詢</strong>
+            <span>對手錶的真偽、市場行情或保養狀態有疑問？我們免費為您解答。</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
 
-  <!--  4. 引入公共弹窗 HTML (登录/注册弹窗) -->
-  <div th:replace="~{fragments/common :: modals}"></div>
+  <!-- FAQ 提示 -->
+  <div class="faq-hint">
+    <h3><i class="fas fa-question-circle"></i> 在聯繫我們之前...</h3>
+    <p>您遇到的問題可能已經在我們的常見問題解答中找到了答案。查看 FAQ 可以幫您節省寶貴的時間。</p>
+    <a href="/faq" class="btn btn-gold"><i class="fas fa-search"></i> 查看常見問題 (FAQ)</a>
+  </div>
+</div>
 
-  <!--  5. 注入登录状态变量 (必须在 common.js 之前，用于购物车拦截) -->
-  <script th:inline="javascript">
-    const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
-  </script>
+<!-- === 頁腳 === -->
+<footer class="footer">
+  <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All Rights
+    Reserved.</p>
+</footer>
 
-  <!--  6. 引入公共 JS (包含购物车逻辑、弹窗控制、登出等) -->
-  <script src="/js/common.js"></script>
+<!--  4. 引入公共弹窗 HTML (登录/注册弹窗) -->
+<div th:replace="~{fragments/common :: modals}"></div>
 
-  <!--  7. 页面特有 JS -->
-  <script>
-    // ===== 表單提交處理 =====
-    function handleSubmit(event) {
-      event.preventDefault();
-      const form = event.target;
-      const btn = form.querySelector('button[type="submit"]');
+<!--  5. 注入登录状态变量 (必须在 common.js 之前，用于购物车拦截) -->
+<script th:inline="javascript">
+  const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+</script>
 
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // 1. 獲取今天是星期幾 (JavaScript 中 0=星期日, 1=星期一, ..., 6=星期六)
+    const todayJsDay = new Date().getDay();
+    // 2. 轉換為與你的 JSON key 匹配的格式 (1=星期一, ..., 7=星期日)
+    const todayKey = todayJsDay === 0 ? 7 : todayJsDay;
 
-      setTimeout(() => {
-        alert('✅ 感谢您的留言！我們的團隊會在 24 小時內透過電子郵件回覆您。');
-        form.reset();
-        btn.innerHTML = '<i class="fas fa-paper-plane"></i> 提交留言';
-      }, 1500);
-    }
-  </script>
+    // 3. 遍歷頁面上所有需要顯示今日營業時間的元素
+    const hoursElements = document.querySelectorAll('.today-hours-text');
+
+    hoursElements.forEach(el => {
+      const mode = el.getAttribute('data-schedule-mode');
+
+      // 只有當模式為 DAILY 時才進行 JSON 解析
+      if (mode === 'DAILY') {
+        const dailyHoursJson = el.getAttribute('data-daily-hours');
+
+        if (dailyHoursJson) {
+          try {
+            // 解析 JSON 字符串
+            const dailyHours = JSON.parse(dailyHoursJson);
+            // 獲取今天的配置
+            const todayConfig = dailyHours[String(todayKey)];
+
+            if (todayConfig) {
+              if (todayConfig.closed === true) {
+                // 如果 closed 為 true，顯示今天不營業
+                el.innerHTML = '<span style="color: #dc3545; font-weight: 600;">今日休息</span>';
+              } else {
+                // 否則顯示今天的具體營業時間
+                el.innerHTML = `<span style="color: #28a745; font-weight: 600;">今日營業時間：${todayConfig.start} - ${todayConfig.end}</span>`;
+              }
+            } else {
+              el.innerHTML = '<span style="color: #6c757d;">今日營業時間未設置</span>';
+            }
+          } catch (e) {
+            console.error('解析每日營業時間 JSON 失敗:', e);
+            el.innerHTML = '<span style="color: #6c757d;">營業時間數據異常</span>';
+          }
+        } else {
+          el.innerHTML = '<span style="color: #6c757d;">未設置每日營業時間</span>';
+        }
+      }
+    });
+  });
+</script>
+
+<!--  6. 引入公共 JS (包含购物车逻辑、弹窗控制、登出等) -->
+<script src="/js/common.js"></script>
 </body>
 
 </html>
