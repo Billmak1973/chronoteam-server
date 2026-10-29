@@ -411,6 +411,9 @@
                             <button class="config-tab" onclick="switchConfigTab('notification', this)">
                                 <i class="fas fa-bell"></i> 通知文字设置
                             </button>
+                            <button class="config-tab" onclick="switchConfigTab('permissions', this)">
+                                <i class="fas fa-user-shield"></i> 員工操作權限
+                            </button>
                         </div>
 
                         <!-- Tab 1 & 2 保持不變，此處省略 -->
@@ -864,6 +867,84 @@
                                         class="fas fa-save"></i> 保存通知文字设置</button>
                             </form>
                         </div>
+
+                        <div id="tab-permissions" class="tab-content">
+                            <form id="permissionsConfigForm" onsubmit="savePermissionsConfig(event)">
+                                <!-- 1. 鎖定規則 -->
+                                <div class="form-group">
+                                    <label style="font-size: 1.1rem; color: var(--primary); margin-bottom: 1rem;">
+                                        <i class="fas fa-lock"></i> 售後訂單鎖定規則
+                                    </label>
+                                    <label style="display: flex; align-items: flex-start; gap: 0.8rem; cursor: pointer; padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; transition: all 0.3s;">
+                                        <input type="checkbox" id="afterSalesStaffLock" style="width: 20px; height: 20px; margin-top: 2px; accent-color: var(--gold);">
+                                        <div>
+                                            <div style="font-weight: 600; color: var(--primary);">店員接收後鎖定編輯權限</div>
+                                            <div style="font-size: 0.85rem; color: var(--gray); margin-top: 0.2rem;">開啟後，訂單一旦被某位員工接收，其他未獲授權的員工將無法修改，防止多人同時操作導致數據衝突。</div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <!-- 2. 最高覆蓋權限角色 (包含所有非顧客角色) -->
+                                <div class="form-group">
+                                    <label style="font-size: 1.1rem; color: var(--primary); margin-bottom: 1rem;">
+                                        <i class="fas fa-crown"></i> 最高覆蓋權限角色 (可自由設定)
+                                    </label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="overrideRoles" value="ADMIN" style="width: 18px; height: 18px; accent-color: var(--gold);"> 管理員 (ADMIN)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="overrideRoles" value="SALES" style="width: 18px; height: 18px; accent-color: var(--gold);"> 銷售人員 (SALES)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="overrideRoles" value="COURIER" style="width: 18px; height: 18px; accent-color: var(--gold);"> 快遞人員 (COURIER)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="overrideRoles" value="APPRAISER" style="width: 18px; height: 18px; accent-color: var(--gold);"> 鑑定師 (APPRAISER)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="overrideRoles" value="ONLINE_STAFF" style="width: 18px; height: 18px; accent-color: var(--gold);"> 線上員工 (ONLINE_STAFF)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="overrideRoles" value="STORE_MANAGER" style="width: 18px; height: 18px; accent-color: var(--gold);"> 門店經理 (STORE_MANAGER)
+                                        </label>
+                                    </div>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i> 勾選的角色將無視上述「店員鎖定」規則，擁有強制修改任何狀態訂單的最高權限。</small>
+                                </div>
+
+                                <!-- 3. 允許執行鑑定操作的角色 (包含所有非顧客角色) -->
+                                <div class="form-group">
+                                    <label style="font-size: 1.1rem; color: var(--primary); margin-bottom: 1rem;">
+                                        <i class="fas fa-search-dollar"></i> 允許執行鑑定操作的角色 (可自由設定)
+                                    </label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="appraisalRoles" value="ADMIN" style="width: 18px; height: 18px; accent-color: var(--gold);"> 管理員 (ADMIN)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="appraisalRoles" value="SALES" style="width: 18px; height: 18px; accent-color: var(--gold);"> 銷售人員 (SALES)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="appraisalRoles" value="COURIER" style="width: 18px; height: 18px; accent-color: var(--gold);"> 快遞人員 (COURIER)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="appraisalRoles" value="APPRAISER" style="width: 18px; height: 18px; accent-color: var(--gold);"> 鑑定師 (APPRAISER)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="appraisalRoles" value="ONLINE_STAFF" style="width: 18px; height: 18px; accent-color: var(--gold);"> 線上員工 (ONLINE_STAFF)
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                            <input type="checkbox" name="appraisalRoles" value="STORE_MANAGER" style="width: 18px; height: 18px; accent-color: var(--gold);"> 門店經理 (STORE_MANAGER)
+                                        </label>
+                                    </div>
+                                    <small class="form-hint"><i class="fas fa-info-circle"></i> 只有勾選的角色，才能在後台修改「鑑定師指派」、「預估價格」與「最終成交價」等敏感字段。</small>
+                                </div>
+
+                                <button type="submit" class="btn-save-config" id="savePermissionsBtn">
+                                    <i class="fas fa-save"></i> 保存權限設置
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1014,15 +1095,32 @@
                     if (configs.ONLINE_ORDER_RETENTION_DAYS !== undefined) document.getElementById('onlineOrderRetentionDays').value = configs.ONLINE_ORDER_RETENTION_DAYS;
                     if (configs.DELIVERY_START_TIME) document.getElementById('deliveryStartTime').value = configs.DELIVERY_START_TIME;
                     if (configs.DELIVERY_END_TIME) document.getElementById('deliveryEndTime').value = configs.DELIVERY_END_TIME;
-                    // 加載最大地址數量
+
                     if (configs.MAX_USER_ADDRESSES !== undefined) {
                         document.getElementById('maxUserAddresses').value = configs.MAX_USER_ADDRESSES;
                     }
                     if (configs.MAX_DELIVERY_DATE_OPTIONS !== undefined) {
                         document.getElementById('maxDeliveryDateOptions').value = configs.MAX_DELIVERY_DATE_OPTIONS;
                     }
+
+                    // ==========================================
+                    // 【新增】加載 Tab 4: 員工操作權限配置
+                    // ==========================================
+                    document.getElementById('afterSalesStaffLock').checked = configs.AFTER_SALES_STAFF_LOCK !== 'false';
+
+                    const overrideRoles = (configs.AFTER_SALES_OVERRIDE_ROLES || "ADMIN,ONLINE_STAFF").split(',').map(r => r.trim());
+                    document.querySelectorAll('input[name="overrideRoles"]').forEach(cb => {
+                        cb.checked = overrideRoles.includes(cb.value);
+                    });
+
+                    const appraisalRoles = (configs.APPRAISAL_AUTHORIZED_ROLES || "ADMIN,APPRAISER").split(',').map(r => r.trim());
+                    document.querySelectorAll('input[name="appraisalRoles"]').forEach(cb => {
+                        cb.checked = appraisalRoles.includes(cb.value);
+                    });
                 }
-            } catch (error) {console.warn('加載當前配置失敗:', error);}
+            } catch (error) {
+                console.warn('加載當前配置失敗:', error);
+            }
         }
 
         // ==========================================
@@ -1139,6 +1237,28 @@
                 "MAX_DELIVERY_DATE_OPTIONS": document.getElementById('maxDeliveryDateOptions').value
             };
             await saveConfig('/api/admin/config/update-return-policy', data, 'saveReturnBtn', '退换货政策已成功保存！');
+        }
+
+        // ==========================================
+        // 保存 Tab 4: 員工操作權限配置
+        // ==========================================
+        async function savePermissionsConfig(e) {
+            e.preventDefault();
+
+            // 收集被勾選的角色，並用逗號連接成字串 (例如: "ADMIN,ONLINE_STAFF")
+            const overrideRoles = Array.from(document.querySelectorAll('input[name="overrideRoles"]:checked'))
+                .map(cb => cb.value).join(',');
+            const appraisalRoles = Array.from(document.querySelectorAll('input[name="appraisalRoles"]:checked'))
+                .map(cb => cb.value).join(',');
+
+            const data = {
+                "AFTER_SALES_STAFF_LOCK": document.getElementById('afterSalesStaffLock').checked.toString(),
+                "AFTER_SALES_OVERRIDE_ROLES": overrideRoles,
+                "APPRAISAL_AUTHORIZED_ROLES": appraisalRoles
+            };
+
+            // 調用現有的 saveConfig 通用函數進行保存
+            await saveConfig('/api/admin/config/update', data, 'savePermissionsBtn', '權限設置已成功保存！');
         }
 
         async function saveConfig(url, data, btnId, successMessage) {

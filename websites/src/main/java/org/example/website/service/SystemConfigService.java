@@ -226,4 +226,33 @@ public class SystemConfigService {
                 })
                 .orElse(null);
     }
+
+    /**
+     * 獲取「售後訂單店員接收後是否鎖定」配置
+     * @return 默認為 true (開啟鎖定)
+     */
+    public boolean getAfterSalesStaffLock() {
+        return repository.findById("AFTER_SALES_STAFF_LOCK")
+                .map(c->Boolean.parseBoolean(c.getConfigValue()))
+                .orElse(false);
+    }
+    /**
+     * 獲取「擁有售後訂單最高覆蓋權限」的角色列表
+     * @return 默認為 ADMIN, ONLINE_STAFF (可自由配置)
+     */
+    public List<String> getAfterSalesOverrideRoles() {
+        return repository.findById("AFTER_SALES_OVERRIDE_ROLES")
+                .map(c -> Arrays.asList(c.getConfigValue().split(",")))
+                .orElse(List.of("ADMIN")); // 默認值
+    }
+
+    /**
+     * 獲取「允許執行鑑定操作」的角色列表
+     * @return 默認為 ADMIN, APPRAISER (可自由配置)
+     */
+    public List<String> getAppraisalAuthorizedRoles() {
+        return repository.findById("APPRAISAL_AUTHORIZED_ROLES")
+                .map(c -> Arrays.asList(c.getConfigValue().split(",")))
+                .orElse(Arrays.asList("ADMIN", "APPRAISER")); // 默認值
+    }
 }

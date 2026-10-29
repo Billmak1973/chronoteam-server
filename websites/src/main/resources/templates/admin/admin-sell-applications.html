@@ -2010,6 +2010,31 @@
             </div>
         `;
             document.getElementById('detailContent').innerHTML = html;
+            // ==========================================
+            // 【核心修改】：根據後端返回的 canEdit 決定是否顯示「重新編輯」按鈕
+            // ==========================================
+            const footer = document.querySelector('.modal-footer');
+            if (footer) {
+                if (app.canEdit) {
+                    // 有權限：渲染編輯按鈕
+                    footer.innerHTML = `
+                <button class="btn-modal btn-edit" onclick="reEditApplication()" style="margin-right: auto;">
+                    <i class="fas fa-edit"></i> 重新編輯
+                </button>
+                <button class="btn-modal btn-cancel" onclick="closeDetailModal()">
+                    <i class="fas fa-times"></i> 關閉
+                </button>
+            `;
+                } else {
+                    // 無權限：只顯示關閉按鈕
+                    footer.innerHTML = `
+                <button class="btn-modal btn-cancel" onclick="closeDetailModal()" style="margin-right: auto;">
+                    <i class="fas fa-times"></i> 關閉
+
+</button>
+            `;
+                }
+            }
         }
 
         // ==========================================

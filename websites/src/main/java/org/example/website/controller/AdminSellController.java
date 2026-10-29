@@ -8,6 +8,7 @@ import org.example.website.dto.Result;
 import org.example.website.entity.*;
 import org.example.website.repository.*;
 import org.example.website.service.FileStorageService;
+import org.example.website.service.SystemConfigService;
 import org.example.website.util.PaginationUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,6 +18,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,8 +41,9 @@ public class AdminSellController {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final StoreDailyReportRepository storeDailyReportRepository;
+    private final SystemConfigService systemConfigService;
 
-    public AdminSellController(SellApplicationRepository sellApplicationRepository, OfflineStoreRepository offlineStoreRepository, FileStorageService fileStorageService, ObjectMapper objectMapper, UserRepository userRepository, ProductRepository productRepository, StoreDailyReportRepository storeDailyReportRepository) {
+    public AdminSellController(SellApplicationRepository sellApplicationRepository, OfflineStoreRepository offlineStoreRepository, FileStorageService fileStorageService, ObjectMapper objectMapper, UserRepository userRepository, ProductRepository productRepository, StoreDailyReportRepository storeDailyReportRepository, SystemConfigService systemConfigService) {
         this.sellApplicationRepository = sellApplicationRepository;
         this.offlineStoreRepository = offlineStoreRepository;
         this.fileStorageService = fileStorageService;
@@ -48,6 +51,7 @@ public class AdminSellController {
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.storeDailyReportRepository = storeDailyReportRepository;
+        this.systemConfigService = systemConfigService;
     }
 
     /**
@@ -81,18 +85,18 @@ public class AdminSellController {
         Page<SellApplication> appPage = sellApplicationRepository.findAll(pageable);
 
         // 批量獲取門店名稱，避免 N+1 查詢
-        List<String>storeIdStrs=appPage.getContent().stream()
+        List<String> storeIdStrs = appPage.getContent().stream()
                 .map(SellApplication::getStoreId)
-                .filter(id->id !=null && !id.trim().isEmpty()&& id.matches("\\d+"))
+                .filter(id -> id != null && !id.trim().isEmpty() && id.matches("\\d+"))
                 .distinct()
                 .collect(Collectors.toList());
 
-        Map<String,String> storeMap= new HashMap<>();
-        if(!storeIdStrs.isEmpty()) {
+        Map<String, String> storeMap = new HashMap<>();
+        if (!storeIdStrs.isEmpty()) {
             List<Long> storeIds = storeIdStrs.stream().map(Long::valueOf).collect(Collectors.toList());
             List<OfflineStore> stores = offlineStoreRepository.findByStoreIdIn(storeIds);
-            for(OfflineStore store:stores) {
-                storeMap.put(String.valueOf(store.getStoreId()),store.getName());
+            for (OfflineStore store : stores) {
+                storeMap.put(String.valueOf(store.getStoreId()), store.getName());
             }
         }
         // 數據清洗 (避免 Hibernate 循環引用與序列化報錯)
@@ -125,16 +129,43 @@ public class AdminSellController {
     }
 
     /**
-     * 3. 獲取詳情 API (供彈窗調用)
+     * 3. 獲取詳情 API (供彈窗調用) - 【已修復：移除了重複的方法，保留此包含 Authentication 的版本】
      */
     @Operation(summary = "獲取出售申請詳情")
     @GetMapping("/api/sell-applications/{id}")
     @ResponseBody
-    public ResponseEntity<?> getApplicationDetail(@PathVariable Long id) {
+    public ResponseEntity<?> getApplicationDetail(@PathVariable Long id, Authentication authentication) {
         SellApplication app = sellApplicationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("申請記錄不存在"));
 
-        // 為了防止實體類直接序列化報錯，這裡手動組裝 Map 返回 (或配置 Jackson 忽略屬性)
+        // ==========================================
+        // 【核心新增】：計算當前登錄用戶是否有權編輯此申請
+        // ==========================================
+        boolean canEdit = false;
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            String currentUsername = authentication.getName();
+            User currentUser = userRepository.findByUsername(currentUsername).orElse(null);
+
+            if (currentUser != null) {
+                boolean isStaffLock = systemConfigService.getAfterSalesStaffLock();
+                List<String> overrideRoles = systemConfigService.getAfterSalesOverrideRoles();
+
+                // 規則 1：如果沒有開啟鎖定，允許編輯
+                if (!isStaffLock) {
+                    canEdit = true;
+                }
+                // 規則 2：如果開啟了鎖定，且當前用戶就是該申請的 operator，允許編輯
+                else if (app.getOperator() != null && app.getOperator().getUsername().equals(currentUsername)) {
+                    canEdit = true;
+                }
+                // 規則 3：如果當前用戶的角色在「最高覆蓋權限」列表中，允許編輯
+                else if (overrideRoles.contains(currentUser.getRole().name())) {
+                    canEdit = true;
+                }
+            }
+        }
+
+        // 為了防止實體類直接序列化報錯，這裡手動組裝 Map 返回
         Map<String, Object> data = new HashMap<>();
         data.put("applicationId", app.getApplicationId());
         data.put("brand", app.getBrand());
@@ -146,7 +177,7 @@ public class AdminSellController {
         data.put("condition", app.getCondition());
         data.put("functionStatus", app.getFunctionStatus());
         data.put("notes", app.getNotes());
-        data.put("imagePaths", app.getImagePaths()); // 前端 JS 會解析這個 JSON
+        data.put("imagePaths", app.getImagePaths());
         data.put("transactionMode", app.getTransactionMode().name());
         data.put("status", app.getStatus().name());
         data.put("estimatedPrice", app.getEstimatedPrice());
@@ -155,6 +186,9 @@ public class AdminSellController {
         data.put("createdAt", app.getCreatedAt());
         data.put("appointmentDate", app.getAppointmentDate() != null ? app.getAppointmentDate().toString() : null);
         data.put("appointmentTimeSlot", app.getAppointmentTimeSlot());
+
+        // 【核心新增】：將權限標識返回給前端
+        data.put("canEdit", canEdit);
 
         String storeName = "未指定";
         if (app.getStoreId() != null && !app.getStoreId().trim().isEmpty() && app.getStoreId().matches("\\d+")) {
@@ -172,21 +206,21 @@ public class AdminSellController {
         }
         if (app.getAppraiser() != null) {
             Map<String, Object> appraiserMap = new HashMap<>();
-            appraiserMap.put("id",app.getAppraiser().getId());
+            appraiserMap.put("id", app.getAppraiser().getId());
             appraiserMap.put("username", app.getAppraiser().getUsername());
             data.put("appraiser", appraiserMap);
         }
-        //處理最後負責人 (Operator)
-        if(app.getOperator() != null) {
+        // 處理最後負責人 (Operator)
+        if (app.getOperator() != null) {
             Map<String, Object> operatorMap = new HashMap<>();
-            operatorMap.put("id",app.getOperator().getId());
+            operatorMap.put("id", app.getOperator().getId());
             operatorMap.put("username", app.getOperator().getUsername());
             data.put("operator", operatorMap);
-        }else{
+        } else {
             data.put("operator", null);
         }
-        if(app.getProduct() != null) {
-            Map<String,Object>productMap = new HashMap<>();
+        if (app.getProduct() != null) {
+            Map<String, Object> productMap = new HashMap<>();
             productMap.put("productId", app.getProduct().getProductId());
             productMap.put("description", app.getProduct().getDescription());
             productMap.put("price", app.getProduct().getPrice());
@@ -210,6 +244,79 @@ public class AdminSellController {
 
         try {
             // ==========================================
+            // 【核心校驗 0】：基於 Config 的動態權限校驗 (雙重保險)
+            // ==========================================
+            if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+                String currentUsername = authentication.getName();
+                User currentUser = userRepository.findByUsername(currentUsername)
+                        .orElseThrow(() -> new RuntimeException("操作人不存在: " + currentUsername));
+
+                boolean isStaffLock = systemConfigService.getAfterSalesStaffLock();
+                List<String> overrideRoles = systemConfigService.getAfterSalesOverrideRoles();
+
+                boolean hasPermission = false;
+                if (!isStaffLock) {
+                    hasPermission = true;
+                } else if (app.getOperator() != null && app.getOperator().getUsername().equals(currentUsername)) {
+                    hasPermission = true;
+                } else if (overrideRoles.contains(currentUser.getRole().name())) {
+                    hasPermission = true;
+                }
+
+                if (!hasPermission) {
+                    return ResponseEntity.status(403).body(Result.error("您無權編輯此申請，該申請已被其他員工接收或您沒有相應權限。"));
+                }
+
+                // ==========================================
+                // 【核心校驗 0.5】：非最高權限角色禁止修改核心字段 (防前端篡改)
+                // ==========================================
+                boolean isOverrideRole = overrideRoles.contains(currentUser.getRole().name());
+
+                if (!isOverrideRole) {
+                    boolean isCoreChanged = false;
+
+                    // 輔助方法：安全比較字符串 (處理 null 和 空字符串)
+                    java.util.function.BiPredicate<String, String> isStrChanged = (formVal, originalVal) -> {
+                        String f = formVal == null ? "" : formVal.trim();
+                        String o = originalVal == null ? "" : originalVal.toString().trim();
+                        return !f.equals(o);
+                    };
+
+                    if (isStrChanged.test(form.get("brand"), app.getBrand())) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("series"), app.getSeries())) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("model"), app.getModel())) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("condition"), app.getCondition())) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("functionStatus"), app.getFunctionStatus())) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("status"), app.getStatus() != null ? app.getStatus().name() : "")) isCoreChanged = true;
+
+                    // 處理 Integer 類型
+                    Integer formYear = (form.get("purchaseYear") != null && !form.get("purchaseYear").isEmpty()) ? Integer.parseInt(form.get("purchaseYear")) : null;
+                    if (!java.util.Objects.equals(formYear, app.getPurchaseYear())) isCoreChanged = true;
+
+                    Integer formQty = (form.get("quantity") != null && !form.get("quantity").isEmpty()) ? Integer.parseInt(form.get("quantity")) : null;
+                    if (!java.util.Objects.equals(formQty, app.getQuantity())) isCoreChanged = true;
+
+                    // 處理 Long 類型 (appraiserId)
+                    Long formAppraiserId = (form.get("appraiserId") != null && !form.get("appraiserId").isEmpty()) ? Long.parseLong(form.get("appraiserId")) : null;
+                    Long originalAppraiserId = app.getAppraiser() != null ? app.getAppraiser().getId() : null;
+                    if (!java.util.Objects.equals(formAppraiserId, originalAppraiserId)) isCoreChanged = true;
+
+                    // 處理 BigDecimal 類型 (finalPrice)
+                    java.math.BigDecimal formFinalPrice = (form.get("finalPrice") != null && !form.get("finalPrice").isEmpty()) ? new java.math.BigDecimal(form.get("finalPrice")) : null;
+                    if (!java.util.Objects.equals(formFinalPrice, app.getFinalPrice())) isCoreChanged = true;
+
+                    if (isCoreChanged) {
+                        return ResponseEntity.status(403).body(Result.error("您沒有權限修改核心字段（品牌、型號、狀態、鑑定師、成交價等），請聯繫擁有最高權限的人員！"));
+                    }
+                }
+
+                // 校驗通過，設置操作人
+                app.setOperator(currentUser);
+            } else {
+                return ResponseEntity.status(401).body(Result.error("請先登入"));
+            }
+
+            // ==========================================
             // 【核心校驗 1】：檢查是否試圖將狀態改為 COMPLETED，若是則必須填寫鑑定師和最終成交價
             // ==========================================
             boolean isChangingToCompleted = false;
@@ -217,7 +324,6 @@ public class AdminSellController {
                 SellApplication.ApplicationStatus newStatus = SellApplication.ApplicationStatus.valueOf(form.get("status"));
                 if (newStatus == SellApplication.ApplicationStatus.COMPLETED) {
                     isChangingToCompleted = true;
-                    //記錄交易完成時間
                     app.setCompletedAt(java.time.LocalDateTime.now());
                     String appraiserIdStr = form.get("appraiserId");
                     String finalPriceStr = form.get("finalPrice");
@@ -231,10 +337,6 @@ public class AdminSellController {
                 }
             }
 
-
-            // ==========================================
-            // 執行更新 (若未被保護，則正常更新)
-            // ==========================================
             // ===== 1. 手錶基礎資訊 =====
             String brand = emptyToNull(form.get("brand"));
             String series = emptyToNull(form.get("series"));
@@ -298,11 +400,8 @@ public class AdminSellController {
                 }
             }
 
-
             // ===== 6. 圖片管理 (更換 / 移動 / 刪除) =====
             Map<String, String> oldMap = parseImageMap(app.getImagePaths());
-
-            // 6.1 前端回傳「舊圖最終歸屬」JSON
             Map<String, String> finalMap = new java.util.LinkedHashMap<>();
             String imageMapJson = form.get("imageMapJson");
             if (imageMapJson != null && !imageMapJson.isEmpty()) {
@@ -310,22 +409,17 @@ public class AdminSellController {
                         new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {}));
             }
 
-            // 6.2 收集本次新上傳的檔案
             Map<String, MultipartFile> uploads = new HashMap<>();
             multipartRequest.getFileMap().forEach((slot, file) -> {
                 if (file != null && !file.isEmpty()) uploads.put(slot, file);
             });
 
-            // 6.3 處理存儲與實體檔案清理
             if (!uploads.isEmpty() || imageMapJson != null) {
-                // 修改第 220-225 行左右
                 if (!uploads.isEmpty()) {
-                    //  使用固定文件夹名称，不要加时间戳
                     String folder = "sell_app_" + app.getApplicationId();
                     Map<String, String> uploaded = fileStorageService.uploadMultipleImages(uploads, folder);
                     finalMap.putAll(uploaded);
                 }
-                // Diff：舊路徑不在最終結果中 = 被刪除或被更換 → 清理實體檔案
                 Set<String> finalPaths = new HashSet<>(finalMap.values());
                 for (String oldPath : oldMap.values()) {
                     if (oldPath != null && !finalPaths.contains(oldPath)) {
@@ -333,12 +427,6 @@ public class AdminSellController {
                     }
                 }
                 app.setImagePaths(objectMapper.writeValueAsString(finalMap));
-            }
-            if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
-                String operatorUsername = authentication.getName();
-                User operatorUser = userRepository.findByUsername(operatorUsername)
-                        .orElseThrow(() -> new RuntimeException("操作人不存在: " + operatorUsername));
-                app.setOperator(operatorUser); // 設置操作人
             }
 
             sellApplicationRepository.save(app);
@@ -349,9 +437,8 @@ public class AdminSellController {
             if (isChangingToCompleted && app.getStoreId() != null && !app.getStoreId().trim().isEmpty()) {
                 try {
                     Long storeId = Long.parseLong(app.getStoreId());
-                    LocalDate reportDate = LocalDate.now(); // 使用當前日期作為報表統計日期
+                    LocalDate reportDate = LocalDate.now();
 
-                    // 查找或創建當日的門店報表
                     StoreDailyReport report = storeDailyReportRepository.findByStore_StoreIdAndReportDate(storeId, reportDate)
                             .orElseGet(() -> {
                                 OfflineStore store = offlineStoreRepository.findById(storeId)
@@ -363,18 +450,12 @@ public class AdminSellController {
                             });
 
                     BigDecimal finalPrice = app.getFinalPrice() != null ? app.getFinalPrice() : BigDecimal.ZERO;
-
-                    // 【核心邏輯】：出售申請完成 = 平台收購二手錶，計入「收購成本」
                     BigDecimal currentCost = report.getStoreAcquisitionCost() != null ? report.getStoreAcquisitionCost() : BigDecimal.ZERO;
                     report.setStoreAcquisitionCost(currentCost.add(finalPrice));
-
-                    // 2. 保存更新後的報表
                     storeDailyReportRepository.save(report);
                 } catch (NumberFormatException e) {
-                    // 忽略無效的 storeId 格式，不中斷主流程
                     System.err.println("⚠️ 無效的門店ID格式，無法更新門店每日報表: " + app.getStoreId());
                 } catch (Exception e) {
-                    // 記錄日誌，根據業務需求決定是否拋出異常。此處選擇捕獲以防影響主流程
                     System.err.println("⚠️ 更新門店每日報表失敗: " + e.getMessage());
                 }
             }
@@ -404,22 +485,33 @@ public class AdminSellController {
             return new HashMap<>();
         }
     }
+
     // ==========================================
     // 【新增 API】獲取具備鑑定/銷售權限的員工列表
     // ==========================================
     @Operation(
             summary = "獲取具備鑑定/銷售權限的員工列表",
-            description = "獲取 Role 為 SALES、APPRAISER 或 ADMIN 的用戶列表，用於後台分配鑑定師或處理售後。"
+            description = "根據系統配置動態獲取具備權限的用戶列表，用於後台分配鑑定師或處理售後。"
     )
     @GetMapping("/api/staff")
     @ResponseBody
     public ResponseEntity<?> getStaffUsers() {
 
-        // 2. 查詢三種具備權限的角色，並使用 Set 自動去重 (防止未來角色權限重疊或重複查詢)
+        // 1. 【核心修改】：從系統配置中動態獲取允許執行鑑定操作的角色列表 (徹底消除硬編碼)
+        List<String> authorizedRoles = systemConfigService.getAppraisalAuthorizedRoles();
+
+        // 2. 動態查詢這些角色的用戶，並使用 Set 自動去重 (防止未來角色權限重疊或重複查詢)
         Set<User> staffUsers = new HashSet<>();
-        staffUsers.addAll(userRepository.findByRole(User.Role.SALES));
-        staffUsers.addAll(userRepository.findByRole(User.Role.APPRAISER));
-        staffUsers.addAll(userRepository.findByRole(User.Role.ADMIN));
+        for (String roleName : authorizedRoles) {
+            try {
+                // 將字符串轉換為枚舉並查詢
+                User.Role role = User.Role.valueOf(roleName);
+                staffUsers.addAll(userRepository.findByRole(role));
+            } catch (IllegalArgumentException e) {
+                // 容錯處理：忽略配置中無效的角色名稱，防止系統崩潰
+                System.err.println("⚠️ 系統配置中存在無效的角色名稱: " + roleName);
+            }
+        }
 
         // 3. 轉換為前端需要的輕量級 Map (簡潔的 Stream 寫法，不易報錯)
         List<Map<String, Object>> staffList = staffUsers.stream()
