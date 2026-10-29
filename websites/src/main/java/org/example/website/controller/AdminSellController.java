@@ -54,14 +54,33 @@ public class AdminSellController {
         this.systemConfigService = systemConfigService;
     }
 
-    /**
-     * 1. 渲染頁面
-     */
     @Hidden
     @GetMapping("/sell-applications")
-    public String sellApplicationsPage(Model model) {
-        // 傳遞 activePage 讓側邊欄高亮
+    public String sellApplicationsPage(Model model, org.springframework.security.core.Authentication authentication) {
         model.addAttribute("activePage", "sell-app");
+
+        // 【核心修復】：動態判斷當前用戶是否擁有「最高覆蓋權限」(不僅限於 ADMIN，店主也可以)
+        boolean isOverrideRole = false;
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            try {
+                // 獲取當前用戶的角色名稱 (例如: "STORE_MANAGER")
+                org.example.website.security.CustomUserDetails userDetails =
+                        (org.example.website.security.CustomUserDetails) authentication.getPrincipal();
+                String roleName = userDetails.getRole().name();
+
+                // 獲取系統配置的覆蓋權限列表
+                List<String> overrideRoles = systemConfigService.getAfterSalesOverrideRoles();
+
+                // 判斷當前角色是否在列表中
+                isOverrideRole = overrideRoles.contains(roleName);
+            } catch (Exception e) {
+                // 未登入或解析異常，默認為 false
+            }
+        }
+
+        // 將動態計算的結果傳遞給前端 Thymeleaf
+        model.addAttribute("isOverrideRole", isOverrideRole);
+
         return "admin/admin-sell-applications";
     }
 
