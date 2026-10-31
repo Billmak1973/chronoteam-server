@@ -1680,7 +1680,7 @@
 
     <script th:inline="javascript">
 
-        const isAdmin = /*[[${isAdmin}]]*/ false;
+        const isOverrideRole = /*[[${isOverrideRole}]]*/ false;
 
         // ==========================================
         // 0. 中文映射表 (提升可讀性)
@@ -2002,7 +2002,7 @@
                 <div class="info-item"><span class="info-label">預估價格</span><span class="info-value" style="color: var(--accent); font-weight: 700;">HK$ ${app.estimatedPrice || '待估'}</span></div>
                 <div class="info-item"><span class="info-label">最終成交價</span><span class="info-value" style="color: #28a745; font-weight: 700;">HK$ ${app.finalPrice || '待議'}</span></div>
                 <div class="info-item"><span class="info-label">負責鑑定師</span><span class="info-value">${app.appraiser?.username || '未指派'}</span></div>
-                <div class="info-item"><span class="info-label">最後負責人</span><span class="info-value">${app.operator?.username || '未指定'}</span></div>
+                <div class="info-item"><span class="info-label">主要負責人</span><span class="info-value">${app.operator?.username || '未指定'}</span></div>
                 <div class="info-item" style="grid-column: 1 / -1;">
             <span class="info-label">鑑定備註</span>
             <span class="info-value">${app.appraisalNotes || '無'}</span>
@@ -2062,6 +2062,10 @@
                 console.error('獲取鑑定師列表失敗', e);
             }
 
+            // 【新增】獲取當前操作人 ID 和是否為 Override Role
+            const currentOperatorId = app.operator?.id || '';
+            const isOverrideRole = app.isOverrideRole || false;
+
             // 申請狀態選項
             const statusOptions = [
                 {val: 'PENDING', text: '待處理 / 待鑑定'},
@@ -2096,7 +2100,7 @@
             // 【核心修改】：區塊 2.6 關聯平台商品 改為自定義下拉框結構
             const currentProductText = app.product
                 ? `${app.product.description} (ID: ${app.product.productId})`
-                : '尚未分配 (清空關聯>';
+                : '尚未分配 (清空關聯)';
             const currentProductId = app.product ? app.product.productId : '';
 
             const editHtml = `
@@ -2165,6 +2169,25 @@
                         `).join('')}
                     </select>
                 </div>
+
+                <!-- 【核心新增】：指定負責人選項 -->
+                <div class="info-item">
+                    <label class="info-label">指定負責人</label>
+                    ${isOverrideRole ? `
+                        <select name="operatorId" class="filter-select" style="margin-top:0.5rem;">
+                            <option value="">自動 (當前登入者)</option>
+                            ${appraisers.map(u => `
+                                <option value="${u.id}" ${currentOperatorId == u.id ? 'selected' : ''}>
+                                    ${u.username} ${u.name ? '(' + u.name + ')' : ''} [${u.role}]
+                                </option>
+                            `).join('')}
+                        </select>
+                    ` : `
+                        <input type="text" class="filter-input" style="margin-top:0.5rem; background:#f1f5f9; cursor:not-allowed;" value="自動 (當前登入者)" disabled>
+                        <input type="hidden" name="operatorId" value="">
+                    `}
+                </div>
+
                 <div class="info-item">
                     <label class="info-label">預估價格 (HK$)</label>
                     <input type="number" name="estimatedPrice" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.estimatedPrice || ''}" step="0.01" placeholder="輸入預估價格">
@@ -2221,7 +2244,7 @@
                             <!-- 下拉選項列表 (核心：限制最大高度並允許滾動) -->
                             <div class="custom-dropdown-options" id="productDropdownOptions">
                                 <!-- JS 會動態填充這裡 -->
-                           6</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2381,7 +2404,7 @@
             // ==========================================
             // 【核心校驗 1】：如果已經是 COMPLETED 狀態，禁止修改核心字段
             // ==========================================
-            if (isAlreadyCompleted) {
+            if (isAlreadyCompleted && !isOverrideRole) {
                 // 定義不能被修改的核心字段及其對應的原始值
                 const fieldsToCheck = [
                     {key: 'brand', original: originalApp.brand},

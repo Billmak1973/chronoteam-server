@@ -1332,6 +1332,7 @@
     <!-- 4. 引入公共 JS -->
     <script th:inline="javascript">
         const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        const CURRENT_USER_STORE_ID = /*[[${currentUserStoreId}]]*/ null;
     </script>
     <script src="/js/common.js"></script>
     <script src="/js/admin.js"></script>
@@ -1345,7 +1346,6 @@
         let currentStockInPurchaseId = null;
         let supplierSearchTimeout = null;
         let isSelectingSupplier = false;
-
         /**
          * 核心：JS 版智能分頁渲染函數
          *
@@ -2034,18 +2034,45 @@
         }
 
         function openAddPurchaseModal() {
-            document.getElementById('addPurchaseModal').style.display = 'flex';
+            const modal = document.getElementById('addPurchaseModal');
+            const form = document.getElementById('purchaseOrderForm');
+
+            // 1. 重置表單和顯示模態框
+            modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
-            document.getElementById('purchaseOrderForm').reset();
+            form.reset();
+
+            // 2. 重置其他字段
             document.getElementById('editPurchaseId').value = '';
-            document.getElementById('purchaseModalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color: var(--gold);"></i> 新增采购订单';
-            document.getElementById('savePurchaseBtn').innerHTML = '<i class="fas fa-save"></i> 确认创建';
+            document.getElementById('purchaseModalTitle').innerHTML =
+                '<i class="fas fa-plus-circle" style="color: var(--gold);"></i> 新增采购订单';
+            document.getElementById('savePurchaseBtn').innerHTML =
+                '<i class="fas fa-save"></i> 确认创建';
             document.getElementById('brandSelect').value = '';
-            document.getElementById('productSelect').innerHTML = '<option value="">请先选择品牌</option>';
+            document.getElementById('productSelect').innerHTML =
+                '<option value="">请先选择品牌</option>';
             document.getElementById('purchaseDate').valueAsDate = new Date();
             document.getElementById('statusSelectGroup').style.display = 'none';
             document.getElementById('orderStatus').value = 'PENDING';
-            loadStores();
+
+            // 3. 【核心修復】根據當前用戶的 storeId 設置默認值
+            if (CURRENT_USER_STORE_ID !== null && CURRENT_USER_STORE_ID !== undefined) {
+                console.log('✅ 自動設置為線下門店模式，門店 ID:', CURRENT_USER_STORE_ID);
+
+                // 設置倉庫類型為線下門店
+                const warehouseTypeSelect = document.getElementById('warehouseType');
+                warehouseTypeSelect.value = 'OFFLINE';
+
+                // 觸發顯示門店選擇框
+                toggleStoreSelect();
+
+                // 加載門店列表並默認選中
+                loadStoresAndSelectDefault(CURRENT_USER_STORE_ID);
+            } else {
+                console.log('⚠️ 當前用戶無關聯門店，使用默認線上總倉');
+                document.getElementById('warehouseType').value = 'ONLINE';
+                toggleStoreSelect();
+            }
         }
 
         function toggleStoreSelect() {
@@ -2062,20 +2089,52 @@
             }
         }
 
-        async function loadStores() {
+        /**
+         * 加載門店列表並默認選中指定門店
+         * @param {number} defaultStoreId - 默認選中的門店 ID
+         */
+        async function loadStoresAndSelectDefault(defaultStoreId) {
+            const storeIdSelect = document.getElementById('storeId');
+
             try {
+                // console.log(' 正在加載門店列表...');
                 const response = await fetch('/admin/stores/api/active-list');
                 const result = await response.json();
-                const storeIdSelect = document.getElementById('storeId');
-                if (result.success && result.data) {
+
+                if (result.success && result.data && result.data.length > 0) {
+                    // console.log(' 成功加載', result.data.length, '個門店');
+
                     let options = '<option value="">請選擇門店</option>';
+                    let hasSelected = false;
+
                     result.data.forEach(store => {
-                        options += `<option value="${store.storeId}">${store.name}</option>`;
+                        // 嚴格比較（轉換為相同類型）
+                        const isDefault = (String(store.storeId) === String(defaultStoreId));
+                        const selectedAttr = isDefault ? 'selected' : '';
+
+                        if (isDefault) {
+                            hasSelected = true;
+                            //   console.log(' 自動選中門店:', store.name, '(ID:', store.storeId, ')');
+                        }
+
+                        options += `<option value="${store.storeId}" ${selectedAttr}>${store.name}</option>`;
                     });
+
                     storeIdSelect.innerHTML = options;
+
+                    // 如果沒有自動選中，手動設置
+                    if (!hasSelected && defaultStoreId) {
+                        //    console.warn(' 未找到匹配的門店 ID:', defaultStoreId);
+                        storeIdSelect.value = '';
+                    }
+
+                } else {
+                    console.error(' 門店列表為空或加載失敗');
+                    storeIdSelect.innerHTML = '<option value="">暫無可用門店</option>';
                 }
             } catch (error) {
-                console.error('加載門店列表失敗:', error);
+                console.error(' 加載門店列表失敗:', error);
+                storeIdSelect.innerHTML = '<option value="">加載失敗</option>';
             }
         }
 

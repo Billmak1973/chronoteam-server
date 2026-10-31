@@ -249,6 +249,18 @@
             color: #4a148c;
         }
 
+        /* 【新增】線上員工：科技藍 */
+        .role-ONLINE_STAFF {
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            color: white;
+        }
+
+        /* 【新增】店鋪經理：穩重深綠 */
+        .role-STORE_MANAGER {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
         /* ==========================================
 4. 其他細節優化
 ========================================== */
@@ -525,11 +537,24 @@
                         <label class="filter-label"><i class="fas fa-user-shield"></i> 角色篩選</label>
                         <select id="roleFilter" class="filter-select">
                             <option value="">全部角色</option>
+                            <option value="STAFF">👔 工作人員 (非顧客)</option>
                             <option value="ADMIN">👑 管理員 (ADMIN)</option>
                             <option value="CUSTOMER">👤 顧客 (CUSTOMER)</option>
                             <option value="SALES">💼 銷售人員 (SALES)</option>
                             <option value="COURIER">🚚 快遞人員 (COURIER)</option>
                             <option value="APPRAISER">🔍 鑑定師 (APPRAISER)</option>
+                            <option value="ONLINE_STAFF">💻 線上員工 (ONLINE_STAFF)</option>
+                            <option value="STORE_MANAGER">🏪 店鋪經理 (STORE_MANAGER)</option>
+                        </select>
+                    </div>
+                    <!-- 【新增】店鋪篩選框，預設隱藏 -->
+                    <div class="filter-item" id="storeFilterDiv" style="display: none;">
+                        <label class="filter-label"><i class="fas fa-store"></i> 所屬門店</label>
+                        <select id="storeFilter" class="filter-select">
+                            <option value="">不限門店 (查所有人)</option>
+                            <option value="HAS_STORE">所有有門店歸屬的員工</option>
+                            <option value="NO_STORE"> 網上工作人員 (無門店)</option>
+                            <!-- JS 會動態填充這裡 -->
                         </select>
                     </div>
                     <div style="display: flex; gap: 0.8rem; align-items: flex-end;">
@@ -602,7 +627,15 @@
                     <option value="SALES">銷售人員 (SALES)</option>
                     <option value="COURIER">快遞人員 (COURIER)</option>
                     <option value="APPRAISER">鑑定師 (APPRAISER)</option>
+                    <option value="ONLINE_STAFF">線上員工(ONLINE_STAFF)</option>
+                    <option value="STORE_MANAGER">店鋪經理(STORE_MANAGER)</option>
                     <option value="ADMIN">管理員 (ADMIN)</option>
+                </select>
+            </div>
+            <div class="form-group" id="newStoreGroup" style="display: none;">
+                <label>所屬門店</label>
+                <select id="newStoreSelect" class="form-control">
+                    <option value="">請選擇門店</option>
                 </select>
             </div>
             <div>
@@ -638,7 +671,15 @@
                     <option value="SALES">銷售人員 (SALES)</option>
                     <option value="COURIER">快遞人員 (COURIER)</option>
                     <option value="APPRAISER">鑑定師 (APPRAISER)</option>
+                    <option value="ONLINE_STAFF">線上員工(ONLINE_STAFF)</option>
+                    <option value="STORE_MANAGER">店鋪經理(STORE_MANAGER)</option>
                     <option value="ADMIN">管理員 (ADMIN)</option>
+                </select>
+            </div>
+            <div class="form-group" id="updateStoreGroup" style="display: none;">
+                <label>所屬門店</label>
+                <select id="updateStoreSelect" class="form-control">
+                    <option value="">請選擇門店</option>
                 </select>
             </div>
             <div class="modal-footer">
@@ -679,7 +720,29 @@
         function searchCustomers() {
             tableConfig.params.keyword = document.getElementById('keywordInput').value.trim();
             tableConfig.params.role = document.getElementById('roleFilter').value;
-            tableConfig.params.page = 1; // 搜索時重置到第一頁
+
+            const storeFilterVal = document.getElementById('storeFilter').value;
+            if (storeFilterVal === 'HAS_STORE') {
+                tableConfig.params.hasStoreNotNull = true;
+                delete tableConfig.params.hasStoreNull;
+                delete tableConfig.params.storeId;
+            } else if (storeFilterVal === 'NO_STORE') {
+                // 【新增】處理沒有門店歸屬的員工
+                tableConfig.params.hasStoreNull = true;
+                delete tableConfig.params.hasStoreNotNull;
+                delete tableConfig.params.storeId;
+            } else if (storeFilterVal) {
+                tableConfig.params.storeId = storeFilterVal;
+                delete tableConfig.params.hasStoreNotNull;
+                delete tableConfig.params.hasStoreNull;
+            } else {
+                delete tableConfig.params.storeId;
+                //delete 運算子：用來把 JavaScript 物件（tableConfig.params）裡的某個鍵值對（storeId）徹底拔除，讓它在發送給後端時完全不會出現這個欄位，比傳送空字串更乾淨。
+                delete tableConfig.params.hasStoreNotNull;
+                delete tableConfig.params.hasStoreNull;
+            }
+
+            tableConfig.params.page = 1;
             AdminTable.loadData(tableConfig);
         }
 
@@ -687,8 +750,17 @@
         function resetFilters() {
             document.getElementById('keywordInput').value = '';
             document.getElementById('roleFilter').value = '';
+
+            const storeFilter = document.getElementById('storeFilter');
+            const storeFilterDiv = document.getElementById('storeFilterDiv');
+            storeFilter.value = ''; // 重置為 "不限門店 (查所有人)"
+            storeFilterDiv.style.display = 'none';
+
             tableConfig.params.keyword = '';
             tableConfig.params.role = '';
+            delete tableConfig.params.storeId;
+            delete tableConfig.params.hasStoreNotNull;
+            delete tableConfig.params.hasStoreNull; // 確保清除
             tableConfig.params.page = 1;
             AdminTable.loadData(tableConfig);
         }
@@ -706,10 +778,19 @@
                 case 'SALES': roleClass = 'role-SALES'; roleLabel = '銷售人員'; roleIcon = 'fa-briefcase'; break;
                 case 'COURIER': roleClass = 'role-COURIER'; roleLabel = '快遞人員'; roleIcon = 'fa-truck-fast'; break;
                 case 'APPRAISER': roleClass = 'role-APPRAISER'; roleLabel = '鑑定師'; roleIcon = 'fa-magnifying-glass'; break;
+                case 'ONLINE_STAFF': roleClass = 'role-ONLINE_STAFF'; roleLabel = '線上員工'; roleIcon = 'fa-laptop-code'; break;
+                case 'STORE_MANAGER': roleClass = 'role-STORE_MANAGER'; roleLabel = '店鋪經理'; roleIcon = 'fa-store'; break;
             }
 
             // 【核心修改】：直接使用後端傳來的 addressesHtml，若為空則顯示預設值
             const addressesHtml = u.addressesHtml || '<span style="color:#cbd5e1; font-style: italic;">未設置</span>';
+
+            // 所屬門店信息顯示
+            const storeHtml = u.storeName ?
+                `<div style="margin-top: 0.4rem; font-size: 0.8rem; color: #64748b;">
+            <i class="fas fa-store" style="color: var(--gold); margin-right: 4px;"></i>
+            ${u.storeName}
+        </div>` : '';
 
             return `
         <tr>
@@ -731,12 +812,15 @@
                 </div>
             </td>
             <td>
-                <span class="role-badge ${roleClass}" style="cursor:pointer;"
-                      onclick="openUpdateRoleModal(${u.id}, '${u.username}', '${u.role}')"
-                      title="點擊修改權限">
-                    <i class="fas ${roleIcon}"></i> ${roleLabel}
-                    <i class="fas fa-pen" style="font-size:0.6rem; margin-left:4px; opacity:0.7;"></i>
-                </span>
+                <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                    <span class="role-badge ${roleClass}" style="cursor:pointer;"
+                          onclick="openUpdateRoleModal(${u.id}, '${u.username}', '${u.role}', ${u.storeId != null ? u.storeId : 'null'})"
+                          title="點擊修改權限">
+                        <i class="fas ${roleIcon}"></i> ${roleLabel}
+                        <i class="fas fa-pen" style="font-size:0.6rem; margin-left:4px; opacity:0.7;"></i>
+                    </span>
+                    ${storeHtml}
+                </div>
             </td>
 
             <!-- 【核心修改】：直接渲染 addressesHtml，並設置垂直靠上對齊 -->
@@ -765,6 +849,7 @@
             </td>
         </tr>`;
         }
+
         // ==========================================
         // 輔助函數 (保持不變)
         // ==========================================
@@ -780,6 +865,10 @@
         function openCreateUserModal() {
             document.getElementById('newUsername').value = '';
             document.getElementById('newRole').value = 'CUSTOMER';
+
+            // 觸發顯示邏輯，確保初始狀態為隱藏
+            handleRoleChange('newRole', 'newStoreGroup');
+
             document.getElementById('createUserModal').style.display = 'flex';
         }
         function closeCreateUserModal() {document.getElementById('createUserModal').style.display = 'none';}
@@ -787,9 +876,18 @@
         async function submitCreateUser() {
             const username = document.getElementById('newUsername').value.trim();
             const role = document.getElementById('newRole').value;
+            const storeId = document.getElementById('newStoreSelect').value;
+
             if (!username) {showNotification('❌ 請輸入用戶名', true); return;}
             try {
-                const res = await fetch('/admin/api/customers/create', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, role})});
+                const res = await fetch('/admin/api/customers/create', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        username, role,
+                        storeId: storeId || null
+                    })
+                });
                 const result = await res.json();
                 if (result.success) {
                     showNotification('✅ 賬號創建成功！默認密碼為 123456');
@@ -799,10 +897,22 @@
             } catch (e) {showNotification('❌ 網絡錯誤', true);}
         }
 
-        function openUpdateRoleModal(id, username, currentRole) {
+        function openUpdateRoleModal(id, username, currentRole, storeId) {
             document.getElementById('roleTargetId').value = id;
             document.getElementById('roleTargetUsername').textContent = username;
             document.getElementById('updateRoleSelect').value = currentRole;
+
+            handleRoleChange('updateRoleSelect', 'updateStoreGroup');
+            // 【新增】如果用戶有 storeId，設置下拉框的值
+            if (storeId) {
+                // 等待一下確保門店數據已加載
+                setTimeout(() => {
+                    const storeSelect = document.getElementById('updateStoreSelect');
+                    if (storeSelect) {
+                        storeSelect.value = storeId;
+                    }
+                }, 100);
+            }
             document.getElementById('updateRoleModal').style.display = 'flex';
         }
         function closeUpdateRoleModal() {document.getElementById('updateRoleModal').style.display = 'none';}
@@ -810,8 +920,19 @@
         async function submitUpdateRole() {
             const id = document.getElementById('roleTargetId').value;
             const newRole = document.getElementById('updateRoleSelect').value;
+            const storeId = document.getElementById('updateStoreSelect').value;
             try {
-                const res = await fetch(`/admin/api/customers/${id}/role`, {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({role: newRole})});
+                const res = await fetch(`/admin/api/customers/${id}/role`, {
+                    method: 'PUT',
+                    // 設定請求標頭，明確告知後端這次傳送的請求體（body）內容是 JSON 格式的資料
+                    headers: {'Content-Type': 'application/json'},
+                    // 將 JavaScript 物件轉換成 JSON 字串，並放進請求的 body 裡傳送給後端
+                    body: JSON.stringify({
+                        role: newRole,// 將變數 newRole 的值賦給 role 欄位（例如：'SALES'）
+                        storeId: storeId || null // 將變數 storeId 傳過去；若 storeId 是空的（如 undefined、'' 或 0），則改傳 null
+                    })
+                }
+                );
                 const result = await res.json();
                 if (result.success) {
                     showNotification('✅ 權限更新成功');
@@ -819,6 +940,183 @@
                     AdminTable.loadData(tableConfig); //  使用 AdminTable 刷新
                 } else {showNotification('❌ ' + result.message, true);}
             } catch (e) {showNotification('❌ 網絡錯誤', true);}
+        }
+
+        // ==========================================
+        // 【新增】全局變量與門店加載邏輯
+        // ==========================================
+        // 全局變量：存儲加載的門店數據
+        let availableStores = [];
+
+        /**
+         * 異步加載門店列表
+         */
+        async function loadStores() {
+            if (availableStores.length > 0) return; // 已加載過則跳過，避免重複請求
+
+            try {
+                const res = await fetch('/admin/stores/api/active-list');
+                const result = await res.json();
+
+                if (result.success && result.data) {
+                    availableStores = result.data;
+                    // 填充創建和更新彈窗中的門店下拉選單
+                    populateStoreSelect('newStoreSelect');
+                    populateStoreSelect('updateStoreSelect');
+                }
+            } catch (error) {
+                // 【修復 1】：補上 error 參數並打印錯誤日誌
+                console.error('加載門店列表失敗:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('❌ 加載門店列表失敗，請刷新重試', true);
+                }
+            }
+        }
+
+        /**
+         * 輔助函數：填充指定的下拉選單
+         * @param {string} selectId - 下拉選單的 DOM ID
+         */
+        function populateStoreSelect(selectId) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            // 保留第一個默認選項（例如："請選擇門店"）
+            const defaultOption = select.options[0];
+            select.innerHTML = '';
+            select.appendChild(defaultOption);
+
+            // 遍歷門店數據並生成 option
+            availableStores.forEach(store => {
+                const option = document.createElement('option');
+                // 假設後端返回的對象包含 storeId 和 name 字段，請根據實際後端返回調整
+                option.value = store.storeId;
+                option.textContent = store.name;
+                select.appendChild(option);
+            });
+        }
+
+        // 【修復 2】：將事件監聽器移出函數，確保只在頁面加載時執行一次
+        document.addEventListener('DOMContentLoaded', () => {
+
+            if (typeof loadStores === 'function') {
+                loadStores();
+            }
+            // ==========================================
+            // 1. 加載門店列表到「頂部篩選框」
+            // ==========================================
+            if (typeof loadStoresToFilter === 'function') {
+                loadStoresToFilter();
+            }
+
+            // ==========================================
+            // 2. 監聽「頂部角色篩選」變化，控制「門店篩選框」顯示/隱藏
+            // ==========================================
+            const roleFilter = document.getElementById('roleFilter');
+            if (roleFilter) {
+                roleFilter.addEventListener('change', function () {
+                    const role = this.value;
+                    const storeFilterDiv = document.getElementById('storeFilterDiv');
+                    const storeSelect = document.getElementById('storeFilter');
+
+                    // 定義需要顯示門店篩選的角色
+                    const rolesNeedStore = ['SALES', 'APPRAISER', 'STORE_MANAGER', 'STAFF'];
+
+                    if (rolesNeedStore.includes(role)) {
+                        storeFilterDiv.style.display = 'flex'; // 顯示
+                    } else {
+                        storeFilterDiv.style.display = 'none';  // 隱藏
+                        if (storeSelect) storeSelect.value = ''; // 隱藏時重置選擇，避免提交無效數據
+                    }
+                });
+            }
+
+            // ==========================================
+            // 3. 【保留】綁定「彈窗內」的角色變更事件監聽器
+            // ==========================================
+            const newRoleSelect = document.getElementById('newRole');
+            if (newRoleSelect) {
+                newRoleSelect.addEventListener('change', () => {
+                    if (typeof handleRoleChange === 'function') {
+                        handleRoleChange('newRole', 'newStoreGroup');
+                    }
+                });
+            }
+
+            const updateRoleSelect = document.getElementById('updateRoleSelect');
+            if (updateRoleSelect) {
+                updateRoleSelect.addEventListener('change', () => {
+                    if (typeof handleRoleChange === 'function') {
+                        handleRoleChange('updateRoleSelect', 'updateStoreGroup');
+                    }
+                });
+            }
+
+            // ==========================================
+            // 4. 初始化表格
+            // ==========================================
+            if (typeof AdminTable !== 'undefined' && typeof tableConfig !== 'undefined') {
+                AdminTable.loadData(tableConfig);
+            }
+        });
+
+        // ==========================================
+        // 【新增】輔助函數：根據選擇的角色顯示/隱藏門店下拉框
+        // ==========================================
+        function handleRoleChange(roleSelectId, storeGroupId) {
+            const role = document.getElementById(roleSelectId).value;
+            const storeGroup = document.getElementById(storeGroupId);
+            const storeSelect = storeGroup.querySelector('select'); // 獲取裡面的 select 元素以便重置
+
+            // 定義需要顯示門店選擇的角色
+            const rolesNeedStore = ['SALES', 'APPRAISER', 'STORE_MANAGER'];
+
+            if (rolesNeedStore.includes(role)) {
+                storeGroup.style.display = 'block'; // 顯示
+            } else {
+                storeGroup.style.display = 'none';  // 隱藏
+                if (storeSelect) storeSelect.value = ''; // 隱藏時重置選擇，防止提交錯誤數據
+            }
+        }
+
+        // 4. 【新增】專門為篩選框加載門店數據的函數
+        async function loadStoresToFilter() {
+            try {
+                const res = await fetch('/admin/stores/api/active-list');
+                const result = await res.json();
+                if (result.success && result.data) {
+                    const select = document.getElementById('storeFilter');
+
+                    // 【關鍵修復】保留原有的兩個特殊選項，只清空門店數據
+                    // 先保存前三個選項（不限門店 , 所有有門店歸屬的員工和網上工作人員 (無門店)）
+                    const specialOptions = [];
+                    for (let i = 0; i < Math.min(3, select.options.length); i++) {
+                        specialOptions.push({
+                            value: select.options[i].value,
+                            text: select.options[i].textContent
+                        });
+                    }
+
+                    // 清空並重新添加特殊選項
+                    select.innerHTML = '';
+                    specialOptions.forEach(opt => {
+                        const option = document.createElement('option');
+                        option.value = opt.value;
+                        option.textContent = opt.text;
+                        select.appendChild(option);
+                    });
+
+                    // 添加門店數據
+                    result.data.forEach(store => {
+                        const option = document.createElement('option');
+                        option.value = store.storeId;
+                        option.textContent = store.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('加載門店列表失敗:', error);
+            }
         }
 
         // 操作按鈕跳轉邏輯 (保持不變)

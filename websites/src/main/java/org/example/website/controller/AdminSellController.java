@@ -54,14 +54,33 @@ public class AdminSellController {
         this.systemConfigService = systemConfigService;
     }
 
-    /**
-     * 1. 渲染頁面
-     */
     @Hidden
     @GetMapping("/sell-applications")
-    public String sellApplicationsPage(Model model) {
-        // 傳遞 activePage 讓側邊欄高亮
+    public String sellApplicationsPage(Model model, org.springframework.security.core.Authentication authentication) {
         model.addAttribute("activePage", "sell-app");
+
+        // 【核心修復】：動態判斷當前用戶是否擁有「最高覆蓋權限」(不僅限於 ADMIN，店主也可以)
+        boolean isOverrideRole = false;
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            try {
+                // 獲取當前用戶的角色名稱 (例如: "STORE_MANAGER")
+                org.example.website.security.CustomUserDetails userDetails =
+                        (org.example.website.security.CustomUserDetails) authentication.getPrincipal();
+                String roleName = userDetails.getRole().name();
+
+                // 獲取系統配置的覆蓋權限列表
+                List<String> overrideRoles = systemConfigService.getAfterSalesOverrideRoles();
+
+                // 判斷當前角色是否在列表中
+                isOverrideRole = overrideRoles.contains(roleName);
+            } catch (Exception e) {
+                // 未登入或解析異常，默認為 false
+            }
+        }
+
+        // 將動態計算的結果傳遞給前端 Thymeleaf
+        model.addAttribute("isOverrideRole", isOverrideRole);
+
         return "admin/admin-sell-applications";
     }
 
@@ -129,7 +148,7 @@ public class AdminSellController {
     }
 
     /**
-     * 3. 獲取詳情 API (供彈窗調用) - 【已修復：移除了重複的方法，保留此包含 Authentication 的版本】
+     * 3. 獲取詳情 API (供彈窗調用)
      */
     @Operation(summary = "獲取出售申請詳情")
     @GetMapping("/api/sell-applications/{id}")
@@ -139,9 +158,11 @@ public class AdminSellController {
                 .orElseThrow(() -> new RuntimeException("申請記錄不存在"));
 
         // ==========================================
-        // 【核心新增】：計算當前登錄用戶是否有權編輯此申請
+        // 【核心新增】：計算當前登錄用戶是否有權編輯此申請，並標記是否為 Override Role
         // ==========================================
         boolean canEdit = false;
+        boolean isOverrideRole = false; // <--- 新增此變量
+
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
             String currentUsername = authentication.getName();
             User currentUser = userRepository.findByUsername(currentUsername).orElse(null);
@@ -149,6 +170,10 @@ public class AdminSellController {
             if (currentUser != null) {
                 boolean isStaffLock = systemConfigService.getAfterSalesStaffLock();
                 List<String> overrideRoles = systemConfigService.getAfterSalesOverrideRoles();
+                List<String> appraisalRoles = systemConfigService.getAppraisalAuthorizedRoles();
+
+                // 判斷是否為最高權限角色
+                isOverrideRole = overrideRoles.contains(currentUser.getRole().name()); // <--- 記錄狀態
 
                 // 規則 1：如果沒有開啟鎖定，允許編輯
                 if (!isStaffLock) {
@@ -159,7 +184,12 @@ public class AdminSellController {
                     canEdit = true;
                 }
                 // 規則 3：如果當前用戶的角色在「最高覆蓋權限」列表中，允許編輯
-                else if (overrideRoles.contains(currentUser.getRole().name())) {
+                else if (isOverrideRole) {
+                    canEdit = true;
+                }
+
+                // 【規則 4 新增】：如果 operator 為 null (尚未被接收)，且當前用戶角色在「鑑定授權角色」列表中，允許編輯 (視為接收並編輯)
+                else if (app.getOperator() == null && appraisalRoles.contains(currentUser.getRole().name())) {
                     canEdit = true;
                 }
             }
@@ -187,8 +217,9 @@ public class AdminSellController {
         data.put("appointmentDate", app.getAppointmentDate() != null ? app.getAppointmentDate().toString() : null);
         data.put("appointmentTimeSlot", app.getAppointmentTimeSlot());
 
-        // 【核心新增】：將權限標識返回給前端
+        // 【核心新增】：將權限標識返回給前端，讓前端決定是否渲染手動選擇框
         data.put("canEdit", canEdit);
+        data.put("isOverrideRole", isOverrideRole);
 
         String storeName = "未指定";
         if (app.getStoreId() != null && !app.getStoreId().trim().isEmpty() && app.getStoreId().matches("\\d+")) {
@@ -253,6 +284,7 @@ public class AdminSellController {
 
                 boolean isStaffLock = systemConfigService.getAfterSalesStaffLock();
                 List<String> overrideRoles = systemConfigService.getAfterSalesOverrideRoles();
+                List<String> appraisalRoles = systemConfigService.getAppraisalAuthorizedRoles();
 
                 boolean hasPermission = false;
                 if (!isStaffLock) {
@@ -261,18 +293,28 @@ public class AdminSellController {
                     hasPermission = true;
                 } else if (overrideRoles.contains(currentUser.getRole().name())) {
                     hasPermission = true;
+                }    // 【規則 4 新增】：如果 operator 為 null，且當前用戶角色在「鑑定授權角色」列表中，允許操作
+                else if (app.getOperator() == null && appraisalRoles.contains(currentUser.getRole().name())) {
+                    hasPermission = true;
                 }
+
 
                 if (!hasPermission) {
                     return ResponseEntity.status(403).body(Result.error("您無權編輯此申請，該申請已被其他員工接收或您沒有相應權限。"));
                 }
 
                 // ==========================================
-                // 【核心校驗 0.5】：非最高權限角色禁止修改核心字段 (防前端篡改)
+                // 【核心校驗 0.5】：精细化核心字段修改權限控制
+                // 規則：最高權限可隨意修改。
+                //       鑑定授權角色在「非 COMPLETED」狀態下可修改核心字段。
+                //       其他情況禁止修改核心字段。
                 // ==========================================
                 boolean isOverrideRole = overrideRoles.contains(currentUser.getRole().name());
+                boolean isAppraisalRole = appraisalRoles.contains(currentUser.getRole().name());
+                boolean isCompleted = app.getStatus() == SellApplication.ApplicationStatus.COMPLETED;
 
-                if (!isOverrideRole) {
+                // 如果 不是最高權限，並且 (不是鑑定授權角色 OR 狀態已為 COMPLETED)
+                if (!isOverrideRole && (!isAppraisalRole || isCompleted)) {
                     boolean isCoreChanged = false;
 
                     // 輔助方法：安全比較字符串 (處理 null 和 空字符串)
@@ -306,12 +348,27 @@ public class AdminSellController {
                     if (!java.util.Objects.equals(formFinalPrice, app.getFinalPrice())) isCoreChanged = true;
 
                     if (isCoreChanged) {
-                        return ResponseEntity.status(403).body(Result.error("您沒有權限修改核心字段（品牌、型號、狀態、鑑定師、成交價等），請聯繫擁有最高權限的人員！"));
+                        return ResponseEntity.status(403).body(Result.error("您沒有權限修改核心字段（品牌、型號、狀態、鑑定師、成交價等），或該申請已完成鎖定，請聯繫擁有最高權限的人員！"));
                     }
                 }
 
-                // 校驗通過，設置操作人
-                app.setOperator(currentUser);
+                // ==========================================
+                // 【核心修改】：處理負責人的自動/手動邏輯
+                // ==========================================
+                if (isOverrideRole && form.containsKey("operatorId") && !form.get("operatorId").trim().isEmpty()) {
+                    try {
+                        Long operatorId = Long.parseLong(form.get("operatorId").trim());
+                        User operator = userRepository.findById(operatorId)
+                                .orElseThrow(() -> new RuntimeException("指定的負責人不存在，ID: " + operatorId));
+                        app.setOperator(operator); // 手動指定負責人
+                    } catch (NumberFormatException e) {
+                        return ResponseEntity.badRequest().body(Result.error("負責人ID格式無效"));
+                    }
+                } else {
+                    // 非最高權限角色，或前端未傳遞 operatorId (選擇了"自動")，則自動記錄為當前登入者
+                    app.setOperator(currentUser);
+                }
+
             } else {
                 return ResponseEntity.status(401).body(Result.error("請先登入"));
             }

@@ -63,19 +63,39 @@ public class AdminPurchaseController {
     // ==========================================
     // 1. 頁面視圖渲染 (僅返回 HTML 骨架，數據由前端 AJAX 獲取)
     // ==========================================
-    @Hidden // 隱藏純頁面渲染接口，保持 Swagger UI 專注於 REST API
+    @Hidden
     @GetMapping("/purchases")
-    public String managePurchasesPage(Model model) {
-        // 1.獲取系統中所有產品
+    public String managePurchasesPage(Model model, Authentication authentication) {
+        // 1. 獲取所有產品和品牌
         List<Product> allProducts = productService.getAllProducts();
-
-        // 2. 提取所有不重复的品牌名称，并使用 TreeSet 自动按字母排序
         Set<String> allBrands = allProducts.stream()
                 .map(Product::getBrand)
                 .filter(brand -> brand != null && !brand.isEmpty())
                 .collect(Collectors.toCollection(TreeSet::new));
-
         model.addAttribute("allBrands", allBrands);
+
+        // 2. 【核心修復】獲取當前用戶的 storeId
+        Long currentUserStoreId = null;
+        if (authentication != null && authentication.isAuthenticated() &&
+                !"anonymousUser".equals(authentication.getPrincipal())) {
+
+            String username = authentication.getName();
+            Optional<User> userOpt = userRepository.findByUsername(username);
+
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                if (user.getStore() != null) {
+                    currentUserStoreId = user.getStore().getStoreId();
+                  //  System.out.println(" 當前用戶 [" + username + "] 所屬門店 ID: " + currentUserStoreId);
+                } else {
+                //    System.out.println(" 當前用戶 [" + username + "] 未關聯門店");
+                }
+            }
+        }
+
+        // 3. 傳遞給前端（使用 Long 類型，避免 null 問題）
+        model.addAttribute("currentUserStoreId", currentUserStoreId);
+
         return "admin/admin-purchases";
     }
 

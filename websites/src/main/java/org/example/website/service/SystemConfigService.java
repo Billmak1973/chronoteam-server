@@ -236,13 +236,17 @@ public class SystemConfigService {
                 .map(c->Boolean.parseBoolean(c.getConfigValue()))
                 .orElse(false);
     }
+
     /**
      * 獲取「擁有售後訂單最高覆蓋權限」的角色列表
      * @return 默認為 ADMIN, ONLINE_STAFF (可自由配置)
      */
     public List<String> getAfterSalesOverrideRoles() {
         return repository.findById("AFTER_SALES_OVERRIDE_ROLES")
-                .map(c -> Arrays.asList(c.getConfigValue().split(",")))
+                .map(c -> Arrays.stream(c.getConfigValue().split(","))
+                        .map(String::trim)          // 【修復 1】：去除首尾空格
+                        .map(String::toUpperCase)   // 【修復 2】：強制轉為大寫，確保與枚舉 name() 完美匹配
+                        .collect(java.util.stream.Collectors.toList()))
                 .orElse(List.of("ADMIN")); // 默認值
     }
 

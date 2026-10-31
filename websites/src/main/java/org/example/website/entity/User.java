@@ -51,6 +51,12 @@ public class User {
     @Column(name = "work_phone", length = 20)
     private String workPhone;
 
+    // 關聯的線下門店實體 (非必填，FetchType.LAZY 避免效能問題)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id") // 這會在資料庫生成名為 store_id 的外鍵欄位
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private OfflineStore store;
+
     // 用戶角色 (默認為顧客)
     @Enumerated(EnumType.STRING)
     @Column(name = "user_type", length = 20, nullable = false)
