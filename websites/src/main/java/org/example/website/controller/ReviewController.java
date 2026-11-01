@@ -38,7 +38,7 @@ public class ReviewController {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final ReviewReactionService reactionService;
-    private final UserRepository userRepository; //  新增：用於樓中樓回覆時獲取用戶實體
+    private final UserRepository userRepository; //  用於樓中樓回覆時獲取用戶實體
     private final ReviewReactionRepository reviewReactionRepository;
     private final NotificationRepository notificationRepository;
     private final UserBlockService userBlockService;

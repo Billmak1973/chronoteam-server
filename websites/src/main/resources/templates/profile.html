@@ -1313,7 +1313,7 @@
     <!--  注入登录状态变量與內聯編輯 JS 邏輯 -->
     <script th:inline="javascript">
         // 獲取 Spring Security 狀態
-        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        window.isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
 
         /**
          * 切換到編輯模式

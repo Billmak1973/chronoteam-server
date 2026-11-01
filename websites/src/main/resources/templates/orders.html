@@ -1688,7 +1688,7 @@
     <!-- 注入後端配置變量 -->
     <!-- ========================================== -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        window.isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
         const returnDaysConfig = [[${returnDays}]];
         const exchangeDaysConfig = [[${exchangeDays}]];
         const offlinePaymentDaysConfig = [[${offlinePaymentDays}]];

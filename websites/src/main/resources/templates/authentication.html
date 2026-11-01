@@ -412,7 +412,7 @@
 
     <!--  5. 注入登入狀態變量 (必須在 common.js 之前，供購物車等功能判斷使用) -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        window.isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
     </script>
 
     <!--  6. 引入公共 JS (包含購物車邏輯、彈窗控制、登出處理等) -->

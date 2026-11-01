@@ -296,7 +296,7 @@
 
 <!--  5. 注入登录状态变量 (必须在 common.js 之前，用于购物车拦截) -->
 <script th:inline="javascript">
-  const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+  window.isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
 </script>
 
 <script>

@@ -243,7 +243,7 @@
 
 <div th:replace="~{fragments/common :: modals}"></div>
 <script th:inline="javascript">
-    const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+    window.isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
 </script>
 <script src="/js/common.js"></script>
 </body>

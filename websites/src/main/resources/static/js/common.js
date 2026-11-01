@@ -1,528 +1,1106 @@
-// @ts-check
-/* ==========================================
-   ChronoTeam 公共脚本 (common.js) - 完整修復版
-   ========================================== */
-
-/* ==========================================
-  1. 購物車模塊 (Namespace Refactored)
-   ========================================== */
-
-// ===== 第一步：建立唯一的命名空間容器 =====
-window.ChronoTeam = window.ChronoTeam || {};
-window.ChronoTeam.cart = window.ChronoTeam.cart || {
-  // ===== 第二步：遷移並封裝狀態變量 =====
-  isOpen: false,
-  pendingDeleteId: null,
-  // 確保 selectedItems 在頁面切換時不丟失
-  selectedItems: new Set(),
-};
-
-// 內部引用簡寫 (直接使用 Cart，更簡潔)
-const Cart = window.ChronoTeam.cart;
-
-// ===== 第三步：將函數掛載到命名空間下 =====
-
-/**
- * 切換購物車下拉菜單的顯示與隱藏
- * @param {Event} [event] - 點擊事件對象 (用於阻止事件冒泡)
- * @returns {void}
- */
-Cart.toggleDropdown = function (event) {
-  if (event) event.stopPropagation();
-  const dropdown = document.getElementById("cartDropdown");
-  if (!dropdown) return;
-
-  Cart.isOpen = !Cart.isOpen;
-  if (Cart.isOpen) {
-    dropdown.style.display = "flex";
-    dropdown.style.flexDirection = "column";
-    Cart.loadItems();
-  } else {
-    dropdown.style.display = "none";
-  }
-};
-
-/**
- * 遍歷 DOM 中勾選的商品，計算總價並更新底部金額顯示
- * @returns {void}
- */
-Cart.calculateSelectedTotal = function () {
-  const checkboxes = document.querySelectorAll(".cart-item-select:checked");
-  let total = 0;
-
-  checkboxes.forEach((checkbox) => {
-    const cartItem = checkbox.closest(".cart-item");
-    if (cartItem) {
-      const priceText = cartItem
-        .querySelector(".cart-item-price")
-        .textContent.replace("HK$ ", "")
-        .replace(/,/g, "");
-      const quantity = parseInt(
-        cartItem.querySelector(".qty-value").textContent,
-      );
-      total += parseFloat(priceText) * quantity;
+"use strict";
+var ChronoTeamApp = (() => {
+  var __create = Object.create;
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __getProtoOf = Object.getPrototypeOf;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __commonJS = (cb, mod) => function __require() {
+    try {
+      return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+    } catch (e) {
+      throw mod = 0, e;
     }
-  });
+  };
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+    // If the importer is in node compatibility mode or this is not an ESM
+    // file that has been converted to a CommonJS file using a Babel-
+    // compatible transform (i.e. "__esModule" has not been set), then set
+    // "default" to the CommonJS "module.exports" for node compatibility.
+    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+    mod
+  ));
+  var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  const totalEl = document.getElementById("cartTotalAmount");
-  if (totalEl) totalEl.textContent = "HK$ " + formatPrice(total);
-};
-
-/**
- * 異步請求後端 API 獲取購物車數據，並觸發渲染與角標更新
- * @returns {Promise<void>}
- */
-Cart.loadItems = async function () {
-  try {
-    const response = await fetch("/cart/api/list");
-    const data = await response.json();
-
-    if (data.success) {
-      Cart.renderItems(data.cartItems, data.totalAmount);
-      updateCartBadge(data.cartCount);
-
-      // 替換內部引用 -> Cart.selectedItems
-      Cart.selectedItems.clear();
-      data.cartItems.forEach((item) => {
-        if (item.selected !== false) {
-          Cart.selectedItems.add(item.cartId);
+  // node_modules/react/cjs/react.development.js
+  var require_react_development = __commonJS({
+    "node_modules/react/cjs/react.development.js"(exports, module) {
+      "use strict";
+      (function() {
+        function defineDeprecationWarning(methodName, info) {
+          Object.defineProperty(Component.prototype, methodName, {
+            get: function() {
+              console.warn(
+                "%s(...) is deprecated in plain JavaScript React classes. %s",
+                info[0],
+                info[1]
+              );
+            }
+          });
         }
-      });
-
-      Cart.calculateSelectedTotal();
-      return Promise.resolve();
-    }
-  } catch (error) {
-    console.error("加载购物车失败:", error);
-    return Promise.reject(error);
-  }
-};
-
-/**
- * 根據後端返回的數據生成購物車列表 DOM
- * @param {Array<Object>} cartItems - 購物車商品數據數組
- * @param {number} totalAmount - 選中商品的總金額
- * @returns {void}
- */
-Cart.renderItems = function (cartItems, totalAmount) {
-  const container = document.getElementById("cartItemsContainer");
-
-  // ️ 終極防禦：防止覆蓋詳情頁 DOM
-  if (!container || !container.closest(".cart-dropdown-menu")) {
-    console.warn("🛡️ [安全攔截] 阻止了 renderCartItems 覆蓋詳情頁 DOM！");
-    return;
-  }
-
-  if (!container) return;
-
-  Cart.selectedItems.clear();
-
-  if (!cartItems || cartItems.length === 0) {
-    container.innerHTML = `<div class="cart-empty"><i class="fas fa-shopping-basket" style="font-size: 3rem; color: #ddd; margin-bottom: 1rem;"></i><p>購物車是空的</p></div>`;
-    const totalEl = document.getElementById("cartTotalAmount");
-    if (totalEl) totalEl.textContent = "HK$ 0";
-    return;
-  }
-
-  let html = "";
-  cartItems.forEach((item) => {
-    const isChecked = item.selected !== false;
-    if (isChecked) {
-      Cart.selectedItems.add(item.cartId);
-    }
-
-    html += `<div class="cart-item" data-cart-id="${item.cartId}" data-product-id="${item.product.productId}">
-            <div class="cart-item-checkbox">
-                <input type="checkbox"
-                       class="cart-item-select"
-                       data-cart-id="${item.cartId}"
-                       onchange="Cart.toggleSelection(${item.cartId}, this.checked)"
-                       ${isChecked ? "checked" : ""}>
-            </div>
-            <div class="cart-item-img"><img src="/images/products/${item.product.image}" alt="${item.product.description}" onerror="this.src='/images/placeholder.png'"></div>
-            <div class="cart-item-info">
-                <div class="cart-item-name">${item.product.description}</div>
-                <div class="cart-item-price">HK$ ${formatPrice(item.price)}</div>
-                <div class="cart-item-quantity">
-                    <button class="qty-btn" onclick="Cart.updateQuantity(${item.cartId}, ${item.quantity - 1})" ${item.quantity <= 1 ? "disabled" : ""}>-</button>
-                    <span class="qty-value">${item.quantity}</span>
-                    <button class="qty-btn" onclick="Cart.updateQuantity(${item.cartId}, ${item.quantity + 1})" ${item.quantity >= item.product.stock ? "disabled" : ""}>+</button>
-                </div>
-            </div>
-            <div class="cart-item-remove" onclick="Cart.removeFromCart(${item.product.productId})"><i class="fas fa-trash-alt"></i></div>
-        </div>`;
-  });
-  container.innerHTML = html;
-
-  const totalEl = document.getElementById("cartTotalAmount");
-  if (totalEl) totalEl.textContent = "HK$ " + formatPrice(totalAmount);
-};
-
-/**
- * 切換單個購物車項的選中狀態，並同步後端與詳情頁 UI
- * @param {number} cartId - 購物車記錄 ID
- * @param {boolean} isChecked - 當前是否被勾選
- * @returns {Promise<void>}
- */
-Cart.toggleSelection = async function (cartId, isChecked) {
-  // 替換內部引用
-  if (isChecked) {
-    Cart.selectedItems.add(cartId);
-  } else {
-    Cart.selectedItems.delete(cartId);
-  }
-
-  try {
-    await fetch(
-      `/cart/api/toggle-selection/${cartId}?isSelected=${isChecked}`,
-      { method: "PUT" },
-    );
-
-    // 跨頁面同步邏輯保持不變
-    if (window.location.pathname === "/cart/view") {
-      const detailCheckbox = document.querySelector(
-        `.cart-items-list input[data-cart-id="${cartId}"]`,
-      );
-      if (detailCheckbox) {
-        detailCheckbox.checked = isChecked;
-        const cartItem = detailCheckbox.closest(".cart-item");
-        if (isChecked) {
-          cartItem.classList.remove("not-selected");
-        } else {
-          cartItem.classList.add("not-selected");
+        function getIteratorFn(maybeIterable) {
+          if (null === maybeIterable || "object" !== typeof maybeIterable)
+            return null;
+          maybeIterable = MAYBE_ITERATOR_SYMBOL && maybeIterable[MAYBE_ITERATOR_SYMBOL] || maybeIterable["@@iterator"];
+          return "function" === typeof maybeIterable ? maybeIterable : null;
         }
-        if (typeof window.updateCartTotal === "function")
-          window.updateCartTotal();
-        if (typeof window.updateSelectedCount === "function")
-          window.updateSelectedCount();
-        if (typeof window.syncSelectAllCheckbox === "function")
-          window.syncSelectAllCheckbox();
-      }
-    }
-  } catch (error) {
-    console.error("同步选中状态失败:", error);
-    // 【失敗回滾】
-    if (isChecked) {
-      Cart.selectedItems.delete(cartId);
-    } else {
-      Cart.selectedItems.add(cartId);
-    }
-    // 詳情頁 UI 回滾...
-    if (window.location.pathname === "/cart/view") {
-      const detailCheckbox = document.querySelector(
-        `.cart-items-list input[data-cart-id="${cartId}"]`,
-      );
-      if (detailCheckbox) {
-        detailCheckbox.checked = !isChecked;
-        const cartItem = detailCheckbox.closest(".cart-item");
-        if (isChecked) cartItem.classList.add("not-selected");
-        else cartItem.classList.remove("not-selected");
-        if (typeof window.updateCartTotal === "function")
-          window.updateCartTotal();
-        if (typeof window.updateSelectedCount === "function")
-          window.updateSelectedCount();
-        if (typeof window.syncSelectAllCheckbox === "function")
-          window.syncSelectAllCheckbox();
-      }
-    }
-    showNotification("❌ 網絡錯誤，同步失敗", true);
-    return;
-  }
-
-  Cart.calculateSelectedTotal();
-};
-
-/**
- * 更新購物車商品數量 (包含樂觀更新 UI 與失敗回滾機制)
- * @param {number} cartId - 購物車記錄 ID
- * @param {number} newQuantity - 目標數量
- * @returns {Promise<void>}
- */
-Cart.updateQuantity = async function (cartId, newQuantity) {
-  if (newQuantity <= 0) return;
-
-  const navQtyElement = document.querySelector(
-    `#cartItemsContainer [data-cart-id="${cartId}"] .qty-value`,
-  );
-  const originalNavQty = navQtyElement
-    ? parseInt(navQtyElement.textContent)
-    : newQuantity;
-  const detailQtyElement = document.querySelector(
-    `.cart-items-list [data-cart-id="${cartId}"] .qty-value`,
-  );
-  const originalDetailQty = detailQtyElement
-    ? parseInt(detailQtyElement.textContent)
-    : newQuantity;
-
-  // 樂觀更新 UI
-  if (navQtyElement) navQtyElement.textContent = newQuantity;
-  if (detailQtyElement) detailQtyElement.textContent = newQuantity;
-
-  if (detailQtyElement) {
-    const detailCartItem = detailQtyElement.closest(".cart-item");
-    const price = parseFloat(detailCartItem.dataset.price);
-    const subtotalSpan = detailCartItem.querySelector(".item-subtotal span");
-    if (subtotalSpan)
-      subtotalSpan.textContent = (price * newQuantity).toLocaleString("zh-HK");
-    if (typeof window.updateCartTotal === "function") window.updateCartTotal();
-    if (typeof window.updateSelectedCount === "function")
-      window.updateSelectedCount();
-  }
-
-  try {
-    const response = await fetch(
-      `/cart/api/update/${cartId}?quantity=${newQuantity}`,
-      { method: "PUT" },
-    );
-    const data = await response.json();
-
-    if (response.ok) {
-      if (typeof Cart.loadItems === "function") await Cart.loadItems();
-      showNotification("✅ 數量更新成功");
-    } else {
-      // 回滾
-      if (navQtyElement) navQtyElement.textContent = originalNavQty;
-      if (detailQtyElement) detailQtyElement.textContent = originalDetailQty;
-      if (detailQtyElement) {
-        const detailCartItem = detailQtyElement.closest(".cart-item");
-        const price = parseFloat(detailCartItem.dataset.price);
-        const subtotalSpan = detailCartItem.querySelector(
-          ".item-subtotal span",
-        );
-        if (subtotalSpan)
-          subtotalSpan.textContent = (price * originalDetailQty).toLocaleString(
-            "zh-HK",
-          );
-        if (typeof window.updateCartTotal === "function")
-          window.updateCartTotal();
-        if (typeof window.updateSelectedCount === "function")
-          window.updateSelectedCount();
-      }
-      showNotification("❌ " + (data.message || "更新失敗"), true);
-    }
-  } catch (error) {
-    console.error("更新購物車失敗:", error);
-    // 網絡錯誤回滾...
-    if (navQtyElement) navQtyElement.textContent = originalNavQty;
-    if (detailQtyElement) detailQtyElement.textContent = originalDetailQty;
-    if (detailQtyElement) {
-      const detailCartItem = detailQtyElement.closest(".cart-item");
-      const price = parseFloat(detailCartItem.dataset.price);
-      const subtotalSpan = detailCartItem.querySelector(".item-subtotal span");
-      if (subtotalSpan)
-        subtotalSpan.textContent = (price * originalDetailQty).toLocaleString(
-          "zh-HK",
-        );
-      if (typeof window.updateCartTotal === "function")
-        window.updateCartTotal();
-      if (typeof window.updateSelectedCount === "function")
-        window.updateSelectedCount();
-    }
-    showNotification("❌ 網絡錯誤，同步失敗", true);
-  }
-};
-
-/**
- * 攔截刪除操作，打開確認彈窗並暫存待刪除的商品 ID
- * @param {number} productId - 準備移除的商品 ID
- * @returns {void}
- */
-Cart.removeFromCart = function (productId) {
-  Cart.pendingDeleteId = productId;
-  document.getElementById("cartDeleteModal").style.display = "flex";
-  document.body.style.overflow = "hidden";
-};
-
-/**
- * 關閉刪除確認彈窗，並清空暫存的 pendingDeleteId
- * @returns {void}
- */
-Cart.closeDeleteModal = function () {
-  document.getElementById("cartDeleteModal").style.display = "none";
-  document.body.style.overflow = "";
-  Cart.pendingDeleteId = null;
-};
-
-/**
- * 確認執行刪除操作，調用 API 並處理列表移除動畫與狀態重算
- * @returns {Promise<void>}
- */
-Cart.confirmDelete = async function () {
-  if (!Cart.pendingDeleteId) return;
-
-  const detailCartItem = document.querySelector(
-    `.cart-items-list [data-product-id="${Cart.pendingDeleteId}"]`,
-  );
-
-  try {
-    const response = await fetch(`/cart/api/remove/${Cart.pendingDeleteId}`, {
-      method: "DELETE",
-    });
-
-    if (response.ok) {
-      Cart.closeDeleteModal();
-      showNotification("✅ 商品已移除");
-
-      if (typeof Cart.loadItems === "function") await Cart.loadItems();
-
-      if (window.location.pathname === "/cart/view" && detailCartItem) {
-        detailCartItem.style.transition = "all 0.3s ease";
-        detailCartItem.style.opacity = "0";
-        detailCartItem.style.transform = "translateX(-20px)";
-
-        setTimeout(() => {
-          detailCartItem.remove();
-          const remainingItems = document.querySelectorAll(
-            ".cart-items-list .cart-item",
-          );
-          if (remainingItems.length === 0) {
-            location.reload();
-          } else {
-            if (typeof window.updateCartTotal === "function")
-              window.updateCartTotal();
-            if (typeof window.updateSelectedCount === "function")
-              window.updateSelectedCount();
-            if (typeof window.syncSelectAllCheckbox === "function")
-              window.syncSelectAllCheckbox();
+        function warnNoop(publicInstance, callerName) {
+          publicInstance = (publicInstance = publicInstance.constructor) && (publicInstance.displayName || publicInstance.name) || "ReactClass";
+          var warningKey = publicInstance + "." + callerName;
+          didWarnStateUpdateForUnmountedComponent[warningKey] || (console.error(
+            "Can't call %s on a component that is not yet mounted. This is a no-op, but it might indicate a bug in your application. Instead, assign to `this.state` directly or define a `state = {};` class property with the desired state in the %s component.",
+            callerName,
+            publicInstance
+          ), didWarnStateUpdateForUnmountedComponent[warningKey] = true);
+        }
+        function Component(props, context, updater) {
+          this.props = props;
+          this.context = context;
+          this.refs = emptyObject;
+          this.updater = updater || ReactNoopUpdateQueue;
+        }
+        function ComponentDummy() {
+        }
+        function PureComponent(props, context, updater) {
+          this.props = props;
+          this.context = context;
+          this.refs = emptyObject;
+          this.updater = updater || ReactNoopUpdateQueue;
+        }
+        function noop() {
+        }
+        function testStringCoercion(value) {
+          return "" + value;
+        }
+        function checkKeyStringCoercion(value) {
+          try {
+            testStringCoercion(value);
+            var JSCompiler_inline_result = false;
+          } catch (e) {
+            JSCompiler_inline_result = true;
           }
-        }, 300);
+          if (JSCompiler_inline_result) {
+            JSCompiler_inline_result = console;
+            var JSCompiler_temp_const = JSCompiler_inline_result.error;
+            var JSCompiler_inline_result$jscomp$0 = "function" === typeof Symbol && Symbol.toStringTag && value[Symbol.toStringTag] || value.constructor.name || "Object";
+            JSCompiler_temp_const.call(
+              JSCompiler_inline_result,
+              "The provided key is an unsupported type %s. This value must be coerced to a string before using it here.",
+              JSCompiler_inline_result$jscomp$0
+            );
+            return testStringCoercion(value);
+          }
+        }
+        function getComponentNameFromType(type) {
+          if (null == type) return null;
+          if ("function" === typeof type)
+            return type.$$typeof === REACT_CLIENT_REFERENCE ? null : type.displayName || type.name || null;
+          if ("string" === typeof type) return type;
+          switch (type) {
+            case REACT_FRAGMENT_TYPE:
+              return "Fragment";
+            case REACT_PROFILER_TYPE:
+              return "Profiler";
+            case REACT_STRICT_MODE_TYPE:
+              return "StrictMode";
+            case REACT_SUSPENSE_TYPE:
+              return "Suspense";
+            case REACT_SUSPENSE_LIST_TYPE:
+              return "SuspenseList";
+            case REACT_ACTIVITY_TYPE:
+              return "Activity";
+          }
+          if ("object" === typeof type)
+            switch ("number" === typeof type.tag && console.error(
+              "Received an unexpected object in getComponentNameFromType(). This is likely a bug in React. Please file an issue."
+            ), type.$$typeof) {
+              case REACT_PORTAL_TYPE:
+                return "Portal";
+              case REACT_CONTEXT_TYPE:
+                return type.displayName || "Context";
+              case REACT_CONSUMER_TYPE:
+                return (type._context.displayName || "Context") + ".Consumer";
+              case REACT_FORWARD_REF_TYPE:
+                var innerType = type.render;
+                type = type.displayName;
+                type || (type = innerType.displayName || innerType.name || "", type = "" !== type ? "ForwardRef(" + type + ")" : "ForwardRef");
+                return type;
+              case REACT_MEMO_TYPE:
+                return innerType = type.displayName || null, null !== innerType ? innerType : getComponentNameFromType(type.type) || "Memo";
+              case REACT_LAZY_TYPE:
+                innerType = type._payload;
+                type = type._init;
+                try {
+                  return getComponentNameFromType(type(innerType));
+                } catch (x) {
+                }
+            }
+          return null;
+        }
+        function getTaskName(type) {
+          if (type === REACT_FRAGMENT_TYPE) return "<>";
+          if ("object" === typeof type && null !== type && type.$$typeof === REACT_LAZY_TYPE)
+            return "<...>";
+          try {
+            var name = getComponentNameFromType(type);
+            return name ? "<" + name + ">" : "<...>";
+          } catch (x) {
+            return "<...>";
+          }
+        }
+        function getOwner() {
+          var dispatcher = ReactSharedInternals.A;
+          return null === dispatcher ? null : dispatcher.getOwner();
+        }
+        function UnknownOwner() {
+          return Error("react-stack-top-frame");
+        }
+        function hasValidKey(config) {
+          if (hasOwnProperty.call(config, "key")) {
+            var getter = Object.getOwnPropertyDescriptor(config, "key").get;
+            if (getter && getter.isReactWarning) return false;
+          }
+          return void 0 !== config.key;
+        }
+        function defineKeyPropWarningGetter(props, displayName) {
+          function warnAboutAccessingKey() {
+            specialPropKeyWarningShown || (specialPropKeyWarningShown = true, console.error(
+              "%s: `key` is not a prop. Trying to access it will result in `undefined` being returned. If you need to access the same value within the child component, you should pass it as a different prop. (https://react.dev/link/special-props)",
+              displayName
+            ));
+          }
+          warnAboutAccessingKey.isReactWarning = true;
+          Object.defineProperty(props, "key", {
+            get: warnAboutAccessingKey,
+            configurable: true
+          });
+        }
+        function elementRefGetterWithDeprecationWarning() {
+          var componentName = getComponentNameFromType(this.type);
+          didWarnAboutElementRef[componentName] || (didWarnAboutElementRef[componentName] = true, console.error(
+            "Accessing element.ref was removed in React 19. ref is now a regular prop. It will be removed from the JSX Element type in a future release."
+          ));
+          componentName = this.props.ref;
+          return void 0 !== componentName ? componentName : null;
+        }
+        function ReactElement(type, key, props, owner, debugStack, debugTask) {
+          var refProp = props.ref;
+          type = {
+            $$typeof: REACT_ELEMENT_TYPE,
+            type,
+            key,
+            props,
+            _owner: owner
+          };
+          null !== (void 0 !== refProp ? refProp : null) ? Object.defineProperty(type, "ref", {
+            enumerable: false,
+            get: elementRefGetterWithDeprecationWarning
+          }) : Object.defineProperty(type, "ref", { enumerable: false, value: null });
+          type._store = {};
+          Object.defineProperty(type._store, "validated", {
+            configurable: false,
+            enumerable: false,
+            writable: true,
+            value: 0
+          });
+          Object.defineProperty(type, "_debugInfo", {
+            configurable: false,
+            enumerable: false,
+            writable: true,
+            value: null
+          });
+          Object.defineProperty(type, "_debugStack", {
+            configurable: false,
+            enumerable: false,
+            writable: true,
+            value: debugStack
+          });
+          Object.defineProperty(type, "_debugTask", {
+            configurable: false,
+            enumerable: false,
+            writable: true,
+            value: debugTask
+          });
+          Object.freeze && (Object.freeze(type.props), Object.freeze(type));
+          return type;
+        }
+        function cloneAndReplaceKey(oldElement, newKey) {
+          newKey = ReactElement(
+            oldElement.type,
+            newKey,
+            oldElement.props,
+            oldElement._owner,
+            oldElement._debugStack,
+            oldElement._debugTask
+          );
+          oldElement._store && (newKey._store.validated = oldElement._store.validated);
+          return newKey;
+        }
+        function validateChildKeys(node) {
+          isValidElement(node) ? node._store && (node._store.validated = 1) : "object" === typeof node && null !== node && node.$$typeof === REACT_LAZY_TYPE && ("fulfilled" === node._payload.status ? isValidElement(node._payload.value) && node._payload.value._store && (node._payload.value._store.validated = 1) : node._store && (node._store.validated = 1));
+        }
+        function isValidElement(object) {
+          return "object" === typeof object && null !== object && object.$$typeof === REACT_ELEMENT_TYPE;
+        }
+        function escape(key) {
+          var escaperLookup = { "=": "=0", ":": "=2" };
+          return "$" + key.replace(/[=:]/g, function(match) {
+            return escaperLookup[match];
+          });
+        }
+        function getElementKey(element, index) {
+          return "object" === typeof element && null !== element && null != element.key ? (checkKeyStringCoercion(element.key), escape("" + element.key)) : index.toString(36);
+        }
+        function resolveThenable(thenable) {
+          switch (thenable.status) {
+            case "fulfilled":
+              return thenable.value;
+            case "rejected":
+              throw thenable.reason;
+            default:
+              switch ("string" === typeof thenable.status ? thenable.then(noop, noop) : (thenable.status = "pending", thenable.then(
+                function(fulfilledValue) {
+                  "pending" === thenable.status && (thenable.status = "fulfilled", thenable.value = fulfilledValue);
+                },
+                function(error) {
+                  "pending" === thenable.status && (thenable.status = "rejected", thenable.reason = error);
+                }
+              )), thenable.status) {
+                case "fulfilled":
+                  return thenable.value;
+                case "rejected":
+                  throw thenable.reason;
+              }
+          }
+          throw thenable;
+        }
+        function mapIntoArray(children, array, escapedPrefix, nameSoFar, callback) {
+          var type = typeof children;
+          if ("undefined" === type || "boolean" === type) children = null;
+          var invokeCallback = false;
+          if (null === children) invokeCallback = true;
+          else
+            switch (type) {
+              case "bigint":
+              case "string":
+              case "number":
+                invokeCallback = true;
+                break;
+              case "object":
+                switch (children.$$typeof) {
+                  case REACT_ELEMENT_TYPE:
+                  case REACT_PORTAL_TYPE:
+                    invokeCallback = true;
+                    break;
+                  case REACT_LAZY_TYPE:
+                    return invokeCallback = children._init, mapIntoArray(
+                      invokeCallback(children._payload),
+                      array,
+                      escapedPrefix,
+                      nameSoFar,
+                      callback
+                    );
+                }
+            }
+          if (invokeCallback) {
+            invokeCallback = children;
+            callback = callback(invokeCallback);
+            var childKey = "" === nameSoFar ? "." + getElementKey(invokeCallback, 0) : nameSoFar;
+            isArrayImpl(callback) ? (escapedPrefix = "", null != childKey && (escapedPrefix = childKey.replace(userProvidedKeyEscapeRegex, "$&/") + "/"), mapIntoArray(callback, array, escapedPrefix, "", function(c) {
+              return c;
+            })) : null != callback && (isValidElement(callback) && (null != callback.key && (invokeCallback && invokeCallback.key === callback.key || checkKeyStringCoercion(callback.key)), escapedPrefix = cloneAndReplaceKey(
+              callback,
+              escapedPrefix + (null == callback.key || invokeCallback && invokeCallback.key === callback.key ? "" : ("" + callback.key).replace(
+                userProvidedKeyEscapeRegex,
+                "$&/"
+              ) + "/") + childKey
+            ), "" !== nameSoFar && null != invokeCallback && isValidElement(invokeCallback) && null == invokeCallback.key && invokeCallback._store && !invokeCallback._store.validated && (escapedPrefix._store.validated = 2), callback = escapedPrefix), array.push(callback));
+            return 1;
+          }
+          invokeCallback = 0;
+          childKey = "" === nameSoFar ? "." : nameSoFar + ":";
+          if (isArrayImpl(children))
+            for (var i = 0; i < children.length; i++)
+              nameSoFar = children[i], type = childKey + getElementKey(nameSoFar, i), invokeCallback += mapIntoArray(
+                nameSoFar,
+                array,
+                escapedPrefix,
+                type,
+                callback
+              );
+          else if (i = getIteratorFn(children), "function" === typeof i)
+            for (i === children.entries && (didWarnAboutMaps || console.warn(
+              "Using Maps as children is not supported. Use an array of keyed ReactElements instead."
+            ), didWarnAboutMaps = true), children = i.call(children), i = 0; !(nameSoFar = children.next()).done; )
+              nameSoFar = nameSoFar.value, type = childKey + getElementKey(nameSoFar, i++), invokeCallback += mapIntoArray(
+                nameSoFar,
+                array,
+                escapedPrefix,
+                type,
+                callback
+              );
+          else if ("object" === type) {
+            if ("function" === typeof children.then)
+              return mapIntoArray(
+                resolveThenable(children),
+                array,
+                escapedPrefix,
+                nameSoFar,
+                callback
+              );
+            array = String(children);
+            throw Error(
+              "Objects are not valid as a React child (found: " + ("[object Object]" === array ? "object with keys {" + Object.keys(children).join(", ") + "}" : array) + "). If you meant to render a collection of children, use an array instead."
+            );
+          }
+          return invokeCallback;
+        }
+        function mapChildren(children, func, context) {
+          if (null == children) return children;
+          var result = [], count = 0;
+          mapIntoArray(children, result, "", "", function(child) {
+            return func.call(context, child, count++);
+          });
+          return result;
+        }
+        function lazyInitializer(payload) {
+          if (-1 === payload._status) {
+            var ioInfo = payload._ioInfo;
+            null != ioInfo && (ioInfo.start = ioInfo.end = performance.now());
+            ioInfo = payload._result;
+            var thenable = ioInfo();
+            thenable.then(
+              function(moduleObject) {
+                if (0 === payload._status || -1 === payload._status) {
+                  payload._status = 1;
+                  payload._result = moduleObject;
+                  var _ioInfo = payload._ioInfo;
+                  null != _ioInfo && (_ioInfo.end = performance.now());
+                  void 0 === thenable.status && (thenable.status = "fulfilled", thenable.value = moduleObject);
+                }
+              },
+              function(error) {
+                if (0 === payload._status || -1 === payload._status) {
+                  payload._status = 2;
+                  payload._result = error;
+                  var _ioInfo2 = payload._ioInfo;
+                  null != _ioInfo2 && (_ioInfo2.end = performance.now());
+                  void 0 === thenable.status && (thenable.status = "rejected", thenable.reason = error);
+                }
+              }
+            );
+            ioInfo = payload._ioInfo;
+            if (null != ioInfo) {
+              ioInfo.value = thenable;
+              var displayName = thenable.displayName;
+              "string" === typeof displayName && (ioInfo.name = displayName);
+            }
+            -1 === payload._status && (payload._status = 0, payload._result = thenable);
+          }
+          if (1 === payload._status)
+            return ioInfo = payload._result, void 0 === ioInfo && console.error(
+              "lazy: Expected the result of a dynamic import() call. Instead received: %s\n\nYour code should look like: \n  const MyComponent = lazy(() => import('./MyComponent'))\n\nDid you accidentally put curly braces around the import?",
+              ioInfo
+            ), "default" in ioInfo || console.error(
+              "lazy: Expected the result of a dynamic import() call. Instead received: %s\n\nYour code should look like: \n  const MyComponent = lazy(() => import('./MyComponent'))",
+              ioInfo
+            ), ioInfo.default;
+          throw payload._result;
+        }
+        function resolveDispatcher() {
+          var dispatcher = ReactSharedInternals.H;
+          null === dispatcher && console.error(
+            "Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:\n1. You might have mismatching versions of React and the renderer (such as React DOM)\n2. You might be breaking the Rules of Hooks\n3. You might have more than one copy of React in the same app\nSee https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem."
+          );
+          return dispatcher;
+        }
+        function releaseAsyncTransition() {
+          ReactSharedInternals.asyncTransitions--;
+        }
+        function enqueueTask(task) {
+          if (null === enqueueTaskImpl)
+            try {
+              var requireString = ("require" + Math.random()).slice(0, 7);
+              enqueueTaskImpl = (module && module[requireString]).call(
+                module,
+                "timers"
+              ).setImmediate;
+            } catch (_err) {
+              enqueueTaskImpl = function(callback) {
+                false === didWarnAboutMessageChannel && (didWarnAboutMessageChannel = true, "undefined" === typeof MessageChannel && console.error(
+                  "This browser does not have a MessageChannel implementation, so enqueuing tasks via await act(async () => ...) will fail. Please file an issue at https://github.com/facebook/react/issues if you encounter this warning."
+                ));
+                var channel = new MessageChannel();
+                channel.port1.onmessage = callback;
+                channel.port2.postMessage(void 0);
+              };
+            }
+          return enqueueTaskImpl(task);
+        }
+        function aggregateErrors(errors) {
+          return 1 < errors.length && "function" === typeof AggregateError ? new AggregateError(errors) : errors[0];
+        }
+        function popActScope(prevActQueue, prevActScopeDepth) {
+          prevActScopeDepth !== actScopeDepth - 1 && console.error(
+            "You seem to have overlapping act() calls, this is not supported. Be sure to await previous act() calls before making a new one. "
+          );
+          actScopeDepth = prevActScopeDepth;
+        }
+        function recursivelyFlushAsyncActWork(returnValue, resolve, reject) {
+          var queue = ReactSharedInternals.actQueue;
+          if (null !== queue)
+            if (0 !== queue.length)
+              try {
+                flushActQueue(queue);
+                enqueueTask(function() {
+                  return recursivelyFlushAsyncActWork(returnValue, resolve, reject);
+                });
+                return;
+              } catch (error) {
+                ReactSharedInternals.thrownErrors.push(error);
+              }
+            else ReactSharedInternals.actQueue = null;
+          0 < ReactSharedInternals.thrownErrors.length ? (queue = aggregateErrors(ReactSharedInternals.thrownErrors), ReactSharedInternals.thrownErrors.length = 0, reject(queue)) : resolve(returnValue);
+        }
+        function flushActQueue(queue) {
+          if (!isFlushing) {
+            isFlushing = true;
+            var i = 0;
+            try {
+              for (; i < queue.length; i++) {
+                var callback = queue[i];
+                do {
+                  ReactSharedInternals.didUsePromise = false;
+                  var continuation = callback(false);
+                  if (null !== continuation) {
+                    if (ReactSharedInternals.didUsePromise) {
+                      queue[i] = callback;
+                      queue.splice(0, i);
+                      return;
+                    }
+                    callback = continuation;
+                  } else break;
+                } while (1);
+              }
+              queue.length = 0;
+            } catch (error) {
+              queue.splice(0, i + 1), ReactSharedInternals.thrownErrors.push(error);
+            } finally {
+              isFlushing = false;
+            }
+          }
+        }
+        "undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(Error());
+        var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.transitional.element"), REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal"), REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment"), REACT_STRICT_MODE_TYPE = /* @__PURE__ */ Symbol.for("react.strict_mode"), REACT_PROFILER_TYPE = /* @__PURE__ */ Symbol.for("react.profiler"), REACT_CONSUMER_TYPE = /* @__PURE__ */ Symbol.for("react.consumer"), REACT_CONTEXT_TYPE = /* @__PURE__ */ Symbol.for("react.context"), REACT_FORWARD_REF_TYPE = /* @__PURE__ */ Symbol.for("react.forward_ref"), REACT_SUSPENSE_TYPE = /* @__PURE__ */ Symbol.for("react.suspense"), REACT_SUSPENSE_LIST_TYPE = /* @__PURE__ */ Symbol.for("react.suspense_list"), REACT_MEMO_TYPE = /* @__PURE__ */ Symbol.for("react.memo"), REACT_LAZY_TYPE = /* @__PURE__ */ Symbol.for("react.lazy"), REACT_ACTIVITY_TYPE = /* @__PURE__ */ Symbol.for("react.activity"), MAYBE_ITERATOR_SYMBOL = Symbol.iterator, didWarnStateUpdateForUnmountedComponent = {}, ReactNoopUpdateQueue = {
+          isMounted: function() {
+            return false;
+          },
+          enqueueForceUpdate: function(publicInstance) {
+            warnNoop(publicInstance, "forceUpdate");
+          },
+          enqueueReplaceState: function(publicInstance) {
+            warnNoop(publicInstance, "replaceState");
+          },
+          enqueueSetState: function(publicInstance) {
+            warnNoop(publicInstance, "setState");
+          }
+        }, assign = Object.assign, emptyObject = {};
+        Object.freeze(emptyObject);
+        Component.prototype.isReactComponent = {};
+        Component.prototype.setState = function(partialState, callback) {
+          if ("object" !== typeof partialState && "function" !== typeof partialState && null != partialState)
+            throw Error(
+              "takes an object of state variables to update or a function which returns an object of state variables."
+            );
+          this.updater.enqueueSetState(this, partialState, callback, "setState");
+        };
+        Component.prototype.forceUpdate = function(callback) {
+          this.updater.enqueueForceUpdate(this, callback, "forceUpdate");
+        };
+        var deprecatedAPIs = {
+          isMounted: [
+            "isMounted",
+            "Instead, make sure to clean up subscriptions and pending requests in componentWillUnmount to prevent memory leaks."
+          ],
+          replaceState: [
+            "replaceState",
+            "Refactor your code to use setState instead (see https://github.com/facebook/react/issues/3236)."
+          ]
+        };
+        for (fnName in deprecatedAPIs)
+          deprecatedAPIs.hasOwnProperty(fnName) && defineDeprecationWarning(fnName, deprecatedAPIs[fnName]);
+        ComponentDummy.prototype = Component.prototype;
+        deprecatedAPIs = PureComponent.prototype = new ComponentDummy();
+        deprecatedAPIs.constructor = PureComponent;
+        assign(deprecatedAPIs, Component.prototype);
+        deprecatedAPIs.isPureReactComponent = true;
+        var isArrayImpl = Array.isArray, REACT_CLIENT_REFERENCE = /* @__PURE__ */ Symbol.for("react.client.reference"), ReactSharedInternals = {
+          H: null,
+          A: null,
+          T: null,
+          S: null,
+          actQueue: null,
+          asyncTransitions: 0,
+          isBatchingLegacy: false,
+          didScheduleLegacyUpdate: false,
+          didUsePromise: false,
+          thrownErrors: [],
+          getCurrentStack: null,
+          recentlyCreatedOwnerStacks: 0
+        }, hasOwnProperty = Object.prototype.hasOwnProperty, createTask = console.createTask ? console.createTask : function() {
+          return null;
+        };
+        deprecatedAPIs = {
+          react_stack_bottom_frame: function(callStackForError) {
+            return callStackForError();
+          }
+        };
+        var specialPropKeyWarningShown, didWarnAboutOldJSXRuntime;
+        var didWarnAboutElementRef = {};
+        var unknownOwnerDebugStack = deprecatedAPIs.react_stack_bottom_frame.bind(
+          deprecatedAPIs,
+          UnknownOwner
+        )();
+        var unknownOwnerDebugTask = createTask(getTaskName(UnknownOwner));
+        var didWarnAboutMaps = false, userProvidedKeyEscapeRegex = /\/+/g, reportGlobalError = "function" === typeof reportError ? reportError : function(error) {
+          if ("object" === typeof window && "function" === typeof window.ErrorEvent) {
+            var event = new window.ErrorEvent("error", {
+              bubbles: true,
+              cancelable: true,
+              message: "object" === typeof error && null !== error && "string" === typeof error.message ? String(error.message) : String(error),
+              error
+            });
+            if (!window.dispatchEvent(event)) return;
+          } else if ("object" === typeof process && "function" === typeof process.emit) {
+            process.emit("uncaughtException", error);
+            return;
+          }
+          console.error(error);
+        }, didWarnAboutMessageChannel = false, enqueueTaskImpl = null, actScopeDepth = 0, didWarnNoAwaitAct = false, isFlushing = false, queueSeveralMicrotasks = "function" === typeof queueMicrotask ? function(callback) {
+          queueMicrotask(function() {
+            return queueMicrotask(callback);
+          });
+        } : enqueueTask;
+        deprecatedAPIs = Object.freeze({
+          __proto__: null,
+          c: function(size) {
+            return resolveDispatcher().useMemoCache(size);
+          }
+        });
+        var fnName = {
+          map: mapChildren,
+          forEach: function(children, forEachFunc, forEachContext) {
+            mapChildren(
+              children,
+              function() {
+                forEachFunc.apply(this, arguments);
+              },
+              forEachContext
+            );
+          },
+          count: function(children) {
+            var n = 0;
+            mapChildren(children, function() {
+              n++;
+            });
+            return n;
+          },
+          toArray: function(children) {
+            return mapChildren(children, function(child) {
+              return child;
+            }) || [];
+          },
+          only: function(children) {
+            if (!isValidElement(children))
+              throw Error(
+                "React.Children.only expected to receive a single React element child."
+              );
+            return children;
+          }
+        };
+        exports.Activity = REACT_ACTIVITY_TYPE;
+        exports.Children = fnName;
+        exports.Component = Component;
+        exports.Fragment = REACT_FRAGMENT_TYPE;
+        exports.Profiler = REACT_PROFILER_TYPE;
+        exports.PureComponent = PureComponent;
+        exports.StrictMode = REACT_STRICT_MODE_TYPE;
+        exports.Suspense = REACT_SUSPENSE_TYPE;
+        exports.__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE = ReactSharedInternals;
+        exports.__COMPILER_RUNTIME = deprecatedAPIs;
+        exports.act = function(callback) {
+          var prevActQueue = ReactSharedInternals.actQueue, prevActScopeDepth = actScopeDepth;
+          actScopeDepth++;
+          var queue = ReactSharedInternals.actQueue = null !== prevActQueue ? prevActQueue : [], didAwaitActCall = false;
+          try {
+            var result = callback();
+          } catch (error) {
+            ReactSharedInternals.thrownErrors.push(error);
+          }
+          if (0 < ReactSharedInternals.thrownErrors.length)
+            throw popActScope(prevActQueue, prevActScopeDepth), callback = aggregateErrors(ReactSharedInternals.thrownErrors), ReactSharedInternals.thrownErrors.length = 0, callback;
+          if (null !== result && "object" === typeof result && "function" === typeof result.then) {
+            var thenable = result;
+            queueSeveralMicrotasks(function() {
+              didAwaitActCall || didWarnNoAwaitAct || (didWarnNoAwaitAct = true, console.error(
+                "You called act(async () => ...) without await. This could lead to unexpected testing behaviour, interleaving multiple act calls and mixing their scopes. You should - await act(async () => ...);"
+              ));
+            });
+            return {
+              then: function(resolve, reject) {
+                didAwaitActCall = true;
+                thenable.then(
+                  function(returnValue) {
+                    popActScope(prevActQueue, prevActScopeDepth);
+                    if (0 === prevActScopeDepth) {
+                      try {
+                        flushActQueue(queue), enqueueTask(function() {
+                          return recursivelyFlushAsyncActWork(
+                            returnValue,
+                            resolve,
+                            reject
+                          );
+                        });
+                      } catch (error$0) {
+                        ReactSharedInternals.thrownErrors.push(error$0);
+                      }
+                      if (0 < ReactSharedInternals.thrownErrors.length) {
+                        var _thrownError = aggregateErrors(
+                          ReactSharedInternals.thrownErrors
+                        );
+                        ReactSharedInternals.thrownErrors.length = 0;
+                        reject(_thrownError);
+                      }
+                    } else resolve(returnValue);
+                  },
+                  function(error) {
+                    popActScope(prevActQueue, prevActScopeDepth);
+                    0 < ReactSharedInternals.thrownErrors.length ? (error = aggregateErrors(
+                      ReactSharedInternals.thrownErrors
+                    ), ReactSharedInternals.thrownErrors.length = 0, reject(error)) : reject(error);
+                  }
+                );
+              }
+            };
+          }
+          var returnValue$jscomp$0 = result;
+          popActScope(prevActQueue, prevActScopeDepth);
+          0 === prevActScopeDepth && (flushActQueue(queue), 0 !== queue.length && queueSeveralMicrotasks(function() {
+            didAwaitActCall || didWarnNoAwaitAct || (didWarnNoAwaitAct = true, console.error(
+              "A component suspended inside an `act` scope, but the `act` call was not awaited. When testing React components that depend on asynchronous data, you must await the result:\n\nawait act(() => ...)"
+            ));
+          }), ReactSharedInternals.actQueue = null);
+          if (0 < ReactSharedInternals.thrownErrors.length)
+            throw callback = aggregateErrors(ReactSharedInternals.thrownErrors), ReactSharedInternals.thrownErrors.length = 0, callback;
+          return {
+            then: function(resolve, reject) {
+              didAwaitActCall = true;
+              0 === prevActScopeDepth ? (ReactSharedInternals.actQueue = queue, enqueueTask(function() {
+                return recursivelyFlushAsyncActWork(
+                  returnValue$jscomp$0,
+                  resolve,
+                  reject
+                );
+              })) : resolve(returnValue$jscomp$0);
+            }
+          };
+        };
+        exports.cache = function(fn) {
+          return function() {
+            return fn.apply(null, arguments);
+          };
+        };
+        exports.cacheSignal = function() {
+          return null;
+        };
+        exports.captureOwnerStack = function() {
+          var getCurrentStack = ReactSharedInternals.getCurrentStack;
+          return null === getCurrentStack ? null : getCurrentStack();
+        };
+        exports.cloneElement = function(element, config, children) {
+          if (null === element || void 0 === element)
+            throw Error(
+              "The argument must be a React element, but you passed " + element + "."
+            );
+          var props = assign({}, element.props), key = element.key, owner = element._owner;
+          if (null != config) {
+            var JSCompiler_inline_result;
+            a: {
+              if (hasOwnProperty.call(config, "ref") && (JSCompiler_inline_result = Object.getOwnPropertyDescriptor(
+                config,
+                "ref"
+              ).get) && JSCompiler_inline_result.isReactWarning) {
+                JSCompiler_inline_result = false;
+                break a;
+              }
+              JSCompiler_inline_result = void 0 !== config.ref;
+            }
+            JSCompiler_inline_result && (owner = getOwner());
+            hasValidKey(config) && (checkKeyStringCoercion(config.key), key = "" + config.key);
+            for (propName in config)
+              !hasOwnProperty.call(config, propName) || "key" === propName || "__self" === propName || "__source" === propName || "ref" === propName && void 0 === config.ref || (props[propName] = config[propName]);
+          }
+          var propName = arguments.length - 2;
+          if (1 === propName) props.children = children;
+          else if (1 < propName) {
+            JSCompiler_inline_result = Array(propName);
+            for (var i = 0; i < propName; i++)
+              JSCompiler_inline_result[i] = arguments[i + 2];
+            props.children = JSCompiler_inline_result;
+          }
+          props = ReactElement(
+            element.type,
+            key,
+            props,
+            owner,
+            element._debugStack,
+            element._debugTask
+          );
+          for (key = 2; key < arguments.length; key++)
+            validateChildKeys(arguments[key]);
+          return props;
+        };
+        exports.createContext = function(defaultValue) {
+          defaultValue = {
+            $$typeof: REACT_CONTEXT_TYPE,
+            _currentValue: defaultValue,
+            _currentValue2: defaultValue,
+            _threadCount: 0,
+            Provider: null,
+            Consumer: null
+          };
+          defaultValue.Provider = defaultValue;
+          defaultValue.Consumer = {
+            $$typeof: REACT_CONSUMER_TYPE,
+            _context: defaultValue
+          };
+          defaultValue._currentRenderer = null;
+          defaultValue._currentRenderer2 = null;
+          return defaultValue;
+        };
+        exports.createElement = function(type, config, children) {
+          for (var i = 2; i < arguments.length; i++)
+            validateChildKeys(arguments[i]);
+          i = {};
+          var key = null;
+          if (null != config)
+            for (propName in didWarnAboutOldJSXRuntime || !("__self" in config) || "key" in config || (didWarnAboutOldJSXRuntime = true, console.warn(
+              "Your app (or one of its dependencies) is using an outdated JSX transform. Update to the modern JSX transform for faster performance: https://react.dev/link/new-jsx-transform"
+            )), hasValidKey(config) && (checkKeyStringCoercion(config.key), key = "" + config.key), config)
+              hasOwnProperty.call(config, propName) && "key" !== propName && "__self" !== propName && "__source" !== propName && (i[propName] = config[propName]);
+          var childrenLength = arguments.length - 2;
+          if (1 === childrenLength) i.children = children;
+          else if (1 < childrenLength) {
+            for (var childArray = Array(childrenLength), _i = 0; _i < childrenLength; _i++)
+              childArray[_i] = arguments[_i + 2];
+            Object.freeze && Object.freeze(childArray);
+            i.children = childArray;
+          }
+          if (type && type.defaultProps)
+            for (propName in childrenLength = type.defaultProps, childrenLength)
+              void 0 === i[propName] && (i[propName] = childrenLength[propName]);
+          key && defineKeyPropWarningGetter(
+            i,
+            "function" === typeof type ? type.displayName || type.name || "Unknown" : type
+          );
+          var propName = 1e4 > ReactSharedInternals.recentlyCreatedOwnerStacks++;
+          return ReactElement(
+            type,
+            key,
+            i,
+            getOwner(),
+            propName ? Error("react-stack-top-frame") : unknownOwnerDebugStack,
+            propName ? createTask(getTaskName(type)) : unknownOwnerDebugTask
+          );
+        };
+        exports.createRef = function() {
+          var refObject = { current: null };
+          Object.seal(refObject);
+          return refObject;
+        };
+        exports.forwardRef = function(render) {
+          null != render && render.$$typeof === REACT_MEMO_TYPE ? console.error(
+            "forwardRef requires a render function but received a `memo` component. Instead of forwardRef(memo(...)), use memo(forwardRef(...))."
+          ) : "function" !== typeof render ? console.error(
+            "forwardRef requires a render function but was given %s.",
+            null === render ? "null" : typeof render
+          ) : 0 !== render.length && 2 !== render.length && console.error(
+            "forwardRef render functions accept exactly two parameters: props and ref. %s",
+            1 === render.length ? "Did you forget to use the ref parameter?" : "Any additional parameter will be undefined."
+          );
+          null != render && null != render.defaultProps && console.error(
+            "forwardRef render functions do not support defaultProps. Did you accidentally pass a React component?"
+          );
+          var elementType = { $$typeof: REACT_FORWARD_REF_TYPE, render }, ownName;
+          Object.defineProperty(elementType, "displayName", {
+            enumerable: false,
+            configurable: true,
+            get: function() {
+              return ownName;
+            },
+            set: function(name) {
+              ownName = name;
+              render.name || render.displayName || (Object.defineProperty(render, "name", { value: name }), render.displayName = name);
+            }
+          });
+          return elementType;
+        };
+        exports.isValidElement = isValidElement;
+        exports.lazy = function(ctor) {
+          ctor = { _status: -1, _result: ctor };
+          var lazyType = {
+            $$typeof: REACT_LAZY_TYPE,
+            _payload: ctor,
+            _init: lazyInitializer
+          }, ioInfo = {
+            name: "lazy",
+            start: -1,
+            end: -1,
+            value: null,
+            owner: null,
+            debugStack: Error("react-stack-top-frame"),
+            debugTask: console.createTask ? console.createTask("lazy()") : null
+          };
+          ctor._ioInfo = ioInfo;
+          lazyType._debugInfo = [{ awaited: ioInfo }];
+          return lazyType;
+        };
+        exports.memo = function(type, compare) {
+          null == type && console.error(
+            "memo: The first argument must be a component. Instead received: %s",
+            null === type ? "null" : typeof type
+          );
+          compare = {
+            $$typeof: REACT_MEMO_TYPE,
+            type,
+            compare: void 0 === compare ? null : compare
+          };
+          var ownName;
+          Object.defineProperty(compare, "displayName", {
+            enumerable: false,
+            configurable: true,
+            get: function() {
+              return ownName;
+            },
+            set: function(name) {
+              ownName = name;
+              type.name || type.displayName || (Object.defineProperty(type, "name", { value: name }), type.displayName = name);
+            }
+          });
+          return compare;
+        };
+        exports.startTransition = function(scope) {
+          var prevTransition = ReactSharedInternals.T, currentTransition = {};
+          currentTransition._updatedFibers = /* @__PURE__ */ new Set();
+          ReactSharedInternals.T = currentTransition;
+          try {
+            var returnValue = scope(), onStartTransitionFinish = ReactSharedInternals.S;
+            null !== onStartTransitionFinish && onStartTransitionFinish(currentTransition, returnValue);
+            "object" === typeof returnValue && null !== returnValue && "function" === typeof returnValue.then && (ReactSharedInternals.asyncTransitions++, returnValue.then(releaseAsyncTransition, releaseAsyncTransition), returnValue.then(noop, reportGlobalError));
+          } catch (error) {
+            reportGlobalError(error);
+          } finally {
+            null === prevTransition && currentTransition._updatedFibers && (scope = currentTransition._updatedFibers.size, currentTransition._updatedFibers.clear(), 10 < scope && console.warn(
+              "Detected a large number of updates inside startTransition. If this is due to a subscription please re-write it to use React provided hooks. Otherwise concurrent mode guarantees are off the table."
+            )), null !== prevTransition && null !== currentTransition.types && (null !== prevTransition.types && prevTransition.types !== currentTransition.types && console.error(
+              "We expected inner Transitions to have transferred the outer types set and that you cannot add to the outer Transition while inside the inner.This is a bug in React."
+            ), prevTransition.types = currentTransition.types), ReactSharedInternals.T = prevTransition;
+          }
+        };
+        exports.unstable_useCacheRefresh = function() {
+          return resolveDispatcher().useCacheRefresh();
+        };
+        exports.use = function(usable) {
+          return resolveDispatcher().use(usable);
+        };
+        exports.useActionState = function(action, initialState, permalink) {
+          return resolveDispatcher().useActionState(
+            action,
+            initialState,
+            permalink
+          );
+        };
+        exports.useCallback = function(callback, deps) {
+          return resolveDispatcher().useCallback(callback, deps);
+        };
+        exports.useContext = function(Context) {
+          var dispatcher = resolveDispatcher();
+          Context.$$typeof === REACT_CONSUMER_TYPE && console.error(
+            "Calling useContext(Context.Consumer) is not supported and will cause bugs. Did you mean to call useContext(Context) instead?"
+          );
+          return dispatcher.useContext(Context);
+        };
+        exports.useDebugValue = function(value, formatterFn) {
+          return resolveDispatcher().useDebugValue(value, formatterFn);
+        };
+        exports.useDeferredValue = function(value, initialValue) {
+          return resolveDispatcher().useDeferredValue(value, initialValue);
+        };
+        exports.useEffect = function(create2, deps) {
+          null == create2 && console.warn(
+            "React Hook useEffect requires an effect callback. Did you forget to pass a callback to the hook?"
+          );
+          return resolveDispatcher().useEffect(create2, deps);
+        };
+        exports.useEffectEvent = function(callback) {
+          return resolveDispatcher().useEffectEvent(callback);
+        };
+        exports.useId = function() {
+          return resolveDispatcher().useId();
+        };
+        exports.useImperativeHandle = function(ref, create2, deps) {
+          return resolveDispatcher().useImperativeHandle(ref, create2, deps);
+        };
+        exports.useInsertionEffect = function(create2, deps) {
+          null == create2 && console.warn(
+            "React Hook useInsertionEffect requires an effect callback. Did you forget to pass a callback to the hook?"
+          );
+          return resolveDispatcher().useInsertionEffect(create2, deps);
+        };
+        exports.useLayoutEffect = function(create2, deps) {
+          null == create2 && console.warn(
+            "React Hook useLayoutEffect requires an effect callback. Did you forget to pass a callback to the hook?"
+          );
+          return resolveDispatcher().useLayoutEffect(create2, deps);
+        };
+        exports.useMemo = function(create2, deps) {
+          return resolveDispatcher().useMemo(create2, deps);
+        };
+        exports.useOptimistic = function(passthrough, reducer) {
+          return resolveDispatcher().useOptimistic(passthrough, reducer);
+        };
+        exports.useReducer = function(reducer, initialArg, init) {
+          return resolveDispatcher().useReducer(reducer, initialArg, init);
+        };
+        exports.useRef = function(initialValue) {
+          return resolveDispatcher().useRef(initialValue);
+        };
+        exports.useState = function(initialState) {
+          return resolveDispatcher().useState(initialState);
+        };
+        exports.useSyncExternalStore = function(subscribe, getSnapshot, getServerSnapshot) {
+          return resolveDispatcher().useSyncExternalStore(
+            subscribe,
+            getSnapshot,
+            getServerSnapshot
+          );
+        };
+        exports.useTransition = function() {
+          return resolveDispatcher().useTransition();
+        };
+        exports.version = "19.2.7";
+        "undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
+      })();
+    }
+  });
+
+  // node_modules/react/index.js
+  var require_react = __commonJS({
+    "node_modules/react/index.js"(exports, module) {
+      "use strict";
+      if (false) {
+        module.exports = null;
+      } else {
+        module.exports = require_react_development();
       }
-    } else {
-      const data = await response.json();
-      showNotification("❌ " + (data.message || "移除失敗"), true);
-    }
-  } catch (error) {
-    console.error("移除商品失敗:", error);
-    showNotification("❌ 網絡錯誤，同步失敗", true);
-    Cart.closeDeleteModal();
-  }
-};
-
-/**
- * 執行結帳流程：校驗登入與選中狀態，創建訂單並跳轉至結帳頁
- * @returns {Promise<void>}
- */
-Cart.checkout = async function () {
-  if (!isLoggedIn) {
-    showNotification("❌ 請先登入！", true);
-    return;
-  }
-
-  // 替換內部引用
-  if (Cart.selectedItems.size === 0) {
-    showNotification("❌ 請至少選擇一件商品！", true);
-    return;
-  }
-
-  const btn = document.querySelector(".checkout-btn");
-  const originalText = btn.innerHTML;
-
-  try {
-    const response = await fetch("/checkout/api/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        selectedCartIds: Array.from(Cart.selectedItems),
-      }),
-    });
-    const result = await response.json();
-
-    if (response.ok && result.success) {
-      window.location.href = `/checkout?orderNo=${result.data}`;
-    } else {
-      showNotification("❌ " + (result.message || "創建訂單失敗"), true);
-    }
-  } catch (error) {
-    console.error("結賬錯誤:", error);
-    showNotification("❌ 網絡錯誤", true);
-  }
-};
-
-// ===== 事件綁定 (使用命名空間內的函數) =====
-document.addEventListener("click", function (e) {
-  const cartDropdown = document.getElementById("cartDropdown");
-  if (cartDropdown && !cartDropdown.contains(e.target)) {
-    cartDropdown.style.display = "none";
-    Cart.isOpen = false;
-  }
-});
-
-const cartDropdownEl = document.getElementById("cartDropdown");
-const cartNavContainer = cartDropdownEl
-  ? cartDropdownEl.closest(".nav-dropdown")
-  : null;
-if (cartNavContainer) {
-  cartNavContainer.addEventListener("mouseleave", function () {
-    const dropdown = document.getElementById("cartDropdown");
-    if (dropdown) {
-      dropdown.style.display = "";
-      dropdown.style.flexDirection = "";
-      Cart.isOpen = false;
     }
   });
-}
 
-document
-  .getElementById("cartDeleteModal")
-  ?.addEventListener("click", function (e) {
-    if (e.target === this) Cart.closeDeleteModal();
+  // src/common.ts
+  var common_exports = {};
+  __export(common_exports, {
+    Auth: () => Auth,
+    Cart: () => Cart,
+    NotificationSys: () => NotificationSys,
+    useAuthStore: () => useAuthStore,
+    useCartStore: () => useCartStore
   });
 
-document.addEventListener("keydown", function (e) {
-  if (e.key === "Escape") {
-    const modal = document.getElementById("cartDeleteModal");
-    if (modal && modal.style.display === "flex") Cart.closeDeleteModal();
-  }
-});
+  // node_modules/zustand/esm/vanilla.mjs
+  var createStoreImpl = (createState) => {
+    let state;
+    const listeners = /* @__PURE__ */ new Set();
+    const setState = (partial, replace) => {
+      const nextState = typeof partial === "function" ? partial(state) : partial;
+      if (!Object.is(nextState, state)) {
+        const previousState = state;
+        state = (replace != null ? replace : typeof nextState !== "object" || nextState === null) ? nextState : Object.assign({}, state, nextState);
+        listeners.forEach((listener) => listener(state, previousState));
+      }
+    };
+    const getState = () => state;
+    const getInitialState = () => initialState;
+    const subscribe = (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    };
+    const api = { setState, getState, getInitialState, subscribe };
+    const initialState = state = createState(setState, getState, api);
+    return api;
+  };
+  var createStore = ((createState) => createState ? createStoreImpl(createState) : createStoreImpl);
 
-/**
- * 格式化價格數字 (自動添加千分位逗號)
- * @param {number} price - 原始價格數值
- * @returns {string} 格式化後的價格字符串 (例如: "12,345")
- */
-function formatPrice(price) {
-  return new Intl.NumberFormat("zh-HK", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price);
-}
-
-/**
- * 將指定商品加入購物車 (帶有登入狀態攔截)
- * @param {number} productId - 商品 ID
- * @returns {Promise<void>}
- */
-async function addToCart(productId) {
-  if (typeof isLoggedIn === "undefined" || !isLoggedIn) {
-    showNotification("❌ 請先登入後再加入購物車！", true);
-    return;
+  // node_modules/zustand/esm/react.mjs
+  var import_react = __toESM(require_react(), 1);
+  var identity = (arg) => arg;
+  function useStore(api, selector = identity) {
+    const slice = import_react.default.useSyncExternalStore(
+      api.subscribe,
+      import_react.default.useCallback(() => selector(api.getState()), [api, selector]),
+      () => selector(api.getInitialState())
+    );
+    import_react.default.useDebugValue(slice);
+    return slice;
   }
-  try {
-    const response = await fetch(`/cart/api/add/${productId}`, {
-      method: "POST",
-    });
-    const data = await response.json();
-    if (response.ok) {
-      showNotification("✅ 已加入購物車");
-      Cart.loadItems();
-    } else {
-      showNotification("❌ " + (data.message || "加入失敗"), true);
+  var createImpl = (createState) => {
+    const api = createStore(createState);
+    const useBoundStore = (selector) => useStore(api, selector);
+    Object.assign(useBoundStore, api);
+    return useBoundStore;
+  };
+  var create = ((createState) => createState ? createImpl(createState) : createImpl);
+
+  // src/common.ts
+  var useCartStore = create((set, get) => ({
+    isOpen: false,
+    pendingDeleteId: null,
+    selectedItems: /* @__PURE__ */ new Set(),
+    setIsOpen: (isOpen) => set({ isOpen }),
+    setPendingDeleteId: (id) => set({ pendingDeleteId: id }),
+    toggleSelection: (cartId, isChecked) => {
+      const selectedItems = new Set(get().selectedItems);
+      if (isChecked) selectedItems.add(cartId);
+      else selectedItems.delete(cartId);
+      set({ selectedItems });
     }
-  } catch (error) {
-    console.error("加入购物车失败:", error);
-    showNotification("❌ 网络错误", true);
-  }
-}
-
-/**
- * 在頁面中央顯示 Toast 提示通知 (自動消失)
- * @param {string} message - 提示文字內容
- * @param {boolean} [isError=false] - 是否為錯誤提示 (true 為紅色背景，false 為金色背景)
- * @returns {void}
- */
-function showNotification(message, isError = false) {
-  const notification = document.createElement("div");
-  notification.style.cssText = `
+  }));
+  var useAuthStore = create((set) => ({
+    isLoginOpen: false,
+    isRegisterOpen: false,
+    isLogoutOpen: false,
+    setLoginOpen: (open) => set({ isLoginOpen: open }),
+    setRegisterOpen: (open) => set({ isRegisterOpen: open }),
+    setLogoutOpen: (open) => set({ isLogoutOpen: open })
+  }));
+  window.formatPrice = (price) => {
+    return new Intl.NumberFormat("zh-HK", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(price);
+  };
+  window.showNotification = (message, isError = false) => {
+    const notification = document.createElement("div");
+    notification.style.cssText = `
         position: fixed; top: 50%; left: 50%; transform: translate(-50%, -60%);
         background: ${isError ? "#dc3545" : "var(--gold)"};
         color: ${isError ? "white" : "var(--primary)"};
@@ -532,716 +1110,701 @@ function showNotification(message, isError = false) {
         display: flex; align-items: center; gap: 0.8rem;
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     `;
-  notification.innerHTML = `<span>${message}</span>`;
-  document.body.appendChild(notification);
-  setTimeout(() => {
-    notification.style.opacity = "1";
-    notification.style.transform = "translate(-50%, -50%)";
-  }, 10);
-  setTimeout(() => {
-    notification.style.opacity = "0";
-    notification.style.transform = "translate(-50%, -70%)";
-    setTimeout(() => notification.remove(), 400);
-  }, 1500);
-}
-
-/**
- * 更新導航欄購物車圖標右上角的數量角標 (Badge)
- * @param {number} count - 購物車內的商品總件數
- * @returns {void}
- */
-function updateCartBadge(count) {
-  const badge = document.getElementById("cartCountBadge");
-  if (!badge) return;
-
-  if (count > 0) {
-    badge.textContent = count;
-    badge.style.display = "inline-flex";
-  } else {
-    badge.style.display = "none";
-  }
-}
-// ===== 登录/注册弹窗控制 =====
-/* ==========================================
-  2. 認證與權限模塊 (Namespace Refactored)
-   ========================================== */
-
-// ===== 第一步：建立命名空間 =====
-window.ChronoTeam.auth = window.ChronoTeam.auth || {};
-/**
- * @namespace Auth
- * @description 處理用戶身份驗證相關的 UI 控制與 API 互動 (登入、註冊、登出、權限攔截)。
- */
-const Auth = window.ChronoTeam.auth;
-
-// ===== 第二步：UI 控制函數 =====
-
-/**
- * 打開註冊彈窗，重置表單並清空提示訊息，同時鎖定背景滾動。
- * @returns {void}
- */
-Auth.openRegisterModal = function () {
-    const modal = document.getElementById("registerModal");
-    if (!modal) return;
-    modal.style.display = "flex";
-    const msg = document.getElementById("registerMsg");
-    if (msg) msg.textContent = "";
-    const form = document.getElementById("registerForm");
-    if (form) form.reset();
-    document.body.style.overflow = "hidden";
-};
-
-/**
- * 關閉註冊彈窗並恢復背景滾動。
- * @returns {void}
- */
-Auth.closeRegisterModal = function () {
-    const modal = document.getElementById("registerModal");
-    if (!modal) return;
-    modal.style.display = "none";
-    document.body.style.overflow = "";
-};
-
-/**
- * 打開登入彈窗，重置表單並清空提示訊息，同時鎖定背景滾動。
- * @returns {void}
- */
-Auth.openLoginModal = function () {
-    const modal = document.getElementById("loginModal");
-    if (!modal) return;
-    modal.style.display = "flex";
-    const msg = document.getElementById("loginMsg");
-    if (msg) msg.textContent = "";
-    const form = document.getElementById("loginForm");
-    if (form) form.reset();
-    document.body.style.overflow = "hidden";
-};
-
-/**
- * 關閉登入彈窗並恢復背景滾動。
- * @returns {void}
- */
-Auth.closeLoginModal = function () {
-    const modal = document.getElementById("loginModal");
-    if (!modal) return;
-    modal.style.display = "none";
-    document.body.style.overflow = "";
-};
-
-/**
- * 從登入彈窗切換到註冊彈窗（帶有 200ms 的延遲過渡動畫）。
- * @returns {void}
- */
-Auth.switchToRegister = function () {
-    Auth.closeLoginModal();
-    setTimeout(Auth.openRegisterModal, 200);
-};
-
-/**
- * 從註冊彈窗切換到登入彈窗（帶有 200ms 的延遲過渡動畫）。
- * @returns {void}
- */
-Auth.switchToLogin = function () {
-    Auth.closeRegisterModal();
-    setTimeout(Auth.openLoginModal, 200);
-};
-
-/**
- * 切換密碼輸入框的可見性（明文/密文），並同步切換 FontAwesome 圖標。
- * @param {string} inputId - 密碼輸入框的 DOM ID (例如: 'regPassword', 'loginPassword')。
- * @param {HTMLElement} icon - 觸發切換的圖標元素 (需包含 fa-eye / fa-eye-slash 類名)。
- * @returns {void}
- */
-Auth.togglePassword = function (inputId, icon) {
-    const input = document.getElementById(inputId);
-    if (!input) return;
-    if (input.type === "password") {
-        input.type = "text";
-        icon.classList.replace("fa-eye", "fa-eye-slash");
-    } else {
-        input.type = "password";
-        icon.classList.replace("fa-eye-slash", "fa-eye");
-    }
-};
-
-// ===== 第三步：業務邏輯函數 =====
-
-/**
- * 處理註冊表單的異步提交邏輯。
- * 包含前端密碼一致性校驗、API 請求、成功後的自動跳轉登入以及錯誤處理。
- * @async
- * @param {SubmitEvent} e - 表單提交事件對象。
- * @returns {Promise<void>}
- */
-Auth.handleRegister = async function (e) {
-  e.preventDefault();
-  const form = e.target;
-  const msg = document.getElementById("registerMsg");
-
-  // 1. 密碼一致性校驗
-  if (form.password.value !== form.confirmPassword.value) {
-    msg.textContent = "❌ 兩次密碼輸入不一致";
-    msg.style.color = "var(--accent)";
-    form.confirmPassword.focus();
-    return;
-  }
-
-  // 2. 獲取地址輸入框 (使用 ID 獲取更穩妥)
-  const addressInput = document.getElementById("regAddress");
-
-  // 【核心修復】：級聯選擇器已經自動將「區域 + 行政區」寫入到 regAddress 中
-  // 所以直接獲取它的值作為完整地址即可，千萬不要再手動拼接 region 和 district！
-  const fullAddress = addressInput ? addressInput.value.trim() : "";
-
-  // 3. 簡單校驗：如果填寫了地址，確保它不為空
-  if (fullAddress && fullAddress.length < 3) {
-    msg.textContent = "❌ 詳細地址不能為空！";
-    msg.style.color = "var(--accent)";
-    if (addressInput) {
-      addressInput.focus();
-      addressInput.style.borderColor = "#e94560";
-    }
-    return; // 阻止提交
-  }
-
-  msg.textContent = "";
-
-  try {
-    // 4. 構建發送至後端的數據
-    const formData = {
-      username: form.username.value.trim(),
-      name: form.name.value.trim(),
-      email: form.email.value.trim(),
-      password: form.password.value,
-      phone: form.phone.value.trim(),
-      // 直接傳遞已經拼接好的完整地址，後端 UserService 會直接使用 fullAddress
-      fullAddress: fullAddress
-    };
-
-    const response = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-    const result = await response.json();
-
-    if (response.ok) {
-      msg.textContent = "✅ 註冊成功！3秒後自動登入...";
-      msg.style.color = "green";
-      setTimeout(() => {
-        Auth.closeRegisterModal();
-        Auth.openLoginModal();
-        const loginForm = document.getElementById("loginForm");
-        if (loginForm) {
-          loginForm.username.value = formData.username;
-          loginForm.password.focus();
-        }
-      }, 2500);
-    } else {
-      msg.textContent = "❌ " + (result.message || "註冊失敗，請重試");
-      msg.style.color = "var(--accent)";
-    }
-  } catch (error) {
-    msg.textContent = "❌ 網絡錯誤，請檢查連接";
-    msg.style.color = "var(--accent)";
-    console.error("註冊錯誤:", error);
-  }
-};
-/**
- * 處理登入表單的異步提交邏輯。
- * 包含 API 請求、成功後的頁面刷新、針對用戶名不存在或密碼錯誤的特定 UI 反饋 (shake 動畫)。
- * @async
- * @param {SubmitEvent} e - 表單提交事件對象。
- * @returns {Promise<void>}
- */
-Auth.handleLogin = async function (e) {
-    e.preventDefault();
-    const form = e.target;
-    const msg = document.getElementById("loginMsg");
-    const btn = form.querySelector('button[type="submit"]');
-
-    msg.textContent = "";
-    msg.style.color = "var(--accent)";
-
-    try {
-        const response = await fetch("/api/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                username: form.username.value.trim(),
-                password: form.password.value,
-            }),
-        });
-        const result = await response.json();
-
-        if (response.ok) {
-            msg.textContent = "✅ 登入成功！正在刷新...";
-            msg.style.color = "green";
-            setTimeout(() => {
-                Auth.closeLoginModal();
-                window.location.reload();
-            }, 1200);
-        } else {
-            let errorMsg = result.message || "用戶名或密碼錯誤";
-
-            if (errorMsg.startsWith("USER_NOT_FOUND:")) {
-                errorMsg = "❌ 該用戶名不存在";
-                form.querySelector('input[name="username"]').classList.add("shake");
-                setTimeout(
-                    () =>
-                        form
-                            .querySelector('input[name="username"]')
-                            .classList.remove("shake"),
-                    500,
-                );
-            } else if (errorMsg.startsWith("INVALID_PASSWORD:")) {
-                errorMsg = "❌ 輸入密碼不正確";
-                form.querySelector('input[name="password"]').classList.add("shake");
-                setTimeout(
-                    () =>
-                        form
-                            .querySelector('input[name="password"]')
-                            .classList.remove("shake"),
-                    500,
-                );
-            } else {
-                errorMsg = "❌ " + errorMsg;
-            }
-            msg.textContent = errorMsg;
-        }
-    } catch (error) {
-        msg.textContent = "❌ 網絡錯誤，請檢查連接";
-    } finally {
-
-    }
-};
-
-// ===== 第四步：登出與權限攔截 =====
-
-/**
- * 顯示自定義的登出確認彈窗，並鎖定背景滾動。
- * @returns {void}
- */
-Auth.showLogoutModal = function () {
-    const modal = document.getElementById("logoutModal");
-    if (modal) {
-        modal.style.display = "flex";
-        document.body.style.overflow = "hidden";
-    }
-};
-
-/**
- * 關閉登出確認彈窗，並恢復背景滾動。
- * @returns {void}
- */
-Auth.closeLogoutModal = function () {
-    const modal = document.getElementById("logoutModal");
-    if (modal) {
-        modal.style.display = "none";
-        document.body.style.overflow = "";
-    }
-};
-
-/**
- * 執行實際的登出 API 請求，成功或失敗後均強制重定向至首頁 ("/")。
- * @async
- * @returns {Promise<void>}
- */
-Auth.performLogout = async function () {
-    Auth.closeLogoutModal();
-    try {
-        await fetch("/logout", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-        });
-        window.location.href = "/";
-    } catch (error) {
-        console.error("登出失败:", error);
-        window.location.href = "/";
-    }
-};
-
-/**
- * 頁面跳轉前的登入狀態攔截器。
- * 若用戶未登入，則彈出提示並喚起登入彈窗；若已登入，則直接跳轉至目標 URL。
- *
- * ⚠️ 依賴全局變量 `isLoggedIn` (由 Thymeleaf 後端注入)
- * ⚠️ 依賴全局函數 `showNotification(message, isError)`
- *
- * @param {string} url - 嘗試跳轉的目標 URL。
- * @param {string} [message="❌ 請先登入！"] - 未登入時顯示的提示消息。
- * @returns {boolean} 若已登入並執行跳轉返回 `true`；若未登入被攔截返回 `false`。
- */
-Auth.handleLogout = function () {
-    Auth.showLogoutModal();
-};
-
-/**
- * 頁面跳轉登入攔截
- * @param {string} url - 目標 URL
- * @param {string} message - 提示消息
- */
-Auth.requireLogin = function (url, message) {
-    // 注意：這裡依賴全局變量 isLoggedIn，它由 Thymeleaf 注入
-    if (typeof isLoggedIn === "undefined" || !isLoggedIn) {
-        showNotification(message || "❌ 請先登入！", true);
-        setTimeout(() => {
-            Auth.openLoginModal();
-        }, 500);
-        return false;
-    }
-    window.location.href = url;
-    return true;
-};
-
-// ===== 第五步：事件綁定與初始化 =====
-
-document.addEventListener("DOMContentLoaded", function () {
-    const registerModal = document.getElementById("registerModal");
-    const loginModal = document.getElementById("loginModal");
-
-    // 點擊遮罩層關閉登入彈窗
-    if (loginModal) {
-        loginModal.addEventListener("click", function (e) {
-            if (e.target === this) Auth.closeLoginModal();
-        });
-    }
-
-    // 點擊遮罩層關閉註冊彈窗 (補充原有邏輯缺失的部分)
-    if (registerModal) {
-        registerModal.addEventListener("click", function (e) {
-            if (e.target === this) Auth.closeRegisterModal();
-        });
-    }
-
-    // 購物車初始化 (保持原有邏輯，但在 Auth 模塊加載後執行更安全)
-    if (
-        document.querySelector(".nav-dropdown") &&
-        typeof Cart !== "undefined" &&
-        typeof Cart.loadItems === "function"
-    ) {
-        Cart.loadItems();
-    }
-});
-
-// ESC 鍵關閉彈窗 (整合 Auth 相關)
-document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") {
-        Auth.closeRegisterModal();
-        Auth.closeLoginModal();
-        Auth.closeLogoutModal(); // 新增：ESC 關閉登出彈窗
-    }
-});
-
-// 點擊遮罩層關閉登出彈窗
-document.addEventListener("click", function (e) {
-    const logoutModal = document.getElementById("logoutModal");
-    if (logoutModal && e.target === logoutModal) {
-        Auth.closeLogoutModal();
-    }
-});
-
-/* ==========================================
-  3. 通知系統模塊 (Namespace Refactored)
-   ========================================== */
-
-// ===== 第一步：建立命名空間 =====
-window.ChronoTeam.notification = window.ChronoTeam.notification || {};
-const NotificationSys = window.ChronoTeam.notification;
-
-/**
- * 獲取未讀通知數量並更新導航欄 UI (紅點與智能跳轉連結)
- * @async
- * @returns {Promise<void>}
- */
-NotificationSys.fetchUnreadCounts = async function () {
-  try {
-    const response = await fetch("/api/notifications/unread-count");
-    const data = await response.json();
-
-    // 1. 更新消息通知紅點
-    const msgBadge = document.getElementById("notificationBadge");
-    if (msgBadge) {
-      if (data.messageCount > 0) {
-        msgBadge.textContent = data.messageCount > 99 ? "99+" : data.messageCount;
-        msgBadge.style.display = "inline-flex";
-      } else {
-        msgBadge.style.display = "none";
-      }
-    }
-
-    // 2. 更新系統通知紅點
-    const sysBadge = document.getElementById("systemNotificationBadge");
-    if (sysBadge) {
-      if (data.systemCount > 0) {
-        sysBadge.textContent = data.systemCount > 99 ? "99+" : data.systemCount;
-        sysBadge.style.display = "inline-flex";
-      } else {
-        sysBadge.style.display = "none";
-      }
-    }
-
-    // ==========================================
-    // 【核心功能】：智能跳轉邏輯
-    // ==========================================
-    // 優先級規則：回復 > @提及 > 點贊
-    let targetTab = 'MY'; // 默認
-
-    // 注意：後端返回的字段名需與 NotificationController 一致
-    // data.replyCount, data.mentionCount, data.likeCount (這是別人點贊我)
-    if (data.replyCount > 0) {
-      targetTab = 'REPLY';
-    } else if (data.mentionCount > 0) {
-      targetTab = 'MENTION';
-    } else if (data.likeCount > 0) {
-      targetTab = 'LIKED_ME';
-    }
-
-    // 找到導航欄的消息鏈接並更新 href
-    // 假設你的 navbar 中該鏈接沒有特定 ID，我們通過文本內容或 href 查找
-    // 推薦在 HTML 中給該 <a> 標籤加上 id="nav-msg-link" 以提高性能
-    const navLinks = document.querySelectorAll('a[href^="/account/reviews"]');
-
-    navLinks.forEach(link => {
-      // 只有當有未讀消息時，才強制跳轉到特定 Tab
-      // 如果沒有未讀消息，保持默認 (MY) 或原樣
-      if (data.messageCount > 0) {
-        // 構建新 URL，保留可能的其他參數 (這裡簡單處理，直接覆蓋)
-        // 如果原鏈接有其他參數，可以使用 URL API 處理，這裡為了簡單直接拼接
-        link.href = `/account/reviews?type=${targetTab}`;
-      } else {
-        // 如果沒有未讀消息，重置為默認頁面 (不帶 type 參數，後端默認 MY)
-        link.href = `/account/reviews`;
-      }
-    });
-
-  } catch (error) {
-    console.error("獲取通知失敗:", error);
-  }
-};
-
-// ===== 第二步：全局橋接 (保持向後兼容) =====
-// 其他頁面 (如 React 組件或內聯 JS) 可能依賴 window.refreshNotificationBadge
-//window.refreshNotificationBadge = NotificationSys.fetchUnreadCounts;
-
-// ===== 第三步：初始化與事件綁定 =====
-document.addEventListener("DOMContentLoaded", function () {
-  // 僅在用戶已登入時獲取通知
-  if (typeof isLoggedIn !== "undefined" && isLoggedIn) {
-    NotificationSys.fetchUnreadCounts();
-  }
-});
-
-// ==========================================
-// 4.註冊表單 - 區域級聯選擇與自動填充邏輯 (完整修復版)
-// ==========================================
-document.addEventListener("DOMContentLoaded", function () {
-  const regionSelect = document.getElementById("regionSelect");
-  const districtSelect = document.getElementById("districtSelect");
-  const addressInput = document.getElementById("regAddress"); //  修正 ID，與 HTML 中的 id="regAddress" 保持一致
-
-  // 核心修復 1：安全護欄！
-  // 因為 common.js 是全局加載的，在首頁、商品頁等沒有註冊彈窗的頁面，這三個元素是 null。
-  // 如果不加判斷直接 addEventListener，會導致 JS 報錯崩潰，阻斷後續所有功能！
-  if (!regionSelect || !districtSelect || !addressInput) return;
-
-  // 定义区域和行政区的映射关系
-  const districtData = {
-    港岛: ["中西区", "湾仔区", "东区", "南区"],
-    九龙: ["油尖旺区", "深水埗区", "九龙城区", "黄大仙区", "观塘区"],
-    新界: [
-      "荃湾区",
-      "屯门区",
-      "元朗区",
-      "北区",
-      "大埔区",
-      "西贡区",
-      "沙田区",
-      "葵青区",
-      "离岛区",
-    ],
+    notification.innerHTML = `<span>${message}</span>`;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+      notification.style.opacity = "1";
+      notification.style.transform = "translate(-50%, -50%)";
+    }, 10);
+    setTimeout(() => {
+      notification.style.opacity = "0";
+      notification.style.transform = "translate(-50%, -70%)";
+      setTimeout(() => notification.remove(), 400);
+    }, 1500);
   };
-
-  // 1. 监听第一级下拉框变化
-  regionSelect.addEventListener("change", function () {
-    const selectedRegion = this.value;
-
-    // 清空并重置第二级下拉框
-    districtSelect.innerHTML = '<option value="">请选择行政区</option>';
-    districtSelect.disabled = true;
-    districtSelect.style.backgroundColor = "#f8f9fa"; // 恢復禁用時的灰色背景
-
-    if (selectedRegion && districtData[selectedRegion]) {
-      districtSelect.disabled = false;
-      districtSelect.style.backgroundColor = "white"; // 啟用時變為白色
-
-      // 填充第二级选项
-      districtData[selectedRegion].forEach((district) => {
-        const option = document.createElement("option");
-        option.value = district;
-        option.textContent = district;
-        districtSelect.appendChild(option);
-      });
+  window.updateCartBadge = (count) => {
+    const badge = document.getElementById("cartCountBadge");
+    if (!badge) return;
+    if (count > 0) {
+      badge.textContent = count.toString();
+      badge.style.display = "inline-flex";
+    } else {
+      badge.style.display = "none";
     }
-  });
-
-  // 2. 监听第二级下拉框变化 -> 自动填入地址栏
-  districtSelect.addEventListener("change", function () {
-    const region = regionSelect.value;
-    const district = this.value;
-
-    if (region && district) {
-      // 核心逻辑：将区域和行政区填入地址框，并加一个空格，聚焦光标让用户继续输入
-      if (!addressInput.value.startsWith(region)) {
-        addressInput.value = region + " " + district + " ";
-      } else {
-        if (addressInput.value.trim() === "") {
-          addressInput.value = region + " " + district + " ";
-        }
-      }
-
-      // 自动聚焦到地址框，方便用户接着输入街道
-      addressInput.focus();
-      addressInput.classList.remove("is-invalid");
-    }
-  });
-
-  //  核心修復 2：必須指定 registerForm！
-  // 原本使用 document.querySelector('form') 會抓到頁面上的第一個表單（通常是登入表單），導致驗證綁定錯誤。
-  const registerForm = document.getElementById("registerForm");
-  if (registerForm) {
-    registerForm.addEventListener("submit", function (e) {
-      const region = regionSelect.value;
-      const address = addressInput.value.trim();
-
-      // 如果选了区域，但地址栏被删空了，或者地址栏里没有包含选中的区域
-      if (region && (!address || !address.includes(region))) {
-        e.preventDefault(); // 阻止提交
-        //  核心修復 3：使用項目統一的 showNotification 代替醜陋的 alert
-        showNotification(
-            "❌ 既然選擇了區域，詳細地址不能為空，且必須包含所選區域！",
-            true,
-        );
-        addressInput.focus();
-        addressInput.style.borderColor = "#e94560";
-      }
-    });
-  }
-});
-
-
-// ==========================================
-// 5. 滾動通知功能 (已整合 LTR 反轉 + 動態速度計算 + 間隔設置)
-// ==========================================
-async function loadScrollingNotification() {
-  try {
-    const response = await fetch('/api/config/notification');
-    const config = await response.json();
-
-    const container = document.getElementById('notificationContainer');
-    const notificationText = document.getElementById('scrollingNotification');
-
-    if (!container || !notificationText) return;
-
-    // 如果沒有通知文字，隱藏容器
-    if (!config.notificationText || config.notificationText.trim() === '') {
-      container.style.display = 'none';
+  };
+  async function addToCart(productId) {
+    if (typeof window.isLoggedIn === "undefined" || !window.isLoggedIn) {
+      window.showNotification("\u274C \u8ACB\u5148\u767B\u5165\u5F8C\u518D\u52A0\u5165\u8CFC\u7269\u8ECA\uFF01", true);
       return;
     }
-
-    // 【核心修改】不再直接使用 textContent，而是根據方向重建 DOM 節點
-    // 這樣才能實現 LTR 模式下的字符反轉
-    const text = config.notificationText;
-    const scrollEnabled = config.scrollEnabled !== 'false';
-    const direction = config.scrollDirection || 'rtl';
-
-    // 清空原有內容，準備重新生成 span
-    notificationText.innerHTML = '';
-    notificationText.style.whiteSpace = 'nowrap'; // 確保不換行
-
-    // 【條件分支】處理文字排序與 DOM 生成
-    if (scrollEnabled && direction === 'ltr') {
-      // 【數據處理】將文字拆分為字符數組並反轉，實現 LTR 反向排列
-      // 這樣 "祝" 會在 DOM 的最後面，配合 LTR 動畫，視覺上 "祝" 會最先從左邊出來
-      const chars = text.split('').reverse();
-      for (let char of chars) {
-        const span = document.createElement('span');
-        span.textContent = char;
-        notificationText.appendChild(span);
-      }
-    } else {
-      // 【其他情況】RTL 方向或固定顯示模式均保持原始文字順序
-      for (let char of text) {
-        const span = document.createElement('span');
-        span.textContent = char;
-        notificationText.appendChild(span);
-      }
-    }
-
-    // 應用基礎樣式 (顏色、字體等)
-    notificationText.style.color = config.textColor || '#FFFFFF';
-    notificationText.style.fontWeight = config.fontWeight || 'normal';
-    notificationText.style.fontSize = (config.fontSize || '14') + 'px';
-    notificationText.style.fontStyle = (config.fontItalic === 'true') ? 'italic' : 'normal';
-
-    // 【修改】處理滾動啟用狀態與動畫參數
-    if (scrollEnabled) {
-      // 移除舊的類名
-      notificationText.classList.remove('is-scrolling-rtl', 'is-scrolling-ltr');
-
-      const speed = config.scrollSpeed || 'normal';
-
-      // 【新增】獲取滾動間隔 (秒)，默認為 0 (無額外間隔)
-      const intervalSeconds = parseFloat(config.scrollInterval) || 0;
-
-      /*
-       * 速度計算階段：根據用戶選擇的速度檔位確定單字符耗時
-       */
-      // 【變量初始化】設置默認單字符耗時為 1.4 秒 (對應中速)
-      let secondsPerChar = 1.4; // 默認 (中速)
-      // 【條件賦值】如果選擇慢速，單字符耗時改為 1.7 秒
-      if (speed === 'slow') secondsPerChar = 1.7;
-      // 【條件賦值】如果選擇快速，單字符耗時改為 1.2 秒
-      else if (speed === 'fast') secondsPerChar = 1.2;
-
-      // 【核心優化】根據實際文字長度動態計算總時長
-      // 公式：純滾動時間 = 字符數 × 單字符耗時
-      const totalChars = text.length;
-      const pureScrollDuration = totalChars * secondsPerChar;
-
-      // 【新增】總週期時間 = 純滾動時間 + 用戶設置的靜止間隔時間
-      // 這意味著動畫播放一遍所需的總時間變長了，從而實現「間隔」效果
-      const totalCycleDuration = pureScrollDuration + intervalSeconds;
-
-      // 設置最小 5s 防止過快閃過 (這裡只限制純滾動部分，或者整體，視需求而定，建議整體)
-      const finalDuration = Math.max(5, totalCycleDuration);
-
-      if (direction === 'ltr') {
-        // 从左向右
-        notificationText.classList.add('is-scrolling-ltr');
-        // 【應用總時長】
-        notificationText.style.animationDuration = `${finalDuration}s`;
+    try {
+      const response = await fetch(`/cart/api/add/${productId}`, { method: "POST" });
+      const data = await response.json();
+      if (response.ok) {
+        window.showNotification("\u2705 \u5DF2\u52A0\u5165\u8CFC\u7269\u8ECA");
+        Cart.loadItems();
       } else {
-        // 从右向左（默认）
-        notificationText.classList.add('is-scrolling-rtl');
-        // 【應用總時長】
-        notificationText.style.animationDuration = `${finalDuration}s`;
+        window.showNotification("\u274C " + (data.message || "\u52A0\u5165\u5931\u6557"), true);
       }
-    } else {
-      // 固定模式：移除所有滚动类名
-      notificationText.classList.remove('is-scrolling-rtl', 'is-scrolling-ltr');
-      notificationText.style.animation = 'none';
+    } catch (error) {
+      console.error("\u52A0\u5165\u8CFC\u7269\u8ECA\u5931\u6557:", error);
+      window.showNotification("\u274C \u7DB2\u7D61\u932F\u8AA4", true);
     }
-
-    // 顯示容器
-    container.style.display = 'flex';
-
-  } catch (error) {
-    console.error('加載滾動通知失敗:', error);
   }
-}
+  window.addToCart = addToCart;
+  var Cart = {
+    toggleDropdown: (event) => {
+      if (event) event.stopPropagation();
+      const dropdown = document.getElementById("cartDropdown");
+      if (!dropdown) return;
+      const isOpen = !useCartStore.getState().isOpen;
+      useCartStore.getState().setIsOpen(isOpen);
+      if (isOpen) {
+        dropdown.style.display = "flex";
+        dropdown.style.flexDirection = "column";
+        Cart.loadItems();
+      } else {
+        dropdown.style.display = "none";
+      }
+    },
+    calculateSelectedTotal: () => {
+      const checkboxes = document.querySelectorAll(".cart-item-select:checked");
+      let total = 0;
+      checkboxes.forEach((checkbox) => {
+        const cartItem = checkbox.closest(".cart-item");
+        if (cartItem) {
+          const priceText = cartItem.querySelector(".cart-item-price")?.textContent?.replace("HK$ ", "").replace(/,/g, "") || "0";
+          const quantity = parseInt(cartItem.querySelector(".qty-value")?.textContent || "1", 10);
+          total += parseFloat(priceText) * quantity;
+        }
+      });
+      const totalEl = document.getElementById("cartTotalAmount");
+      if (totalEl) totalEl.textContent = "HK$ " + window.formatPrice(total);
+    },
+    loadItems: async () => {
+      try {
+        const response = await fetch("/cart/api/list");
+        const data = await response.json();
+        if (data.success) {
+          Cart.renderItems(data.cartItems, data.totalAmount);
+          window.updateCartBadge(data.cartCount);
+          useCartStore.getState().selectedItems.clear();
+          data.cartItems.forEach((item) => {
+            if (item.selected !== false) useCartStore.getState().selectedItems.add(item.cartId);
+          });
+          Cart.calculateSelectedTotal();
+        }
+      } catch (error) {
+        console.error("\u52A0\u8F09\u8CFC\u7269\u8ECA\u5931\u6557:", error);
+      }
+    },
+    renderItems: (cartItems, totalAmount) => {
+      const container = document.getElementById("cartItemsContainer");
+      if (!container || !container.closest(".cart-dropdown-menu")) {
+        console.warn("\u{1F6E1}\uFE0F [\u5B89\u5168\u6514\u622A] \u963B\u6B62\u4E86 renderCartItems \u8986\u84CB\u8A73\u60C5\u9801 DOM\uFF01");
+        return;
+      }
+      if (!container) return;
+      useCartStore.getState().selectedItems.clear();
+      if (!cartItems || cartItems.length === 0) {
+        container.innerHTML = `<div class="cart-empty"><i class="fas fa-shopping-basket" style="font-size: 3rem; color: #ddd; margin-bottom: 1rem;"></i><p>\u8CFC\u7269\u8ECA\u662F\u7A7A\u7684</p></div>`;
+        const totalEl2 = document.getElementById("cartTotalAmount");
+        if (totalEl2) totalEl2.textContent = "HK$ 0";
+        return;
+      }
+      let html = "";
+      cartItems.forEach((item) => {
+        const isChecked = item.selected !== false;
+        if (isChecked) useCartStore.getState().selectedItems.add(item.cartId);
+        html += `<div class="cart-item" data-cart-id="${item.cartId}" data-product-id="${item.product.productId}">
+                <div class="cart-item-checkbox">
+                    <input type="checkbox" class="cart-item-select" data-cart-id="${item.cartId}" 
+                           onchange="window.Cart.toggleSelection(${item.cartId}, this.checked)" ${isChecked ? "checked" : ""}>
+                </div>
+                <div class="cart-item-img"><img src="/images/products/${item.product.image}" alt="${item.product.description}" onerror="this.src='/images/placeholder.png'"></div>
+                <div class="cart-item-info">
+                    <div class="cart-item-name">${item.product.description}</div>
+                    <div class="cart-item-price">HK$ ${window.formatPrice(item.price)}</div>
+                    <div class="cart-item-quantity">
+                        <button class="qty-btn" onclick="window.Cart.updateQuantity(${item.cartId}, ${item.quantity - 1})" ${item.quantity <= 1 ? "disabled" : ""}>-</button>
+                        <span class="qty-value">${item.quantity}</span>
+                        <button class="qty-btn" onclick="window.Cart.updateQuantity(${item.cartId}, ${item.quantity + 1})" ${item.quantity >= item.product.stock ? "disabled" : ""}>+</button>
+                    </div>
+                </div>
+                <div class="cart-item-remove" onclick="window.Cart.removeFromCart(${item.product.productId})"><i class="fas fa-trash-alt"></i></div>
+            </div>`;
+      });
+      container.innerHTML = html;
+      const totalEl = document.getElementById("cartTotalAmount");
+      if (totalEl) totalEl.textContent = "HK$ " + window.formatPrice(totalAmount);
+    },
+    toggleSelection: async (cartId, isChecked) => {
+      useCartStore.getState().toggleSelection(cartId, isChecked);
+      try {
+        await fetch(`/cart/api/toggle-selection/${cartId}?isSelected=${isChecked}`, { method: "PUT" });
+        if (window.location.pathname === "/cart/view") {
+          const detailCheckbox = document.querySelector(`.cart-items-list input[data-cart-id="${cartId}"]`);
+          if (detailCheckbox) {
+            detailCheckbox.checked = isChecked;
+            const cartItem = detailCheckbox.closest(".cart-item");
+            if (isChecked) cartItem?.classList.remove("not-selected");
+            else cartItem?.classList.add("not-selected");
+            if (typeof window.updateCartTotal === "function") window.updateCartTotal();
+            if (typeof window.updateSelectedCount === "function") window.updateSelectedCount();
+            if (typeof window.syncSelectAllCheckbox === "function") window.syncSelectAllCheckbox();
+          }
+        }
+      } catch (error) {
+        console.error("\u540C\u6B65\u9078\u4E2D\u72C0\u614B\u5931\u6557:", error);
+        useCartStore.getState().toggleSelection(cartId, !isChecked);
+        if (window.location.pathname === "/cart/view") {
+          const detailCheckbox = document.querySelector(`.cart-items-list input[data-cart-id="${cartId}"]`);
+          if (detailCheckbox) {
+            detailCheckbox.checked = !isChecked;
+            const cartItem = detailCheckbox.closest(".cart-item");
+            if (isChecked) cartItem?.classList.add("not-selected");
+            else cartItem?.classList.remove("not-selected");
+            if (typeof window.updateCartTotal === "function") window.updateCartTotal();
+            if (typeof window.updateSelectedCount === "function") window.updateSelectedCount();
+            if (typeof window.syncSelectAllCheckbox === "function") window.syncSelectAllCheckbox();
+          }
+        }
+        window.showNotification("\u274C \u7DB2\u7D61\u932F\u8AA4\uFF0C\u540C\u6B65\u5931\u6557", true);
+      }
+      Cart.calculateSelectedTotal();
+    },
+    updateQuantity: async (cartId, newQuantity) => {
+      if (newQuantity <= 0) return;
+      const navQtyElement = document.querySelector(`#cartItemsContainer [data-cart-id="${cartId}"] .qty-value`);
+      const originalNavQty = navQtyElement ? parseInt(navQtyElement.textContent || "1", 10) : newQuantity;
+      const detailQtyElement = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"] .qty-value`);
+      const originalDetailQty = detailQtyElement ? parseInt(detailQtyElement.textContent || "1", 10) : newQuantity;
+      if (navQtyElement) navQtyElement.textContent = newQuantity.toString();
+      if (detailQtyElement) detailQtyElement.textContent = newQuantity.toString();
+      if (detailQtyElement) {
+        const detailCartItem = detailQtyElement.closest(".cart-item");
+        const price = parseFloat(detailCartItem?.dataset.price || "0");
+        const subtotalSpan = detailCartItem?.querySelector(".item-subtotal span");
+        if (subtotalSpan) subtotalSpan.textContent = (price * newQuantity).toLocaleString("zh-HK");
+        if (typeof window.updateCartTotal === "function") window.updateCartTotal();
+        if (typeof window.updateSelectedCount === "function") window.updateSelectedCount();
+      }
+      try {
+        const response = await fetch(`/cart/api/update/${cartId}?quantity=${newQuantity}`, { method: "PUT" });
+        const data = await response.json();
+        if (response.ok) {
+          await Cart.loadItems();
+          window.showNotification("\u2705 \u6578\u91CF\u66F4\u65B0\u6210\u529F");
+        } else {
+          if (navQtyElement) navQtyElement.textContent = originalNavQty.toString();
+          if (detailQtyElement) detailQtyElement.textContent = originalDetailQty.toString();
+          if (detailQtyElement) {
+            const detailCartItem = detailQtyElement.closest(".cart-item");
+            const price = parseFloat(detailCartItem?.dataset.price || "0");
+            const subtotalSpan = detailCartItem?.querySelector(".item-subtotal span");
+            if (subtotalSpan) subtotalSpan.textContent = (price * originalDetailQty).toLocaleString("zh-HK");
+            if (typeof window.updateCartTotal === "function") window.updateCartTotal();
+            if (typeof window.updateSelectedCount === "function") window.updateSelectedCount();
+          }
+          window.showNotification("\u274C " + (data.message || "\u66F4\u65B0\u5931\u6557"), true);
+        }
+      } catch (error) {
+        console.error("\u66F4\u65B0\u8CFC\u7269\u8ECA\u5931\u6557:", error);
+        if (navQtyElement) navQtyElement.textContent = originalNavQty.toString();
+        if (detailQtyElement) detailQtyElement.textContent = originalDetailQty.toString();
+        if (detailQtyElement) {
+          const detailCartItem = detailQtyElement.closest(".cart-item");
+          const price = parseFloat(detailCartItem?.dataset.price || "0");
+          const subtotalSpan = detailCartItem?.querySelector(".item-subtotal span");
+          if (subtotalSpan) subtotalSpan.textContent = (price * originalDetailQty).toLocaleString("zh-HK");
+          if (typeof window.updateCartTotal === "function") window.updateCartTotal();
+          if (typeof window.updateSelectedCount === "function") window.updateSelectedCount();
+        }
+        window.showNotification("\u274C \u7DB2\u7D61\u932F\u8AA4\uFF0C\u540C\u6B65\u5931\u6557", true);
+      }
+    },
+    removeFromCart: (productId) => {
+      useCartStore.getState().setPendingDeleteId(productId);
+      const modal = document.getElementById("cartDeleteModal");
+      if (modal) {
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+      }
+    },
+    closeDeleteModal: () => {
+      const modal = document.getElementById("cartDeleteModal");
+      if (modal) {
+        modal.style.display = "none";
+        document.body.style.overflow = "";
+      }
+      useCartStore.getState().setPendingDeleteId(null);
+    },
+    confirmDelete: async () => {
+      const pendingDeleteId = useCartStore.getState().pendingDeleteId;
+      if (!pendingDeleteId) return;
+      const detailCartItem = document.querySelector(`.cart-items-list [data-product-id="${pendingDeleteId}"]`);
+      try {
+        const response = await fetch(`/cart/api/remove/${pendingDeleteId}`, { method: "DELETE" });
+        if (response.ok) {
+          Cart.closeDeleteModal();
+          window.showNotification("\u2705 \u5546\u54C1\u5DF2\u79FB\u9664");
+          await Cart.loadItems();
+          if (window.location.pathname === "/cart/view" && detailCartItem) {
+            detailCartItem.style.transition = "all 0.3s ease";
+            detailCartItem.style.opacity = "0";
+            detailCartItem.style.transform = "translateX(-20px)";
+            setTimeout(() => {
+              detailCartItem?.remove();
+              const remainingItems = document.querySelectorAll(".cart-items-list .cart-item");
+              if (remainingItems.length === 0) {
+                location.reload();
+              } else {
+                if (typeof window.updateCartTotal === "function") window.updateCartTotal();
+                if (typeof window.updateSelectedCount === "function") window.updateSelectedCount();
+                if (typeof window.syncSelectAllCheckbox === "function") window.syncSelectAllCheckbox();
+              }
+            }, 300);
+          }
+        } else {
+          const data = await response.json();
+          window.showNotification("\u274C " + (data.message || "\u79FB\u9664\u5931\u6557"), true);
+        }
+      } catch (error) {
+        console.error("\u79FB\u9664\u5546\u54C1\u5931\u6557:", error);
+        window.showNotification("\u274C \u7DB2\u7D61\u932F\u8AA4\uFF0C\u540C\u6B65\u5931\u6557", true);
+        Cart.closeDeleteModal();
+      }
+    },
+    checkout: async () => {
+      if (!window.isLoggedIn) {
+        window.showNotification("\u274C \u8ACB\u5148\u767B\u5165\uFF01", true);
+        return;
+      }
+      if (useCartStore.getState().selectedItems.size === 0) {
+        window.showNotification("\u274C \u8ACB\u81F3\u5C11\u9078\u64C7\u4E00\u4EF6\u5546\u54C1\uFF01", true);
+        return;
+      }
+      try {
+        const response = await fetch("/checkout/api/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selectedCartIds: Array.from(useCartStore.getState().selectedItems) })
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+          window.location.href = `/checkout?orderNo=${result.data}`;
+        } else {
+          window.showNotification("\u274C " + (result.message || "\u5275\u5EFA\u8A02\u55AE\u5931\u6557"), true);
+        }
+      } catch (error) {
+        console.error("\u7D50\u8CEC\u932F\u8AA4:", error);
+        window.showNotification("\u274C \u7DB2\u7D61\u932F\u8AA4", true);
+      }
+    }
+  };
+  window.Cart = Cart;
+  var Auth = {
+    openRegisterModal: () => {
+      useAuthStore.getState().setRegisterOpen(true);
+      const modal = document.getElementById("registerModal");
+      if (modal) {
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+        const form = document.getElementById("registerForm");
+        if (form) form.reset();
+      }
+    },
+    closeRegisterModal: () => {
+      useAuthStore.getState().setRegisterOpen(false);
+      const modal = document.getElementById("registerModal");
+      if (modal) {
+        modal.style.display = "none";
+        document.body.style.overflow = "";
+      }
+    },
+    openLoginModal: () => {
+      useAuthStore.getState().setLoginOpen(true);
+      const modal = document.getElementById("loginModal");
+      if (modal) {
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+        const form = document.getElementById("loginForm");
+        if (form) form.reset();
+      }
+    },
+    closeLoginModal: () => {
+      useAuthStore.getState().setLoginOpen(false);
+      const modal = document.getElementById("loginModal");
+      if (modal) {
+        modal.style.display = "none";
+        document.body.style.overflow = "";
+      }
+    },
+    switchToRegister: () => {
+      Auth.closeLoginModal();
+      setTimeout(Auth.openRegisterModal, 200);
+    },
+    switchToLogin: () => {
+      Auth.closeRegisterModal();
+      setTimeout(Auth.openLoginModal, 200);
+    },
+    togglePassword: (inputId, icon) => {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      if (input.type === "password") {
+        input.type = "text";
+        icon.classList.replace("fa-eye", "fa-eye-slash");
+      } else {
+        input.type = "password";
+        icon.classList.replace("fa-eye-slash", "fa-eye");
+      }
+    },
+    handleRegister: async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const msg = document.getElementById("registerMsg");
+      if (!msg) return;
+      if (form.elements.namedItem("password").value !== form.elements.namedItem("confirmPassword").value) {
+        msg.textContent = "\u274C \u5169\u6B21\u5BC6\u78BC\u8F38\u5165\u4E0D\u4E00\u81F4";
+        msg.style.color = "var(--accent)";
+        form.elements.namedItem("confirmPassword").focus();
+        return;
+      }
+      const addressInput = document.getElementById("regAddress");
+      const fullAddress = addressInput ? addressInput.value.trim() : "";
+      if (fullAddress && fullAddress.length < 3) {
+        msg.textContent = "\u274C \u8A73\u7D30\u5730\u5740\u4E0D\u80FD\u70BA\u7A7A\uFF01";
+        msg.style.color = "var(--accent)";
+        if (addressInput) {
+          addressInput.focus();
+          addressInput.style.borderColor = "#e94560";
+        }
+        return;
+      }
+      msg.textContent = "";
+      try {
+        const formData = {
+          username: form.elements.namedItem("username").value.trim(),
+          name: form.elements.namedItem("name").value.trim(),
+          email: form.elements.namedItem("email").value.trim(),
+          password: form.elements.namedItem("password").value,
+          phone: form.elements.namedItem("phone").value.trim(),
+          fullAddress
+        };
+        const response = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData)
+        });
+        const result = await response.json();
+        if (response.ok) {
+          msg.textContent = "\u2705 \u8A3B\u518A\u6210\u529F\uFF013\u79D2\u5F8C\u81EA\u52D5\u767B\u5165...";
+          msg.style.color = "green";
+          setTimeout(() => {
+            Auth.closeRegisterModal();
+            Auth.openLoginModal();
+            const loginForm = document.getElementById("loginForm");
+            if (loginForm) {
+              loginForm.elements.namedItem("username").value = formData.username;
+              loginForm.elements.namedItem("password").focus();
+            }
+          }, 2500);
+        } else {
+          msg.textContent = "\u274C " + (result.message || "\u8A3B\u518A\u5931\u6557\uFF0C\u8ACB\u91CD\u8A66");
+          msg.style.color = "var(--accent)";
+        }
+      } catch (error) {
+        msg.textContent = "\u274C \u7DB2\u7D61\u932F\u8AA4\uFF0C\u8ACB\u6AA2\u67E5\u9023\u63A5";
+        msg.style.color = "var(--accent)";
+        console.error("\u8A3B\u518A\u932F\u8AA4:", error);
+      }
+    },
+    handleLogin: async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const msg = document.getElementById("loginMsg");
+      if (!msg) return;
+      msg.textContent = "";
+      msg.style.color = "var(--accent)";
+      try {
+        const response = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: form.elements.namedItem("username").value.trim(),
+            password: form.elements.namedItem("password").value
+          })
+        });
+        const result = await response.json();
+        if (response.ok) {
+          msg.textContent = "\u2705 \u767B\u5165\u6210\u529F\uFF01\u6B63\u5728\u5237\u65B0...";
+          msg.style.color = "green";
+          setTimeout(() => {
+            Auth.closeLoginModal();
+            window.location.reload();
+          }, 1200);
+        } else {
+          let errorMsg = result.message || "\u7528\u6236\u540D\u6216\u5BC6\u78BC\u932F\u8AA4";
+          if (errorMsg.startsWith("USER_NOT_FOUND:")) {
+            errorMsg = "\u274C \u8A72\u7528\u6236\u540D\u4E0D\u5B58\u5728";
+            form.querySelector('input[name="username"]').classList.add("shake");
+            setTimeout(() => form.querySelector('input[name="username"]').classList.remove("shake"), 500);
+          } else if (errorMsg.startsWith("INVALID_PASSWORD:")) {
+            errorMsg = "\u274C \u8F38\u5165\u5BC6\u78BC\u4E0D\u6B63\u78BA";
+            form.querySelector('input[name="password"]').classList.add("shake");
+            setTimeout(() => form.querySelector('input[name="password"]').classList.remove("shake"), 500);
+          } else {
+            errorMsg = "\u274C " + errorMsg;
+          }
+          msg.textContent = errorMsg;
+        }
+      } catch (error) {
+        msg.textContent = "\u274C \u7DB2\u7D61\u932F\u8AA4\uFF0C\u8ACB\u6AA2\u67E5\u9023\u63A5";
+      }
+    },
+    showLogoutModal: () => {
+      useAuthStore.getState().setLogoutOpen(true);
+      const modal = document.getElementById("logoutModal");
+      if (modal) {
+        modal.style.display = "flex";
+        document.body.style.overflow = "hidden";
+      }
+    },
+    closeLogoutModal: () => {
+      useAuthStore.getState().setLogoutOpen(false);
+      const modal = document.getElementById("logoutModal");
+      if (modal) {
+        modal.style.display = "none";
+        document.body.style.overflow = "";
+      }
+    },
+    performLogout: async () => {
+      Auth.closeLogoutModal();
+      try {
+        await fetch("/logout", { method: "POST", headers: { "Content-Type": "application/json" } });
+        window.location.href = "/";
+      } catch (error) {
+        console.error("\u767B\u51FA\u5931\u6557:", error);
+        window.location.href = "/";
+      }
+    },
+    handleLogout: () => {
+      Auth.showLogoutModal();
+    },
+    requireLogin: (url, message) => {
+      if (typeof window.isLoggedIn === "undefined" || !window.isLoggedIn) {
+        window.showNotification(message || "\u274C \u8ACB\u5148\u767B\u5165\uFF01", true);
+        setTimeout(() => {
+          Auth.openLoginModal();
+        }, 500);
+        return false;
+      }
+      window.location.href = url;
+      return true;
+    }
+  };
+  window.Auth = Auth;
+  var NotificationSys = {
+    fetchUnreadCounts: async () => {
+      try {
+        const response = await fetch("/api/notifications/unread-count");
+        const data = await response.json();
+        const msgBadge = document.getElementById("notificationBadge");
+        if (msgBadge) {
+          if (data.messageCount > 0) {
+            msgBadge.textContent = data.messageCount > 99 ? "99+" : data.messageCount.toString();
+            msgBadge.style.display = "inline-flex";
+          } else {
+            msgBadge.style.display = "none";
+          }
+        }
+        const sysBadge = document.getElementById("systemNotificationBadge");
+        if (sysBadge) {
+          if (data.systemCount > 0) {
+            sysBadge.textContent = data.systemCount > 99 ? "99+" : data.systemCount.toString();
+            sysBadge.style.display = "inline-flex";
+          } else {
+            sysBadge.style.display = "none";
+          }
+        }
+        let targetTab = "MY";
+        if (data.replyCount > 0) targetTab = "REPLY";
+        else if (data.mentionCount > 0) targetTab = "MENTION";
+        else if (data.likeCount > 0) targetTab = "LIKED_ME";
+        const navLinks = document.querySelectorAll('a[href^="/account/reviews"]');
+        navLinks.forEach((link) => {
+          if (data.messageCount > 0) {
+            link.href = `/account/reviews?type=${targetTab}`;
+          } else {
+            link.href = `/account/reviews`;
+          }
+        });
+      } catch (error) {
+        console.error("\u7372\u53D6\u901A\u77E5\u5931\u6557:", error);
+      }
+    }
+  };
+  window.NotificationSys = NotificationSys;
+  var RegionCascade = {
+    init: () => {
+      const regionSelect = document.getElementById("regionSelect");
+      const districtSelect = document.getElementById("districtSelect");
+      const addressInput = document.getElementById("regAddress");
+      if (!regionSelect || !districtSelect || !addressInput) return;
+      const districtData = {
+        \u6E2F\u5C9B: ["\u4E2D\u897F\u533A", "\u6E7E\u4ED4\u533A", "\u4E1C\u533A", "\u5357\u533A"],
+        \u4E5D\u9F99: ["\u6CB9\u5C16\u65FA\u533A", "\u6DF1\u6C34\u57D7\u533A", "\u4E5D\u9F99\u57CE\u533A", "\u9EC4\u5927\u4ED9\u533A", "\u89C2\u5858\u533A"],
+        \u65B0\u754C: ["\u8343\u6E7E\u533A", "\u5C6F\u95E8\u533A", "\u5143\u6717\u533A", "\u5317\u533A", "\u5927\u57D4\u533A", "\u897F\u8D21\u533A", "\u6C99\u7530\u533A", "\u8475\u9752\u533A", "\u79BB\u5C9B\u533A"]
+      };
+      regionSelect.addEventListener("change", function() {
+        const selectedRegion = this.value;
+        districtSelect.innerHTML = '<option value="">\u8BF7\u9009\u62E9\u884C\u653F\u533A</option>';
+        districtSelect.disabled = true;
+        districtSelect.style.backgroundColor = "#f8f9fa";
+        if (selectedRegion && districtData[selectedRegion]) {
+          districtSelect.disabled = false;
+          districtSelect.style.backgroundColor = "white";
+          districtData[selectedRegion].forEach((district) => {
+            const option = document.createElement("option");
+            option.value = district;
+            option.textContent = district;
+            districtSelect.appendChild(option);
+          });
+        }
+      });
+      districtSelect.addEventListener("change", function() {
+        const region = regionSelect.value;
+        const district = this.value;
+        if (region && district) {
+          if (!addressInput.value.startsWith(region)) {
+            addressInput.value = region + " " + district + " ";
+          } else {
+            if (addressInput.value.trim() === "") {
+              addressInput.value = region + " " + district + " ";
+            }
+          }
+          addressInput.focus();
+          addressInput.classList.remove("is-invalid");
+        }
+      });
+      const registerForm = document.getElementById("registerForm");
+      if (registerForm) {
+        registerForm.addEventListener("submit", function(e) {
+          const region = regionSelect.value;
+          const address = addressInput.value.trim();
+          if (region && (!address || !address.includes(region))) {
+            e.preventDefault();
+            window.showNotification("\u274C \u65E2\u7136\u9078\u64C7\u4E86\u5340\u57DF\uFF0C\u8A73\u7D30\u5730\u5740\u4E0D\u80FD\u70BA\u7A7A\uFF0C\u4E14\u5FC5\u9808\u5305\u542B\u6240\u9078\u5340\u57DF\uFF01", true);
+            addressInput.focus();
+            addressInput.style.borderColor = "#e94560";
+          }
+        });
+      }
+    }
+  };
+  async function loadScrollingNotification() {
+    try {
+      const response = await fetch("/api/config/notification");
+      const config = await response.json();
+      const container = document.getElementById("notificationContainer");
+      const notificationText = document.getElementById("scrollingNotification");
+      if (!container || !notificationText) return;
+      if (!config.notificationText || config.notificationText.trim() === "") {
+        container.style.display = "none";
+        return;
+      }
+      const text = config.notificationText;
+      const scrollEnabled = config.scrollEnabled !== "false";
+      const direction = config.scrollDirection || "rtl";
+      notificationText.innerHTML = "";
+      notificationText.style.whiteSpace = "nowrap";
+      if (scrollEnabled && direction === "ltr") {
+        const chars = text.split("").reverse();
+        for (const char of chars) {
+          const span = document.createElement("span");
+          span.textContent = char;
+          notificationText.appendChild(span);
+        }
+      } else {
+        for (const char of text) {
+          const span = document.createElement("span");
+          span.textContent = char;
+          notificationText.appendChild(span);
+        }
+      }
+      notificationText.style.color = config.textColor || "#FFFFFF";
+      notificationText.style.fontWeight = config.fontWeight || "normal";
+      notificationText.style.fontSize = (config.fontSize || "14") + "px";
+      notificationText.style.fontStyle = config.fontItalic === "true" ? "italic" : "normal";
+      if (scrollEnabled) {
+        notificationText.classList.remove("is-scrolling-rtl", "is-scrolling-ltr");
+        const speed = config.scrollSpeed || "normal";
+        const intervalSeconds = parseFloat(config.scrollInterval) || 0;
+        let secondsPerChar = 1.4;
+        if (speed === "slow") secondsPerChar = 1.7;
+        else if (speed === "fast") secondsPerChar = 1.2;
+        const totalChars = text.length;
+        const pureScrollDuration = totalChars * secondsPerChar;
+        const totalCycleDuration = pureScrollDuration + intervalSeconds;
+        const finalDuration = Math.max(5, totalCycleDuration);
+        if (direction === "ltr") {
+          notificationText.classList.add("is-scrolling-ltr");
+          notificationText.style.animationDuration = `${finalDuration}s`;
+        } else {
+          notificationText.classList.add("is-scrolling-rtl");
+          notificationText.style.animationDuration = `${finalDuration}s`;
+        }
+      } else {
+        notificationText.classList.remove("is-scrolling-rtl", "is-scrolling-ltr");
+        notificationText.style.animation = "none";
+      }
+      container.style.display = "flex";
+    } catch (error) {
+      console.error("\u52A0\u8F09\u6EFE\u52D5\u901A\u77E5\u5931\u6557:", error);
+    }
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    RegionCascade.init();
+    loadScrollingNotification();
+    const loginModal = document.getElementById("loginModal");
+    if (loginModal) {
+      loginModal.addEventListener("click", (e) => {
+        if (e.target === loginModal) Auth.closeLoginModal();
+      });
+    }
+    const registerModal = document.getElementById("registerModal");
+    if (registerModal) {
+      registerModal.addEventListener("click", (e) => {
+        if (e.target === registerModal) Auth.closeRegisterModal();
+      });
+    }
+    if (document.querySelector(".nav-dropdown") && typeof Cart !== "undefined") {
+      Cart.loadItems();
+    }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        Auth.closeRegisterModal();
+        Auth.closeLoginModal();
+        Auth.closeLogoutModal();
+        Cart.closeDeleteModal();
+      }
+    });
+    if (typeof window.isLoggedIn !== "undefined" && window.isLoggedIn) {
+      NotificationSys.fetchUnreadCounts();
+    }
+  });
+  return __toCommonJS(common_exports);
+})();
+/*! Bundled license information:
 
-// 頁面加載時初始化滾動通知
-document.addEventListener('DOMContentLoaded', function() {
-  loadScrollingNotification();
-});
+react/cjs/react.development.js:
+  (**
+   * @license React
+   * react.development.js
+   *
+   * Copyright (c) Meta Platforms, Inc. and affiliates.
+   *
+   * This source code is licensed under the MIT license found in the
+   * LICENSE file in the root directory of this source tree.
+   *)
+*/

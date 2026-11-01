@@ -1038,9 +1038,9 @@
 
         // 全局變量：暫存當前要入庫的 requestItemId
         let pendingStockInItemId = null;
-        // 【修復】：只聲明一次 afterSalesDataMap
+        // 只聲明一次 afterSalesDataMap
         const afterSalesDataMap = /*[[${itemsDataMap}]]*/ {};
-        console.log('✅ afterSalesDataMap 初始化成功:', afterSalesDataMap);
+        console.log(' afterSalesDataMap 初始化成功:', afterSalesDataMap);
 
         // 控制用户名输入框的显示/隐藏
         function toggleUserInput() {
@@ -1058,9 +1058,6 @@
         // ==========================================
         // 1. 篩選與列表基礎交互
         // =========================================
-        // ==========================================
-        // 1. 篩選與列表基礎交互
-        // ==========================================
         function applyFilter() {
             // 獲取所有篩選條件的值
             const status = document.querySelector('select[name="status"]').value;

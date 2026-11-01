@@ -1331,7 +1331,7 @@
 
     <!-- 4. 引入公共 JS -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        window.isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
         const CURRENT_USER_STORE_ID = /*[[${currentUserStoreId}]]*/ null;
     </script>
     <script src="/js/common.js"></script>

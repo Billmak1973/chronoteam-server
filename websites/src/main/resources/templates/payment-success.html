@@ -83,7 +83,7 @@
 
     <!--  修復：加入 sec 命名空間後，這裡的 #authorization 才能正常解析 -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
+        window.isLoggedIn = [[${ #authorization.expression('isAuthenticated()') } ?: false]];
     </script>
     <script src="/js/common.js"></script>
 </body>

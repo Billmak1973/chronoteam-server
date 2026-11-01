@@ -3904,7 +3904,7 @@
     <!-- 1. 統一在這裡獲取所有 Thymeleaf 後端變量 -->
     <!-- ========================================== -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        window.isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
         const currentProductId = [[${product.productId}]];
         const currentUsername = [[${#authentication.name}]];
         const isAdmin = [[${isAdmin}]];

@@ -780,7 +780,7 @@
 
     <!-- 注入登录状态变量 -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        window.isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
 
     <!-- 引入公共 JS -->

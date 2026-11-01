@@ -493,7 +493,7 @@
 
     <!--  5. 注入後端登入狀態變量 -->
     <script th:inline="javascript">
-        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        window.isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
 
     <!--  6. 引入公共 JS -->

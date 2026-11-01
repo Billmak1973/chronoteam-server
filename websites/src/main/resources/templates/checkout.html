@@ -1888,7 +1888,7 @@
     <div th:replace="~{fragments/common :: modals}"></div>
     <script src="/js/common.js"></script>
     <script th:inline="javascript">
-        const isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
+        window.isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
         //  接收後端傳來的動態配置
         const baseShippingFee = [[${shippingFee}]];
         const freeShippingThreshold = [[${freeShippingThreshold}]];
