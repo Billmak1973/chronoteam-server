@@ -42,8 +42,9 @@ public class AdminSellController {
     private final ProductRepository productRepository;
     private final StoreDailyReportRepository storeDailyReportRepository;
     private final SystemConfigService systemConfigService;
+    private final SellApplicationAuditLogRepository auditLogRepository; // 確保已注入
 
-    public AdminSellController(SellApplicationRepository sellApplicationRepository, OfflineStoreRepository offlineStoreRepository, FileStorageService fileStorageService, ObjectMapper objectMapper, UserRepository userRepository, ProductRepository productRepository, StoreDailyReportRepository storeDailyReportRepository, SystemConfigService systemConfigService) {
+    public AdminSellController(SellApplicationRepository sellApplicationRepository, OfflineStoreRepository offlineStoreRepository, FileStorageService fileStorageService, ObjectMapper objectMapper, UserRepository userRepository, ProductRepository productRepository, StoreDailyReportRepository storeDailyReportRepository, SystemConfigService systemConfigService, SellApplicationAuditLogRepository auditLogRepository) {
         this.sellApplicationRepository = sellApplicationRepository;
         this.offlineStoreRepository = offlineStoreRepository;
         this.fileStorageService = fileStorageService;
@@ -52,6 +53,7 @@ public class AdminSellController {
         this.productRepository = productRepository;
         this.storeDailyReportRepository = storeDailyReportRepository;
         this.systemConfigService = systemConfigService;
+        this.auditLogRepository = auditLogRepository;
     }
 
     @Hidden
@@ -162,10 +164,11 @@ public class AdminSellController {
         // ==========================================
         boolean canEdit = false;
         boolean isOverrideRole = false; // <--- 新增此變量
+        User currentUser = null; // 將聲明移到 if 外部，解決作用域問題
 
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
             String currentUsername = authentication.getName();
-            User currentUser = userRepository.findByUsername(currentUsername).orElse(null);
+             currentUser = userRepository.findByUsername(currentUsername).orElse(null);
 
             if (currentUser != null) {
                 boolean isStaffLock = systemConfigService.getAfterSalesStaffLock();
@@ -220,6 +223,9 @@ public class AdminSellController {
         // 【核心新增】：將權限標識返回給前端，讓前端決定是否渲染手動選擇框
         data.put("canEdit", canEdit);
         data.put("isOverrideRole", isOverrideRole);
+        if (currentUser != null) {
+            data.put("currentUserId", currentUser.getId()); // 返回當前登入用戶的 ID
+        }
 
         String storeName = "未指定";
         if (app.getStoreId() != null && !app.getStoreId().trim().isEmpty() && app.getStoreId().matches("\\d+")) {
@@ -275,12 +281,40 @@ public class AdminSellController {
 
         try {
             // ==========================================
+            // 【步驟 1】：在修改前，記錄所有需要審計的「舊值」
+            // ==========================================
+            SellApplication.ApplicationStatus oldStatus = app.getStatus();
+            String oldImagePathsJson = app.getImagePaths();
+            String oldBrand = app.getBrand();
+            String oldSeries = app.getSeries();
+            String oldModel = app.getModel();
+            Integer oldPurchaseYear = app.getPurchaseYear();
+            Integer oldQuantity = app.getQuantity();
+            String oldCondition = app.getCondition();
+            String oldFunctionStatus = app.getFunctionStatus();
+            Long oldAppraiserId = app.getAppraiser() != null ? app.getAppraiser().getId() : null;
+            java.math.BigDecimal oldFinalPrice = app.getFinalPrice();
+            java.math.BigDecimal oldEstimatedPrice = app.getEstimatedPrice();
+            Integer oldProductId = app.getProduct() != null ? app.getProduct().getProductId() : null;
+            String oldAppraisalNotes = app.getAppraisalNotes();
+
+            // ==========================================
+            // 【核心修復】：將需要在方法末尾使用的變數聲明提升到 try 塊頂部，解決作用域問題
+            // ==========================================
+            User currentUser = null;
+            String currentUsername = null;
+            boolean isOverrideRole = false;
+            boolean isMyApplication = false;
+            boolean isCompleted = false;
+            String modificationReason = null;
+
+            // ==========================================
             // 【核心校驗 0】：基於 Config 的動態權限校驗 (雙重保險)
             // ==========================================
             if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
-                String currentUsername = authentication.getName();
-                User currentUser = userRepository.findByUsername(currentUsername)
-                        .orElseThrow(() -> new RuntimeException("操作人不存在: " + currentUsername));
+                final String authUsername = authentication.getName();
+                currentUser = userRepository.findByUsername(authUsername)
+                        .orElseThrow(() -> new RuntimeException("操作人不存在: " + authUsername));
 
                 boolean isStaffLock = systemConfigService.getAfterSalesStaffLock();
                 List<String> overrideRoles = systemConfigService.getAfterSalesOverrideRoles();
@@ -289,15 +323,13 @@ public class AdminSellController {
                 boolean hasPermission = false;
                 if (!isStaffLock) {
                     hasPermission = true;
-                } else if (app.getOperator() != null && app.getOperator().getUsername().equals(currentUsername)) {
+                } else if (app.getOperator() != null && app.getOperator().getUsername().equals(authUsername)) {
                     hasPermission = true;
                 } else if (overrideRoles.contains(currentUser.getRole().name())) {
                     hasPermission = true;
-                }    // 【規則 4 新增】：如果 operator 為 null，且當前用戶角色在「鑑定授權角色」列表中，允許操作
-                else if (app.getOperator() == null && appraisalRoles.contains(currentUser.getRole().name())) {
+                } else if (app.getOperator() == null && appraisalRoles.contains(currentUser.getRole().name())) {
                     hasPermission = true;
                 }
-
 
                 if (!hasPermission) {
                     return ResponseEntity.status(403).body(Result.error("您無權編輯此申請，該申請已被其他員工接收或您沒有相應權限。"));
@@ -305,50 +337,54 @@ public class AdminSellController {
 
                 // ==========================================
                 // 【核心校驗 0.5】：精细化核心字段修改權限控制
-                // 規則：最高權限可隨意修改。
-                //       鑑定授權角色在「非 COMPLETED」狀態下可修改核心字段。
-                //       其他情況禁止修改核心字段。
                 // ==========================================
-                boolean isOverrideRole = overrideRoles.contains(currentUser.getRole().name());
+                // 【注意】這裡是賦值，去掉了 boolean 聲明，因為上面已經聲明過了
+                isOverrideRole = overrideRoles.contains(currentUser.getRole().name());
                 boolean isAppraisalRole = appraisalRoles.contains(currentUser.getRole().name());
-                boolean isCompleted = app.getStatus() == SellApplication.ApplicationStatus.COMPLETED;
+                isCompleted = app.getStatus() == SellApplication.ApplicationStatus.COMPLETED;
+                isMyApplication = app.getOperator() != null && app.getOperator().getId().equals(currentUser.getId());
 
-                // 如果 不是最高權限，並且 (不是鑑定授權角色 OR 狀態已為 COMPLETED)
                 if (!isOverrideRole && (!isAppraisalRole || isCompleted)) {
                     boolean isCoreChanged = false;
-
-                    // 輔助方法：安全比較字符串 (處理 null 和 空字符串)
                     java.util.function.BiPredicate<String, String> isStrChanged = (formVal, originalVal) -> {
                         String f = formVal == null ? "" : formVal.trim();
                         String o = originalVal == null ? "" : originalVal.toString().trim();
                         return !f.equals(o);
                     };
 
-                    if (isStrChanged.test(form.get("brand"), app.getBrand())) isCoreChanged = true;
-                    if (isStrChanged.test(form.get("series"), app.getSeries())) isCoreChanged = true;
-                    if (isStrChanged.test(form.get("model"), app.getModel())) isCoreChanged = true;
-                    if (isStrChanged.test(form.get("condition"), app.getCondition())) isCoreChanged = true;
-                    if (isStrChanged.test(form.get("functionStatus"), app.getFunctionStatus())) isCoreChanged = true;
-                    if (isStrChanged.test(form.get("status"), app.getStatus() != null ? app.getStatus().name() : "")) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("brand"), oldBrand)) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("series"), oldSeries)) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("model"), oldModel)) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("condition"), oldCondition)) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("functionStatus"), oldFunctionStatus)) isCoreChanged = true;
+                    if (isStrChanged.test(form.get("status"), oldStatus != null ? oldStatus.name() : "")) isCoreChanged = true;
 
-                    // 處理 Integer 類型
                     Integer formYear = (form.get("purchaseYear") != null && !form.get("purchaseYear").isEmpty()) ? Integer.parseInt(form.get("purchaseYear")) : null;
-                    if (!java.util.Objects.equals(formYear, app.getPurchaseYear())) isCoreChanged = true;
+                    if (!java.util.Objects.equals(formYear, oldPurchaseYear)) isCoreChanged = true;
 
                     Integer formQty = (form.get("quantity") != null && !form.get("quantity").isEmpty()) ? Integer.parseInt(form.get("quantity")) : null;
-                    if (!java.util.Objects.equals(formQty, app.getQuantity())) isCoreChanged = true;
+                    if (!java.util.Objects.equals(formQty, oldQuantity)) isCoreChanged = true;
 
-                    // 處理 Long 類型 (appraiserId)
                     Long formAppraiserId = (form.get("appraiserId") != null && !form.get("appraiserId").isEmpty()) ? Long.parseLong(form.get("appraiserId")) : null;
-                    Long originalAppraiserId = app.getAppraiser() != null ? app.getAppraiser().getId() : null;
-                    if (!java.util.Objects.equals(formAppraiserId, originalAppraiserId)) isCoreChanged = true;
+                    if (!java.util.Objects.equals(formAppraiserId, oldAppraiserId)) isCoreChanged = true;
 
-                    // 處理 BigDecimal 類型 (finalPrice)
                     java.math.BigDecimal formFinalPrice = (form.get("finalPrice") != null && !form.get("finalPrice").isEmpty()) ? new java.math.BigDecimal(form.get("finalPrice")) : null;
-                    if (!java.util.Objects.equals(formFinalPrice, app.getFinalPrice())) isCoreChanged = true;
+                    if (!java.util.Objects.equals(formFinalPrice, oldFinalPrice)) isCoreChanged = true;
 
                     if (isCoreChanged) {
                         return ResponseEntity.status(403).body(Result.error("您沒有權限修改核心字段（品牌、型號、狀態、鑑定師、成交價等），或該申請已完成鎖定，請聯繫擁有最高權限的人員！"));
+                    }
+                }
+
+                // ==========================================
+                // 【核心新增校驗】：最高權限修改非本人或已完成申請時，強制要求填寫原因
+                // ==========================================
+                modificationReason = form.get("modificationReason"); // 【賦值】
+                // 【核心修改】：增加了 app.getOperator() != null 的判斷
+                // 如果申請尚未被接收 (operator 為 null)，則不強制要求填寫修改原因
+                if (isOverrideRole && app.getOperator() != null && (!isMyApplication || isCompleted)) {
+                    if (modificationReason == null || modificationReason.trim().isEmpty()) {
+                        return ResponseEntity.badRequest().body(Result.error("最高權限修改非本人申請或已完成的申請時，必須填寫「修改原因」以供審計！"));
                     }
                 }
 
@@ -360,28 +396,28 @@ public class AdminSellController {
                         Long operatorId = Long.parseLong(form.get("operatorId").trim());
                         User operator = userRepository.findById(operatorId)
                                 .orElseThrow(() -> new RuntimeException("指定的負責人不存在，ID: " + operatorId));
-                        app.setOperator(operator); // 手動指定負責人
+                        app.setOperator(operator);
                     } catch (NumberFormatException e) {
                         return ResponseEntity.badRequest().body(Result.error("負責人ID格式無效"));
                     }
                 } else {
-                    // 非最高權限角色，或前端未傳遞 operatorId (選擇了"自動")，則自動記錄為當前登入者
                     app.setOperator(currentUser);
                 }
-
             } else {
                 return ResponseEntity.status(401).body(Result.error("請先登入"));
             }
 
             // ==========================================
-            // 【核心校驗 1】：檢查是否試圖將狀態改為 COMPLETED，若是則必須填寫鑑定師和最終成交價
+            // 【核心校驗 1】：檢查是否試圖將狀態改為 COMPLETED
             // ==========================================
             boolean isChangingToCompleted = false;
             if (form.get("status") != null && !form.get("status").isEmpty()) {
                 SellApplication.ApplicationStatus newStatus = SellApplication.ApplicationStatus.valueOf(form.get("status"));
-                if (newStatus == SellApplication.ApplicationStatus.COMPLETED) {
+
+                if (newStatus == SellApplication.ApplicationStatus.COMPLETED && oldStatus != SellApplication.ApplicationStatus.COMPLETED) {
                     isChangingToCompleted = true;
                     app.setCompletedAt(java.time.LocalDateTime.now());
+
                     String appraiserIdStr = form.get("appraiserId");
                     String finalPriceStr = form.get("finalPrice");
 
@@ -458,10 +494,12 @@ public class AdminSellController {
             }
 
             // ===== 6. 圖片管理 (更換 / 移動 / 刪除) =====
-            Map<String, String> oldMap = parseImageMap(app.getImagePaths());
-            Map<String, String> finalMap = new java.util.LinkedHashMap<>();
+            Map<String, String> oldMap = parseImageMap(oldImagePathsJson);
+            Map<String, String> finalMap = new java.util.LinkedHashMap<>(oldMap);
+
             String imageMapJson = form.get("imageMapJson");
             if (imageMapJson != null && !imageMapJson.isEmpty()) {
+                finalMap.clear();
                 finalMap.putAll(objectMapper.readValue(imageMapJson,
                         new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {}));
             }
@@ -486,36 +524,151 @@ public class AdminSellController {
                 app.setImagePaths(objectMapper.writeValueAsString(finalMap));
             }
 
+            // ==========================================
+            // 審計日誌 Diff 比對與記錄邏輯 (嚴格比對，杜絕誤判)
+            // ==========================================
+            List<Map<String, String>> changesList = new ArrayList<>();
+
+            java.util.function.BiPredicate<String, String> isStrChanged = (newVal, oldVal) -> {
+                String n = newVal == null ? "" : newVal.trim();
+                String o = oldVal == null ? "" : oldVal.toString().trim();
+                return !n.equals(o);
+            };
+
+            java.util.function.BiPredicate<java.math.BigDecimal, java.math.BigDecimal> isBigDecimalChanged = (newVal, oldVal) -> {
+                if (newVal == null && oldVal == null) return false;
+                if (newVal == null || oldVal == null) return true;
+                return newVal.compareTo(oldVal) != 0;
+            };
+
+            String newImagePathsJson = app.getImagePaths();
+            boolean isImageChanged = !java.util.Objects.equals(oldImagePathsJson, newImagePathsJson);
+            if (isImageChanged) {
+                addChange(changesList, "imagePaths", oldImagePathsJson, newImagePathsJson);
+            }
+
+            if (isStrChanged.test(app.getBrand(), oldBrand)) addChange(changesList, "brand", oldBrand, app.getBrand());
+            if (isStrChanged.test(app.getSeries(), oldSeries)) addChange(changesList, "series", oldSeries, app.getSeries());
+            if (isStrChanged.test(app.getModel(), oldModel)) addChange(changesList, "model", oldModel, app.getModel());
+            if (isStrChanged.test(app.getCondition(), oldCondition)) addChange(changesList, "condition", oldCondition, app.getCondition());
+            if (isStrChanged.test(app.getFunctionStatus(), oldFunctionStatus)) addChange(changesList, "functionStatus", oldFunctionStatus, app.getFunctionStatus());
+
+            if (isStrChanged.test(app.getAppraisalNotes(), oldAppraisalNotes)) {
+                addChange(changesList, "appraisalNotes", oldAppraisalNotes, app.getAppraisalNotes());
+            }
+
+            String newStatusStr = app.getStatus() != null ? app.getStatus().name() : "";
+            String oldStatusStr = oldStatus != null ? oldStatus.name() : "";
+            if (isStrChanged.test(newStatusStr, oldStatusStr)) addChange(changesList, "status", oldStatusStr, newStatusStr);
+
+            if (!java.util.Objects.equals(app.getPurchaseYear(), oldPurchaseYear)) addChange(changesList, "purchaseYear", String.valueOf(oldPurchaseYear), String.valueOf(app.getPurchaseYear()));
+            if (!java.util.Objects.equals(app.getQuantity(), oldQuantity)) addChange(changesList, "quantity", String.valueOf(oldQuantity), String.valueOf(app.getQuantity()));
+
+            Long newAppraiserId = app.getAppraiser() != null ? app.getAppraiser().getId() : null;
+            if (!java.util.Objects.equals(newAppraiserId, oldAppraiserId)) addChange(changesList, "appraiserId", String.valueOf(oldAppraiserId), String.valueOf(newAppraiserId));
+
+            if (isBigDecimalChanged.test(app.getEstimatedPrice(), oldEstimatedPrice)) {
+                addChange(changesList, "estimatedPrice", String.valueOf(oldEstimatedPrice), String.valueOf(app.getEstimatedPrice()));
+            }
+            if (isBigDecimalChanged.test(app.getFinalPrice(), oldFinalPrice)) {
+                addChange(changesList, "finalPrice", String.valueOf(oldFinalPrice), String.valueOf(app.getFinalPrice()));
+            }
+
+            Integer newProductId = app.getProduct() != null ? app.getProduct().getProductId() : null;
+            if (!java.util.Objects.equals(newProductId, oldProductId)) addChange(changesList, "productId", String.valueOf(oldProductId), String.valueOf(newProductId));
+
+            boolean hasRemark = modificationReason != null && !modificationReason.trim().isEmpty();
+
+            if (changesList.isEmpty() && !isImageChanged && !hasRemark) {
+                return ResponseEntity.ok(Result.ok("申請資料未發生任何變更，無需保存"));
+            }
+
+            String actionType = "UPDATE_APPLICATION";
+            if (isChangingToCompleted) {
+                actionType = "COMPLETE_TRANSACTION";
+            } else if (isImageChanged) {
+                actionType = "UPDATE_IMAGES";
+            }
+
+            // ==========================================
+            // 9. 持久化審計日誌 (現在這些變數都在作用域內，不會報錯了)
+            // ==========================================
+            if (isOverrideRole && (!isMyApplication || isCompleted)) {
+                SellApplicationAuditLog auditLog = new SellApplicationAuditLog();
+                auditLog.setApplication(app);
+                auditLog.setOperator(currentUser);
+                auditLog.setActionType(actionType);
+                auditLog.setChangedFields(objectMapper.writeValueAsString(changesList));
+                auditLog.setRemark(modificationReason); // 核心：保存到 remark 字段
+
+                auditLogRepository.save(auditLog);
+            }
+            // ==========================================
+
+            // 保存業務數據
+            // ==========================================
+            // 保存業務數據 (先保存申請，確保 app.getCompletedAt() 等數據是最新的)
+            // ==========================================
             sellApplicationRepository.save(app);
 
             // ==========================================
-            // 【核心新增】：如果狀態剛剛變更為 COMPLETED，且有關聯門店，則更新門店每日報表
+            // 【 核心財務報表更新邏輯整合】
+            // 觸發條件 1: 狀態剛剛變更為 COMPLETED (isChangingToCompleted)
+            // 觸發條件 2: 已經是 COMPLETED 狀態，但管理員修改了最終成交價 (isPriceChangedInCompleted)
             // ==========================================
-            if (isChangingToCompleted && app.getStoreId() != null && !app.getStoreId().trim().isEmpty()) {
+            boolean isPriceChangedInCompleted = (oldStatus == SellApplication.ApplicationStatus.COMPLETED) &&
+                    (app.getFinalPrice() != null && !app.getFinalPrice().equals(oldFinalPrice));
+
+            if ((isChangingToCompleted || isPriceChangedInCompleted) && app.getStoreId() != null && !app.getStoreId().trim().isEmpty()) {
                 try {
                     Long storeId = Long.parseLong(app.getStoreId());
-                    LocalDate reportDate = LocalDate.now();
 
+                    // 【核心修復】：提取日期
+                    // 如果是「已完成狀態下修改價格」，必須使用該申請原本的 completedAt 日期
+                    // 如果是「剛剛變更為完成」，則使用今天的日期 (LocalDate.now())
+                    LocalDate reportDate = (isPriceChangedInCompleted && app.getCompletedAt() != null)
+                            ? app.getCompletedAt().toLocalDate()
+                            : LocalDate.now();
+
+                    // 1. 找到對應門店、對應日期的每日報表
                     StoreDailyReport report = storeDailyReportRepository.findByStore_StoreIdAndReportDate(storeId, reportDate)
                             .orElseGet(() -> {
-                                OfflineStore store = offlineStoreRepository.findById(storeId)
-                                        .orElseThrow(() -> new RuntimeException("門店不存在, ID: " + storeId));
                                 StoreDailyReport newReport = new StoreDailyReport();
+                                // 獲取門店實體並建立關聯 (因為實體類中 store 是 @ManyToOne 且通常不可為空)
+                                OfflineStore store = offlineStoreRepository.findById(storeId)
+                                        .orElseThrow(() -> new RuntimeException("找不到關聯的門店，ID: " + storeId));
                                 newReport.setStore(store);
                                 newReport.setReportDate(reportDate);
+                                // 其他數值字段 (如 storeAcquisitionCost) 在實體類中已有默認值 BigDecimal.ZERO，直接返回即可
                                 return newReport;
                             });
 
-                    BigDecimal finalPrice = app.getFinalPrice() != null ? app.getFinalPrice() : BigDecimal.ZERO;
-                    BigDecimal currentCost = report.getStoreAcquisitionCost() != null ? report.getStoreAcquisitionCost() : BigDecimal.ZERO;
-                    report.setStoreAcquisitionCost(currentCost.add(finalPrice));
+                    java.math.BigDecimal currentCost = report.getStoreAcquisitionCost() != null ? report.getStoreAcquisitionCost() : java.math.BigDecimal.ZERO;
+
+                    if (isChangingToCompleted) {
+                        // 情況 A：剛剛變更為完成 -> 直接加上最終成交價
+                        java.math.BigDecimal finalPriceToAdd = app.getFinalPrice() != null ? app.getFinalPrice() : java.math.BigDecimal.ZERO;
+                        report.setStoreAcquisitionCost(currentCost.add(finalPriceToAdd));
+                    }
+                    else if (isPriceChangedInCompleted) {
+                        // 情況 B：已完成狀態下修改價格 -> 計算差值 (新價格 - 舊價格)，並累加到原成本中
+                        // 注意：如果新價格小於舊價格，diff 會是負數，add(diff) 就等於減去，完美符合邏輯！
+                        java.math.BigDecimal diff = app.getFinalPrice().subtract(oldFinalPrice);
+                        report.setStoreAcquisitionCost(currentCost.add(diff));
+                    }
+
+                    // 2. 保存更新後的報表
                     storeDailyReportRepository.save(report);
+
                 } catch (NumberFormatException e) {
                     System.err.println("⚠️ 無效的門店ID格式，無法更新門店每日報表: " + app.getStoreId());
                 } catch (Exception e) {
                     System.err.println("⚠️ 更新門店每日報表失敗: " + e.getMessage());
+                    // 【重要】財務數據更新失敗應拋出異常，阻止整個事務提交，保證數據一致性
+                    throw new RuntimeException("更新門店每日報表失敗: " + e.getMessage());
                 }
             }
+
             return ResponseEntity.ok(Result.ok("申請資料更新成功"));
 
         } catch (IllegalArgumentException e) {
@@ -524,7 +677,16 @@ public class AdminSellController {
             return ResponseEntity.internalServerError().body(Result.error("更新失敗: " + e.getMessage()));
         }
     }
-
+    /**
+     * 【輔助方法】：快速構建變更記錄 Map
+     */
+    private void addChange(List<Map<String, String>> changesList, String fieldName, Object oldValue, Object newValue) {
+        Map<String, String> change = new HashMap<>();
+        change.put("fieldName", fieldName);
+        change.put("oldValue", oldValue != null ? String.valueOf(oldValue) : "");
+        change.put("newValue", newValue != null ? String.valueOf(newValue) : "");
+        changesList.add(change);
+    }
     /** 輔助方法：空字串轉 null */
     private String emptyToNull(Object o) {
         if (o == null) return null;

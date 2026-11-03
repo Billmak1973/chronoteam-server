@@ -2050,6 +2050,10 @@
             const app = window.currentEditingApp;
             if (!app) return;
 
+            // 獲取原始最終成交價和當前狀態，用於後續比對
+            const originalFinalPrice = parseFloat(app.finalPrice) || 0;
+            const isStatusCompleted = app.status === 'COMPLETED';
+
             // 異步加載具備鑑定權限的員工列表 (SALES, APPRAISER, ADMIN)
             let appraisers = [];
             try {
@@ -2062,9 +2066,18 @@
                 console.error('獲取鑑定師列表失敗', e);
             }
 
-            // 【新增】獲取當前操作人 ID 和是否為 Override Role
+            // 【新增】獲取當前操作人 ID、當前登入者 ID 和是否為 Override Role
             const currentOperatorId = app.operator?.id || '';
+            const currentUserId = app.currentUserId || null; // 從後端新返回的字段獲取
             const isOverrideRole = app.isOverrideRole || false;
+
+            // 【核心邏輯】判斷是否為本人的申請
+            const isMyApplication = currentOperatorId && currentUserId && (currentOperatorId == currentUserId);
+
+            // 【核心邏輯】判斷是否需要強制填寫修改原因：
+            // 條件：是最高權限，且 (不是本人的申請 OR 已經是 COMPLETED 狀態)
+            //  并且也沒有操作者
+            const requireModificationReason = isOverrideRole && app.operator != null && (!isMyApplication || isStatusCompleted);
 
             // 申請狀態選項
             const statusOptions = [
@@ -2097,178 +2110,201 @@
 
             const currentAppraiserId = app.appraiser?.id || app.appraiserId || '';
 
-            // 【核心修改】：區塊 2.6 關聯平台商品 改為自定義下拉框結構
+            // 區塊 2.6 關聯平台商品 改為自定義下拉框結構
             const currentProductText = app.product
                 ? `${app.product.description} (ID: ${app.product.productId})`
                 : '尚未分配 (清空關聯)';
             const currentProductId = app.product ? app.product.productId : '';
 
             const editHtml = `
-        <form id="editSellForm" onsubmit="submitEditApplication(event)">
-            <!-- ========== 區塊 1：手錶基礎資訊 ========== -->
-            <h4 class="section-title-sm" style="margin-top:0;">
-                <i class="fas fa-clock" style="color: #11998e;"></i> 手錶基礎資訊 (可直接修改)
-            </h4>
-            <div class="info-grid">
-                <div class="info-item">
-                    <label class="info-label">品牌 <span style="color:var(--accent)">*</span></label>
-                    <input type="text" name="brand" class="filter-input" style="margin-top:0.5rem;" value="${escAttr(app.brand)}" required>
-                </div>
-                <div class="info-item">
-                    <label class="info-label">系列 <span style="color:var(--accent)">*</span></label>
-                    <input type="text" name="series" class="filter-input" style="margin-top:0.5rem;" value="${escAttr(app.series)}" required>
-                </div>
-                <div class="info-item">
-                    <label class="info-label">型號 / 編號</label>
-                    <input type="text" name="model" class="filter-input" style="margin-top:0.5rem;" value="${escAttr(app.model)}" placeholder="例如：116610LN">
-                </div>
-                <div class="info-item">
-                    <label class="info-label">購買年份</label>
-                    <input type="number" name="purchaseYear" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.purchaseYear || ''}" min="1900" max="2026">
-                </div>
-                <div class="info-item">
-                    <label class="info-label">出售數量 <span style="color:var(--accent)">*</span></label>
-                    <input type="number" name="quantity" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.quantity || 1}" min="1" required>
-                </div>
-                <div class="info-item">
-                    <label class="info-label">成色</label>
-                    <select name="condition" class="filter-select" style="margin-top:0.5rem;">
-                        ${buildOptions(conditionOptions, app.condition)}
-                    </select>
-                </div>
-                <div class="info-item">
-                    <label class="info-label">功能狀況</label>
-                    <select name="functionStatus" class="filter-select" style="margin-top:0.5rem;">
-                        ${buildOptions(functionOptions, app.functionStatus)}
-                    </select>
-                </div>
-                <div class="info-item">
-                    <label class="info-label">交易模式 (不可改)</label>
-                    <input type="text" class="filter-input" style="margin-top:0.5rem; background:#f1f5f9; cursor:not-allowed;" value="${MODE_MAP[app.transactionMode]?.text || app.transactionMode}" disabled>
-                </div>
+    <form id="editSellForm" onsubmit="submitEditApplication(event)">
+        <!-- ========== 區塊 1：手錶基礎資訊 ========== -->
+        <h4 class="section-title-sm" style="margin-top:0;">
+            <i class="fas fa-clock" style="color: #11998e;"></i> 手錶基礎資訊 (可直接修改)
+        </h4>
+        <div class="info-grid">
+            <div class="info-item">
+                <label class="info-label">品牌 <span style="color:var(--accent)">*</span></label>
+                <input type="text" name="brand" class="filter-input" style="margin-top:0.5rem;" value="${escAttr(app.brand)}" required>
+            </div>
+            <div class="info-item">
+                <label class="info-label">系列 <span style="color:var(--accent)">*</span></label>
+                <input type="text" name="series" class="filter-input" style="margin-top:0.5rem;" value="${escAttr(app.series)}" required>
+            </div>
+            <div class="info-item">
+                <label class="info-label">型號 / 編號</label>
+                <input type="text" name="model" class="filter-input" style="margin-top:0.5rem;" value="${escAttr(app.model)}" placeholder="例如：116610LN">
+            </div>
+            <div class="info-item">
+                <label class="info-label">購買年份</label>
+                <input type="number" name="purchaseYear" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.purchaseYear || ''}" min="1900" max="2026">
+            </div>
+            <div class="info-item">
+                <label class="info-label">出售數量 <span style="color:var(--accent)">*</span></label>
+                <input type="number" name="quantity" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.quantity || 1}" min="1" required>
+            </div>
+            <div class="info-item">
+                <label class="info-label">成色</label>
+                <select name="condition" class="filter-select" style="margin-top:0.5rem;">
+                    ${buildOptions(conditionOptions, app.condition)}
+                </select>
+            </div>
+            <div class="info-item">
+                <label class="info-label">功能狀況</label>
+                <select name="functionStatus" class="filter-select" style="margin-top:0.5rem;">
+                    ${buildOptions(functionOptions, app.functionStatus)}
+                </select>
+            </div>
+            <div class="info-item">
+                <label class="info-label">交易模式 (不可改)</label>
+                <input type="text" class="filter-input" style="margin-top:0.5rem; background:#f1f5f9; cursor:not-allowed;" value="${MODE_MAP[app.transactionMode]?.text || app.transactionMode}" disabled>
+            </div>
+        </div>
+
+        <hr class="section-divider">
+        <!-- ========== 區塊 2：狀態與鑑定資訊 ========== -->
+        <h4 class="section-title-sm"><i class="fas fa-edit" style="color: #11998e;"></i> 申請狀態與鑑定資訊</h4>
+        <div class="info-grid">
+            <div class="info-item">
+                <label class="info-label">申請狀態 <span style="color:var(--accent)">*</span></label>
+                <select name="status" class="filter-select" style="margin-top:0.5rem;" required>
+                    ${buildOptions(statusOptions, app.status)}
+                </select>
+            </div>
+            <div class="info-item">
+                <label class="info-label">負責鑑定師</label>
+                <select name="appraiserId" class="filter-select" style="margin-top:0.5rem;">
+                    <option value="">未分配</option>
+                    ${appraisers.map(u => `
+                        <option value="${u.id}" ${currentAppraiserId === u.id ? 'selected' : ''}>
+                            ${u.username} ${u.name ? '(' + u.name + ')' : ''} [${u.role}]
+                        </option>
+                    `).join('')}
+                </select>
             </div>
 
-            <hr class="section-divider">
-            <!-- ========== 區塊 2：狀態與鑑定資訊 ========== -->
-            <h4 class="section-title-sm"><i class="fas fa-edit" style="color: #11998e;"></i> 申請狀態與鑑定資訊</h4>
-            <div class="info-grid">
-                <div class="info-item">
-                    <label class="info-label">申請狀態 <span style="color:var(--accent)">*</span></label>
-                    <select name="status" class="filter-select" style="margin-top:0.5rem;" required>
-                        ${buildOptions(statusOptions, app.status)}
-                    </select>
-                </div>
-                <div class="info-item">
-                    <label class="info-label">負責鑑定師</label>
-                    <select name="appraiserId" class="filter-select" style="margin-top:0.5rem;">
-                        <option value="">未分配</option>
+            <!-- 【核心新增】：指定負責人選項 -->
+            <div class="info-item">
+                <label class="info-label">指定負責人</label>
+                ${isOverrideRole ? `
+                    <select name="operatorId" class="filter-select" style="margin-top:0.5rem;">
+                        <option value="">自動 (當前登入者)</option>
                         ${appraisers.map(u => `
-                            <option value="${u.id}" ${currentAppraiserId === u.id ? 'selected' : ''}>
+                            <option value="${u.id}" ${currentOperatorId == u.id ? 'selected' : ''}>
                                 ${u.username} ${u.name ? '(' + u.name + ')' : ''} [${u.role}]
                             </option>
                         `).join('')}
                     </select>
-                </div>
+                ` : `
+                    <input type="text" class="filter-input" style="margin-top:0.5rem; background:#f1f5f9; cursor:not-allowed;" value="自動 (當前登入者)" disabled>
+                    <input type="hidden" name="operatorId" value="">
+                `}
+            </div>
 
-                <!-- 【核心新增】：指定負責人選項 -->
-                <div class="info-item">
-                    <label class="info-label">指定負責人</label>
-                    ${isOverrideRole ? `
-                        <select name="operatorId" class="filter-select" style="margin-top:0.5rem;">
-                            <option value="">自動 (當前登入者)</option>
-                            ${appraisers.map(u => `
-                                <option value="${u.id}" ${currentOperatorId == u.id ? 'selected' : ''}>
-                                    ${u.username} ${u.name ? '(' + u.name + ')' : ''} [${u.role}]
-                                </option>
-                            `).join('')}
-                        </select>
-                    ` : `
-                        <input type="text" class="filter-input" style="margin-top:0.5rem; background:#f1f5f9; cursor:not-allowed;" value="自動 (當前登入者)" disabled>
-                        <input type="hidden" name="operatorId" value="">
-                    `}
-                </div>
+            <div class="info-item">
+                <label class="info-label">預估價格 (HK$)</label>
+                <input type="number" name="estimatedPrice" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.estimatedPrice || ''}" step="0.01" placeholder="輸入預估價格">
+            </div>
 
-                <div class="info-item">
-                    <label class="info-label">預估價格 (HK$)</label>
-                    <input type="number" name="estimatedPrice" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.estimatedPrice || ''}" step="0.01" placeholder="輸入預估價格">
-                </div>
-                <div class="info-item">
-                    <label class="info-label">最終成交價 (HK$)</label>
-                    <input type="number" name="finalPrice" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.finalPrice || ''}" step="0.01" placeholder="輸入最終成交價">
-                </div>
-                <div class="info-item" style="grid-column: 1 / -1;">
-                    <label class="info-label">鑑定備註</label>
-                    <textarea name="appraisalNotes" class="filter-input" style="margin-top:0.5rem; min-height: 80px; resize: vertical;" placeholder="輸入鑑定師備註...">${escAttr(app.appraisalNotes)}</textarea>
+            <!-- 最終成交價輸入框 (添加 id 以便監聽價格變動) -->
+            <div class="info-item">
+                <label class="info-label">最終成交價 (HK$)</label>
+                <input type="number" id="editFinalPriceInput" name="finalPrice" class="filter-input no-spin" style="margin-top:0.5rem;" value="${app.finalPrice || ''}" step="0.01" placeholder="輸入最終成交價">
+
+                <!-- 價格變動提示區域 (位於輸入框和鑑定備註之間) -->
+                <div id="priceDiffAlert" style="margin-top: 0.5rem; padding: 0.6rem; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; color: #856404; font-size: 0.85rem; display: none; font-weight: 500; grid-column: 1 / -1;">
+                    <!-- JS 將在這裡填充內容 -->
                 </div>
             </div>
 
-            <hr class="section-divider">
-            <!-- ========== 區塊 2.5：實物圖片管理 ========== -->
-            <h4 class="section-title-sm"><i class="fas fa-images" style="color: #11998e;"></i> 實物圖片管理 (更換 / 移動 / 刪除)</h4>
-            <div id="imageManagerGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-bottom:1rem;"></div>
-            <small style="color:var(--gray); font-size:0.8rem; display:block; margin-bottom:1rem;">
-                <i class="fas fa-info-circle"></i> 說明：點「上傳/更換」選新圖；用下拉選單可將圖片移動到其他分類；點「刪除圖片」移除。
-            </small>
+            <!-- 鑑定備註 -->
+            <div class="info-item" style="grid-column: 1 / -1;">
+                <label class="info-label">鑑定備註</label>
+                <textarea name="appraisalNotes" class="filter-input" style="margin-top:0.5rem; min-height: 80px; resize: vertical;" placeholder="輸入鑑定師備註...">${escAttr(app.appraisalNotes)}</textarea>
+            </div>
 
-            <!-- ========== 【核心修改】區塊 2.6：關聯平台商品 (自定義滾動下拉框) ========== -->
-            <hr class="section-divider">
-            <h4 class="section-title-sm"><i class="fas fa-link" style="color: #11998e;"></i> 關聯平台商品 (分配商品)</h4>
-            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 1rem;">
-                <div id="assignedProductDisplay" style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--gray);">
-                    ${app.product ? `當前已分配：<strong style="color: var(--primary);">${app.product.description}</strong> (ID: ${app.product.productId})` : '當前狀態：<strong style="color: #dc3545;">尚未分配</strong>'}
-                </div>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <label class="info-label">搜尋品牌</label>
-                        <div style="display: flex; gap: 0.5rem; margin-top:0.5rem;">
-                            <div class="autocomplete-wrapper">
-                                <input type="text" id="editBrandInput" class="filter-input" placeholder="輸入或選擇品牌 (如 Rolex)" value="${escAttr(app.brand)}" autocomplete="off">
-                                <div id="brandAutocompleteList" class="autocomplete-list"></div>
-                            </div>
-                        </div>
-                    </div>
+            <!-- 【核心新增】：修改原因欄位 (僅在滿足最高權限修改非本人或已完成申請時顯示) -->
+            ${requireModificationReason ? `
+            <div class="info-item" style="grid-column: 1 / -1; margin-top: 1rem;">
+                <label class="info-label" style="color: #dc3545;">
+                    <i class="fas fa-exclamation-circle"></i> 修改原因 <span style="color:var(--accent)">*</span>
+                </label>
+                <textarea name="modificationReason" class="filter-input"
+                    style="margin-top:0.5rem; min-height: 80px; resize: vertical; border-color: #dc3545;"
+                    placeholder="⚠️ 作為最高權限修改非本人申請或已完成的申請，請務必填寫修改原因以供審計..."
+                    required></textarea>
+            </div>
+            ` : ''}
+        </div>
 
-                    <div class="info-item">
-                        <label class="info-label">選擇商品</label>
-                        <!-- 隱藏的 input，用於表單提交時獲取 productId -->
-                        <input type="hidden" name="productId" id="editProductSelectValue" value="${currentProductId}">
+        <hr class="section-divider">
+        <!-- ========== 區塊 2.5：實物圖片管理 ========== -->
+        <h4 class="section-title-sm"><i class="fas fa-images" style="color: #11998e;"></i> 實物圖片管理 (更換 / 移動 / 刪除)</h4>
+        <div id="imageManagerGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; margin-bottom:1rem;"></div>
+        <small style="color:var(--gray); font-size:0.8rem; display:block; margin-bottom:1rem;">
+            <i class="fas fa-info-circle"></i> 說明：點「上傳/更換」選新圖；用下拉選單可將圖片移動到其他分類；點「刪除圖片」移除。
+        </small>
 
-                        <!-- 自定義下拉框外層 -->
-                        <div class="custom-dropdown-wrapper" style="position: relative; margin-top: 0.5rem;">
-                            <!-- 觸發器 -->
-                            <div class="custom-dropdown-trigger filter-input" id="productDropdownTrigger" onclick="toggleProductDropdown()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                                <span id="productDropdownText">${currentProductText}</span>
-                                <i class="fas fa-chevron-down"></i>
-                            </div>
-
-                            <!-- 下拉選項列表 (核心：限制最大高度並允許滾動) -->
-                            <div class="custom-dropdown-options" id="productDropdownOptions">
-                                <!-- JS 會動態填充這裡 -->
-                            </div>
+        <!-- ========== 區塊 2.6：關聯平台商品 (自定義滾動下拉框) ========== -->
+        <hr class="section-divider">
+        <h4 class="section-title-sm"><i class="fas fa-link" style="color: #11998e;"></i> 關聯平台商品 (分配商品)</h4>
+        <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e9ecef; margin-bottom: 1rem;">
+            <div id="assignedProductDisplay" style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--gray);">
+                ${app.product ? `當前已分配：<strong style="color: var(--primary);">${app.product.description}</strong> (ID: ${app.product.productId})` : '當前狀態：<strong style="color: #dc3545;">尚未分配</strong>'}
+            </div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label class="info-label">搜尋品牌</label>
+                    <div style="display: flex; gap: 0.5rem; margin-top:0.5rem;">
+                        <div class="autocomplete-wrapper">
+                            <input type="text" id="editBrandInput" class="filter-input" placeholder="輸入或選擇品牌 (如 Rolex)" value="${escAttr(app.brand)}" autocomplete="off">
+                            <div id="brandAutocompleteList" class="autocomplete-list"></div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <hr class="section-divider">
-            <!-- ========== 區塊 3：其餘原始資料 (唯讀) ========== -->
-            <h4 class="section-title-sm"><i class="fas fa-info-circle"></i> 其他原始資料 (唯讀)</h4>
-            <div class="info-grid" style="opacity: 0.8; margin-bottom: 0;">
-                <div class="info-item"><span class="info-label">申請人</span><span class="info-value">${app.user?.username || '未知'}</span></div>
-                <div class="info-item"><span class="info-label">提交時間</span><span class="info-value">${formatDate(app.createdAt)}</span></div>
-            </div>
+                <div class="info-item">
+                    <label class="info-label">選擇商品</label>
+                    <!-- 隱藏的 input，用於表單提交時獲取 productId -->
+                    <input type="hidden" name="productId" id="editProductSelectValue" value="${currentProductId}">
 
-            <div style="display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;">
-                <button type="button" class="btn-modal btn-cancel" onclick="cancelEditAndShowDetail()">
-                    <i class="fas fa-times"></i> 取消
-                </button>
-                <button type="submit" class="btn-modal" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);">
-                    <i class="fas fa-save"></i> 儲存變更
-                </button>
-            </div>
-        </form>
-    `;
+                    <!-- 自定義下拉框外層 -->
+                    <div class="custom-dropdown-wrapper" style="position: relative; margin-top: 0.5rem;">
+                        <!-- 觸發器 -->
+                        <div class="custom-dropdown-trigger filter-input" id="productDropdownTrigger" onclick="toggleProductDropdown()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                            <span id="productDropdownText">${currentProductText}</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
 
+                        <!-- 下拉選項列表 (核心：限制最大高度並允許滾動) -->
+                        <div class="custom-dropdown-options" id="productDropdownOptions">
+                            <!-- JS 會動態填充這裡 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <hr class="section-divider">
+        <!-- ========== 區塊 3：其餘原始資料 (唯讀) ========== -->
+        <h4 class="section-title-sm"><i class="fas fa-info-circle"></i> 其他原始資料 (唯讀)</h4>
+        <div class="info-grid" style="opacity: 0.8; margin-bottom: 0;">
+            <div class="info-item"><span class="info-label">申請人</span><span class="info-value">${app.user?.username || '未知'}</span></div>
+            <div class="info-item"><span class="info-label">提交時間</span><span class="info-value">${formatDate(app.createdAt)}</span></div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;">
+            <button type="button" class="btn-modal btn-cancel" onclick="cancelEditAndShowDetail()">
+                <i class="fas fa-times"></i> 取消
+            </button>
+            <button type="submit" class="btn-modal" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; box-shadow: 0 4px 12px rgba(17, 153, 142, 0.3);">
+                <i class="fas fa-save"></i> 儲存變更
+            </button>
+        </div>
+    </form>
+`;
+
+            // 渲染 HTML
             document.getElementById('detailContent').innerHTML = editHtml;
             document.querySelector('.modal-footer').style.display = 'none';
 
@@ -2282,6 +2318,51 @@
             // 如果原有品牌，則加載商品列表
             if (app.brand) {
                 loadProductsForEdit();
+            }
+
+            // 添加價格變動監聽邏輯
+            const priceInput = document.getElementById('editFinalPriceInput');
+            const diffAlert = document.getElementById('priceDiffAlert');
+
+            if (priceInput && diffAlert) {
+                priceInput.addEventListener('input', function() {
+                    // 1. 檢查狀態是否為 COMPLETED
+                    if (!isStatusCompleted) {
+                        diffAlert.style.display = 'none';
+                        return;
+                    }
+
+                    const newVal = parseFloat(this.value);
+
+                    // 如果輸入為空或非數字，隱藏提示
+                    if (isNaN(newVal)) {
+                        diffAlert.style.display = 'none';
+                        return;
+                    }
+
+                    const diff = newVal - originalFinalPrice;
+
+                    if (diff !== 0) {
+                        diffAlert.style.display = 'block';
+                        const diffAbs = Math.abs(diff);
+                        // 判斷是新增還是減少
+                        const actionText = diff > 0 ? '新增' : '減少';
+                        // 根據增減設置文字顏色 (新增綠色，減少紅色)
+                        const textColor = diff > 0 ? '#28a745' : '#dc3545';
+
+                        // 按照要求生成文案
+                        diffAlert.innerHTML = `
+                    <i class="fas fa-exclamation-triangle" style="margin-right: 5px;"></i>
+                    原價 HK$ ${originalFinalPrice.toLocaleString()}，現填 HK$ ${newVal.toLocaleString()}，
+                    <strong style="color: ${textColor}">
+                        ${actionText}了 HK$ ${diffAbs.toLocaleString()}
+                    </strong>
+                `;
+                    } else {
+                        // 如果價格沒變，隱藏提示
+                        diffAlert.style.display = 'none';
+                    }
+                });
             }
         }
 
@@ -2478,7 +2559,7 @@
 
             // ===== 文字欄位 =====
             ['brand', 'series', 'model', 'purchaseYear', 'quantity', 'condition', 'functionStatus',
-                'status', 'estimatedPrice', 'finalPrice', 'appraisalNotes', 'appraiserId', 'productId'].forEach(key => {
+                'status', 'estimatedPrice', 'finalPrice', 'appraisalNotes', 'appraiserId', 'productId','modificationReason','operatorId'].forEach(key => {
                     const el = form.querySelector(`[name="${key}"]`);
                     if (el) fd.append(key, el.value);
                 });

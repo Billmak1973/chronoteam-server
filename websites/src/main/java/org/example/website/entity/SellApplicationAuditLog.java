@@ -34,10 +34,10 @@ public class SellApplicationAuditLog {
     private String actionType; // 例如: "UPDATE_APPLICATION", "UPDATE_TO_COMPLETED"
 
     @Column(name = "changed_fields", columnDefinition = "TEXT", nullable = false)
-    private String changedFields; // JSON 格式記錄所有變更，例如:
-    // [{"fieldName":"finalPrice","oldValue":"10000","newValue":"12000"},{"fieldName":"status","oldValue":"QUOTED","newValue":"COMPLETED"}]
+    private String changedFields; // JSON 格式記錄所有變更
 
-    @Column(name = "remark", columnDefinition = "TEXT")
+    // 【優化點】：顯式聲明 nullable = true，讓代碼意圖更清晰，防止未來被誤改
+    @Column(name = "remark", columnDefinition = "TEXT", nullable = true)
     private String remark; // 修改原因備註
 
     @CreationTimestamp
