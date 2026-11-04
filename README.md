@@ -1,33 +1,76 @@
-# ⌚ ChronoTeam 專業二手名錶交易平台
+# 📖 項目簡介 (Project Overview)
 
-## 📖 項目簡介
-**ChronoTeam** 是一個致力於提供安全、透明、專業的二奢名錶交易生態圈平台。系統涵蓋了完整的買賣家交易閉環、豐富的社區互動機制、嚴格的帳號安全與處罰體系，以及高度定制化的管理員後台。前端採用 **React (Hooks) + Thymeleaf** 混合渲染架構，後端基於 **Spring Boot 3 + Spring Security + JPA**，並引入 **Redis** 進行分佈式限流與緩存，確保高併發下的數據一致性與系統安全性。
+**ChronoTeam** 是一個專為高端二奢名錶市場量身打造的**全鏈路交易與社區生態平台**。系統不僅涵蓋了標準的 B2C 電商購物閉環，更深度結合了二手名錶行業特有的 **「出售申請 -> 專業鑑定 -> 門店履約 -> 財務結算」** 業務流。
+
+平台採用 **React (Hooks) + Thymeleaf** 的混合渲染架構，兼顧了 SEO 首屏性能與高互動組件（如富文本評論區、實時購物車）的極致體驗。後端基於 **Spring Boot 3** 構建，引入了 **Redis 分佈式限流**、**SSE 實時消息推送**、**Jsoup 嚴格 XSS 防禦** 以及 **複雜的財務報表快照機制**，確保在高併發交易與嚴格的社區風控下，數據的絕對一致性與安全性。
+
+### 🌟 核心業務亮點
+1.  **全維度庫存與財務審計**：支援線上總倉與線下門店庫存的原子調撥；首創「單價快照」機制的季度財務報表，精準記錄 GMV、退貨退款、門店收購成本，確保財務數據可溯源、防篡改。
+2.  **多門店履約與動態配送**：門店支援「統一/每日獨立」營業時間、暫停營業及退貨預約配置；結帳系統根據全局截單時間與多種配送模式（次日達/指定星期/自定義天數），動態計算並展示可選送貨日期。
+3.  **嚴格的社區風控與處罰體系**：基於 Redis ZSet 滑動窗口的雙重保險限流機制（全局/單條評論），支援管理員全局禁言、永久拉黑、用戶申訴與定時自動解封，維護社區純淨度。
+4.  **沉浸式社區互動矩陣**：支援富文本評論、樓中樓回覆、@提及、點讚/踩動畫；結合 SSE (Server-Sent Events) 實現未讀消息與互動通知的毫秒級實時推送。
+5.  **多主題動態切換**：全局支援「白天 (Day)」、「夜晚 (Night)」、「七夕限定 (Qixi)」三套視覺主題，包含星空、霓虹、心跳等複雜 CSS 動畫，提供極致的視覺體驗。
+
+---
+
+# 🛠️ 技術棧 (Tech Stack)
+
+## 🖥️ 後端 (Backend)
+*   **核心框架**：Java 17+, Spring Boot 3.x, Spring MVC
+*   **安全與認證**：
+    *   **Spring Security**：自定義 `CustomUserDetails` 將用戶 ID 與 Role 存入 Session，實現**零查庫開銷**的權限校驗。
+    *   **XSS 防禦**：引入 **Jsoup** 配置嚴格的 HTML 白名單（Safelist），在評論/回覆提交時自動清洗惡意腳本，同時保留富文本格式。
+*   **數據持久化**：
+    *   **Spring Data JPA & Hibernate**：熟練運用 JPQL、Native Query、`Specification` 動態多條件查詢。
+    *   **樂觀鎖與原子操作**：在庫存扣減、收藏數/訂閱數增減時，使用 JPQL `UPDATE ... SET count = count + 1` 或 `CASE WHEN` 防止併發超賣與數據覆蓋。
+*   **緩存與分佈式中間件**：**Redis**
+    *   使用 **ZSet (Sorted Set)** 實現滑動窗口限流算法。
+    *   配置 `GenericJackson2JsonRedisSerializer` 解決 `LocalDateTime` 序列化與多態類型還原問題。
+    *   分佈式封禁標記（Redis + DB 雙重保險，防止 Redis 丟失導致封禁失效）。
+*   **實時通訊**：**Spring SseEmitter** (Server-Sent Events)，實現單向實時消息推送（未讀通知、互動提醒）。
+*   **API 文檔**：Swagger / OpenAPI 3 (`springdoc-openapi`)，全量接口配備詳細的 `@Operation` 與 `@ApiResponse` 註解。
+*   **定時任務**：Spring Scheduling (`@Scheduled`)，用於每日財務報表初始化、過期封禁狀態懶檢查與自動解封、瀏覽歷史定期清理。
+
+## 🎨 前端 (Frontend)
+*   **混合渲染架構**：
+    *   **Thymeleaf (SSR)**：負責頁面骨架、SEO 友好型頁面（首頁、商品詳情、關於我們）及後台管理系統的 Fragment 組件化復用。
+    *   **React 18 (Hooks)**：負責高互動、高狀態頻繁變化的模塊（如：評論區 `ReviewsContainer`、購物車下拉 `CartDropdown`、收藏按鈕 `FavoriteButton`）。
+*   **狀態管理**：**Zustand** (輕量級狀態庫，管理購物車選中狀態、彈窗開關，避免 Context 過度渲染)。
+*   **基礎技術**：HTML5, CSS3, Vanilla JavaScript (ES6+)。
+*   **JS 模塊化設計**：採用命名空間模式（如 `window.Cart`, `window.Auth`, `window.ChronoTeamOrders`）封裝全局邏輯，避免變量污染，並提供 Bridge Layer 兼容 Thymeleaf 的 `onclick` 內聯調用。
+*   **UI 與視覺特效**：
+    *   **CSS Variables** 驅動的全局主題切換（Day/Night/Qixi）。
+    *   **自研 CSS 動畫**：星空閃爍 (`starsTwinkle`)、霓虹流光 (`nightGlow`)、心跳脈衝 (`iconPulse`)、平滑過渡與彈性緩動 (`cubic-bezier`)。
+    *   **FontAwesome 6** 圖標庫。
+*   **富文本編輯器**：基於 `contentEditable` + `document.execCommand` 自研輕量級工具欄，**核心修復了 IME 輸入法（如拼音/中文）組合時的 React 狀態重渲染導致光標錯亂問題**（通過 `isComposing` Ref 攔截）。
+
+## 🗄️ 數據庫與存儲 (Database & Storage)
+*   **關係型數據庫**：MySQL 8.0+ (複雜關聯設計，多維度索引優化，如聯合唯一約束防止重複收藏/訂閱)。
+*   **文件存儲**：本地文件系統映射 (Spring `WebMvcConfigurer` 配置 `/uploads/**` 靜態資源路由)，支援多文件批量上傳與路徑 JSON 化存儲。
 
 ---
 
-## 🛠️ 技術棧 (Tech Stack)
+# 🚀 核心業務模塊深度解析 (Key Business Modules)
 
-### 後端 (Backend)
-*   **語言與框架**：Java 17+, Spring Boot 3.x
-*   **安全與認證**：Spring Security, BCrypt, 自定義 `CustomUserDetails` (零查庫權限校驗)
-*   **數據持久化**：Spring Data JPA, Hibernate, MySQL 8.0+ (JPQL, Native Query, 樂觀鎖)
-*   **緩存與中間件**：Redis (ZSet 滑動窗口限流, JSON 序列化, 分佈式封禁標記)
-*   **安全防護**：Jsoup (HTML 白名單過濾, 嚴格 XSS 防禦)
-*   **API 文檔**：Swagger / OpenAPI 3 (`springdoc-openapi`)
-*   **其他**：Lombok, Jakarta Validation, Spring Scheduling (`@Scheduled`)
+### 1. 📦 全鏈路庫存與財務審計系統
+*   **多倉庫調撥**：支援「線上總倉 ↔ 線下門店」及「門店 ↔ 門店」的庫存調撥。每次調撥生成唯一的 `transferBatchId` (UUID)，並同時寫入出入庫兩條 `InventoryAdjustmentLog`，確保賬實相符。
+*   **財務報表快照**：
+    *   **每日/門店報表**：實時累加線上/線下 GMV、訂單數、退貨退款金額、門店收購成本。
+    *   **季度銷售報表**：採用 **「年份+季度+商品ID+單價」唯一約束**。若同一商品單價發生變更，系統不會合併數據，而是生成新的快照記錄，確保歷史財務數據的絕對精確與可追溯。
+*   **售後財務平帳**：當售後申請（退貨/換貨）狀態變更為 COMPLETED 時，系統自動觸發財務扣減邏輯，精確計算差價並同步更新對應日期的 Daily/Store 報表。
 
-### 前端 (Frontend)
-*   **核心架構**：React 18 (Hooks, 狀態管理, 樂觀更新 UI), Thymeleaf (SSR 首屏渲染)
-*   **基礎技術**：HTML5, CSS3 (CSS Variables 動態主題), Vanilla JavaScript (ES6+)
-*   **UI 與圖標**：FontAwesome 6, 自定義 CSS 動畫 (星空/霓虹/心跳/平滑過渡)
-*   **富文本編輯**：`contentEditable` + `document.execCommand` (自研輕量級工具欄，支持 IME 輸入法防抖)
+### 2. 🏪 多門店履約與動態配送計算
+*   **門店複雜配置**：門店支援「統一營業時間」或「每日獨立營業時間」（JSON 格式存儲），並支援設置「暫停營業日期範圍」與「固定休息日」。
+*   **智能截單與日期計算**：結帳頁面根據後台配置的配送模式（`NEXT_DAY` / `SPECIFIC_DAYS` / `CUSTOM`）與全局截單時間（`GLOBAL_CUTOFF_TIME`），結合當前時間，**動態計算並過濾出未來可用的送貨/取貨日期**，自動標記已過期或超出營業時間的選項。
 
-### 工具與環境 (Tools & Environment)
-*   **構建與依賴**：Maven
-*   **版本控制**：Git
-*   **開發環境**：IntelliJ IDEA
+### 3. 🛡️ 社區風控與多維度處罰體系
+*   **滑動窗口限流**：`RateLimitService` 使用 Redis ZSet 記錄用戶操作時間戳，實現「1分鐘內單條評論最多10次操作」、「全局最多20次操作」的精準限流。
+*   **處罰與申訴閉環**：管理員可執行「有期禁言」或「永久拉黑」，系統自動生成關聯的 `Notification` 與 `AdminPenalty` 記錄。用戶可透過站內信發起申訴，管理員審核後自動觸發狀態流轉（`APPROVED` 解除處罰 / `REJECTED` 維持原判），並支援定時任務自動將過期封禁標記為 `EXPIRED`。
 
----
+### 4. 💬 沉浸式互動與實時通知矩陣
+*   **樓中樓與 @提及**：評論區支援無限層級的樓中樓回覆，後端使用正則表達式提取 `@username`，並批量校驗用戶存在性，前端渲染為可點擊的藍色高亮標籤。
+*   **SSE 實時推送**：`NotificationStreamController` 為每個登入用戶建立長連接。當發生回覆、@提及、點讚時，後端透過 `NotificationPushService` 毫秒級推送未讀計數變化，前端導航欄紅點與下拉菜單實時閃爍更新。
+*   **到貨公告系統**：區分於普通的系統通知，引入 `Announcement` 與 `AnnouncementReceipt` 一對多架構。管理員一鍵觸發補貨公告，系統批量為所有訂閱用戶生成接收記錄，並支援已讀/未讀狀態追蹤。
 
 ## 🚀 核心功能模塊
 
