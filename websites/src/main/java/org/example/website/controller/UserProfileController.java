@@ -10,8 +10,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.AddressRequest;
 import org.example.website.dto.AddressUpdateRequest;
 import org.example.website.dto.Result;
+import org.example.website.entity.Staff;
 import org.example.website.entity.User;
 import org.example.website.entity.UserAddress;
+import org.example.website.repository.StaffRepository;
 import org.example.website.repository.UserAddressRepository;
 import org.example.website.repository.UserRepository;
 import org.example.website.security.CustomUserDetails;
@@ -46,9 +48,11 @@ public class UserProfileController {
 
     // 注入 UserAddressService 處理獨立地址表
     private final UserAddressService userAddressService;
+    private final StaffRepository staffRepository; // 【新增】注入 StaffRepository
 
-    public UserProfileController(UserAddressService userAddressService) {
+    public UserProfileController(UserAddressService userAddressService, StaffRepository staffRepository) {
         this.userAddressService = userAddressService;
+        this.staffRepository = staffRepository;
     }
 
     /**
@@ -63,7 +67,7 @@ public class UserProfileController {
 
     @Operation(
             summary = "更新用戶個人資料",
-            description = "允許用戶更新用戶名、地址和備用地址。員工角色(ADMIN/SALES/COURIER/APPRAISER)還可更新郵箱、手機和工作電話。"
+            description = "允許用戶更新用戶名、地址和備用地址。員工角色還可更新郵箱、手機和工作電話。"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "更新成功，或返回特定業務提示", content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Result.class))),
@@ -71,13 +75,14 @@ public class UserProfileController {
             @ApiResponse(responseCode = "404", description = "用戶不存在")
     })
     @PutMapping("/update-profile")
+    @Transactional // 確保 User 和 Staff 的更新在同一個事務中
     public ResponseEntity<?> updateProfile(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "需要更新的字段鍵值對。支持的 key: 'username', 'address', 'backupAddress', 'email', 'phone', 'workPhone'。空字符串表示清空該字段。",
                     required = true,
                     content = @io.swagger.v3.oas.annotations.media.Content(
                             schema = @io.swagger.v3.oas.annotations.media.Schema(
-                                    example = "{\"username\": \"new_username\", \"address\": \"九龍尖沙咀\", \"backupAddress\": \"\"}"
+                                    example = "{\"username\": \"new_username\", \"address\": \"九龍尖沙咀\", \"workPhone\": \"12345678\"}"
                             )
                     )
             )
@@ -97,11 +102,9 @@ public class UserProfileController {
             String value = entry.getValue();
 
             if (key.equals("username")) {
-
                 if (oldUsername.equalsIgnoreCase("admin")) {
                     return ResponseEntity.ok(Map.of("success", false, "message", "系統管理員帳號不允許修改用戶名"));
                 }
-
                 if (value.equals(oldUsername)) {
                     return ResponseEntity.ok(Map.of("success", false, "message", "SAME_USERNAME"));
                 }
@@ -110,13 +113,11 @@ public class UserProfileController {
                 }
                 user.setUsername(value);
             }
-            // === 核心修改：地址字段交由 UserAddressService 處理 ===
+            // === 地址字段交由 UserAddressService 處理 ===
             else if (key.equals("address")) {
-                // ranking = 1 代表主地址。若 value 為空，Service 層會自動執行刪除邏輯
                 userAddressService.updateOrCreateAddress(user, 1, value.isEmpty() ? null : value);
             }
             else if (key.equals("backupAddress")) {
-                // ranking = 2 代表備用地址。若 value 為空，Service 層會自動執行刪除邏輯
                 userAddressService.updateOrCreateAddress(user, 2, value.isEmpty() ? null : value);
             }
             // === 員工專屬字段校驗與更新 ===
@@ -138,11 +139,21 @@ public class UserProfileController {
                 }
                 user.setPhone(value.isEmpty() ? null : value);
             }
+            // 【核心修改】：處理 workPhone，現在它屬於 Staff 實體
             else if (key.equals("workPhone")) {
                 if (!isStaff) {
                     return ResponseEntity.ok(Map.of("success", false, "message", "無權修改工作電話"));
                 }
-                user.setWorkPhone(value.isEmpty() ? null : value);
+
+                // 查找該用戶是否已有 Staff 記錄，若無則創建新記錄
+                Staff staff = staffRepository.findByUser(user).orElse(new Staff());
+                staff.setUser(user); // 確保關聯正確
+
+                // 更新工作電話
+                staff.setWorkPhone(value.isEmpty() ? null : value);
+
+                // 保存 Staff 記錄 (因為有 @Transactional，這會和下面的 user 保存一起在事務中提交)
+                staffRepository.save(staff);
             }
         }
 

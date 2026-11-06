@@ -8,13 +8,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.Result;
-import org.example.website.entity.AfterSalesRequest;
-import org.example.website.entity.AfterSalesRequestItem;
-import org.example.website.entity.Order;
-import org.example.website.entity.OrderItem;
+import org.example.website.entity.*;
 import org.example.website.repository.AfterSalesRequestRepository;
 import org.example.website.repository.OrderItemRepository;
 import org.example.website.repository.OrderRepository;
+import org.example.website.repository.StaffRepository;
 import org.example.website.service.OrderService;
 import org.example.website.service.SystemConfigService;
 import org.example.website.util.PaginationUtils;
@@ -45,15 +43,17 @@ public class OrderController {
     private final OrderService orderService;
     private final AfterSalesRequestRepository afterSalesRequestRepository;
     private final SystemConfigService systemConfigService;
+    private final StaffRepository staffRepository;
 
     // 構造函數注入
     public OrderController(OrderRepository orderRepository, OrderItemRepository orderItemRepository,
-                           OrderService orderService, AfterSalesRequestRepository afterSalesRequestRepository, SystemConfigService systemConfigService) {
+                           OrderService orderService, AfterSalesRequestRepository afterSalesRequestRepository, SystemConfigService systemConfigService, StaffRepository staffRepository) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.orderService = orderService;
         this.afterSalesRequestRepository = afterSalesRequestRepository;
         this.systemConfigService = systemConfigService;
+        this.staffRepository = staffRepository;
     }
 
 
@@ -183,7 +183,6 @@ public class OrderController {
 
         // 3. 根據篩選條件執行不同的查詢邏輯 (互斥)
         if (hasAfterSalesFilter) {
-            // 將字符串轉換為枚舉 (如果為空則傳 null，JPQL 會自動忽略該條件)
             AfterSalesRequest.RequestType reqType = null;
             if (requestType != null && !requestType.trim().isEmpty()) {
                 reqType = AfterSalesRequest.RequestType.valueOf(requestType.trim().toUpperCase());
@@ -196,12 +195,10 @@ public class OrderController {
 
             String cleanProductName = (productName != null && !productName.trim().isEmpty()) ? productName.trim() : null;
 
-            // 調用帶售後篩選條件的查詢
             orderPage = orderRepository.findPaidOrdersWithAfterSalesFilter(
                     username, reqType, reqStatus, cleanProductName, pageable
             );
         } else if (hasOrderStatusFilter) {
-            // 貨物狀態篩選
             Order.OrderStatus status = null;
             try {
                 status = Order.OrderStatus.valueOf(orderStatus.trim().toUpperCase());
@@ -209,16 +206,37 @@ public class OrderController {
                 status = null; // 無效的狀態值，JPQL 會忽略
             }
 
-            // 調用帶貨物狀態篩選條件的查詢
             orderPage = orderRepository.findPaidOrdersWithStatusFilter(
                     username, status, pageable
             );
         } else {
-            // 無任何篩選條件，使用原有查詢
             orderPage = orderRepository.findPaidOrders(username, pageable);
         }
 
-        // 4. 數據清洗與映射 (保持原有邏輯不變)
+        // ==========================================
+        // 0. 【前置優化】：批量獲取當前頁所有快遞員的 workPhone，避免 N+1 查詢
+        // ==========================================
+        List<Long> courierUserIds = orderPage.getContent().stream()
+                .map(order -> order.getCourier())
+                .filter(java.util.Objects::nonNull)
+                .map(user -> user.getId())
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+
+        // 【核心修復】：使用 putAll 保持 courierWorkPhoneMap 為 effectively final，避免 Lambda 表達式報錯
+        Map<Long, String> courierWorkPhoneMap = new java.util.HashMap<>();
+        if (!courierUserIds.isEmpty()) {
+            List<Staff> staffs = staffRepository.findByUser_IdIn(courierUserIds);
+            courierWorkPhoneMap.putAll(staffs.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            s -> s.getUser().getId(),
+                            s -> (s.getWorkPhone() != null && !s.getWorkPhone().trim().isEmpty()) ? s.getWorkPhone() : "預留電話"
+                    )));
+        }
+
+        // ==========================================
+        // 4. 數據清洗與映射
+        // ==========================================
         List<Map<String, Object>> cleanOrders = orderPage.getContent().stream().map(order -> {
             Map<String, Object> map = new HashMap<>();
             map.put("orderNo", order.getOrderNo());
@@ -248,13 +266,17 @@ public class OrderController {
             }
 
             // ==========================================
-            // 提取快遞員資訊 (username 和 workPhone)
+            // 【核心替換區】：提取快遞員資訊 (僅 username 和 workPhone，絕不牽扯門店)
             // ==========================================
             if (order.getCourier() != null) {
                 Map<String, Object> courierMap = new HashMap<>();
                 courierMap.put("username", order.getCourier().getUsername());
-                // 防止 workPhone 為 null 導致前端顯示 "null"
-                courierMap.put("workPhone", order.getCourier().getWorkPhone() != null ? order.getCourier().getWorkPhone() : "預留電話");
+
+                // 從剛才批量查詢的 Map 中直接獲取 workPhone，若無則顯示預設值
+                // 現在 courierWorkPhoneMap 是 effectively final，可以安全在 Lambda 中使用
+                String workPhone = courierWorkPhoneMap.getOrDefault(order.getCourier().getId(), "預留電話");
+                courierMap.put("workPhone", workPhone);
+
                 map.put("courier", courierMap);
             } else {
                 map.put("courier", null);

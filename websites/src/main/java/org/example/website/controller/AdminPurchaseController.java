@@ -14,6 +14,7 @@ import org.example.website.dto.Result;
 import org.example.website.entity.*;
 import org.example.website.repository.InventoryAdjustmentLogRepository;
 import org.example.website.repository.PurchaseOrderRepository;
+import org.example.website.repository.StaffRepository;
 import org.example.website.repository.UserRepository;
 import org.example.website.service.ProductService;
 import org.example.website.service.PurchaseOrderService;
@@ -47,19 +48,24 @@ public class AdminPurchaseController {
     // 新增的依賴注入
     private final PurchaseOrderService purchaseOrderService;
     private final UserRepository userRepository;
+    private final StaffRepository staffRepository;
 
     public AdminPurchaseController(PurchaseOrderRepository purchaseOrderRepository,
                                    InventoryAdjustmentLogRepository adjustmentLogRepository,
                                    ProductService productService,
                                    PurchaseOrderService purchaseOrderService,
-                                   UserRepository userRepository) {
+                                   UserRepository userRepository, StaffRepository staffRepository) {
         this.purchaseOrderRepository = purchaseOrderRepository;
         this.adjustmentLogRepository = adjustmentLogRepository;
         this.productService = productService;
         this.purchaseOrderService = purchaseOrderService;
         this.userRepository = userRepository;
+        this.staffRepository = staffRepository;
     }
 
+    // ==========================================
+    // 1. 頁面視圖渲染 (僅返回 HTML 骨架，數據由前端 AJAX 獲取)
+    // ==========================================
     // ==========================================
     // 1. 頁面視圖渲染 (僅返回 HTML 骨架，數據由前端 AJAX 獲取)
     // ==========================================
@@ -74,21 +80,24 @@ public class AdminPurchaseController {
                 .collect(Collectors.toCollection(TreeSet::new));
         model.addAttribute("allBrands", allBrands);
 
-        // 2. 【核心修復】獲取當前用戶的 storeId
+        // 2. 【核心修復】獲取當前用戶的 storeId (改為透過 Staff 表查詢)
         Long currentUserStoreId = null;
         if (authentication != null && authentication.isAuthenticated() &&
                 !"anonymousUser".equals(authentication.getPrincipal())) {
 
             String username = authentication.getName();
+            // 先獲取 User 實體
             Optional<User> userOpt = userRepository.findByUsername(username);
 
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
-                if (user.getStore() != null) {
-                    currentUserStoreId = user.getStore().getStoreId();
-                  //  System.out.println(" 當前用戶 [" + username + "] 所屬門店 ID: " + currentUserStoreId);
-                } else {
-                //    System.out.println(" 當前用戶 [" + username + "] 未關聯門店");
+
+                // 【修改處】：透過 StaffRepository 查詢該用戶是否有員工檔案及關聯門店
+                Optional<Staff> staffOpt = staffRepository.findByUser(user);
+
+                if (staffOpt.isPresent() && staffOpt.get().getStore() != null) {
+                    currentUserStoreId = staffOpt.get().getStore().getStoreId();
+                    // System.out.println(" 當前用戶 [" + username + "] 所屬門店 ID: " + currentUserStoreId);
                 }
             }
         }

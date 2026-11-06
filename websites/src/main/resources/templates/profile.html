@@ -1070,23 +1070,24 @@
                     <span class="info-label"><i class="fas fa-briefcase"></i> 工作電話</span>
                     <div class="info-action-group">
                         <div class="view-mode" id="view-workPhone">
-                            <span class="info-value"
-                                th:text="${user.workPhone != null ? user.workPhone : '未設置'}">未設置</span>
+                            <!-- 修改：使用獨立的 workPhone 變量 -->
+                            <span class="info-value" th:text="${workPhone != null and workPhone != '未設置' ? workPhone : '未設置'}">未設置</span>
 
-                            <button class="btn-icon btn-edit" th:if="${user.workPhone != null}"
-                                th:attr="data-val=${user.workPhone}" onclick="toggleEdit('workPhone', this.dataset.val)"
-                                data-tooltip="編輯">
+                            <button class="btn-icon btn-edit" th:if="${workPhone != null and workPhone != '未設置'}"
+                                    th:attr="data-val=${workPhone}" onclick="toggleEdit('workPhone', this.dataset.val)"
+                                    data-tooltip="編輯">
                                 <i class="fas fa-pen"></i>
                             </button>
 
-                            <button class="btn-icon btn-add" th:if="${user.workPhone == null}"
-                                onclick="toggleEdit('workPhone', '')" data-tooltip="增加工作電話">
+                            <button class="btn-icon btn-add" th:if="${workPhone == null or workPhone == '未設置'}"
+                                    onclick="toggleEdit('workPhone', '')" data-tooltip="增加工作電話">
                                 <i class="fas fa-plus"></i> 增加工作電話
                             </button>
                         </div>
                         <div class="edit-mode" id="edit-workPhone">
-                            <input type="text" id="input-workPhone" class="form-input" th:value="${user.workPhone}"
-                                placeholder="請輸入工作電話...">
+                            <!-- 修改：如果是'未設置'則顯示為空字符串，方便用戶輸入 -->
+                            <input type="text" id="input-workPhone" class="form-input" th:value="${workPhone == '未設置' ? '' : workPhone}"
+                                   placeholder="請輸入工作電話...">
                             <button class="btn-action btn-save" onclick="saveField('workPhone')">保存</button>
                             <button class="btn-action btn-cancel" onclick="cancelEdit('workPhone')">取消</button>
                         </div>

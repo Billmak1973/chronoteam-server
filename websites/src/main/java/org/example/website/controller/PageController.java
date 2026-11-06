@@ -56,6 +56,7 @@ public class PageController {
     private final OfflineStoreRepository offlineStoreRepository;
     private final UserAddressRepository userAddressRepository;
     private final AfterSalesRequestRepository afterSalesRequestRepository; // 新增注入
+    private final StaffRepository staffRepository;
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
@@ -71,7 +72,7 @@ public class PageController {
                           AdminPenaltyRepository adminPenaltyRepository,
                           AdminPenaltyService adminPenaltyService, SystemConfigService systemConfigService,
                           CartService cartService, ProductService productService, AnnouncementReceiptRepository announcementReceiptRepository,
-                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository, NotificationService notificationService, ReviewReactionRepository reviewReactionRepository, OfflineStoreRepository offlineStoreRepository, UserAddressRepository userAddressRepository, AfterSalesRequestRepository afterSalesRequestRepository) {
+                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository, NotificationService notificationService, ReviewReactionRepository reviewReactionRepository, OfflineStoreRepository offlineStoreRepository, UserAddressRepository userAddressRepository, AfterSalesRequestRepository afterSalesRequestRepository, StaffRepository staffRepository) {
         this.userService = userService;
         this.loginLogRepository = loginLogRepository;
         this.sellApplicationRepository = sellApplicationRepository;
@@ -98,6 +99,7 @@ public class PageController {
         this.offlineStoreRepository = offlineStoreRepository;
         this.userAddressRepository = userAddressRepository;
         this.afterSalesRequestRepository = afterSalesRequestRepository;
+        this.staffRepository = staffRepository;
     }
 
     @GetMapping("/")
@@ -182,24 +184,34 @@ public class PageController {
     }
 
     @GetMapping("/account/profile")
-    public String accountProfile(Model model, Authentication authentication) {
+    public String profilePage(Model model, Authentication authentication) {
         String username = authentication.getName();
-        User user = userService.findByUsername(username);
-
-        // 透過 user_id 關聯查詢，並按 ranking 升序排列 (1=主地址, 2=第二地址...)
-        List<UserAddress> addresses = userAddressRepository.findByUserOrderByRankingAsc(user);
-
-        // 獲取系統配置的最大地址數量
-        int maxAddresses = systemConfigService.getMaxUserAddresses();
-
-        // 判斷當前地址數量是否小於最大允許數量
-        boolean canAddMoreAddresses = (addresses != null ? addresses.size() : 0) < maxAddresses;
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         model.addAttribute("user", user);
-        model.addAttribute("addresses", addresses);
-        model.addAttribute("canAddMoreAddresses", canAddMoreAddresses); // 新增：傳遞布林值給前端
 
-        return "profile";
+        // ==========================================
+        // 【核心修復】：從 Staff 表中獲取 workPhone 並傳遞給前端
+        // ==========================================
+        String workPhone = "未設置";
+        Staff staff = staffRepository.findByUser(user).orElse(null);
+        if (staff != null && staff.getWorkPhone() != null && !staff.getWorkPhone().trim().isEmpty()) {
+            workPhone = staff.getWorkPhone();
+        }
+        // 將 workPhone 作為獨立變量傳遞給 Thymeleaf
+        model.addAttribute("workPhone", workPhone);
+        // ==========================================
+
+        // ... 這裡保留你原有的地址 (addresses) 等其他邏輯 ...
+        List<UserAddress> addresses = userAddressRepository.findByUserOrderByRankingAsc(user);
+        int maxAddresses = systemConfigService.getMaxUserAddresses();
+        boolean canAddMoreAddresses = (addresses != null ? addresses.size() : 0) < maxAddresses;
+
+        model.addAttribute("addresses", addresses);
+        model.addAttribute("canAddMoreAddresses", canAddMoreAddresses);
+
+        return "profile"; // 返回 profile.html
     }
 
     @GetMapping("/about")

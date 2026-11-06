@@ -10,9 +10,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.Result;
 import org.example.website.entity.OfflineStore;
+import org.example.website.entity.Staff;
 import org.example.website.entity.User;
 import org.example.website.entity.UserAddress;
 import org.example.website.repository.OfflineStoreRepository;
+import org.example.website.repository.StaffRepository;
 import org.example.website.repository.UserAddressRepository;
 import org.example.website.repository.UserRepository;
 import org.example.website.security.CustomUserDetails;
@@ -39,12 +41,14 @@ public class AdminCustomerController {
     private final PasswordEncoder passwordEncoder;
     private final UserAddressRepository userAddressRepository;
     private final OfflineStoreRepository offlineStoreRepository;
+    private final StaffRepository staffRepository;
 
-    public AdminCustomerController(UserRepository userRepository, PasswordEncoder passwordEncoder, UserAddressRepository userAddressRepository, OfflineStoreRepository offlineStoreRepository) {
+    public AdminCustomerController(UserRepository userRepository, PasswordEncoder passwordEncoder, UserAddressRepository userAddressRepository, OfflineStoreRepository offlineStoreRepository, StaffRepository staffRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userAddressRepository = userAddressRepository;
         this.offlineStoreRepository = offlineStoreRepository;
+        this.staffRepository = staffRepository;
     }
 
     /**
@@ -56,10 +60,7 @@ public class AdminCustomerController {
         return "admin/admin-customers";
     }
 
-    @Operation(
-            summary = "獲取後台用戶分頁列表",
-            description = "支持關鍵字、角色與所屬門店的分頁查詢。"
-    )
+    @Operation(summary = "獲取後台用戶分頁列表", description = "支持關鍵字、角色與所屬門店的分頁查詢。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "獲取成功"),
             @ApiResponse(responseCode = "401", description = "未登入或無權限"),
@@ -68,21 +69,13 @@ public class AdminCustomerController {
     @GetMapping("/api/customers/list")
     @ResponseBody
     public ResponseEntity<?> getCustomers(
-            @Parameter(description = "當前頁碼 (1-based)", example = "1")
-            @RequestParam(defaultValue = "1") int page,
-            @Parameter(description = "每頁顯示數量", example = "25")
-            @RequestParam(defaultValue = "25") int size,
-            @Parameter(description = "搜索關鍵字", example = "test")
-            @RequestParam(required = false) String keyword,
-            @Parameter(description = "角色篩選 (可傳入 'STAFF' 代表非顧客)", example = "SALES")
-            @RequestParam(required = false) String role,
-            // 【核心修復 1】：接收前端實際傳遞的兩個參數，而不是 storeFilter
-            @Parameter(description = "是否篩選有門店歸屬的員工", example = "true")
-            @RequestParam(required = false) Boolean hasStoreNotNull,
-            @Parameter(description = "是否篩選沒有門店歸屬的員工", example = "true")
-            @RequestParam(required = false) Boolean hasStoreNull,  // 【新增】
-            @Parameter(description = "具體門店 ID", example = "1")
-            @RequestParam(required = false) String storeId) {
+            @Parameter(description = "當前頁碼 (1-based)", example = "1") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每頁顯示數量", example = "25") @RequestParam(defaultValue = "25") int size,
+            @Parameter(description = "搜索關鍵字", example = "test") @RequestParam(required = false) String keyword,
+            @Parameter(description = "角色篩選 (可傳入 'STAFF' 代表非顧客)", example = "SALES") @RequestParam(required = false) String role,
+            @Parameter(description = "是否篩選有門店歸屬的員工", example = "true") @RequestParam(required = false) Boolean hasStoreNotNull,
+            @Parameter(description = "是否篩選沒有門店歸屬的員工", example = "true") @RequestParam(required = false) Boolean hasStoreNull,
+            @Parameter(description = "具體門店 ID", example = "1") @RequestParam(required = false) String storeId) {
 
         int pageIndex = Math.max(0, page - 1);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
@@ -94,23 +87,19 @@ public class AdminCustomerController {
             boolean isStaffFilter = "STAFF".equals(role);
             User.Role targetRole = isStaffFilter ? User.Role.CUSTOMER : (hasRole ? User.Role.valueOf(role) : null);
 
-            // 【核心修復 2】：解析前端傳來的 storeId
             boolean hasSpecificStore = false;
             Long specificStoreId = null;
             if (storeId != null && !storeId.trim().isEmpty()) {
                 try {
                     specificStoreId = Long.parseLong(storeId);
                     hasSpecificStore = true;
-                } catch (NumberFormatException e) {
-                    // 忽略非法值
-                }
+                } catch (NumberFormatException e) { /* 忽略非法值 */ }
             }
 
-            // 將接收到的 Boolean 轉為 boolean，防止 NullPointerException
             boolean hasStoreNotNullFlag = Boolean.TRUE.equals(hasStoreNotNull);
-            boolean hasStoreNullFlag = Boolean.TRUE.equals(hasStoreNull);  // 【新增】
+            boolean hasStoreNullFlag = Boolean.TRUE.equals(hasStoreNull);
 
-            // 【核心修復 3】：根據條件組合調用不同的 Repository 方法
+            // 【注意】：這裡調用的是我們在 Step 2 中修改過的、基於 JOIN Staff 的 Repository 方法
             if (hasKeyword && hasRole && hasSpecificStore) {
                 usersPage = isStaffFilter
                         ? userRepository.findByKeywordAndRoleNotAndStore_StoreId(keyword, targetRole, specificStoreId, pageable)
@@ -123,9 +112,7 @@ public class AdminCustomerController {
                         : userRepository.findByRoleAndStore_StoreId(targetRole, specificStoreId, pageable);
             } else if (hasSpecificStore) {
                 usersPage = userRepository.findByStore_StoreId(specificStoreId, pageable);
-            }
-            // --- 處理 HAS_STORE (所有有門店歸屬的員工) ---
-            else if (hasKeyword && hasRole && hasStoreNotNullFlag) {
+            } else if (hasKeyword && hasRole && hasStoreNotNullFlag) {
                 usersPage = isStaffFilter
                         ? userRepository.findByKeywordAndRoleNotAndStoreIsNotNull(keyword, targetRole, pageable)
                         : userRepository.findByKeywordAndRoleAndStoreIsNotNull(keyword, targetRole, pageable);
@@ -137,9 +124,7 @@ public class AdminCustomerController {
                         : userRepository.findByRoleAndStoreIsNotNull(targetRole, pageable);
             } else if (hasStoreNotNullFlag) {
                 usersPage = userRepository.findByStoreIsNotNull(pageable);
-            }
-            // --- 【新增】處理 NO_STORE (所有沒有門店歸屬的員工) ---
-            else if (hasKeyword && hasRole && hasStoreNullFlag) {
+            } else if (hasKeyword && hasRole && hasStoreNullFlag) {
                 usersPage = isStaffFilter
                         ? userRepository.findByKeywordAndRoleNotAndStoreIsNull(keyword, targetRole, pageable)
                         : userRepository.findByKeywordAndRoleAndStoreIsNull(keyword, targetRole, pageable);
@@ -151,28 +136,34 @@ public class AdminCustomerController {
                         : userRepository.findByRoleAndStoreIsNull(targetRole, pageable);
             } else if (hasStoreNullFlag) {
                 usersPage = userRepository.findByStoreIsNull(pageable);
-            }
-            // --- 原有邏輯 ---
-            else if (hasKeyword && hasRole) {
+            } else if (hasKeyword && hasRole) {
                 usersPage = isStaffFilter
-                        ? userRepository.findByKeywordAndRoleNot(keyword, targetRole, pageable)
+                        ? userRepository.findByKeywordAndRoleNot(keyword, targetRole, pageable)//无法解析 'UserRepository' 中的方法 'findByKeywordAndRoleNot'
                         : userRepository.findByKeywordAndRole(keyword, targetRole, pageable);
             } else if (hasKeyword) {
                 usersPage = userRepository.findByKeyword(keyword, pageable);
             } else if (hasRole) {
                 usersPage = isStaffFilter
-                        ? userRepository.findByRoleNot(targetRole, pageable)
+                        ? userRepository.findByRoleNot(targetRole, pageable)//无法解析 'UserRepository' 中的方法 'findByRoleNot'
                         : userRepository.findByRole(targetRole, pageable);
             } else {
                 usersPage = userRepository.findAll(pageable);
             }
         } catch (Exception e) {
-            // 發生異常時降級為全量查詢，防止系統崩潰
             usersPage = userRepository.findAll(pageable);
         }
 
-        // 4. 批量獲取當前頁用戶的地址信息 (避免 N+1 查詢性能問題)
         List<User> users = usersPage.getContent();
+
+        // 【新增】批量獲取當前頁用戶的 Staff 信息 (避免 N+1 查詢性能問題)
+        List<Long> userIds = users.stream().map(User::getId).collect(Collectors.toList());
+        Map<Long, Staff> staffMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<Staff> staffs = staffRepository.findByUserIdIn(userIds);
+            staffs.forEach(s -> staffMap.put(s.getUser().getId(), s));
+        }
+
+        // 批量獲取當前頁用戶的地址信息
         Map<Long, List<UserAddress>> addressMap = new HashMap<>();
         for (User user : users) {
             addressMap.put(user.getId(), userAddressRepository.findByUserOrderByRankingAsc(user));
@@ -187,14 +178,17 @@ public class AdminCustomerController {
             item.put("username", user.getUsername());
             item.put("email", user.getEmail());
             item.put("phone", user.getPhone());
-            item.put("workPhone", user.getWorkPhone());
             item.put("role", user.getRole().name());
-            item.put("storeId", user.getStore() != null ? user.getStore().getStoreId() : null);
-            item.put("storeName", user.getStore() != null ? user.getStore().getName() : null);
             item.put("createdAt", user.getCreatedAt());
             item.put("updatedAt", user.getUpdatedAt());
 
-            // 5. 格式化地址信息為 HTML
+            // 【修改】從 staffMap 中獲取 workPhone 和 store 信息
+            Staff staff = staffMap.get(user.getId());//无法解析符号 'getId'
+            item.put("workPhone", staff != null ? staff.getWorkPhone() : null);
+            item.put("storeId", staff != null && staff.getStore() != null ? staff.getStore().getStoreId() : null);
+            item.put("storeName", staff != null && staff.getStore() != null ? staff.getStore().getName() : null);
+
+            // 格式化地址信息為 HTML
             List<UserAddress> addrs = addressMap.get(user.getId());
             if (addrs != null && !addrs.isEmpty()) {
                 StringBuilder addrHtml = new StringBuilder();
@@ -203,7 +197,6 @@ public class AdminCustomerController {
                     String prefix = (i == 0) ? "<span style='color:var(--gold); font-weight:600;'>主:</span> " :
                             (i == 1) ? "<span style='color:#64748b;'>備:</span> " :
                                     "<span style='color:#64748b;'>" + (i + 1) + ":</span> ";
-
                     addrHtml.append("<div style='margin-bottom: 4px; white-space: normal;'>")
                             .append(prefix)
                             .append(addr.getFullAddress())
@@ -213,23 +206,15 @@ public class AdminCustomerController {
             } else {
                 item.put("addressesHtml", "<span style='color:#cbd5e1;'>未設置</span>");
             }
-
             return item;
         }).collect(Collectors.toList());
 
         Map<String, Object> response = PaginationUtils.buildPageResponse(usersPage, cleanUsers);
         response.put("currentPage", page);
-
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 創建新手動賬號 (管理員專用)
-     */
-    @Operation(
-            summary = "創建新賬號 (管理員專用)",
-            description = "管理員手動創建系統賬號，默認密碼為 123456，自動生成唯一 UID。禁止使用 'admin' 作為用戶名。"
-    )
+    @Operation(summary = "創建新賬號 (管理員專用)", description = "管理員手動創建系統賬號，默認密碼為 123456，自動生成唯一 UID。禁止使用 'admin' 作為用戶名。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "創建成功"),
             @ApiResponse(responseCode = "400", description = "參數錯誤、用戶名已存在或觸發安全限制"),
@@ -239,15 +224,10 @@ public class AdminCustomerController {
     @PostMapping("/api/customers/create")
     @ResponseBody
     public ResponseEntity<?> createUser(
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "創建賬號請求參數",
-                    required = true,
-                    content = @Content(schema = @Schema(example = "{\"username\": \"new_staff\", \"role\": \"SALES\"}"))
-            )
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "創建賬號請求參數", required = true, content = @Content(schema = @Schema(example = "{\"username\": \"new_staff\", \"role\": \"SALES\", \"storeId\": \"1\", \"workPhone\": \"123456\"}")))
             @RequestBody Map<String, String> payload,
-            Authentication authentication) { // 注入 Authentication 用於權限校驗
+            Authentication authentication) {
 
-        // 核心權限校驗：嚴格檢查 user_type 是否為 ADMIN
         if (authentication == null || !authentication.isAuthenticated() ||
                 "anonymousUser".equals(authentication.getPrincipal()) ||
                 !(authentication.getPrincipal() instanceof CustomUserDetails userDetails) ||
@@ -264,32 +244,24 @@ public class AdminCustomerController {
         if (userRepository.existsByUsername(username)) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "用戶名已存在"));
         }
-
         if ("admin".equalsIgnoreCase(username.trim())) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "⛔ 系統安全限制：不能使用 'admin' 作為用戶名！"
-            ));
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "⛔ 系統安全限制：不能使用 'admin' 作為用戶名！"));
         }
 
         try {
             User user = new User();
             user.setUsername(username);
-            user.setName(username); // 默認姓名
-            user.setEmail(username + "@chronoteam.internal"); // 默認郵箱
-            user.setPhone("0000000000"); // 默認電話
-
-            // 使用注入的 passwordEncoder
+            user.setName(username);
+            user.setEmail(username + "@chronoteam.internal");
+            user.setPhone("0000000000");
             user.setPassword(passwordEncoder.encode("123456"));
 
-            // 設置角色
             try {
                 user.setRole(User.Role.valueOf(roleStr));
             } catch (IllegalArgumentException e) {
                 user.setRole(User.Role.CUSTOMER);
             }
 
-            // 自動生成 UID (帶重試機制確保唯一)
             String uid;
             int retries = 0;
             do {
@@ -301,16 +273,30 @@ public class AdminCustomerController {
                 return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "UID生成衝突，請重試"));
             }
             user.setUid(uid);
-            String storeIdStr = payload.get("storeId");
-            if (storeIdStr != null && !storeIdStr.trim().isEmpty()) {
-                try {
-                    OfflineStore store = offlineStoreRepository.findById(Long.parseLong(storeIdStr)).orElse(null);
-                    user.setStore(store);
-                } catch (NumberFormatException e) {
-                    // 忽略無效的 storeId
-                }
-            }
+
+            // 1. 先保存 User
             userRepository.save(user);
+
+            // 2. 【核心修改】：如果是員工角色，則創建對應的 Staff 記錄
+            if (user.getRole() != User.Role.CUSTOMER) {
+                Staff staff = new Staff();
+                staff.setUser(user);
+
+                String storeIdStr = payload.get("storeId");
+                if (storeIdStr != null && !storeIdStr.trim().isEmpty()) {
+                    try {
+                        OfflineStore store = offlineStoreRepository.findById(Long.parseLong(storeIdStr)).orElse(null);
+                        staff.setStore(store);
+                    } catch (NumberFormatException e) { /* 忽略無效的 storeId */ }
+                }
+
+                // 如果前端傳了 workPhone，則設置
+                if (payload.containsKey("workPhone") && payload.get("workPhone") != null) {
+                    staff.setWorkPhone(payload.get("workPhone"));
+                }
+
+                staffRepository.save(staff);
+            }
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -323,13 +309,8 @@ public class AdminCustomerController {
         }
     }
 
-    /**
-     * 修改用戶角色
-     */
-    @Operation(
-            summary = "修改用戶角色權限",
-            description = "管理員修改指定用戶的角色。系統安全限制：無法修改超級管理員 (admin) 的權限。"
-    )
+
+    @Operation(summary = "修改用戶角色權限", description = "管理員修改指定用戶的角色。系統安全限制：無法修改超級管理員 (admin) 的權限。")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "權限更新成功"),
             @ApiResponse(responseCode = "400", description = "用戶不存在、無效的角色類型或觸發安全限制"),
@@ -339,17 +320,11 @@ public class AdminCustomerController {
     @PutMapping("/api/customers/{id}/role")
     @ResponseBody
     public ResponseEntity<?> updateUserRole(
-            @Parameter(description = "用戶 ID", required = true, example = "1")
-            @PathVariable Long id,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "新角色信息",
-                    required = true,
-                    content = @Content(schema = @Schema(example = "{\"role\": \"APPRAISER\"}"))
-            )
+            @Parameter(description = "用戶 ID", required = true, example = "1") @PathVariable Long id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "新角色信息", required = true, content = @Content(schema = @Schema(example = "{\"role\": \"APPRAISER\", \"storeId\": \"1\", \"workPhone\": \"123456\"}")))
             @RequestBody Map<String, String> payload,
-            Authentication authentication) { // 【新增】注入 Authentication 用於權限校驗
+            Authentication authentication) {
 
-        // 【新增】核心權限校驗：嚴格檢查 user_type 是否為 ADMIN
         if (authentication == null || !authentication.isAuthenticated() ||
                 "anonymousUser".equals(authentication.getPrincipal()) ||
                 !(authentication.getPrincipal() instanceof CustomUserDetails userDetails) ||
@@ -358,42 +333,58 @@ public class AdminCustomerController {
         }
 
         String roleStr = payload.get("role");
-
         User user = userRepository.findById(id).orElse(null);
+
         if (user == null) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "用戶不存在"));
         }
-
         if ("admin".equalsIgnoreCase(user.getUsername())) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "message", "⛔ 系統安全限制：無法修改超級管理員 (admin) 的權限！"
-            ));
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "⛔ 系統安全限制：無法修改超級管理員 (admin) 的權限！"));
         }
 
         try {
             User.Role newRole = User.Role.valueOf(roleStr);
             user.setRole(newRole);
-            String storeIdStr = payload.get("storeId");
-            if (storeIdStr != null && !storeIdStr.trim().isEmpty()) {
-                try {
-                    OfflineStore store = offlineStoreRepository.findById(Long.parseLong(storeIdStr)).orElse(null);
-                    user.setStore(store);
-                } catch (NumberFormatException e) {
-                    user.setStore(null);
-                }
-            } else {
-                user.setStore(null); // 如果切換回非門店角色，清空關聯
-            }
-            userRepository.save(user);
 
+            String storeIdStr = payload.get("storeId");
+            String workPhone = payload.get("workPhone");
+
+            // 【核心修改】：根據新角色處理 Staff 記錄
+            if (newRole == User.Role.CUSTOMER) {
+                // 如果降級為顧客，刪除其 Staff 記錄 (或根據業務需求選擇清空 store)
+                staffRepository.findByUserId(user.getId()).ifPresent(staffRepository::delete);
+            } else {
+                // 如果是員工角色，確保存在 Staff 記錄並更新
+                Staff staff = staffRepository.findByUserId(user.getId()).orElse(new Staff());
+                staff.setUser(user);
+
+                if (storeIdStr != null && !storeIdStr.trim().isEmpty()) {
+                    try {
+                        OfflineStore store = offlineStoreRepository.findById(Long.parseLong(storeIdStr)).orElse(null);
+                        staff.setStore(store);
+                    } catch (NumberFormatException e) {
+                        staff.setStore(null);
+                    }
+                } else {
+                    staff.setStore(null);
+                }
+
+                if (workPhone != null) {
+                    staff.setWorkPhone(workPhone);
+                }
+                staffRepository.save(staff);
+            }
+
+            userRepository.save(user);
             return ResponseEntity.ok(Map.of("success", true, "message", "權限更新成功"));
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "無效的角色類型"));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "更新失敗"));
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "ime", "更新失敗"));
         }
     }
+
 
     /**
      * 根據電話或用戶名查找用戶 (用於創建申請時的用戶查找)

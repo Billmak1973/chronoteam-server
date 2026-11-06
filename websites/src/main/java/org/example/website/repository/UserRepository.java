@@ -127,90 +127,90 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.username LIKE %:keyword% ORDER BY u.username ASC")
     List<User> findByUsernameContainingOrderByUsernameAsc(@Param("keyword") String keyword);
 
-    // 【新增】以下 4 個方法用於支援帶 storeId 的組合查詢
-    Page<User> findByStore_StoreId(Long storeId, Pageable pageable);
+    // =========================================================================
+    // 【核心修改】支援帶 storeId 的組合查詢 (通過 JOIN Staff)
+    // =========================================================================
 
-    @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.store.storeId = :storeId")
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE s.store.storeId = :storeId")
+    Page<User> findByStore_StoreId(@Param("storeId") Long storeId, Pageable pageable);
+
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND s.store.storeId = :storeId")
     Page<User> findByKeywordAndStore_StoreId(@Param("kw") String keyword, @Param("storeId") Long storeId, Pageable pageable);
 
-    Page<User> findByRoleAndStore_StoreId(User.Role role, Long storeId, Pageable pageable);
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE u.role = :role AND s.store.storeId = :storeId")
+    Page<User> findByRoleAndStore_StoreId(@Param("role") User.Role role, @Param("storeId") Long storeId, Pageable pageable);
 
-    @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role = :role AND u.store.storeId = :storeId")
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role = :role AND s.store.storeId = :storeId")
     Page<User> findByKeywordAndRoleAndStore_StoreId(@Param("kw") String keyword, @Param("role") User.Role role, @Param("storeId") Long storeId, Pageable pageable);
 
-    // ==========================================
-    // 【新增】支援「非顧客 (STAFF)」的組合查詢方法
-    // ==========================================
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE u.role != :role AND s.store.storeId = :storeId")
+    Page<User> findByRoleNotAndStore_StoreId(@Param("role") User.Role role, @Param("storeId") Long storeId, Pageable pageable);
 
-    // 1. 僅篩選非顧客
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role != :role AND s.store.storeId = :storeId")
+    Page<User> findByKeywordAndRoleNotAndStore_StoreId(@Param("kw") String keyword, @Param("role") User.Role role, @Param("storeId") Long storeId, Pageable pageable);
+
+    // =========================================================================
+    // 【核心修改】支援「所有擁有門店歸屬的員工 (store IS NOT NULL)」的查詢方法
+    // =========================================================================
+
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE s.store IS NOT NULL")
+    Page<User> findByStoreIsNotNull(Pageable pageable);
+
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND s.store IS NOT NULL")
+    Page<User> findByKeywordAndStoreIsNotNull(@Param("kw") String keyword, Pageable pageable);
+
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE u.role = :role AND s.store IS NOT NULL")
+    Page<User> findByRoleAndStoreIsNotNull(@Param("role") User.Role role, Pageable pageable);
+
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role = :role AND s.store IS NOT NULL")
+    Page<User> findByKeywordAndRoleAndStoreIsNotNull(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
+
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE u.role != :role AND s.store IS NOT NULL")
+    Page<User> findByRoleNotAndStoreIsNotNull(@Param("role") User.Role role, Pageable pageable);
+
+    @Query("SELECT u FROM User u JOIN Staff s ON u.id = s.user.id WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role != :role AND s.store IS NOT NULL")
+    Page<User> findByKeywordAndRoleNotAndStoreIsNotNull(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
+
+    // =========================================================================
+    // 【核心修改】支援「沒有門店歸屬的員工 (store IS NULL 或 無 Staff 記錄)」的查詢方法
+    // =========================================================================
+
+    @Query("SELECT u FROM User u LEFT JOIN Staff s ON u.id = s.user.id WHERE s.id IS NULL OR s.store IS NULL")
+    Page<User> findByStoreIsNull(Pageable pageable);
+
+    @Query("SELECT u FROM User u LEFT JOIN Staff s ON u.id = s.user.id WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND (s.id IS NULL OR s.store IS NULL)")
+    Page<User> findByKeywordAndStoreIsNull(@Param("kw") String keyword, Pageable pageable);
+
+    @Query("SELECT u FROM User u LEFT JOIN Staff s ON u.id = s.user.id WHERE u.role = :role AND (s.id IS NULL OR s.store IS NULL)")
+    Page<User> findByRoleAndStoreIsNull(@Param("role") User.Role role, Pageable pageable);
+
+    @Query("SELECT u FROM User u LEFT JOIN Staff s ON u.id = s.user.id WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role = :role AND (s.id IS NULL OR s.store IS NULL)")
+    Page<User> findByKeywordAndRoleAndStoreIsNull(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
+
+    @Query("SELECT u FROM User u LEFT JOIN Staff s ON u.id = s.user.id WHERE u.role != :role AND (s.id IS NULL OR s.store IS NULL)")
+    Page<User> findByRoleNotAndStoreIsNull(@Param("role") User.Role role, Pageable pageable);
+
+    @Query("SELECT u FROM User u LEFT JOIN Staff s ON u.id = s.user.id WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role != :role AND (s.id IS NULL OR s.store IS NULL)")
+    Page<User> findByKeywordAndRoleNotAndStoreIsNull(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
+
+    /**
+     * 根據角色分頁查詢「非該角色」的用戶。
+     *
+     * @param role     用戶角色枚舉
+     * @param pageable Spring Data 的分頁與排序參數對象
+     * @return 符合條件的用戶分頁結果
+     */
     @Query("SELECT u FROM User u WHERE u.role != :role")
     Page<User> findByRoleNot(@Param("role") User.Role role, Pageable pageable);
 
-    // 2. 關鍵字 + 非顧客
+    /**
+     * 根據關鍵字和「非特定角色」進行組合篩選，並支持分頁。
+     *
+     * @param keyword  搜索關鍵字
+     * @param role     用戶角色枚舉
+     * @param pageable Spring Data 的分頁與排序參數對象
+     * @return 符合關鍵字且角色不匹配的用戶分頁結果
+     */
     @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role != :role")
     Page<User> findByKeywordAndRoleNot(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
-
-    // 3. 非顧客 + 特定門店
-    @Query("SELECT u FROM User u WHERE u.role != :role AND u.store.storeId = :storeId")
-    Page<User> findByRoleNotAndStore_StoreId(@Param("role") User.Role role, @Param("storeId") Long storeId, Pageable pageable);
-
-    // 4. 關鍵字 + 非顧客 + 特定門店
-    @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role != :role AND u.store.storeId = :storeId")
-    Page<User> findByKeywordAndRoleNotAndStore_StoreId(@Param("kw") String keyword, @Param("role") User.Role role, @Param("storeId") Long storeId, Pageable pageable);
-
-    // ==========================================
-    // 【新增】支援「所有擁有門店歸屬的員工 (store IS NOT NULL)」的查詢方法
-    // ==========================================
-
-    // 1. 僅篩選有門店歸屬的用戶
-    @Query("SELECT u FROM User u WHERE u.store IS NOT NULL")
-    Page<User> findByStoreIsNotNull(Pageable pageable);
-
-    // 2. 關鍵字 + 有門店歸屬
-    @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.store IS NOT NULL")
-    Page<User> findByKeywordAndStoreIsNotNull(@Param("kw") String keyword, Pageable pageable);
-
-    // 3. 特定角色 + 有門店歸屬
-    @Query("SELECT u FROM User u WHERE u.role = :role AND u.store IS NOT NULL")
-    Page<User> findByRoleAndStoreIsNotNull(@Param("role") User.Role role, Pageable pageable);
-
-    // 4. 關鍵字 + 特定角色 + 有門店歸屬
-    @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role = :role AND u.store IS NOT NULL")
-    Page<User> findByKeywordAndRoleAndStoreIsNotNull(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
-
-    // 5. 非顧客 + 有門店歸屬
-    @Query("SELECT u FROM User u WHERE u.role != :role AND u.store IS NOT NULL")
-    Page<User> findByRoleNotAndStoreIsNotNull(@Param("role") User.Role role, Pageable pageable);
-
-    // 6. 關鍵字 + 非顧客 + 有門店歸屬
-    @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role != :role AND u.store IS NOT NULL")
-    Page<User> findByKeywordAndRoleNotAndStoreIsNotNull(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
-
-    // ==========================================
-// 【新增】支援「沒有門店歸屬的員工 (store IS NULL)」的查詢方法
-// ==========================================
-
-    // 1. 僅篩選沒有門店歸屬的用戶
-    @Query("SELECT u FROM User u WHERE u.store IS NULL")
-    Page<User> findByStoreIsNull(Pageable pageable);
-
-    // 2. 關鍵字 + 沒有門店歸屬
-    @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.store IS NULL")
-    Page<User> findByKeywordAndStoreIsNull(@Param("kw") String keyword, Pageable pageable);
-
-    // 3. 特定角色 + 沒有門店歸屬
-    @Query("SELECT u FROM User u WHERE u.role = :role AND u.store IS NULL")
-    Page<User> findByRoleAndStoreIsNull(@Param("role") User.Role role, Pageable pageable);
-
-    // 4. 關鍵字 + 特定角色 + 沒有門店歸屬
-    @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role = :role AND u.store IS NULL")
-    Page<User> findByKeywordAndRoleAndStoreIsNull(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
-
-    // 5. 非顧客 + 沒有門店歸屬
-    @Query("SELECT u FROM User u WHERE u.role != :role AND u.store IS NULL")
-    Page<User> findByRoleNotAndStoreIsNull(@Param("role") User.Role role, Pageable pageable);
-
-    // 6. 關鍵字 + 非顧客 + 沒有門店歸屬
-    @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role != :role AND u.store IS NULL")
-    Page<User> findByKeywordAndRoleNotAndStoreIsNull(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
 }

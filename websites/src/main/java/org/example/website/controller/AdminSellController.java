@@ -43,8 +43,10 @@ public class AdminSellController {
     private final StoreDailyReportRepository storeDailyReportRepository;
     private final SystemConfigService systemConfigService;
     private final SellApplicationAuditLogRepository auditLogRepository; // 確保已注入
+    private final StoreInventoryRepository storeInventoryRepository;
+    private final InventoryAdjustmentLogRepository adjustmentLogRepository;
 
-    public AdminSellController(SellApplicationRepository sellApplicationRepository, OfflineStoreRepository offlineStoreRepository, FileStorageService fileStorageService, ObjectMapper objectMapper, UserRepository userRepository, ProductRepository productRepository, StoreDailyReportRepository storeDailyReportRepository, SystemConfigService systemConfigService, SellApplicationAuditLogRepository auditLogRepository) {
+    public AdminSellController(SellApplicationRepository sellApplicationRepository, OfflineStoreRepository offlineStoreRepository, FileStorageService fileStorageService, ObjectMapper objectMapper, UserRepository userRepository, ProductRepository productRepository, StoreDailyReportRepository storeDailyReportRepository, SystemConfigService systemConfigService, SellApplicationAuditLogRepository auditLogRepository, StoreInventoryRepository storeInventoryRepository, InventoryAdjustmentLogRepository adjustmentLogRepository) {
         this.sellApplicationRepository = sellApplicationRepository;
         this.offlineStoreRepository = offlineStoreRepository;
         this.fileStorageService = fileStorageService;
@@ -54,6 +56,8 @@ public class AdminSellController {
         this.storeDailyReportRepository = storeDailyReportRepository;
         this.systemConfigService = systemConfigService;
         this.auditLogRepository = auditLogRepository;
+        this.storeInventoryRepository = storeInventoryRepository;
+        this.adjustmentLogRepository = adjustmentLogRepository;
     }
 
     @Hidden
@@ -134,6 +138,7 @@ public class AdminSellController {
             map.put("appointmentTimeSlot", app.getAppointmentTimeSlot());
             map.put("createdAt", app.getCreatedAt());
             map.put("storeName", storeMap.getOrDefault(app.getStoreId(), "未指定"));
+            map.put("isStockedIn", app.getIsStockedIn()); // 確保列表能獲取入庫狀態
 
             if (app.getUser() != null) {
                 Map<String, Object> userMap = new HashMap<>();
@@ -160,15 +165,16 @@ public class AdminSellController {
                 .orElseThrow(() -> new RuntimeException("申請記錄不存在"));
 
         // ==========================================
-        // 【核心新增】：計算當前登錄用戶是否有權編輯此申請，並標記是否為 Override Role
+        // 【核心新增】：計算當前登錄用戶是否有權編輯此申請，並標記權限角色
         // ==========================================
         boolean canEdit = false;
-        boolean isOverrideRole = false; // <--- 新增此變量
+        boolean isOverrideRole = false;
+        boolean isAppraisalRole = false; // 聲明鑑定授權角色標識，提升作用域
         User currentUser = null; // 將聲明移到 if 外部，解決作用域問題
 
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
             String currentUsername = authentication.getName();
-             currentUser = userRepository.findByUsername(currentUsername).orElse(null);
+            currentUser = userRepository.findByUsername(currentUsername).orElse(null);
 
             if (currentUser != null) {
                 boolean isStaffLock = systemConfigService.getAfterSalesStaffLock();
@@ -176,7 +182,10 @@ public class AdminSellController {
                 List<String> appraisalRoles = systemConfigService.getAppraisalAuthorizedRoles();
 
                 // 判斷是否為最高權限角色
-                isOverrideRole = overrideRoles.contains(currentUser.getRole().name()); // <--- 記錄狀態
+                isOverrideRole = overrideRoles.contains(currentUser.getRole().name());
+
+                // 【新增】：判斷當前用戶是否為鑑定授權角色
+                isAppraisalRole = appraisalRoles.contains(currentUser.getRole().name());
 
                 // 規則 1：如果沒有開啟鎖定，允許編輯
                 if (!isStaffLock) {
@@ -190,9 +199,8 @@ public class AdminSellController {
                 else if (isOverrideRole) {
                     canEdit = true;
                 }
-
                 // 【規則 4 新增】：如果 operator 為 null (尚未被接收)，且當前用戶角色在「鑑定授權角色」列表中，允許編輯 (視為接收並編輯)
-                else if (app.getOperator() == null && appraisalRoles.contains(currentUser.getRole().name())) {
+                else if (app.getOperator() == null && isAppraisalRole) {
                     canEdit = true;
                 }
             }
@@ -219,12 +227,16 @@ public class AdminSellController {
         data.put("createdAt", app.getCreatedAt());
         data.put("appointmentDate", app.getAppointmentDate() != null ? app.getAppointmentDate().toString() : null);
         data.put("appointmentTimeSlot", app.getAppointmentTimeSlot());
+        data.put("isStockedIn", app.getIsStockedIn()); // 確保詳情頁能獲取入庫狀態
 
-        // 【核心新增】：將權限標識返回給前端，讓前端決定是否渲染手動選擇框
+        // 將權限標識與當前用戶資訊返回給前端，讓前端決定如何渲染
         data.put("canEdit", canEdit);
         data.put("isOverrideRole", isOverrideRole);
+        data.put("isAppraisalRole", isAppraisalRole); // 傳遞鑑定授權角色標識
+
         if (currentUser != null) {
-            data.put("currentUserId", currentUser.getId()); // 返回當前登入用戶的 ID
+            data.put("currentUserId", currentUser.getId());       // 返回當前登入用戶的 ID
+            data.put("currentUsername", currentUser.getUsername()); // 傳遞當前用戶名
         }
 
         String storeName = "未指定";
@@ -284,6 +296,7 @@ public class AdminSellController {
             // 【步驟 1】：在修改前，記錄所有需要審計的「舊值」
             // ==========================================
             SellApplication.ApplicationStatus oldStatus = app.getStatus();
+            java.time.LocalDateTime oldCompletedAt = app.getCompletedAt();
             String oldImagePathsJson = app.getImagePaths();
             String oldBrand = app.getBrand();
             String oldSeries = app.getSeries();
@@ -293,6 +306,10 @@ public class AdminSellController {
             String oldCondition = app.getCondition();
             String oldFunctionStatus = app.getFunctionStatus();
             Long oldAppraiserId = app.getAppraiser() != null ? app.getAppraiser().getId() : null;
+
+            // 【新增】：備份原本的主要負責人
+            Long oldOperatorId = app.getOperator() != null ? app.getOperator().getId() : null;
+
             java.math.BigDecimal oldFinalPrice = app.getFinalPrice();
             java.math.BigDecimal oldEstimatedPrice = app.getEstimatedPrice();
             Integer oldProductId = app.getProduct() != null ? app.getProduct().getProductId() : null;
@@ -338,12 +355,48 @@ public class AdminSellController {
                 // ==========================================
                 // 【核心校驗 0.5】：精细化核心字段修改權限控制
                 // ==========================================
-                // 【注意】這裡是賦值，去掉了 boolean 聲明，因為上面已經聲明過了
                 isOverrideRole = overrideRoles.contains(currentUser.getRole().name());
                 boolean isAppraisalRole = appraisalRoles.contains(currentUser.getRole().name());
                 isCompleted = app.getStatus() == SellApplication.ApplicationStatus.COMPLETED;
                 isMyApplication = app.getOperator() != null && app.getOperator().getId().equals(currentUser.getId());
 
+// ==========================================
+// 【新增】：鑑定師與主要負責人獨立權限校驗 (嚴格支援認領邏輯)
+// ==========================================
+                String operatorIdStr = form.get("operatorId");
+                Long requestedOperatorId = null;
+                if (operatorIdStr != null && !operatorIdStr.trim().isEmpty()) {
+                    requestedOperatorId = Long.valueOf(operatorIdStr.trim());
+                }
+
+                // 1. 非最高權限者的 operatorId 修改限制
+                if (!isOverrideRole) {
+                    // 允許的情況 A：認領 (原本沒有負責人 oldOperatorId == null，現在指定為自己)
+                    boolean isClaiming = (oldOperatorId == null && requestedOperatorId != null && requestedOperatorId.equals(currentUser.getId()));
+                    // 允許的情況 B：保持 (原本就是自己，現在還是自己)
+                    boolean isKeepingOwn = (oldOperatorId != null && oldOperatorId.equals(currentUser.getId()) && requestedOperatorId != null && requestedOperatorId.equals(currentUser.getId()));
+
+                    // 如果不是認領，也不是保持自己的狀態，且表單中包含了 operatorId，則攔截
+                    if (!isClaiming && !isKeepingOwn && form.containsKey("operatorId")) {
+                        return ResponseEntity.status(403).body(Result.error("只有最高權限者才可以修改主要負責人，或您無權認領此已被接手的訂單！"));
+                    }
+                }
+
+                // 2. 鑑定師發生變更時，必須明確指定主要負責人
+                String appraiserIdStr = form.get("appraiserId");
+                Long requestedAppraiserId = null;
+                if (appraiserIdStr != null && !appraiserIdStr.trim().isEmpty()) {
+                    requestedAppraiserId = Long.valueOf(appraiserIdStr.trim());
+                }
+
+                boolean isAppraiserChanged = !java.util.Objects.equals(requestedAppraiserId, oldAppraiserId);
+                if (isAppraiserChanged) {
+                    if (operatorIdStr == null || operatorIdStr.trim().isEmpty()) {
+                        return ResponseEntity.badRequest().body(Result.error("修改負責鑑定師時，必須明確指定主要負責人！"));
+                    }
+                }
+
+                    // 3. 原有的核心字段修改限制 (保持不變)
                 if (!isOverrideRole && (!isAppraisalRole || isCompleted)) {
                     boolean isCoreChanged = false;
                     java.util.function.BiPredicate<String, String> isStrChanged = (formVal, originalVal) -> {
@@ -365,8 +418,7 @@ public class AdminSellController {
                     Integer formQty = (form.get("quantity") != null && !form.get("quantity").isEmpty()) ? Integer.parseInt(form.get("quantity")) : null;
                     if (!java.util.Objects.equals(formQty, oldQuantity)) isCoreChanged = true;
 
-                    Long formAppraiserId = (form.get("appraiserId") != null && !form.get("appraiserId").isEmpty()) ? Long.parseLong(form.get("appraiserId")) : null;
-                    if (!java.util.Objects.equals(formAppraiserId, oldAppraiserId)) isCoreChanged = true;
+                    if (!java.util.Objects.equals(requestedAppraiserId, oldAppraiserId)) isCoreChanged = true;
 
                     java.math.BigDecimal formFinalPrice = (form.get("finalPrice") != null && !form.get("finalPrice").isEmpty()) ? new java.math.BigDecimal(form.get("finalPrice")) : null;
                     if (!java.util.Objects.equals(formFinalPrice, oldFinalPrice)) isCoreChanged = true;
@@ -380,7 +432,6 @@ public class AdminSellController {
                 // 【核心新增校驗】：最高權限修改非本人或已完成申請時，強制要求填寫原因
                 // ==========================================
                 modificationReason = form.get("modificationReason"); // 【賦值】
-                // 【核心修改】：增加了 app.getOperator() != null 的判斷
                 // 如果申請尚未被接收 (operator 為 null)，則不強制要求填寫修改原因
                 if (isOverrideRole && app.getOperator() != null && (!isMyApplication || isCompleted)) {
                     if (modificationReason == null || modificationReason.trim().isEmpty()) {
@@ -388,21 +439,8 @@ public class AdminSellController {
                     }
                 }
 
-                // ==========================================
-                // 【核心修改】：處理負責人的自動/手動邏輯
-                // ==========================================
-                if (isOverrideRole && form.containsKey("operatorId") && !form.get("operatorId").trim().isEmpty()) {
-                    try {
-                        Long operatorId = Long.parseLong(form.get("operatorId").trim());
-                        User operator = userRepository.findById(operatorId)
-                                .orElseThrow(() -> new RuntimeException("指定的負責人不存在，ID: " + operatorId));
-                        app.setOperator(operator);
-                    } catch (NumberFormatException e) {
-                        return ResponseEntity.badRequest().body(Result.error("負責人ID格式無效"));
-                    }
-                } else {
-                    app.setOperator(currentUser);
-                }
+                // 【已刪除】：處理負責人的自動/手動邏輯已完全移除
+
             } else {
                 return ResponseEntity.status(401).body(Result.error("請先登入"));
             }
@@ -411,8 +449,15 @@ public class AdminSellController {
             // 【核心校驗 1】：檢查是否試圖將狀態改為 COMPLETED
             // ==========================================
             boolean isChangingToCompleted = false;
+            boolean isChangingFromCompletedToOther = false; // 標記是否從 COMPLETED 變為其他狀態
+            SellApplication.ApplicationStatus newStatus = null;
             if (form.get("status") != null && !form.get("status").isEmpty()) {
-                SellApplication.ApplicationStatus newStatus = SellApplication.ApplicationStatus.valueOf(form.get("status"));
+                newStatus = SellApplication.ApplicationStatus.valueOf(form.get("status"));
+
+                // 如果已經入庫 (is_stocked_in == true)，則禁止修改狀態
+                if (Boolean.TRUE.equals(app.getIsStockedIn()) && newStatus != oldStatus) {
+                    return ResponseEntity.badRequest().body(Result.error("該申請已入庫，狀態已被鎖定，無法修改！"));
+                }
 
                 if (newStatus == SellApplication.ApplicationStatus.COMPLETED && oldStatus != SellApplication.ApplicationStatus.COMPLETED) {
                     isChangingToCompleted = true;
@@ -427,6 +472,10 @@ public class AdminSellController {
                     if (finalPriceStr == null || finalPriceStr.trim().isEmpty()) {
                         return ResponseEntity.badRequest().body(Result.error("狀態為「已完成」時，最終成交價不能為空！"));
                     }
+                } //如果原本是 COMPLETED，但現在改成了其他狀態
+                else if (oldStatus == SellApplication.ApplicationStatus.COMPLETED && newStatus != SellApplication.ApplicationStatus.COMPLETED) {
+                    isChangingFromCompletedToOther = true;
+                    app.setCompletedAt(null); // 【核心】清空完成時間
                 }
             }
 
@@ -493,7 +542,19 @@ public class AdminSellController {
                 }
             }
 
-            // ===== 6. 圖片管理 (更換 / 移動 / 刪除) =====
+            // ===== 6. 指定負責人 (operatorId) =====
+            if (form.containsKey("operatorId")) {
+                String operatorIdStr = form.get("operatorId");
+                if (operatorIdStr != null && !operatorIdStr.trim().isEmpty()) {
+                    User operator = userRepository.findById(Long.valueOf(operatorIdStr))
+                            .orElseThrow(() -> new RuntimeException("指定的負責人不存在，ID: " + operatorIdStr));
+                    app.setOperator(operator);
+                } else {
+                    app.setOperator(null);
+                }
+            }
+
+            // ===== 7. 圖片管理 (更換 / 移動 / 刪除) =====
             Map<String, String> oldMap = parseImageMap(oldImagePathsJson);
             Map<String, String> finalMap = new java.util.LinkedHashMap<>(oldMap);
 
@@ -565,7 +626,17 @@ public class AdminSellController {
             if (!java.util.Objects.equals(app.getQuantity(), oldQuantity)) addChange(changesList, "quantity", String.valueOf(oldQuantity), String.valueOf(app.getQuantity()));
 
             Long newAppraiserId = app.getAppraiser() != null ? app.getAppraiser().getId() : null;
-            if (!java.util.Objects.equals(newAppraiserId, oldAppraiserId)) addChange(changesList, "appraiserId", String.valueOf(oldAppraiserId), String.valueOf(newAppraiserId));
+            if (!java.util.Objects.equals(newAppraiserId, oldAppraiserId)) {
+                addChange(changesList, "appraiserId", String.valueOf(oldAppraiserId), String.valueOf(newAppraiserId));
+            }
+
+            // ==========================================
+            // 【新增】：主要負責人變更審計
+            // ==========================================
+            Long newOperatorId = app.getOperator() != null ? app.getOperator().getId() : null;
+            if (!java.util.Objects.equals(newOperatorId, oldOperatorId)) {
+                addChange(changesList, "operatorId", String.valueOf(oldOperatorId), String.valueOf(newOperatorId));
+            }
 
             if (isBigDecimalChanged.test(app.getEstimatedPrice(), oldEstimatedPrice)) {
                 addChange(changesList, "estimatedPrice", String.valueOf(oldEstimatedPrice), String.valueOf(app.getEstimatedPrice()));
@@ -603,69 +674,81 @@ public class AdminSellController {
 
                 auditLogRepository.save(auditLog);
             }
-            // ==========================================
 
-            // 保存業務數據
             // ==========================================
             // 保存業務數據 (先保存申請，確保 app.getCompletedAt() 等數據是最新的)
             // ==========================================
             sellApplicationRepository.save(app);
 
             // ==========================================
-            // 【 核心財務報表更新邏輯整合】
-            // 觸發條件 1: 狀態剛剛變更為 COMPLETED (isChangingToCompleted)
-            // 觸發條件 2: 已經是 COMPLETED 狀態，但管理員修改了最終成交價 (isPriceChangedInCompleted)
+            // 【 核心財務報表更新邏輯整合 (修正版) 】
+            // 觸發條件:
+            // 1. 狀態剛剛變更為 COMPLETED (isChangingToCompleted) -> 首次計入
+            // 2. 狀態已經是 COMPLETED，但 finalPrice 被修改了 -> 差額修正
+            // 3. 從 COMPLETED 變更為其他狀態，需扣減原 finalPrice
             // ==========================================
-            boolean isPriceChangedInCompleted = (oldStatus == SellApplication.ApplicationStatus.COMPLETED) &&
-                    (app.getFinalPrice() != null && !app.getFinalPrice().equals(oldFinalPrice));
+            boolean isFinalPriceChanged = isBigDecimalChanged.test(app.getFinalPrice(), oldFinalPrice);
 
-            if ((isChangingToCompleted || isPriceChangedInCompleted) && app.getStoreId() != null && !app.getStoreId().trim().isEmpty()) {
-                try {
-                    Long storeId = Long.parseLong(app.getStoreId());
+            // 【核心修改】：只要涉及門店且狀態/價格有變動，就進入處理
+            if (app.getStoreId() != null && !app.getStoreId().trim().isEmpty()) {
 
-                    // 【核心修復】：提取日期
-                    // 如果是「已完成狀態下修改價格」，必須使用該申請原本的 completedAt 日期
-                    // 如果是「剛剛變更為完成」，則使用今天的日期 (LocalDate.now())
-                    LocalDate reportDate = (isPriceChangedInCompleted && app.getCompletedAt() != null)
-                            ? app.getCompletedAt().toLocalDate()
-                            : LocalDate.now();
+                if (isChangingToCompleted || (oldStatus == SellApplication.ApplicationStatus.COMPLETED && isFinalPriceChanged)) {
+                    // === 情況 A & B：變更為 COMPLETED，或已是 COMPLETED 但修改了價格 (保持您原有的邏輯) ===
+                    try {
+                        Long storeId = Long.parseLong(app.getStoreId());
+                        LocalDate reportDate = (app.getCompletedAt() != null) ? app.getCompletedAt().toLocalDate() : LocalDate.now();
 
-                    // 1. 找到對應門店、對應日期的每日報表
-                    StoreDailyReport report = storeDailyReportRepository.findByStore_StoreIdAndReportDate(storeId, reportDate)
-                            .orElseGet(() -> {
-                                StoreDailyReport newReport = new StoreDailyReport();
-                                // 獲取門店實體並建立關聯 (因為實體類中 store 是 @ManyToOne 且通常不可為空)
-                                OfflineStore store = offlineStoreRepository.findById(storeId)
-                                        .orElseThrow(() -> new RuntimeException("找不到關聯的門店，ID: " + storeId));
-                                newReport.setStore(store);
-                                newReport.setReportDate(reportDate);
-                                // 其他數值字段 (如 storeAcquisitionCost) 在實體類中已有默認值 BigDecimal.ZERO，直接返回即可
-                                return newReport;
-                            });
+                        StoreDailyReport report = storeDailyReportRepository.findByStore_StoreIdAndReportDate(storeId, reportDate)
+                                .orElseGet(() -> {
+                                    StoreDailyReport newReport = new StoreDailyReport();
+                                    OfflineStore store = offlineStoreRepository.findById(storeId)
+                                            .orElseThrow(() -> new RuntimeException("找不到關聯的門店，ID: " + storeId));
+                                    newReport.setStore(store);
+                                    newReport.setReportDate(reportDate);
+                                    return newReport;
+                                });
 
-                    java.math.BigDecimal currentCost = report.getStoreAcquisitionCost() != null ? report.getStoreAcquisitionCost() : java.math.BigDecimal.ZERO;
+                        java.math.BigDecimal currentCost = report.getStoreAcquisitionCost() != null ? report.getStoreAcquisitionCost() : java.math.BigDecimal.ZERO;
+                        java.math.BigDecimal newFinalPrice = app.getFinalPrice() != null ? app.getFinalPrice() : java.math.BigDecimal.ZERO;
 
-                    if (isChangingToCompleted) {
-                        // 情況 A：剛剛變更為完成 -> 直接加上最終成交價
-                        java.math.BigDecimal finalPriceToAdd = app.getFinalPrice() != null ? app.getFinalPrice() : java.math.BigDecimal.ZERO;
-                        report.setStoreAcquisitionCost(currentCost.add(finalPriceToAdd));
-                    }
-                    else if (isPriceChangedInCompleted) {
-                        // 情況 B：已完成狀態下修改價格 -> 計算差值 (新價格 - 舊價格)，並累加到原成本中
-                        // 注意：如果新價格小於舊價格，diff 會是負數，add(diff) 就等於減去，完美符合邏輯！
-                        java.math.BigDecimal diff = app.getFinalPrice().subtract(oldFinalPrice);
-                        report.setStoreAcquisitionCost(currentCost.add(diff));
+                        if (isChangingToCompleted) {
+                            report.setStoreAcquisitionCost(currentCost.add(newFinalPrice));
+                        } else {
+                            java.math.BigDecimal oldPriceVal = oldFinalPrice != null ? oldFinalPrice : java.math.BigDecimal.ZERO;
+                            java.math.BigDecimal diff = newFinalPrice.subtract(oldPriceVal);
+                            report.setStoreAcquisitionCost(currentCost.add(diff));
+                        }
+                        storeDailyReportRepository.save(report);
+                    } catch (Exception e) {
+                        throw new RuntimeException("更新門店每日報表失敗: " + e.getMessage());
                     }
 
-                    // 2. 保存更新後的報表
-                    storeDailyReportRepository.save(report);
+                } else if (isChangingFromCompletedToOther) {
+                    // === 【新增情況 C】：從 COMPLETED 變更為其他狀態，需扣減原 finalPrice ===
+                    try {
+                        Long storeId = Long.parseLong(app.getStoreId());
 
-                } catch (NumberFormatException e) {
-                    System.err.println("⚠️ 無效的門店ID格式，無法更新門店每日報表: " + app.getStoreId());
-                } catch (Exception e) {
-                    System.err.println("⚠️ 更新門店每日報表失敗: " + e.getMessage());
-                    // 【重要】財務數據更新失敗應拋出異常，阻止整個事務提交，保證數據一致性
-                    throw new RuntimeException("更新門店每日報表失敗: " + e.getMessage());
+                        // 【關鍵】：必須使用備份的 oldCompletedAt，因為 app.getCompletedAt() 剛剛已經被設為 null 了！
+                        LocalDate reportDate = (oldCompletedAt != null) ? oldCompletedAt.toLocalDate() : LocalDate.now();
+
+                        StoreDailyReport report = storeDailyReportRepository.findByStore_StoreIdAndReportDate(storeId, reportDate).orElse(null);
+
+                        if (report != null) {
+                            java.math.BigDecimal currentCost = report.getStoreAcquisitionCost() != null ? report.getStoreAcquisitionCost() : java.math.BigDecimal.ZERO;
+                            java.math.BigDecimal oldPriceVal = oldFinalPrice != null ? oldFinalPrice : java.math.BigDecimal.ZERO;
+
+                            // 【核心】：從收購成本中減去舊的最終成交價
+                            report.setStoreAcquisitionCost(currentCost.subtract(oldPriceVal));
+
+                            storeDailyReportRepository.save(report);
+                            System.out.println("⚠️ [財務審計] 檢測到申請從 COMPLETED 變更為其他狀態，門店 [" + storeId + "] 收購成本已扣減: " + oldPriceVal);
+                        }
+                    } catch (NumberFormatException e) {
+                        System.err.println("⚠️ 無效的門店ID格式，無法更新門店每日報表: " + app.getStoreId());
+                    } catch (Exception e) {
+                        System.err.println("⚠️ 更新門店每日報表失敗: " + e.getMessage());
+                        throw new RuntimeException("更新門店每日報表失敗: " + e.getMessage());
+                    }
                 }
             }
 
@@ -755,5 +838,86 @@ public class AdminSellController {
         String searchKey = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         List<String> brands = productRepository.findDistinctBrandsByKeyword(searchKey);
         return ResponseEntity.ok(Result.okWithData("獲取成功", brands));
+    }
+
+    @Operation(summary = "確認出售申請入庫", description = "將已完成的出售申請商品入庫至指定門店庫存")
+    @PostMapping("/api/sell-applications/{id}/stock-in")
+    @ResponseBody
+    @Transactional
+    public ResponseEntity<?> stockInSellApplication(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        // 1. 查找申請記錄
+        SellApplication app = sellApplicationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("申請記錄不存在"));
+
+        // 2. 核心校驗：必須是 COMPLETED 且未入庫
+        if (app.getStatus() != SellApplication.ApplicationStatus.COMPLETED) {
+            return ResponseEntity.badRequest().body(Result.error("只有狀態為「已完成」的申請才能入庫"));
+        }
+        if (Boolean.TRUE.equals(app.getIsStockedIn())) {
+            return ResponseEntity.badRequest().body(Result.error("該申請已經入庫，請勿重複操作"));
+        }
+
+        // 3. 獲取門店資訊
+        if (app.getStoreId() == null || app.getStoreId().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Result.error("該申請未關聯門店，無法執行門店入庫！"));
+        }
+        Long storeId = Long.parseLong(app.getStoreId());
+        OfflineStore store = offlineStoreRepository.findById(storeId)
+                .orElseThrow(() -> new RuntimeException("關聯的門店不存在，ID: " + storeId));
+
+        // 4. 獲取商品與數量
+        Product product = app.getProduct();
+        if (product == null) {
+            return ResponseEntity.badRequest().body(Result.error("該申請未關聯商品，無法入庫"));
+        }
+        Integer quantity = app.getQuantity() != null ? app.getQuantity() : 0;
+        if (quantity <= 0) {
+            return ResponseEntity.badRequest().body(Result.error("入庫數量必須大於 0"));
+        }
+
+        // 5. 查找或創建門店庫存記錄
+        StoreInventory storeInv = storeInventoryRepository.findByStoreAndProduct(store, product)
+                .orElseGet(() -> {
+                    StoreInventory newInv = new StoreInventory();
+                    newInv.setStore(store);
+                    newInv.setProduct(product);
+                    newInv.setQuantity(0);
+                    return newInv;
+                });
+
+        Integer previousQty = storeInv.getQuantity();
+        Integer newQty = previousQty + quantity;
+
+        // 6. 更新門店庫存
+        storeInv.setQuantity(newQty);
+        storeInventoryRepository.save(storeInv);
+
+        // 7. 記錄庫存調整日誌
+        String operatorUsername = authentication.getName();
+        User operator = userRepository.findByUsername(operatorUsername)
+                .orElseThrow(() -> new RuntimeException("操作人不存在"));
+
+        InventoryAdjustmentLog log = new InventoryAdjustmentLog();
+        log.setProduct(product);
+        log.setOperator(operator);
+        log.setWarehouseType(InventoryAdjustmentLog.WarehouseType.OFFLINE);
+        log.setStore(store);
+        log.setPreviousQuantity(previousQty);
+        log.setNewQuantity(newQty);
+        log.setChangeQuantity(quantity);
+        log.setReason("出售申請買斷入庫 (申請ID: " + app.getApplicationId() + ")");
+        // 註：這裡使用 PURCHASE_IN，因為平台買斷本質上是採購入庫。
+        // 如果您希望語義更精確，可以在 InventoryAdjustmentLog.AdjustmentType 枚舉中新增 SELL_IN，並將此行改為 SELL_IN。
+        log.setAdjustmentType(InventoryAdjustmentLog.AdjustmentType.PURCHASE_IN);
+        adjustmentLogRepository.save(log);
+
+        // 8. 更新出售申請狀態為已入庫
+        app.setIsStockedIn(true);
+        sellApplicationRepository.save(app);
+
+        return ResponseEntity.ok(Result.ok("入庫成功，門店庫存已更新！"));
     }
 }

@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users", indexes = {
-       // MySQL 會為 username 建立一棵獨立的 B+ 樹（非聚簇索引）。這棵樹的葉子節點不會存儲用戶的完整資料，而是存儲 (username, user_id)。
         @Index(name = "uk_user_email", columnList = "email", unique = true),
         @Index(name = "uk_user_username", columnList = "username", unique = true),
         @Index(name = "uk_user_uid", columnList = "uid", unique = true)
@@ -18,46 +17,31 @@ import java.time.LocalDateTime;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class User {
 
-    // 1. 主鍵自增 ID
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
-    private Long id;// 這就是聚簇索引
+    private Long id;
 
-    // UID (唯一標識符)
     @Column(name = "uid", unique = true, length = 50, updatable = false)
     private String uid;
 
-    // 姓名 (必填)
     @Column(name = "name", length = 100, nullable = false)
-    private String name;
+    private String name; // 姓名保留在 User，因為顧客也可能需要真實姓名
 
-    // 用戶名 (唯一業務鍵，必填)
     @Column(name = "username", length = 50, unique = true, nullable = false)
     private String username;
 
-    // 密碼 (加密存儲)
     @Column(name = "password", length = 255)
     private String password;
 
-    // 郵箱 (唯一，必填)
     @Column(name = "email", length = 100, nullable = false, unique = true)
     private String email;
 
-    // 手機號 (必填)
     @Column(name = "phone", length = 20, nullable = false)
     private String phone;
 
-    @Column(name = "work_phone", length = 20)
-    private String workPhone;
+    // 【移除】 workPhone 和 store 關聯，移至 Staff 表
 
-    // 關聯的線下門店實體 (非必填，FetchType.LAZY 避免效能問題)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "store_id") // 這會在資料庫生成名為 store_id 的外鍵欄位
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-    private OfflineStore store;
-
-    // 用戶角色 (默認為顧客)
     @Enumerated(EnumType.STRING)
     @Column(name = "user_type", length = 20, nullable = false)
     private Role role = Role.CUSTOMER;
@@ -71,12 +55,6 @@ public class User {
     private LocalDateTime updatedAt;
 
     public enum Role {
-        ADMIN,
-        CUSTOMER,
-        SALES,      // 一般銷售人員（門店接待、訂單處理、客戶溝通）
-        COURIER,    // 送貨/快遞人員（僅能查看配送任務、更新物流狀態）
-        APPRAISER,   // 【預留】鑑定師（負責手錶真偽鑑定與評級）
-        ONLINE_STAFF,
-        STORE_MANAGER
+        ADMIN, CUSTOMER, SALES, COURIER, APPRAISER, ONLINE_STAFF, STORE_MANAGER
     }
 }
