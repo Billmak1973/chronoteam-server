@@ -31,6 +31,16 @@ public class SellApplicationDTO {
 
     private String notes;
 
+    // 【新增】關聯平台商品 ID (可選)
+    private Integer productId;
+
+    // 【新增】鑑定相關字段
+    private Long appraiserId;
+    private String estimatedPrice;
+    private String finalPrice;
+    private String appraisalNotes;
+
+    private String status;
     // 圖片文件（前端上傳）
     private MultipartFile imgDial;        // 錶面
     private MultipartFile imgCaseback;    // 錶背/機芯

@@ -838,9 +838,8 @@
         // ==========================================
         let loadedStores = [];
 
-        // ==========================================
+
         // 1. 頁面初始化：加載可用門店列表
-        // ==========================================
         document.addEventListener('DOMContentLoaded', function () {
             loadStores();
         });
@@ -903,9 +902,8 @@
             }
         }
 
-        // ==========================================
+
         // 2. 門店信息與日期限制更新
-        // ==========================================
         window.updateStoreInfo = function (storeId, currentAppDate = null) {
             const store = loadedStores.find(s => s.storeId == storeId);
             const infoBox = document.getElementById('storeInfoBox');
@@ -995,9 +993,7 @@
             }
         };
 
-        // ==========================================
         // 3. 時間槽動態驗證與限制
-        // ==========================================
         window.updateTimeSlots = function (isOriginalDate = false) {
             const storeId = document.getElementById('storeIdSelect').value;
             const dateInput = document.getElementById('appointmentDate');
@@ -1186,9 +1182,7 @@
             }
         };
 
-        // ==========================================
         // 4. 輔助函數：時間格式轉換
-        // ==========================================
         function parseBusinessHours(hoursStr) {
             const parts = hoursStr.split('-');
             if (parts.length === 2) {
@@ -1200,9 +1194,8 @@
             return null;
         }
 
-        // ==========================================
+
         // 12小時制轉24小時制函數
-        // ==========================================
         function convertTo24Hour(time12) {
             if (!time12) return null;
 

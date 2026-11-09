@@ -106,4 +106,16 @@ public interface SellApplicationRepository extends JpaRepository<SellApplication
             @Param("username") String username,
             @Param("mode") SellApplication.TransactionMode mode
     );
+
+    /**
+     * 獲取所有出現過的商店 ID (去重)
+     */
+    @Query("SELECT DISTINCT s.storeId FROM SellApplication s WHERE s.storeId IS NOT NULL AND s.storeId != ''")
+    List<String> findDistinctStoreIds();
+
+    /**
+     * 獲取所有出現過的品牌 (去重並排序)
+     */
+    @Query("SELECT DISTINCT s.brand FROM SellApplication s WHERE s.brand IS NOT NULL AND s.brand != '' ORDER BY s.brand ASC")
+    List<String> findDistinctBrands();
 }

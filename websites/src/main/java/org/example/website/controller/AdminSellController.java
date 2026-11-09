@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.example.website.dto.Result;
+import org.example.website.dto.SellApplicationDTO;
 import org.example.website.entity.*;
 import org.example.website.repository.*;
 import org.example.website.service.FileStorageService;
@@ -23,9 +25,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
-
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -60,32 +64,52 @@ public class AdminSellController {
         this.adjustmentLogRepository = adjustmentLogRepository;
     }
 
+
     @Hidden
     @GetMapping("/sell-applications")
     public String sellApplicationsPage(Model model, org.springframework.security.core.Authentication authentication) {
         model.addAttribute("activePage", "sell-app");
 
-        // 【核心修復】：動態判斷當前用戶是否擁有「最高覆蓋權限」(不僅限於 ADMIN，店主也可以)
+        // 【核心修復】：動態判斷當前用戶是否擁有「最高覆蓋權限」
         boolean isOverrideRole = false;
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
             try {
-                // 獲取當前用戶的角色名稱 (例如: "STORE_MANAGER")
                 org.example.website.security.CustomUserDetails userDetails =
                         (org.example.website.security.CustomUserDetails) authentication.getPrincipal();
                 String roleName = userDetails.getRole().name();
-
-                // 獲取系統配置的覆蓋權限列表
                 List<String> overrideRoles = systemConfigService.getAfterSalesOverrideRoles();
-
-                // 判斷當前角色是否在列表中
                 isOverrideRole = overrideRoles.contains(roleName);
             } catch (Exception e) {
                 // 未登入或解析異常，默認為 false
             }
         }
-
-        // 將動態計算的結果傳遞給前端 Thymeleaf
         model.addAttribute("isOverrideRole", isOverrideRole);
+
+        // 獲取所有出現過的商店選項 (通過 storeId 關聯獲取 name)
+        List<String> storeIdStrs = sellApplicationRepository.findDistinctStoreIds();
+        List<Map<String, Object>> storeOptions = new ArrayList<>();
+        if (storeIdStrs != null && !storeIdStrs.isEmpty()) {
+            List<Long> storeIds = storeIdStrs.stream()
+                    .filter(id -> id != null && id.matches("\\d+"))
+                    .map(Long::valueOf)
+                    .distinct()
+                    .collect(java.util.stream.Collectors.toList());
+
+            if (!storeIds.isEmpty()) {
+                List<OfflineStore> stores = offlineStoreRepository.findByStoreIdIn(storeIds);
+                for (OfflineStore store : stores) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("storeId", store.getStoreId());
+                    map.put("name", store.getName());
+                    storeOptions.add(map);
+                }
+            }
+        }
+        model.addAttribute("storeOptions", storeOptions);
+
+        // 獲取所有出現過的品牌選項 (去重)
+        List<String> brandOptions = sellApplicationRepository.findDistinctBrands();
+        model.addAttribute("brandOptions", brandOptions);
 
         return "admin/admin-sell-applications";
     }
@@ -253,12 +277,14 @@ public class AdminSellController {
             userMap.put("phone", app.getUser().getPhone());
             data.put("user", userMap);
         }
+
         if (app.getAppraiser() != null) {
             Map<String, Object> appraiserMap = new HashMap<>();
             appraiserMap.put("id", app.getAppraiser().getId());
             appraiserMap.put("username", app.getAppraiser().getUsername());
             data.put("appraiser", appraiserMap);
         }
+
         // 處理最後負責人 (Operator)
         if (app.getOperator() != null) {
             Map<String, Object> operatorMap = new HashMap<>();
@@ -268,6 +294,7 @@ public class AdminSellController {
         } else {
             data.put("operator", null);
         }
+
         if (app.getProduct() != null) {
             Map<String, Object> productMap = new HashMap<>();
             productMap.put("productId", app.getProduct().getProductId());
@@ -275,6 +302,104 @@ public class AdminSellController {
             productMap.put("price", app.getProduct().getPrice());
             data.put("product", productMap);
         }
+
+// ==========================================
+// 【核心新增】：查詢並組裝審計日誌 (Audit Logs)
+// ==========================================
+// 1. 查詢該申請的所有審計日誌
+        List<SellApplicationAuditLog> auditLogs = auditLogRepository.findAllByApplication_ApplicationIdOrderByCreatedAtDesc(id);
+
+// 2. 【核心修改】：解析 changedFields，收集所有涉及的用戶 ID，以便批量查詢用戶名
+// 注意：需要引入 com.fasterxml.jackson.databind.ObjectMapper;
+        ObjectMapper objectMapper = new ObjectMapper(); // 如果類裡沒注入，這裡 new 一個，或者用 @Autowired 注入的
+        Set<Long> userIdsToFetch = new HashSet<>();
+
+        for (SellApplicationAuditLog log : auditLogs) {
+            try {
+                // changedFields 存的是 JSON 字符串，例如：[{"newValue":"1","fieldName":"operatorId","oldValue":"5"}]
+                JsonNode rootNode = objectMapper.readTree(log.getChangedFields());
+                if (rootNode.isArray()) {
+                    for (JsonNode node : rootNode) {
+                        String fieldName = node.get("fieldName").asText();
+                        // 只處理負責人相關字段
+                        if ("operatorId".equals(fieldName) || "appraiserId".equals(fieldName)) {
+                            if (node.has("oldValue") && !node.get("oldValue").isNull() && !node.get("oldValue").asText().isEmpty()) {
+                                try { userIdsToFetch.add(Long.parseLong(node.get("oldValue").asText())); } catch (Exception ignored) {}
+                            }
+                            if (node.has("newValue") && !node.get("newValue").isNull() && !node.get("newValue").asText().isEmpty()) {
+                                try { userIdsToFetch.add(Long.parseLong(node.get("newValue").asText())); } catch (Exception ignored) {}
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // 忽略解析錯誤
+            }
+        }
+
+// 3. 批量查詢用戶信息 (ID -> Username)
+// 使用 userRepository.findAllById 一次性查出來，避免 N+1 問題
+        List<User> users = userRepository.findAllById(userIdsToFetch);
+        Map<String, String> idToNameMap = new HashMap<>();
+        for (User u : users) {
+            // 這裡決定顯示 username 還是 name。看你的截圖是 "admin"，通常是 username。
+            // 如果想顯示真實姓名，改為 u.getName()
+            idToNameMap.put(String.valueOf(u.getId()), u.getUsername());
+        }
+
+// 4. 構建返回給前端的日誌列表，並替換 ID 為名字
+        List<Map<String, Object>> cleanAuditLogs = auditLogs.stream().map(log -> {
+            Map<String, Object> logMap = new HashMap<>();
+            logMap.put("actionType", log.getActionType());
+
+            // 【核心修改】：處理 changedFields，將 ID 替換為名字
+            String processedChangedFields = log.getChangedFields();
+            try {
+                JsonNode rootNode = objectMapper.readTree(log.getChangedFields());
+                if (rootNode.isArray()) {
+                    for (JsonNode node : rootNode) {
+                        String fieldName = node.get("fieldName").asText();
+                        if ("operatorId".equals(fieldName) || "appraiserId".equals(fieldName)) {
+                            // 替換 oldValue
+                            if (node.has("oldValue") && !node.get("oldValue").isNull()) {
+                                String oldIdStr = node.get("oldValue").asText();
+                                if (idToNameMap.containsKey(oldIdStr)) {
+                                    // 將 JSON 節點的值改為用戶名
+                                    ((ObjectNode) node).put("oldValue", idToNameMap.get(oldIdStr));
+                                }
+                            }
+                            // 替換 newValue
+                            if (node.has("newValue") && !node.get("newValue").isNull()) {
+                                String newIdStr = node.get("newValue").asText();
+                                if (idToNameMap.containsKey(newIdStr)) {
+                                    ((ObjectNode) node).put("newValue", idToNameMap.get(newIdStr));
+                                }
+                            }
+                        }
+                    }
+                    // 重新序列化為字符串
+                    processedChangedFields = objectMapper.writeValueAsString(rootNode);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            logMap.put("changedFields", processedChangedFields);
+            logMap.put("remark", log.getRemark());
+            logMap.put("createdAt", log.getCreatedAt());
+
+            // 操作日誌的人 (Operator) - 這個本來就有名字，不用動
+            Map<String, Object> logOperatorMap = new HashMap<>();
+            if (log.getOperator() != null) {
+                logOperatorMap.put("id", log.getOperator().getId());
+                logOperatorMap.put("username", log.getOperator().getUsername());
+            }
+            logMap.put("operator", logOperatorMap);
+
+            return logMap;
+        }).collect(Collectors.toList());
+
+        data.put("auditLogs", cleanAuditLogs);
 
         return ResponseEntity.ok(Result.okWithData("獲取成功", data));
     }
@@ -920,4 +1045,164 @@ public class AdminSellController {
 
         return ResponseEntity.ok(Result.ok("入庫成功，門店庫存已更新！"));
     }
+
+
+    @Operation(summary = "授權人員手動創建出售申請", description = "管理員、店長、鑑定師等授權人員代為創建出售申請，操作人自動記錄為當前登入者")
+    @PostMapping(value = "/api/sell-applications/create", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseBody
+    @Transactional // 【核心】確保實體保存與財務報表更新在同一事務中，失敗時可整體回滾
+    public ResponseEntity<?> createApplicationByAdmin(
+            @ModelAttribute @Valid SellApplicationDTO dto,
+            @RequestParam String targetUsername, // 從前端 FormData 中獲取目標用戶名
+            MultipartHttpServletRequest multipartRequest,
+            Authentication authentication) {
+
+        try {
+            // 1. 【核心修改】動態權限校驗：檢查當前用戶是否在允許執行鑑定/創建操作的授權角色列表中
+            String operatorUsername = authentication.getName();
+            User operator = userRepository.findByUsername(operatorUsername)
+                    .orElseThrow(() -> new RuntimeException("操作人不存在: " + operatorUsername));
+
+            List<String> authorizedRoles = systemConfigService.getAppraisalAuthorizedRoles();
+            if (!authorizedRoles.contains(operator.getRole().name())) {
+                return ResponseEntity.status(403).body(Result.error("無權操作，僅限授權人員 (如管理員、鑑定師、店長等)"));
+            }
+
+            // 2. 查找目標用戶 (申請人)
+            User targetUser = userRepository.findByUsername(targetUsername)
+                    .orElseThrow(() -> new RuntimeException("目標用戶不存在: " + targetUsername));
+
+            // 3. 查找商品 (如果前端有選擇)
+            Product product = null;
+            if (dto.getProductId() != null) {
+                product = productRepository.findById(dto.getProductId())
+                        .orElseThrow(() -> new RuntimeException("關聯的商品不存在，ID: " + dto.getProductId()));
+            }
+
+            // 4. 查找鑑定師 (如果前端有選擇)
+            User appraiser = null;
+            if (dto.getAppraiserId() != null) {
+                appraiser = userRepository.findById(dto.getAppraiserId())
+                        .orElseThrow(() -> new RuntimeException("指派的鑑定師不存在，ID: " + dto.getAppraiserId()));
+            }
+
+            // 5. 構建實體
+            SellApplication application = new SellApplication();
+            application.setUser(targetUser);
+
+            if (product != null) {
+                application.setProduct(product);
+                application.setBrand(product.getBrand());
+                application.setSeries(product.getDescription());
+            } else {
+                application.setBrand(dto.getBrand());
+                application.setSeries(dto.getSeries());
+            }
+
+            application.setModel(dto.getModel());
+            application.setPurchaseYear(dto.getPurchaseYear());
+            application.setQuantity(dto.getQuantity() != null ? dto.getQuantity() : 1);
+            application.setCondition(dto.getCondition());
+            application.setFunctionStatus(dto.getFunctionStatus());
+            application.setNotes(dto.getNotes());
+            application.setTransactionMode(SellApplication.TransactionMode.valueOf(dto.getTransactionMode()));
+
+            // 解析目標狀態
+            SellApplication.ApplicationStatus targetStatus = SellApplication.ApplicationStatus.valueOf(dto.getStatus());
+            application.setStatus(targetStatus);
+
+            // 【核心修改】：如果狀態為 COMPLETED，設置完成時間
+            if (targetStatus == SellApplication.ApplicationStatus.COMPLETED) {
+                application.setCompletedAt(LocalDateTime.now());
+            } else {
+                application.setCompletedAt(null);
+            }
+
+            // 處理 BigDecimal 轉換
+            BigDecimal finalPrice = null;
+            if (dto.getEstimatedPrice() != null && !dto.getEstimatedPrice().trim().isEmpty()) {
+                application.setEstimatedPrice(new BigDecimal(dto.getEstimatedPrice()));
+            }
+            if (dto.getFinalPrice() != null && !dto.getFinalPrice().trim().isEmpty()) {
+                finalPrice = new BigDecimal(dto.getFinalPrice());
+                application.setFinalPrice(finalPrice);
+            }
+
+            application.setAppraisalNotes(dto.getAppraisalNotes());
+            application.setAppraiser(appraiser);
+
+            // 設置操作人為當前登入者
+            application.setOperator(operator);
+
+            application.setStoreId(dto.getStoreId());
+            application.setAppointmentDate(dto.getAppointmentDate());
+            application.setAppointmentTimeSlot(dto.getAppointmentTimeSlot());
+            application.setIsStockedIn(false); // 新建默認未入庫
+
+            // 6. 處理附件列表 (轉為 JSON)
+            if (dto.getAccessories() != null && !dto.getAccessories().isEmpty()) {
+                application.setAccessories(objectMapper.writeValueAsString(dto.getAccessories()));
+            }
+
+            // 7. 處理圖片上傳
+            Map<String, org.springframework.web.multipart.MultipartFile> imageFiles = new HashMap<>();
+            if (dto.getImgDial() != null && !dto.getImgDial().isEmpty()) imageFiles.put("dial", dto.getImgDial());
+            if (dto.getImgCaseback() != null && !dto.getImgCaseback().isEmpty()) imageFiles.put("caseback", dto.getImgCaseback());
+            if (dto.getImgCard() != null && !dto.getImgCard().isEmpty()) imageFiles.put("card", dto.getImgCard());
+            if (dto.getImgFlaws() != null && !dto.getImgFlaws().isEmpty()) imageFiles.put("flaws", dto.getImgFlaws());
+            if (dto.getImgExtra() != null && !dto.getImgExtra().isEmpty()) imageFiles.put("extra", dto.getImgExtra());
+
+            if (!imageFiles.isEmpty()) {
+                String tempId = "admin_create_" + System.currentTimeMillis() + "_" + targetUsername;
+                Map<String, String> imagePaths = fileStorageService.uploadMultipleImages(imageFiles, tempId);
+                application.setImagePaths(objectMapper.writeValueAsString(imagePaths));
+            }
+
+            // 8. 保存到數據庫
+            SellApplication saved = sellApplicationRepository.save(application);
+
+            // 9. 【核心財務邏輯】：如果狀態為 COMPLETED 且有關聯門店與最終成交價，更新門店每日報表
+            if (targetStatus == SellApplication.ApplicationStatus.COMPLETED &&
+                    saved.getStoreId() != null && !saved.getStoreId().trim().isEmpty() &&
+                    finalPrice != null) {
+
+                try {
+                    Long storeId = Long.parseLong(saved.getStoreId());
+                    LocalDate reportDate = saved.getCompletedAt() != null ? saved.getCompletedAt().toLocalDate() : LocalDate.now();
+
+                    StoreDailyReport report = storeDailyReportRepository.findByStore_StoreIdAndReportDate(storeId, reportDate)
+                            .orElseGet(() -> {
+                                StoreDailyReport newReport = new StoreDailyReport();
+                                OfflineStore store = offlineStoreRepository.findById(storeId)
+                                        .orElseThrow(() -> new RuntimeException("找不到關聯的門店，ID: " + storeId));
+                                newReport.setStore(store);
+                                newReport.setReportDate(reportDate);
+                                newReport.setStoreAcquisitionCost(BigDecimal.ZERO); // 初始化為 0
+                                return newReport;
+                            });
+
+                    BigDecimal currentCost = report.getStoreAcquisitionCost() != null ? report.getStoreAcquisitionCost() : BigDecimal.ZERO;
+                    // 將最終成交價累加到門店收購成本中
+                    report.setStoreAcquisitionCost(currentCost.add(finalPrice));
+
+                    storeDailyReportRepository.save(report);
+                } catch (NumberFormatException e) {
+                    System.err.println("⚠️ 無效的門店ID格式，無法更新門店每日報表: " + saved.getStoreId());
+                } catch (Exception e) {
+                    System.err.println("⚠️ 更新門店每日報表失敗: " + e.getMessage());
+                    // 若業務要求財務記錄失敗必須回滾整個創建流程，可將下行註解取消：
+                    // throw new RuntimeException("更新門店每日報表失敗: " + e.getMessage());
+                }
+            }
+
+            return ResponseEntity.ok(Result.okWithData("申請創建成功", saved.getApplicationId()));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Result.error("欄位值無效 (狀態/數字格式錯誤): " + e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Result.error("系統錯誤，創建失敗: " + e.getMessage()));
+        }
+    }
+
 }
