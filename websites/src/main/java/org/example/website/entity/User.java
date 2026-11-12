@@ -57,4 +57,13 @@ public class User {
     public enum Role {
         ADMIN, CUSTOMER, SALES, COURIER, APPRAISER, ONLINE_STAFF, STORE_MANAGER
     }
+
+    // 關聯的線下門店實體 (非必填，FetchType.LAZY 避免效能問題)
+    //    @ManyToOne(fetch = FetchType.LAZY)
+    //    @JoinColumn(name = "store_id") // 這會在資料庫生成名為 store_id 的外鍵欄位
+    //    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    //    private OfflineStore store;
+    //Jackson 在嘗試將 User 實體序列化並存入 Redis 時，遇到了 store 屬性。
+    //因為 store 使用了 FetchType.LAZY（延遲加載），Hibernate 返回的不是一個真實的 OfflineStore 對象，而是一個 Hibernate 代理對象 (Proxy)。
+    // 這個代理對象內部包含 Hibernate 注入的 $$_hibernate_interceptor 等內部字段。Jackson 在序列化時試圖讀取這些內部字段，但發現它們沒有 Getter/Setter，從而拋出了 InvalidDefinitionException。
 }

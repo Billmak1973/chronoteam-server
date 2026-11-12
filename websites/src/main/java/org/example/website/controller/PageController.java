@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -529,6 +530,43 @@ public class PageController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * 【API 3】獲取平台公告列表 (獨立數據源: AnnouncementReceipt)
+     * 支持 1-based 分頁，並自動標記為已讀
+     */
+    @GetMapping("/api/notifications/announcement")
+    @ResponseBody
+    public ResponseEntity<?> getAnnouncementNotifications(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "25") int size,
+            Authentication authentication) {
+
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用戶不存在"));
+
+        // 1. 核心修改：前端傳入 1-based，JPA 需要 0-based
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // 2. 查詢平台公告 (MAINTENANCE, PROMOTION)
+        Page<AnnouncementReceipt> receiptPage = announcementReceiptRepository
+                .findPlatformAnnouncementsByUserId(user.getId(), pageable);
+
+        // 3. 進入該接口時，自動將這些公告標記為已讀
+        announcementReceiptRepository.markAllAsReadByUserIdAndTypes(
+                user.getId(),
+                java.util.List.of(Announcement.AnnouncementType.MAINTENANCE, Announcement.AnnouncementType.PROMOTION)
+        );
+
+        // 4. 使用 PaginationUtils 構建標準分頁響應
+        Map<String, Object> response = PaginationUtils.buildPageResponse(receiptPage, receiptPage.getContent());
+
+        // 5. 確保返回給前端的 currentPage 是 1-based
+        response.put("currentPage", page);
+
+        return ResponseEntity.ok(response);
+    }
 
     @GetMapping("/account/history")
     public String myHistory(Model model,

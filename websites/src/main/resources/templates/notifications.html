@@ -348,6 +348,10 @@
         <button class="tab-btn" id="tab-btn-admin" onclick="switchTab('admin', this)">
           <i class="fas fa-exclamation-triangle" style="color: var(--accent);"></i> 管理通知
         </button>
+        <!-- 平台公告 Tab -->
+        <button class="tab-btn" id="tab-btn-announcement" onclick="switchTab('announcement', this)">
+          <i class="fas fa-bullhorn" style="color: var(--primary);"></i> 平台公告
+        </button>
       </div>
 
       <!-- 到貨通知 Tab -->
@@ -380,6 +384,22 @@
         </div>
         <!-- 分頁容器 -->
         <div id="admin-pagination"></div>
+      </div>
+
+      <!-- 新增：平台公告 Tab -->
+      <div id="tab-announcement" class="tab-content">
+        <div id="announcement-loading" class="empty-state" style="display:none;">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>正在加載平台公告...</p>
+        </div>
+        <div id="announcement-list-container" class="notification-list"></div>
+        <div id="announcement-empty" class="empty-state" style="display:none;">
+          <i class="fas fa-bullhorn"></i>
+          <h3>暫無平台公告</h3>
+          <p>平台的重要通知、維護信息或活動將顯示在這裡</p>
+        </div>
+        <!-- 分頁容器 -->
+        <div id="announcement-pagination"></div>
       </div>
 
       <!-- 申訴模態框 -->
@@ -433,7 +453,8 @@
     // ==========================================
     const state = {
       stock: {page: 1, size: 25, loading: false},
-      admin: {page: 1, size: 25, loading: false}
+      admin: {page: 1, size: 25, loading: false},
+      announcement: {page: 1, size: 25, loading: false} // 新增：公告狀態
     };
 
     function switchTab(tabName, btn) {
@@ -446,6 +467,8 @@
         loadStockNotifications(state.stock.page);
       } else if (tabName === 'admin') {
         loadAdminNotifications(state.admin.page);
+      } else if (tabName === 'announcement') { // 新增：切換到公告 Tab
+        loadAnnouncementNotifications(state.announcement.page);
       }
     }
 
@@ -475,7 +498,6 @@
 
         if (!data.content || data.content.length === 0) {
           emptyEl.style.display = 'block';
-          // 即使沒有數據，如果總頁數大於0（理論上不會），也渲染分頁，否則清空
           if (data.totalPages > 0) {
             renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'stock');
           }
@@ -488,25 +510,25 @@
             const announcement = receipt.announcement || {};
 
             html += `
-            <div class="notification-card stock-notif ${isUnreadClass}">
-                <div class="notif-header">
-                    <div class="notif-title">
-                        <i class="fas fa-bell" style="color: var(--gold);"></i>
-                        <span>${escapeHtml(announcement.title || '到貨通知')}</span>
-                    </div>
-                    <div class="notif-date">${dateStr}</div>
+        <div class="notification-card stock-notif ${isUnreadClass}">
+            <div class="notif-header">
+                <div class="notif-title">
+                    <i class="fas fa-bell" style="color: var(--gold);"></i>
+                    <span>${escapeHtml(announcement.title || '到貨通知')}</span>
                 </div>
-                <div class="notif-content">${escapeHtml(announcement.content || '')}</div>
-                <div class="stock-info">
-                    <strong><i class="fas fa-box-open"></i> 商品資訊</strong>
-                    <a href="/product/${announcement.targetId}" class="product-name" onclick="clearStockNotification(event, ${announcement.targetId})">
-                        <i class="fas fa-external-link-alt" style="font-size: 0.8rem; margin-right: 0.3rem;"></i> 點擊查看商品詳情
-                    </a>
-                    <div style="margin-top: 0.5rem; font-size: 0.9rem;">
-                        <span class="stock-count"><i class="fas fa-check-circle"></i> 庫存充足，立即搶購！</span>
-                    </div>
+                <div class="notif-date">${dateStr}</div>
+            </div>
+            <div class="notif-content">${escapeHtml(announcement.content || '')}</div>
+            <div class="stock-info">
+                <strong><i class="fas fa-box-open"></i> 商品資訊</strong>
+                <a href="/product/${announcement.targetId}" class="product-name" onclick="clearStockNotification(event, ${announcement.targetId})">
+                    <i class="fas fa-external-link-alt" style="font-size: 0.8rem; margin-right: 0.3rem;"></i> 點擊查看商品詳情
+                </a>
+                <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                    <span class="stock-count"><i class="fas fa-check-circle"></i> 庫存充足，立即搶購！</span>
                 </div>
-            </div>`;
+            </div>
+        </div>`;
           });
           listContainer.innerHTML = html;
           renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'stock');
@@ -573,54 +595,130 @@
     }
 
     // ==========================================
+    // API 3 (新增): 加載平台公告
+    // ==========================================
+    async function loadAnnouncementNotifications(page) {
+      if (state.announcement.loading) return;
+      state.announcement.loading = true;
+      state.announcement.page = page;
+
+      const listContainer = document.getElementById('announcement-list-container');
+      const loadingEl = document.getElementById('announcement-loading');
+      const emptyEl = document.getElementById('announcement-empty');
+      const paginationEl = document.getElementById('announcement-pagination');
+
+      listContainer.innerHTML = '';
+      emptyEl.style.display = 'none';
+      paginationEl.innerHTML = '';
+      loadingEl.style.display = 'block';
+
+      try {
+        const response = await fetch(`/api/notifications/announcement?page=${page}&size=${state.announcement.size}`);
+        const data = await response.json();
+
+        loadingEl.style.display = 'none';
+
+        if (!data.content || data.content.length === 0) {
+          emptyEl.style.display = 'block';
+          if (data.totalPages > 0) {
+            renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'announcement');
+          }
+        } else {
+          let html = '';
+          data.content.forEach(receipt => {
+            const unreadFlag = (receipt.read === false || receipt.isRead === false);
+            const isUnreadClass = unreadFlag ? 'unread' : '';
+            const dateStr = formatDate(receipt.createdAt);
+            const announcement = receipt.announcement || {};
+
+            // 根據公告類型設置不同的圖標和背景樣式
+            let iconClass = 'fas fa-bullhorn';
+            let iconColor = 'var(--primary)';
+            let bgClass = 'system-notif';
+
+            if (announcement.type === 'MAINTENANCE') {
+              iconClass = 'fas fa-tools';
+              iconColor = '#fd7e14'; // 橙色
+              bgClass = 'maintenance-notif';
+            } else if (announcement.type === 'PROMOTION') {
+              iconClass = 'fas fa-gift';
+              iconColor = '#e83e8c'; // 粉色
+              bgClass = 'promotion-notif';
+            }
+
+            html += `
+        <div class="notification-card ${bgClass} ${isUnreadClass}">
+            <div class="notif-header">
+                <div class="notif-title">
+                    <i class="${iconClass}" style="color: ${iconColor};"></i>
+                    <span>${escapeHtml(announcement.title || '平台公告')}</span>
+                </div>
+                <div class="notif-date">${dateStr}</div>
+            </div>
+            <div class="notif-content">${escapeHtml(announcement.content || '').replace(/\n/g, '<br>')}</div>
+        </div>`;
+          });
+          listContainer.innerHTML = html;
+          renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'announcement');
+        }
+      } catch (error) {
+        console.error('加載失敗:', error);
+        loadingEl.style.display = 'none';
+        listContainer.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>加載失敗，請刷新重試</p></div>';
+      } finally {
+        state.announcement.loading = false;
+      }
+    }
+
+    // ==========================================
     // 輔助函數：構建管理通知卡片
     // ==========================================
     function buildAdminNotifCard(notif, status, appeal, appealCount, dateStr, isUnreadClass) {
       let html = `
-        <div class="notification-card ${isUnreadClass}">
-            <div class="notif-header">
-                <div class="notif-title">
-                    <i class="fas fa-exclamation-triangle" style="color: var(--accent);"></i>
-                    <span>${escapeHtml(notif.title || '系統通知')}</span>
-                </div>
-                <div class="notif-date">${dateStr}</div>
+    <div class="notification-card ${isUnreadClass}">
+        <div class="notif-header">
+            <div class="notif-title">
+                <i class="fas fa-exclamation-triangle" style="color: var(--accent);"></i>
+                <span>${escapeHtml(notif.title || '系統通知')}</span>
             </div>
-            <div class="notif-content">${escapeHtml(notif.content || '')}</div>`;
+            <div class="notif-date">${dateStr}</div>
+        </div>
+        <div class="notif-content">${escapeHtml(notif.content || '')}</div>`;
 
       if (notif.deleteReason || (notif.title && notif.title.includes('禁言'))) {
         html += `
-            <div class="violation-content-box">
-                <div class="violation-label"><i class="fas fa-quote-left"></i> 違規內容：</div>
-                <div class="violation-text">${escapeHtml(notif.deletedContent || '無記錄')}</div>
-            </div>`;
+        <div class="violation-content-box">
+            <div class="violation-label"><i class="fas fa-quote-left"></i> 違規內容：</div>
+            <div class="violation-text">${escapeHtml(notif.deletedContent || '無記錄')}</div>
+        </div>`;
       }
 
       if (notif.title && notif.title.includes('禁言')) {
         html += `
-            <div class="delete-reason-box" style="background: #fff3cd; border-color: #ffc107;">
-                <strong><i class="fas fa-gavel"></i> 禁言詳情：</strong>
-                ${notif.deleteReason ? `<p style="margin:0.5rem 0;"><strong>原因：</strong><span>${escapeHtml(notif.deleteReason)}</span></p>` : ''}
-                <div style="margin-top: 1rem;">${getPenaltyStatusHtml(status, appeal, notif.notificationId, 'BAN')}</div>
-            </div>`;
+        <div class="delete-reason-box" style="background: #fff3cd; border-color: #ffc107;">
+            <strong><i class="fas fa-gavel"></i> 禁言詳情：</strong>
+            ${notif.deleteReason ? `<p style="margin:0.5rem 0;"><strong>原因：</strong><span>${escapeHtml(notif.deleteReason)}</span></p>` : ''}
+            <div style="margin-top: 1rem;">${getPenaltyStatusHtml(status, appeal, notif.notificationId, 'BAN')}</div>
+        </div>`;
       }
 
       if (notif.title && notif.title.includes('永久拉黑') && notif.deleteReason) {
         html += `
-            <div class="delete-reason-box" style="background: #f8d7da; border-color: #dc3545; padding: 1.5rem;">
-                <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.8rem;">
-                    <i class="fas fa-user-slash" style="color: #dc3545;"></i> 永久拉黑详情：
-                </strong>
-                <p style="margin: 0.5rem 0; color: #721c24;"><strong>原因：</strong><span>${escapeHtml(notif.deleteReason)}</span></p>
-                <div style="margin-top: 1.5rem;">${getPenaltyStatusHtml(status, appeal, notif.notificationId, 'BLACKLIST', appealCount)}</div>
-            </div>`;
+        <div class="delete-reason-box" style="background: #f8d7da; border-color: #dc3545; padding: 1.5rem;">
+            <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.8rem;">
+                <i class="fas fa-user-slash" style="color: #dc3545;"></i> 永久拉黑详情：
+            </strong>
+            <p style="margin: 0.5rem 0; color: #721c24;"><strong>原因：</strong><span>${escapeHtml(notif.deleteReason)}</span></p>
+            <div style="margin-top: 1.5rem;">${getPenaltyStatusHtml(status, appeal, notif.notificationId, 'BLACKLIST', appealCount)}</div>
+        </div>`;
       }
 
       if (notif.deleteReason && (!notif.title || (!notif.title.includes('禁言') && !notif.title.includes('永久拉黑')))) {
         html += `
-            <div class="delete-reason-box">
-                <strong><i class="fas fa-exclamation-triangle"></i> 管理員處理原因：</strong>
-                <p style="margin:0;">${escapeHtml(notif.deleteReason)}</p>
-            </div>`;
+        <div class="delete-reason-box">
+            <strong><i class="fas fa-exclamation-triangle"></i> 管理員處理原因：</strong>
+            <p style="margin:0;">${escapeHtml(notif.deleteReason)}</p>
+        </div>`;
       }
 
       html += `</div>`;
@@ -633,49 +731,49 @@
       if (status === 'SHOW_APPEAL_BTN') {
         const msg = type === 'BLACKLIST' ? '您已被永久拉黑，如有异议可提交申诉。' : '您目前處於禁言狀態，如有異議可提交申訴。';
         return `
-            <div style="display: flex; align-items: center; justify-content: space-between; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; padding: 0.8rem 1rem;">
-                <div style="color: #856404; font-size: 0.95rem;">
-                    <i class="fas fa-exclamation-circle" style="margin-right: 0.5rem;"></i> ${msg}
-                </div>
-                <button class="btn-sm" onclick="openAppealModal(${notifId}, '${type}')"
-                        style="background: var(--gold); color: var(--primary); border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;">
-                    <i class="fas fa-file-alt"></i> 提交申訴
-                </button>
-            </div>`;
+        <div style="display: flex; align-items: center; justify-content: space-between; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; padding: 0.8rem 1rem;">
+            <div style="color: #856404; font-size: 0.95rem;">
+                <i class="fas fa-exclamation-circle" style="margin-right: 0.5rem;"></i> ${msg}
+            </div>
+            <button class="btn-sm" onclick="openAppealModal(${notifId}, '${type}')"
+                    style="background: var(--gold); color: var(--primary); border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                <i class="fas fa-file-alt"></i> 提交申訴
+            </button>
+        </div>`;
       }
 
       if (status === 'APPEAL_PENDING') {
         return `
-            <div class="appeal-info-box pending">
-                <div class="appeal-label"><i class="fas fa-hourglass-half"></i> 申訴審核中</div>
-                <div class="appeal-content">
-                    <strong>您的申訴理由：</strong>
-                    <p>${escapeHtml(appeal?.reason || '加載中...')}</p>
-                </div>
-                <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #856404;">
-                    <i class="fas fa-info-circle"></i> 管理員正在審核中，請耐心等待。
-                </div>
-            </div>`;
+        <div class="appeal-info-box pending">
+            <div class="appeal-label"><i class="fas fa-hourglass-half"></i> 申訴審核中</div>
+            <div class="appeal-content">
+                <strong>您的申訴理由：</strong>
+                <p>${escapeHtml(appeal?.reason || '加載中...')}</p>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #856404;">
+                <i class="fas fa-info-circle"></i> 管理員正在審核中，請耐心等待。
+            </div>
+        </div>`;
       }
 
       if (status === 'APPEAL_APPROVED') {
         const successMsg = type === 'BLACKLIST' ? '您的申诉已通过，永久拉黑已解除。' : '您的申訴已通過，禁言處罰已提前解除。';
         return `
-            <div class="appeal-info-box approved">
-                <div class="appeal-label"><i class="fas fa-check-circle"></i> 申訴成功！</div>
-                <div class="appeal-content">
-                    <strong>您的申訴理由：</strong>
-                    <p>${escapeHtml(appeal?.reason || '無記錄')}</p>
-                </div>
-                ${appeal?.adminResponse ? `
-                <div class="admin-response-box">
-                    <div class="admin-response-label"><i class="fas fa-user-shield"></i> 管理員回覆：</div>
-                    <p>${escapeHtml(appeal.adminResponse)}</p>
-                </div>` : ''}
-                <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #155724;">
-                    <i class="fas fa-check-circle"></i> ${successMsg}
-                </div>
-            </div>`;
+        <div class="appeal-info-box approved">
+            <div class="appeal-label"><i class="fas fa-check-circle"></i> 申訴成功！</div>
+            <div class="appeal-content">
+                <strong>您的申訴理由：</strong>
+                <p>${escapeHtml(appeal?.reason || '無記錄')}</p>
+            </div>
+            ${appeal?.adminResponse ? `
+            <div class="admin-response-box">
+                <div class="admin-response-label"><i class="fas fa-user-shield"></i> 管理員回覆：</div>
+                <p>${escapeHtml(appeal.adminResponse)}</p>
+            </div>` : ''}
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #155724;">
+                <i class="fas fa-check-circle"></i> ${successMsg}
+            </div>
+        </div>`;
       }
 
       if (status === 'APPEAL_REJECTED') {
@@ -684,114 +782,105 @@
           const remaining = 3 - appealCount;
           if (remaining > 0) {
             extraHtml = `
-                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px dashed #f5c6cb; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap;">
-                        <span style="font-size: 0.9rem; color: #721c24; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center;">
-                            <span>(您還有</span>
-                            <strong style="font-size: 1.1rem; color: #dc3545; font-weight: 700; margin: 0 0.3rem;">${remaining}</strong>
-                            <span>次申訴機會)</span>
-                        </span>
-                        <button class="btn-sm" onclick="openAppealModal(${notifId}, 'BLACKLIST')"
-                                style="background: var(--gold); color: var(--primary); border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap; flex-shrink: 0; margin-left: auto;">
-                            <i class="fas fa-redo"></i> 再次申訴
-                        </button>
-                    </div>`;
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px dashed #f5c6cb; display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap;">
+                    <span style="font-size: 0.9rem; color: #721c24; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center;">
+                        <span>(您還有</span>
+                        <strong style="font-size: 1.1rem; color: #dc3545; font-weight: 700; margin: 0 0.3rem;">${remaining}</strong>
+                        <span>次申訴機會)</span>
+                    </span>
+                    <button class="btn-sm" onclick="openAppealModal(${notifId}, 'BLACKLIST')"
+                            style="background: var(--gold); color: var(--primary); border: none; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; font-weight: 600; white-space: nowrap; flex-shrink: 0; margin-left: auto;">
+                        <i class="fas fa-redo"></i> 再次申訴
+                    </button>
+                </div>`;
           } else {
             extraHtml = `
-                    <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px dashed #f5c6cb; text-align: center;">
-                        <span style="font-size: 0.9rem; color: #721c24;">
-                            <i class="fas fa-exclamation-triangle"></i> 管理員維持原判，您已用盡申訴機會。
-                        </span>
-                    </div>`;
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px dashed #f5c6cb; text-align: center;">
+                    <span style="font-size: 0.9rem; color: #721c24;">
+                        <i class="fas fa-exclamation-triangle"></i> 管理員維持原判，您已用盡申訴機會。
+                    </span>
+                </div>`;
           }
         } else {
           extraHtml = `
-                <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #721c24;">
-                    <i class="fas fa-exclamation-triangle"></i> 管理員維持原判，請遵守社區規範。
-                </div>`;
+            <div style="margin-top: 0.5rem; font-size: 0.9rem; color: #721c24;">
+                <i class="fas fa-exclamation-triangle"></i> 管理員維持原判，請遵守社區規範。
+            </div>`;
         }
 
         return `
-            <div class="appeal-info-box rejected">
-                <div class="appeal-label"><i class="fas fa-times-circle"></i> 申訴被駁回</div>
-                <div class="appeal-content">
-                    <strong>您的申訴理由：</strong>
-                    <p>${escapeHtml(appeal?.reason || '無記錄')}</p>
-                </div>
-                ${appeal?.adminResponse ? `
-                <div class="admin-response-box">
-                    <div class="admin-response-label"><i class="fas fa-user-shield"></i> 管理員回覆：</div>
-                    <p>${escapeHtml(appeal.adminResponse)}</p>
-                </div>` : ''}
-                ${extraHtml}
-            </div>`;
+        <div class="appeal-info-box rejected">
+            <div class="appeal-label"><i class="fas fa-times-circle"></i> 申訴被駁回</div>
+            <div class="appeal-content">
+                <strong>您的申訴理由：</strong>
+                <p>${escapeHtml(appeal?.reason || '無記錄')}</p>
+            </div>
+            ${appeal?.adminResponse ? `
+            <div class="admin-response-box">
+                <div class="admin-response-label"><i class="fas fa-user-shield"></i> 管理員回覆：</div>
+                <p>${escapeHtml(appeal.adminResponse)}</p>
+            </div>` : ''}
+            ${extraHtml}
+        </div>`;
       }
 
       if (status === 'EXPIRED_NO_APPEAL') {
         return `
-            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 0.8rem 1rem; color: #6c757d; font-size: 0.95rem;">
-                <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
-                禁言期已滿，您的帳戶已自動恢復正常。
-            </div>`;
+        <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 0.8rem 1rem; color: #6c757d; font-size: 0.95rem;">
+            <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
+            禁言期已滿，您的帳戶已自動恢復正常。
+        </div>`;
       }
 
       if (status === 'REVOKED_NO_APPEAL') {
         return `
-            <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 0.8rem 1rem; color: #0c5460; font-size: 0.95rem; font-weight: 500;">
-                <i class="fas fa-user-shield" style="margin-right: 0.5rem;"></i>
-                <strong>處罰已撤銷。</strong> 管理員已為您提前解除禁言。
-            </div>`;
+        <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 8px; padding: 0.8rem 1rem; color: #0c5460; font-size: 0.95rem; font-weight: 500;">
+            <i class="fas fa-user-shield" style="margin-right: 0.5rem;"></i>
+            <strong>處罰已撤銷。</strong> 管理員已為您提前解除禁言。
+        </div>`;
       }
       return '';
     }
 
     // ==========================================
     // 核心：渲染智能分頁 (1-based, 依賴後端 smartPages, 居中)
-    //Fragment 是服務端渲染的，它需要服務端傳入 currentPage、smartPages 等變量。
-    // 在純 AJAX 場景下，這些變量只在 JS 中存在，Thymeleaf 無法參與渲染。因此 JS 版的 renderPagination 是唯一正確方案，
-    // 只需確保其輸出 HTML 與 Fragment 結構一致即可實現視覺統一。
     // ==========================================
     function renderPagination(container, currentPage, totalPages, smartPages, type) {
       if (!container) return;
 
-      // 【修復】：移除 totalPages <= 1 的攔截，允許只有 1 頁時也顯示分頁欄
-      // 如果完全沒有數據 (totalPages === 0)，則不顯示
       if (totalPages === 0) {
         container.innerHTML = '';
         return;
       }
 
-      // 如果 smartPages 為空但總頁數大於 0 (兜底邏輯，防止後端未返回 smartPages 時白屏)
       if (!smartPages || smartPages.length === 0) {
-        // 簡單生成一個當前頁的按鈕
         smartPages = [{pageNumber: currentPage, ellipsis: false}];
       }
 
-      // 使用 pagination-wrapper 類來實現居中 (CSS 在 sidebar.css 中定義)
       let html = '<div class="pagination-wrapper">';
 
       // 1. 上一頁按鈕
       if (currentPage > 1) {
-        html += `<button class="page-btn" onclick="load${type === 'stock' ? 'Stock' : 'Admin'}Notifications(${currentPage - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
+        html += `<button class="page-btn" onclick="load${type === 'stock' ? 'Stock' : (type === 'admin' ? 'Admin' : 'Announcement')}Notifications(${currentPage - 1})"><i class="fas fa-chevron-left"></i> 上一頁</button>`;
       } else {
         html += `<button class="page-btn disabled" disabled><i class="fas fa-chevron-left"></i> 上一頁</button>`;
       }
 
-      // 2. 智能頁碼
+      // 2. 智能頁碼 (動態生成函數名稱)
       smartPages.forEach(item => {
-        // 注意：Java 的 isEllipsis() 序列化為 JSON 後通常 key 為 'ellipsis'
         if (item.ellipsis) {
           html += `<span class="page-ellipsis">...</span>`;
         } else {
-          // item.pageNumber 是 1-based，currentPage 也是 1-based，直接比較
           const isActive = item.pageNumber === currentPage ? 'active' : '';
-          const funcName = type === 'stock' ? 'loadStockNotifications' : 'loadAdminNotifications';
+          // 動態生成函數名稱: loadStockNotifications, loadAdminNotifications, loadAnnouncementNotifications
+          const funcName = `load${type.charAt(0).toUpperCase() + type.slice(1)}Notifications`;
           html += `<button class="page-btn ${isActive}" onclick="${funcName}(${item.pageNumber})">${item.pageNumber}</button>`;
         }
       });
 
       // 3. 下一頁按鈕
       if (currentPage < totalPages) {
-        html += `<button class="page-btn" onclick="load${type === 'stock' ? 'Stock' : 'Admin'}Notifications(${currentPage + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
+        html += `<button class="page-btn" onclick="load${type === 'stock' ? 'Stock' : (type === 'admin' ? 'Admin' : 'Announcement')}Notifications(${currentPage + 1})">下一頁 <i class="fas fa-chevron-right"></i></button>`;
       } else {
         html += `<button class="page-btn disabled" disabled>下一頁 <i class="fas fa-chevron-right"></i></button>`;
       }
@@ -885,9 +974,9 @@
     // 頁面初始化
     // ==========================================
     document.addEventListener('DOMContentLoaded', function () {
+      // 默認加載到貨通知 (或根據你的 HTML 默認 active tab 調整)
       loadStockNotifications(1);
     });
-
   </script>
 </body>
 

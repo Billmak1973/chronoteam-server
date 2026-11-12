@@ -2176,41 +2176,40 @@
         }
 
         /**
-         * 執行查詢操作
+         * 執行查詢操作 (AJAX 局部刷新方式，絕對不使用 window.location.href)
          */
         function searchApplications() {
-            // 0. 收集卖家筛选条件（新增）
+            // 1. 收集賣家篩選條件
             const buyerMode = document.getElementById('filter-buyer-mode').value;
             let buyerUsername = '';
             if (buyerMode === 'specific') {
                 buyerUsername = document.getElementById('filter-buyer-input').value.trim();
             }
 
-            // 1. 收集基础筛选条件 (包含品牌和商店)
+            // 2. 收集基礎篩選條件
             const brand = document.getElementById('brandFilter').value;
             const mode = document.getElementById('modeFilter').value;
             const status = document.getElementById('statusFilter').value;
             const condition = document.getElementById('conditionFilter').value;
             const storeId = document.getElementById('storeFilter').value;
 
-            // 2. 收集预约日期条件
+            // 3. 收集預約日期條件
             const apptMode = document.getElementById('filter-appointment-mode').value;
-            let apptDateSpecific = '';
             let apptDateStart = '';
             let apptDateEnd = '';
-
             if (apptMode === 'specific') {
-                apptDateSpecific = document.getElementById('filter-appointment-specific').value;
+                // 【核心修復】：特定某一天時，開始和結束必須是同一天，後端才能用 >= 和 <= 匹配到
+                apptDateStart = document.getElementById('filter-appointment-specific').value;
+                apptDateEnd = apptDateStart;
             } else if (apptMode === 'range') {
                 apptDateStart = document.getElementById('filter-appointment-start').value;
                 apptDateEnd = document.getElementById('filter-appointment-end').value;
             }
 
-            // 3. 收集最终成交价条件
+            // 4. 收集最終成交價條件
             const finalPriceMode = document.getElementById('filter-final-price-mode').value;
             let finalPriceVal1 = '';
             let finalPriceVal2 = '';
-
             if (finalPriceMode === 'gt' || finalPriceMode === 'lt' || finalPriceMode === 'eq') {
                 finalPriceVal1 = document.getElementById('filter-final-price-val1').value;
             } else if (finalPriceMode === 'between') {
@@ -2218,63 +2217,71 @@
                 finalPriceVal2 = document.getElementById('filter-final-price-val2').value;
             }
 
-            // 4. 组装筛选参数对象并跳转 (或替换为您的 AJAX 请求)
-            const params = new URLSearchParams();
+            // 5. 【核心修復】：直接更新 tableConfig.params，並重置為第 1 頁
+            // 只有當值不為空時才賦值，避免傳遞空字符串導致後端 JPQL 查詢失敗
+            tableConfig.params = {
+                page: 1,
+                size: 25,
+                keyword: '',
+                status: status || '',
+                mode: mode || '',
+                buyerUsername: buyerUsername || '',
+                brand: brand || '',
+                condition: condition || '',
+                storeId: storeId || '',
+                // 【修改處】：使用正確的預約日期參數名
+                appointmentDateStart: apptDateStart || '',
+                appointmentDateEnd: apptDateEnd || '',
+                finalPriceMode: (finalPriceMode !== 'all' && finalPriceMode) ? finalPriceMode : '',
+                finalPriceVal1: finalPriceVal1 || '',
+                finalPriceVal2: finalPriceVal2 || ''
+            };
 
-            // 添加卖家参数（新增）
-            if (buyerMode === 'specific' && buyerUsername) {
-                params.append('buyerUsername', buyerUsername);
-            }
-
-            if (brand) params.append('brand', brand);
-            if (mode) params.append('mode', mode);
-            if (status) params.append('status', status);
-            if (condition) params.append('condition', condition);
-            if (storeId) params.append('storeId', storeId);
-
-            if (apptMode === 'specific' && apptDateSpecific) {
-                params.append('apptDateSpecific', apptDateSpecific);
-            } else if (apptMode === 'range') {
-                if (apptDateStart) params.append('apptDateStart', apptDateStart);
-                if (apptDateEnd) params.append('apptDateEnd', apptDateEnd);
-            }
-
-            if (finalPriceMode !== 'all') {
-                params.append('finalPriceMode', finalPriceMode);
-                if (finalPriceVal1) params.append('finalPriceVal1', finalPriceVal1);
-                if (finalPriceMode === 'between' && finalPriceVal2) params.append('finalPriceVal2', finalPriceVal2);
-            }
-
-            // 跳转到带有筛选参数的页面
-            window.location.href = '/admin/sell-applications?' + params.toString();
+            // 6. 使用 AdminTable 重新加載數據 (發送 AJAX 請求)
+            AdminTable.loadData(tableConfig);
         }
 
         /**
-         * 重置所有篩選條件
+         * 重置所有篩選條件 (AJAX 局部刷新方式)
          */
         function resetFilters() {
-            // 0. 重置卖家筛选（新增）
+            // 0. 重置 DOM 元素
             document.getElementById('filter-buyer-mode').value = 'all';
             document.getElementById('filter-buyer-input').value = '';
             document.getElementById('filter-buyer-input').style.display = 'none';
 
-            // 1. 重置基础筛选框
             document.getElementById('brandFilter').value = '';
             document.getElementById('modeFilter').value = '';
             document.getElementById('statusFilter').value = '';
             document.getElementById('conditionFilter').value = '';
             document.getElementById('storeFilter').value = '';
 
-            // 2. 重置预约日期模式并隐藏输入框
             document.getElementById('filter-appointment-mode').value = 'all';
             toggleAppointmentInputs();
 
-            // 3. 重置最终成交价模式并隐藏输入框
             document.getElementById('filter-final-price-mode').value = 'all';
             toggleFinalPriceInput();
 
-            // 4. 跳转回无筛选条件的页面
-            window.location.href = '/admin/sell-applications';
+            // 1. 【核心修復】：重置 tableConfig.params 為初始空狀態
+            tableConfig.params = {
+                page: 1,
+                size: 25,
+                keyword: '',
+                status: '',
+                mode: '',
+                buyerUsername: '',
+                brand: '',
+                condition: '',
+                storeId: '',
+                completedAtStart: '',
+                completedAtEnd: '',
+                finalPriceMode: '',
+                finalPriceVal1: '',
+                finalPriceVal2: ''
+            };
+
+            // 2. 重新加載數據
+            AdminTable.loadData(tableConfig);
         }
 
         // ==========================================

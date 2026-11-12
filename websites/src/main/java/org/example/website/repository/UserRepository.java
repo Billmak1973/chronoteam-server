@@ -213,4 +213,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("SELECT u FROM User u WHERE (u.username LIKE %:kw% OR u.name LIKE %:kw% OR u.email LIKE %:kw% OR u.phone LIKE %:kw%) AND u.role != :role")
     Page<User> findByKeywordAndRoleNot(@Param("kw") String keyword, @Param("role") User.Role role, Pageable pageable);
+
+    List<User> findByRoleNot(User.Role role);
+
 }

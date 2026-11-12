@@ -8,6 +8,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -118,4 +122,37 @@ public interface SellApplicationRepository extends JpaRepository<SellApplication
      */
     @Query("SELECT DISTINCT s.brand FROM SellApplication s WHERE s.brand IS NOT NULL AND s.brand != '' ORDER BY s.brand ASC")
     List<String> findDistinctBrands();
+
+    @Query("SELECT s FROM SellApplication s " +
+            "WHERE (:buyerUsername IS NULL OR s.user.username = :buyerUsername) " +
+            "AND (:brand IS NULL OR s.brand = :brand) " +
+            "AND (:mode IS NULL OR s.transactionMode = :mode) " +
+            "AND (:status IS NULL OR s.status = :status) " +
+            "AND (:condition IS NULL OR s.condition = :condition) " +
+            "AND (:storeId IS NULL OR s.storeId = :storeId) " +
+            // 【修改處】：匹配 appointmentDate 字段
+            "AND (:appointmentDateStart IS NULL OR s.appointmentDate >= :appointmentDateStart) " +
+            "AND (:appointmentDateEnd IS NULL OR s.appointmentDate <= :appointmentDateEnd) " +
+            "AND (:finalPriceMode IS NULL OR " +
+            "   (:finalPriceMode = 'gt' AND s.finalPrice > :finalPriceVal1) OR " +
+            "   (:finalPriceMode = 'lt' AND s.finalPrice < :finalPriceVal1) OR " +
+            "   (:finalPriceMode = 'eq' AND s.finalPrice = :finalPriceVal1) OR " +
+            "   (:finalPriceMode = 'between' AND s.finalPrice >= :finalPriceVal1 AND s.finalPrice <= :finalPriceVal2)" +
+            ") " +
+            "ORDER BY s.createdAt DESC")
+    Page<SellApplication> findAdminFilters(
+            @Param("buyerUsername") String buyerUsername,
+            @Param("brand") String brand,
+            @Param("mode") SellApplication.TransactionMode mode,
+            @Param("status") SellApplication.ApplicationStatus status,
+            @Param("condition") String condition,
+            @Param("storeId") String storeId,
+            // 【修改處】：參數類型改為 LocalDate
+            @Param("appointmentDateStart") LocalDate appointmentDateStart,
+            @Param("appointmentDateEnd") LocalDate appointmentDateEnd,
+            @Param("finalPriceMode") String finalPriceMode,
+            @Param("finalPriceVal1") BigDecimal finalPriceVal1,
+            @Param("finalPriceVal2") BigDecimal finalPriceVal2,
+            Pageable pageable
+    );
 }

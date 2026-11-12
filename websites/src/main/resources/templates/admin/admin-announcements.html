@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-TW" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系統公告管理 - ChronoTeam</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <style>
+    /* ==================== 表單區域美化 ==================== */
+    .form-section {
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      padding: 2.5rem;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      margin-bottom: 2rem;
+      border: 1px solid rgba(212, 175, 55, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .form-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--gold) 0%, #b8972b 100%);
+    }
+
+    .form-section h3 {
+      margin-bottom: 2rem;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      font-size: 1.5rem;
+      font-weight: 700;
+      position: relative;
+      padding-bottom: 1rem;
+    }
+
+    .form-section h3::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold), transparent);
+      border-radius: 2px;
+    }
+
+    .form-section h3 i {
+      font-size: 1.8rem;
+      color: var(--gold);
+      filter: drop-shadow(0 2px 4px rgba(212, 175, 55, 0.3));
+    }
+
+    /* 表單組件樣式 */
+    .form-group {
+      margin-bottom: 2rem;
+      position: relative;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      color: var(--primary);
+      margin-bottom: 0.8rem;
+      font-size: 0.95rem;
+      transition: color 0.3s ease;
+    }
+
+    .form-group:focus-within label {
+      color: var(--gold);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 0.9rem 1.2rem;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: white;
+      font-family: inherit;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .form-control:hover {
+      border-color: #ced4da;
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 150px;
+      line-height: 1.6;
+    }
+
+    .form-text {
+      display: block;
+      margin-top: 0.6rem;
+      color: #6c757d;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* 單選按鈕組美化 */
+    .radio-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .radio-item {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      cursor: pointer;
+      padding: 1rem 1.2rem;
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: 500;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .radio-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.05), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .radio-item:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(212, 175, 55, 0.15);
+    }
+
+    .radio-item:hover::before {
+      opacity: 1;
+    }
+
+    .radio-item input[type="radio"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--gold);
+      position: relative;
+      z-index: 1;
+    }
+
+    .radio-item:has(input:checked) {
+      border-color: var(--gold);
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.08), rgba(212, 175, 55, 0.02));
+      box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+      font-weight: 600;
+    }
+
+    .radio-item:has(input:checked)::after {
+      content: '\f00c';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      position: absolute;
+      right: 1rem;
+      color: var(--gold);
+      font-size: 1.2rem;
+    }
+
+    /* 動態顯示區域 */
+    .dynamic-field {
+      display: none;
+      margin-top: 1.5rem;
+      padding: 1.8rem;
+      background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+      border-radius: 12px;
+      border: 2px dashed #ced4da;
+      position: relative;
+      animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .dynamic-field.active {
+      display: block;
+      border-color: var(--gold);
+      background: linear-gradient(135deg, rgba(212, 175, 55, 0.05), rgba(255, 255, 255, 0.8));
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.98);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .dynamic-field label {
+      display: block;
+      margin-bottom: 0.8rem;
+      font-weight: 600;
+      color: var(--primary);
+      font-size: 0.9rem;
+    }
+
+    /* 按鈕區域 */
+    .form-actions {
+      margin-top: 2.5rem;
+      padding-top: 2rem;
+      border-top: 2px solid #e9ecef;
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 0.9rem 2rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    .btn:active::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn-outline {
+      background: white;
+      color: var(--primary);
+      border: 2px solid #e9ecef;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+      filter: brightness(1.05);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    /* 視圖切換動畫 */
+    .view-container {
+      animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 響應式設計 */
+    @media (max-width: 768px) {
+      .form-section {
+        padding: 1.5rem;
+      }
+
+      .radio-group {
+        grid-template-columns: 1fr;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    /* 必填標記樣式 */
+    .required {
+      color: var(--accent);
+      font-weight: 700;
+      margin-left: 2px;
+    }
+
+    /* 表單驗證狀態 */
+    .form-control:invalid:not(:placeholder-shown) {
+      border-color: var(--accent);
+      background-color: rgba(233, 69, 96, 0.02);
+    }
+
+    .form-control:valid:not(:placeholder-shown) {
+      border-color: #28a745;
+      background-color: rgba(40, 167, 69, 0.02);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 引入公共導航欄 -->
+  <div th:replace="~{fragments/common :: navbar}"></div>
+
+  <div class="admin-layout">
+    <!-- 引入左側邊欄，高亮 'announcements' -->
+    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='announcements')}"></div>
+
+    <main class="admin-main">
+      <!-- 頁面頂部標題與操作區 -->
+      <div class="content-header"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-bullhorn" style="color: var(--gold);"></i> 系統公告管理
+        </h2>
+        <!-- 僅在列表視圖顯示的「發布公告」按鈕 -->
+        <button id="btn-show-create" class="btn btn-primary" onclick="showCreateView()">
+          <i class="fas fa-plus-circle"></i> 發布公告
+        </button>
+      </div>
+
+      <!-- ================= 視圖 1: 公告管理列表 ================= -->
+      <div id="view-list" class="view-container">
+        <div class="content-body">
+          <!-- 簡易篩選區 -->
+          <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+            <input type="text" class="form-control" placeholder="搜索公告標題..." style="max-width: 300px;">
+            <button class="btn btn-primary"><i class="fas fa-search"></i> 查詢</button>
+          </div>
+
+          <!-- 列表表格 -->
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px;">ID</th>
+                  <th>公告標題</th>
+                  <th style="width: 120px;">公告性質</th>
+                  <th style="width: 250px;">發送對象</th>
+                  <th style="width: 160px;">創建時間</th>
+                  <th style="width: 100px;">狀態</th>
+                  <th style="width: 150px; text-align: center;">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Thymeleaf 循環渲染佔位 (實際開發時替換為 th:each) -->
+                <tr>
+                  <td>1</td>
+                  <td>系統例行維護通知</td>
+                  <td><span class="badge" style="background:#e2e3e5; color:#383d41;">維護通知</span></td>
+                  <td><i class="fas fa-users" style="color:var(--gold); margin-right:5px;"></i> 全體用戶</td>
+                  <td>2023-10-25 10:00</td>
+                  <td><span class="status-badge" style="background:#d4edda; color:#155724;">啟用中</span></td>
+                  <td style="text-align: center;">
+                    <button class="btn-sm" style="background:var(--gold); color:white;"><i class="fas fa-edit"></i>
+                      編輯</button>
+                    <button class="btn-sm" style="background:#dc3545; color:white;"><i class="fas fa-trash"></i>
+                      刪除</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>新款勞力士到貨通知</td>
+                  <td><span class="badge" style="background:#d1ecf1; color:#0c5460;">到貨通知</span></td>
+                  <td><i class="fas fa-store" style="color:var(--gold); margin-right:5px;"></i> 門店: 中環店 (僅員工)</td>
+                  <td>2023-10-26 14:30</td>
+                  <td><span class="status-badge" style="background:#d4edda; color:#155724;">啟用中</span></td>
+                  <td style="text-align: center;">
+                    <button class="btn-sm" style="background:var(--gold); color:white;"><i class="fas fa-edit"></i>
+                      編輯</button>
+                    <button class="btn-sm" style="background:#dc3545; color:white;"><i class="fas fa-trash"></i>
+                      刪除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 分頁組件佔位 -->
+        <div class="pagination-wrapper" style="margin-top: 2rem;">
+          <button class="page-btn disabled"><i class="fas fa-chevron-left"></i> 上一頁</button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">下一頁 <i class="fas fa-chevron-right"></i></button>
+        </div>
+      </div>
+
+      <!-- ================= 視圖 2: 發布公告 (默認隱藏) ================= -->
+      <div id="view-create" class="view-container" style="display: none;">
+        <!-- 返回列表按鈕 -->
+        <div style="margin-bottom: 1.5rem;">
+          <button class="btn btn-outline" onclick="showListView()">
+            <i class="fas fa-arrow-left"></i> 返回列表
+          </button>
+        </div>
+
+        <div class="form-section">
+          <h3>
+            <i class="fas fa-bullhorn"></i> 填寫公告資訊
+          </h3>
+          <form id="announcementForm" onsubmit="handlePublish(event)">
+            <!-- 1. 公告標題 (新增 name="title") -->
+            <div class="form-group">
+              <label>公告標題 <span class="required">*</span></label>
+              <input type="text" name="title" class="form-control" placeholder="請輸入公告標題" required>
+            </div>
+
+            <!-- 2. 公告性質 (新增 name="type") -->
+            <div class="form-group">
+              <label>公告性質 <span class="required">*</span></label>
+              <select name="type" class="form-control" required>
+                <option value="">請選擇公告性質</option>
+                <option value="SYSTEM">系統通知</option>
+                <option value="STOCK">到貨通知</option>
+                <option value="MAINTENANCE">維護通知</option>
+                <option value="PROMOTION">促銷活動</option>
+              </select>
+            </div>
+
+            <!-- 3. 公告內容 (新增 name="content") -->
+            <div class="form-group">
+              <label>公告內容 <span class="required">*</span></label>
+              <textarea name="content" class="form-control" rows="8" placeholder="請輸入公告內容" required></textarea>
+            </div>
+
+            <!-- 4. 發送對象 (核心) -->
+            <div class="form-group">
+              <label style="font-size: 1.05rem; color: var(--primary);">
+                <i class="fas fa-bullseye" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                發送對象 <span class="required">*</span>
+              </label>
+              <div class="radio-group">
+                <label class="radio-item">
+                  <input type="radio" name="targetType" value="ALL" checked onchange="toggleTargetField('ALL')">
+                  <i class="fas fa-users" style="color: var(--gold);"></i> 全體用戶
+                </label>
+                <!-- 【新增】全體工作人員選項 -->
+                <label class="radio-item">
+                  <input type="radio" name="targetType" value="ALL_STAFF" onchange="toggleTargetField('ALL_STAFF')">
+                  <i class="fas fa-user-tie" style="color: var(--gold);"></i> 全體工作人員 (非顧客)
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="targetType" value="ROLE" onchange="toggleTargetField('ROLE')">
+                  <i class="fas fa-user-shield" style="color: var(--gold);"></i> 指定特定角色
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="targetType" value="STORE" onchange="toggleTargetField('STORE')">
+                  <i class="fas fa-store" style="color: var(--gold);"></i> 按指定店鋪發送
+                </label>
+                <label class="radio-item">
+                  <input type="radio" name="targetType" value="USER" onchange="toggleTargetField('USER')">
+                  <i class="fas fa-user" style="color: var(--gold);"></i> 指定單個用戶
+                </label>
+              </div>
+
+              <!-- 動態顯示區域：按角色 -->
+              <div id="target-role" class="dynamic-field">
+                <label><i class="fas fa-user-shield" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                  選擇目標角色</label>
+                <select class="form-control" name="targetRole">
+                  <option value="">請選擇角色</option>
+                  <option value="COURIER">快遞人員</option>
+                  <option value="ONLINE_STAFF">線上員工</option>
+                  <option value="STORE_MANAGER">店鋪經理</option>
+                  <option value="APPRAISER">鑒賞師</option>
+                  <option value="SALES">銷售員</option>
+                  <option value="ADMIN">管理員</option>
+                </select>
+              </div>
+
+              <!-- 動態顯示區域：按指定店鋪 -->
+              <div id="target-store" class="dynamic-field">
+                <div class="form-group">
+                  <label><i class="fas fa-store" style="color: var(--gold); margin-right: 0.5rem;"></i> 1. 選擇具體門店 <span
+                      class="required">*</span></label>
+                  <select class="form-control" name="targetStoreId" id="targetStoreSelect"
+                    onchange="toggleStoreRoleGroup(this.value)">
+                    <option value="">請選擇門店</option>
+                    <option value="1">中環旗艦店</option>
+                    <option value="2">旺角分店</option>
+                  </select>
+                </div>
+                <!-- ... 保持原有代碼不變 ... -->
+              </div>
+
+              <!-- 動態顯示區域：指定單個用戶 -->
+              <div id="target-user" class="dynamic-field">
+                <label><i class="fas fa-search" style="color: var(--gold); margin-right: 0.5rem;"></i> 搜索指定用戶 <span
+                    class="required">*</span></label>
+                <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                  <select class="form-control" name="searchType" id="userSearchType"
+                    style="width: 150px; flex-shrink: 0;">
+                    <option value="username">用戶名</option>
+                    <option value="phone">手機號碼</option>
+                  </select>
+                  <div style="flex: 1; position: relative;">
+                    <input type="text" class="form-control" name="targetId" id="userSearchInput"
+                      placeholder="請輸入對應的關鍵字...">
+                    <div id="userAutocompleteResults"
+                      style="display:none; position: absolute; top: 100%; left: 0; right: 0; border:1px solid #ddd; background:white; max-height:150px; overflow-y:auto; border-radius:4px; margin-top:4px; z-index:20; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. 操作按鈕 -->
+            <div class="form-actions">
+              <button type="button" class="btn btn-outline" onclick="alert('預覽功能開發中')">
+                <i class="fas fa-eye"></i> 預覽
+              </button>
+              <button type="submit" class="btn btn-primary" id="submitBtn">
+                <i class="fas fa-paper-plane"></i> 立即發佈
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+  <div th:replace="~{fragments/common :: modals}"></div>
+
+  <!-- 引入公共 JS -->
+  <script src="/js/common.js"></script>
+  <script src="/js/admin.js"></script>
+
+  <script>
+    // 1. 視圖切換邏輯
+    function showCreateView() {
+      document.getElementById('view-list').style.display = 'none';
+      document.getElementById('view-create').style.display = 'block';
+      document.getElementById('btn-show-create').style.display = 'none';
+    }
+
+    function showListView() {
+      document.getElementById('view-list').style.display = 'block';
+      document.getElementById('view-create').style.display = 'none';
+      document.getElementById('btn-show-create').style.display = 'inline-flex';
+    }
+
+    // 2. 動態切換發送對象表單字段
+    function toggleTargetField(type) {
+      // 隱藏所有動態區塊
+      document.querySelectorAll('.dynamic-field').forEach(el => el.classList.remove('active'));
+
+      // 根據選擇顯示對應區塊
+      if (type === 'ROLE') {
+        document.getElementById('target-role').classList.add('active');
+      } else if (type === 'STORE') {
+        document.getElementById('target-store').classList.add('active');
+      } else if (type === 'USER') {
+        document.getElementById('target-user').classList.add('active');
+      }
+      // 注意：如果 type === 'ALL' 或 'ALL_STAFF'，不需要顯示任何額外的動態輸入框，保持隱藏即可
+    }
+
+    // 當選擇了具體門店時，顯示角色選擇區
+    function toggleStoreRoleGroup(storeId) {
+      const roleGroup = document.getElementById('storeRoleGroup');
+      if (storeId) {
+        roleGroup.style.display = 'block';
+        // 【可選擴展】：這裡可以發起 AJAX 請求，動態獲取該門店實際擁有的角色列表並渲染 checkbox
+        // 例如：fetch(`/api/admin/stores/${storeId}/roles`).then(...)
+      } else {
+        roleGroup.style.display = 'none';
+      }
+    }
+
+    // 處理「該店所有員工」的全選/反選聯動
+    function toggleAllStoreStaff(checkbox) {
+      const otherCheckboxes = document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])');
+      otherCheckboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+        cb.disabled = checkbox.checked; // 全選時禁用其他選項，防止邏輯衝突
+      });
+    }
+
+    // 監聽其他角色的點擊，若取消勾選某個角色，自動取消「全選」
+    document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])').forEach(cb => {
+      cb.addEventListener('change', function () {
+        const allStaffCb = document.querySelector('.role-checkbox[value="ALL_STORE_STAFF"]');
+        if (!this.checked) {
+          allStaffCb.checked = false;
+          // 恢復其他選項的可點擊狀態
+          document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])').forEach(c => c.disabled = false);
+        } else {
+          // 如果手動勾選了所有單獨角色，可選：自動勾選全選
+          const allChecked = Array.from(document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])')).every(c => c.checked);
+          if (allChecked) allStaffCb.checked = true;
+        }
+      });
+    });
+
+    async function handlePublish(event) {
+      event.preventDefault();
+
+      const form = document.getElementById('announcementForm');
+
+      // 1. 收集表單數據
+      const formData = new FormData(form);
+
+      try {
+        // 2. 發送 POST 請求到後端
+        const response = await fetch('/admin/announcements/publish', {
+          method: 'POST',
+          body: formData // FormData 會自動設置正確的 Content-Type (multipart/form-data)
+        });
+
+        const result = await response.text();
+
+        if (result === 'success') {
+          // 3. 成功提示
+          if (typeof showNotification === 'function') {
+            showNotification('✅ 公告已成功發佈並發送給目標用戶！');
+          } else {
+            alert('✅ 公告已成功發佈！');
+          }
+
+          // 4. 重置表單並返回列表視圖
+          form.reset();
+          toggleTargetField('ALL'); // 重置動態顯示區域
+          setTimeout(() => {
+            showListView();
+          }, 1000);
+        } else {
+          throw new Error(result);
+        }
+      } catch (error) {
+        console.error('發佈失敗:', error);
+        if (typeof showNotification === 'function') {
+          showNotification('❌ 發佈失敗：' + error.message, true);
+        } else {
+          alert('❌ 發佈失敗，請檢查網絡或聯繫管理員。');
+        }
+      }
+      // 移除了 finally 塊中的按鈕狀態恢復邏輯
+    }
+  </script>
+</body>
+
+</html>

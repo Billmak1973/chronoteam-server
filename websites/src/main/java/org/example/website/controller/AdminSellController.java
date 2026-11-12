@@ -3,6 +3,7 @@ package org.example.website.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.example.website.dto.Result;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -114,26 +116,66 @@ public class AdminSellController {
         return "admin/admin-sell-applications";
     }
 
-    /**
-     * 2. 獲取列表 API (供 AdminTable 調用)
-     */
-    @Operation(summary = "獲取出售申請列表")
+    @Operation(summary = "獲取出售申請列表 (管理員)", description = "支援多條件動態篩選的分頁查詢")
     @GetMapping("/api/sell-applications/list")
     @ResponseBody
     public ResponseEntity<?> getSellApplicationsList(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "25") int size,
+            @Parameter(description = "當前頁碼 (1-based)", example = "1") @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每頁顯示數量", example = "25") @RequestParam(defaultValue = "25") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String mode) {
+            @RequestParam(required = false) String mode,
+            @RequestParam(required = false) String buyerUsername,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String condition,
+            @RequestParam(required = false) String storeId,
+            // 【修改處】：參數名改為 appointmentDateStart 和 appointmentDateEnd，類型為 LocalDate
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate appointmentDateStart,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate appointmentDateEnd,
+            @RequestParam(required = false) String finalPriceMode,
+            @RequestParam(required = false) BigDecimal finalPriceVal1,
+            @RequestParam(required = false) BigDecimal finalPriceVal2
+    ) {
+        // 【核心修復 1】：將前端傳來的空字符串強制轉換為 null，防止 JPQL 匹配空字符串導致查無數據！
+        if (status != null && status.trim().isEmpty()) status = null;
+        if (mode != null && mode.trim().isEmpty()) mode = null;
+        if (buyerUsername != null && buyerUsername.trim().isEmpty()) buyerUsername = null;
+        if (brand != null && brand.trim().isEmpty()) brand = null;
+        if (condition != null && condition.trim().isEmpty()) condition = null;
+        if (storeId != null && storeId.trim().isEmpty()) storeId = null;
+        if (finalPriceMode != null && finalPriceMode.trim().isEmpty()) finalPriceMode = null;
 
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        int pageIndex = Math.max(0, page - 1);
+        Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // 這裡建議在 Repository 中寫一個 @Query 支援多條件查詢，此處為簡化演示使用 findAll
-        // 實際生產環境請替換為 sellApplicationRepository.findByFilters(...)
-        Page<SellApplication> appPage = sellApplicationRepository.findAll(pageable);
+        // 轉換枚舉 (加入 try-catch 防止非法輸入導致 500 錯誤)
+        SellApplication.ApplicationStatus statusEnum = null;
+        if (status != null) {
+            try {
+                statusEnum = SellApplication.ApplicationStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // 忽略無效的狀態值，保持為 null，讓 Repository 的 IS NULL 條件生效
+            }
+        }
 
-        // 批量獲取門店名稱，避免 N+1 查詢
+        SellApplication.TransactionMode modeEnum = null;
+        if (mode != null) {
+            try {
+                modeEnum = SellApplication.TransactionMode.valueOf(mode.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // 忽略無效的模式值
+            }
+        }
+
+        // 調用 Repository 的新方法進行多條件查詢
+        // 【修改處】：因為實體類中的 appointmentDate 是 LocalDate，所以不需要轉換為 LocalDateTime，直接傳遞即可
+        Page<SellApplication> appPage = sellApplicationRepository.findAdminFilters(
+                buyerUsername, brand, modeEnum, statusEnum, condition, storeId,
+                appointmentDateStart, appointmentDateEnd, // 【修改處】：直接傳遞 LocalDate
+                finalPriceMode, finalPriceVal1, finalPriceVal2, pageable
+        );
+
+        // 批量獲取門店名稱，避免 N+1 查詢問題
         List<String> storeIdStrs = appPage.getContent().stream()
                 .map(SellApplication::getStoreId)
                 .filter(id -> id != null && !id.trim().isEmpty() && id.matches("\\d+"))
@@ -148,7 +190,8 @@ public class AdminSellController {
                 storeMap.put(String.valueOf(store.getStoreId()), store.getName());
             }
         }
-        // 數據清洗 (避免 Hibernate 循環引用與序列化報錯)
+
+        // 數據清洗 (避免 Hibernate 循環引用與序列化報錯，並組裝前端需要的扁平化結構)
         List<Map<String, Object>> cleanData = appPage.getContent().stream().map(app -> {
             Map<String, Object> map = new HashMap<>();
             map.put("applicationId", app.getApplicationId());
@@ -162,7 +205,7 @@ public class AdminSellController {
             map.put("appointmentTimeSlot", app.getAppointmentTimeSlot());
             map.put("createdAt", app.getCreatedAt());
             map.put("storeName", storeMap.getOrDefault(app.getStoreId(), "未指定"));
-            map.put("isStockedIn", app.getIsStockedIn()); // 確保列表能獲取入庫狀態
+            map.put("isStockedIn", app.getIsStockedIn());
 
             if (app.getUser() != null) {
                 Map<String, Object> userMap = new HashMap<>();
@@ -173,8 +216,12 @@ public class AdminSellController {
             return map;
         }).collect(Collectors.toList());
 
+        // 使用工具類構建標準分頁響應
         Map<String, Object> response = PaginationUtils.buildPageResponse(appPage, cleanData);
+
+        // 核心修復：確保返回給前端的 currentPage 是 1-based，與前端分頁組件匹配
         response.put("currentPage", page);
+
         return ResponseEntity.ok(response);
     }
 

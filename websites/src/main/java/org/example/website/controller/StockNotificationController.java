@@ -285,7 +285,7 @@ public class StockNotificationController {
         announcement.setContent(String.format("您關注的 %s 已補貨到庫（當前庫存: %d 隻）。庫存緊張，請立即前往搶購！",
                 product.getDescription(), product.getStock()));
         announcement.setType(Announcement.AnnouncementType.STOCK); // 使用 STOCK 類型
-        announcement.setTargetType("SPECIFIC_PRODUCT");            // 標記為特定商品訂閱者
+        announcement.setTargetType(Announcement.TargetAudience.SPECIFIC_PRODUCT);            // 標記為特定商品訂閱者
         announcement.setTargetId(productId.longValue());           // 關聯商品 ID
         announcement.setIsActive(true);
 
