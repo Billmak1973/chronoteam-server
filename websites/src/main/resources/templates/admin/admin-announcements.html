@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/common.css">
   <link rel="stylesheet" href="/css/admin.css">
+
+  <!-- 【新增】引入 Quill.js 富文本編輯器 -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
   <style>
     /* ==================== 表單區域美化 ==================== */
     .form-section {
@@ -101,12 +106,6 @@
       border-color: #ced4da;
     }
 
-    textarea.form-control {
-      resize: vertical;
-      min-height: 150px;
-      line-height: 1.6;
-    }
-
     .form-text {
       display: block;
       margin-top: 0.6rem;
@@ -115,6 +114,35 @@
       display: flex;
       align-items: center;
       gap: 0.4rem;
+    }
+
+    /* 【新增】Quill 編輯器樣式覆蓋，以完美匹配現有表單風格 */
+    .ql-toolbar.ql-snow {
+      border: 2px solid #e9ecef;
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      background: #f8f9fa;
+      padding: 0.8rem;
+    }
+    .ql-container.ql-snow {
+      border: 2px solid #e9ecef;
+      border-radius: 0 0 12px 12px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: white;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    /* 當編輯器獲得焦點時，展現與 input 一致的金色光暈 */
+    .ql-container.ql-snow:focus-within {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.12);
+    }
+    .ql-editor {
+      min-height: 200px;
+      line-height: 1.6;
+    }
+    .ql-editor p {
+      margin-bottom: 0.5rem;
     }
 
     /* 單選按鈕組美化 */
@@ -283,21 +311,6 @@
       box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
     }
 
-    .btn-primary {
-      background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
-      color: white;
-      box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
-      filter: brightness(1.05);
-    }
-
-    .btn-primary:active {
-      transform: translateY(0);
-    }
 
     /* 視圖切換動畫 */
     .view-container {
@@ -353,347 +366,626 @@
       border-color: #28a745;
       background-color: rgba(40, 167, 69, 0.02);
     }
+
+    /* 【新增】让 Quill 编辑器宽度与前台公告卡片一致 */
+    .announcement-editor-wrapper {
+      max-width: 930px;
+      margin: 0 auto;
+    }
+
+    .ql-editor {
+      min-height: 300px;
+      line-height: 1.6;
+      max-width: 100%;
+      /* 模拟前台公告卡片的内边距 */
+      padding: 1.5rem !important; /* 与前台 .notification-card 的 padding 一致 */
+    }
+
+    .ql-container.ql-snow {
+      border: 2px solid #e9ecef;
+      border-radius: 0 0 12px 12px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background: white;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      max-width: 100%; /* 确保不超出父容器 */
+    }
+
+
+
+    .ql-editor p {
+      margin-bottom: 0.5rem;
+    }
+
+    /* 编辑器工具栏样式 */
+    .ql-toolbar.ql-snow {
+      border: 2px solid #e9ecef;
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      background: #f8f9fa;
+      padding: 0.8rem;
+      max-width: 100%;
+    }
+
+    /* 添加宽度提示框 */
+    .editor-width-notice {
+      background: #e7f3ff;
+      border-left: 4px solid #0066cc;
+      padding: 0.8rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #004085;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .editor-width-notice i {
+      color: #0066cc;
+    }
   </style>
 </head>
 
 <body>
-  <!-- 引入公共導航欄 -->
-  <div th:replace="~{fragments/common :: navbar}"></div>
+<!-- 引入公共導航欄 -->
+<div th:replace="~{fragments/common :: navbar}"></div>
 
-  <div class="admin-layout">
-    <!-- 引入左側邊欄，高亮 'announcements' -->
-    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='announcements')}"></div>
+<div class="admin-layout">
+  <!-- 引入左側邊欄，高亮 'announcements' -->
+  <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='announcements')}"></div>
 
-    <main class="admin-main">
-      <!-- 頁面頂部標題與操作區 -->
-      <div class="content-header"
-        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h2 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-          <i class="fas fa-bullhorn" style="color: var(--gold);"></i> 系統公告管理
-        </h2>
-        <!-- 僅在列表視圖顯示的「發布公告」按鈕 -->
-        <button id="btn-show-create" class="btn btn-primary" onclick="showCreateView()">
-          <i class="fas fa-plus-circle"></i> 發布公告
+  <main class="admin-main">
+    <!-- 頁面頂部標題與操作區 -->
+    <div class="content-header"
+         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h2 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fas fa-bullhorn" style="color: var(--gold);"></i> 系統公告管理
+      </h2>
+      <!-- 僅在列表視圖顯示的「發布公告」按鈕 -->
+      <button id="btn-show-create" class="btn btn-primary" onclick="showCreateView()">
+        <i class="fas fa-plus-circle"></i> 發布公告
+      </button>
+    </div>
+
+    <!-- ================= 視圖 1: 公告管理列表 ================= -->
+    <div id="view-list" class="view-container">
+      <div class="content-body">
+        <!-- 簡易篩選區 -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+          <input type="text" class="form-control" placeholder="搜索公告標題..." style="max-width: 300px;">
+          <button class="btn btn-primary"><i class="fas fa-search"></i> 查詢</button>
+        </div>
+
+        <!-- 列表表格 -->
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+            <tr>
+              <th style="width: 60px;">ID</th>
+              <th>公告標題</th>
+              <th style="width: 120px;">公告性質</th>
+              <th style="width: 250px;">發送對象</th>
+              <th style="width: 160px;">創建時間</th>
+              <th style="width: 100px;">狀態</th>
+              <th style="width: 150px; text-align: center;">操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Thymeleaf 循環渲染佔位 (實際開發時替換為 th:each) -->
+            <tr>
+              <td>1</td>
+              <td>系統例行維護通知</td>
+              <td><span class="badge" style="background:#e2e3e5; color:#383d41;">維護通知</span></td>
+              <td><i class="fas fa-users" style="color:var(--gold); margin-right:5px;"></i> 全體用戶</td>
+              <td>2023-10-25 10:00</td>
+              <td><span class="status-badge" style="background:#d4edda; color:#155724;">啟用中</span></td>
+              <td style="text-align: center;">
+                <button class="btn-sm" style="background:var(--gold); color:white;"><i class="fas fa-edit"></i>
+                  編輯</button>
+                <button class="btn-sm" style="background:#dc3545; color:white;"><i class="fas fa-trash"></i>
+                  刪除</button>
+              </td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>新款勞力士到貨通知</td>
+              <td><span class="badge" style="background:#d1ecf1; color:#0c5460;">到貨通知</span></td>
+              <td><i class="fas fa-store" style="color:var(--gold); margin-right:5px;"></i> 門店: 中環店 (僅員工)</td>
+              <td>2023-10-26 14:30</td>
+              <td><span class="status-badge" style="background:#d4edda; color:#155724;">啟用中</span></td>
+              <td style="text-align: center;">
+                <button class="btn-sm" style="background:var(--gold); color:white;"><i class="fas fa-edit"></i>
+                  編輯</button>
+                <button class="btn-sm" style="background:#dc3545; color:white;"><i class="fas fa-trash"></i>
+                  刪除</button>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 分頁組件佔位 -->
+      <div class="pagination-wrapper" style="margin-top: 2rem;">
+        <button class="page-btn disabled"><i class="fas fa-chevron-left"></i> 上一頁</button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">下一頁 <i class="fas fa-chevron-right"></i></button>
+      </div>
+    </div>
+
+    <!-- ================= 視圖 2: 發布公告 (默認隱藏) ================= -->
+    <div id="view-create" class="view-container" style="display: none;">
+      <!-- 返回列表按鈕 -->
+      <div style="margin-bottom: 1.5rem;">
+        <button class="btn btn-outline" onclick="showListView()">
+          <i class="fas fa-arrow-left"></i> 返回列表
         </button>
       </div>
 
-      <!-- ================= 視圖 1: 公告管理列表 ================= -->
-      <div id="view-list" class="view-container">
-        <div class="content-body">
-          <!-- 簡易篩選區 -->
-          <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-            <input type="text" class="form-control" placeholder="搜索公告標題..." style="max-width: 300px;">
-            <button class="btn btn-primary"><i class="fas fa-search"></i> 查詢</button>
+      <div class="form-section">
+        <h3>
+          <i class="fas fa-bullhorn"></i> 填寫公告資訊
+        </h3>
+        <form id="announcementForm" onsubmit="handlePublish(event)">
+          <!-- 1. 公告標題與對齊方式 -->
+          <div class="form-group">
+            <label>公告標題 <span class="required">*</span></label>
+            <div style="display: flex; gap: 1rem; align-items: flex-start;">
+              <input type="text" name="title" class="form-control" placeholder="請輸入公告標題 (純文本，前台會自動加粗)" required style="flex: 1;">
+
+              <!-- 新增：標題對齊控制 -->
+              <select name="titleAlignment" class="form-control" style="width: 160px; flex-shrink: 0;">
+                <option value="LEFT" selected>🡠 靠左對齊</option>
+                <option value="CENTER">⬌ 置中顯示</option>
+                <option value="RIGHT">🡢 靠右對齊</option>
+              </select>
+            </div>
+            <small class="form-text">
+              <i class="fas fa-info-circle"></i> 提示：標題請輸入純文字，前台系統會自動將其顯示為加粗。您可在此選擇標題的對齊方式。
+            </small>
           </div>
 
-          <!-- 列表表格 -->
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width: 60px;">ID</th>
-                  <th>公告標題</th>
-                  <th style="width: 120px;">公告性質</th>
-                  <th style="width: 250px;">發送對象</th>
-                  <th style="width: 160px;">創建時間</th>
-                  <th style="width: 100px;">狀態</th>
-                  <th style="width: 150px; text-align: center;">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- Thymeleaf 循環渲染佔位 (實際開發時替換為 th:each) -->
-                <tr>
-                  <td>1</td>
-                  <td>系統例行維護通知</td>
-                  <td><span class="badge" style="background:#e2e3e5; color:#383d41;">維護通知</span></td>
-                  <td><i class="fas fa-users" style="color:var(--gold); margin-right:5px;"></i> 全體用戶</td>
-                  <td>2023-10-25 10:00</td>
-                  <td><span class="status-badge" style="background:#d4edda; color:#155724;">啟用中</span></td>
-                  <td style="text-align: center;">
-                    <button class="btn-sm" style="background:var(--gold); color:white;"><i class="fas fa-edit"></i>
-                      編輯</button>
-                    <button class="btn-sm" style="background:#dc3545; color:white;"><i class="fas fa-trash"></i>
-                      刪除</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td>2</td>
-                  <td>新款勞力士到貨通知</td>
-                  <td><span class="badge" style="background:#d1ecf1; color:#0c5460;">到貨通知</span></td>
-                  <td><i class="fas fa-store" style="color:var(--gold); margin-right:5px;"></i> 門店: 中環店 (僅員工)</td>
-                  <td>2023-10-26 14:30</td>
-                  <td><span class="status-badge" style="background:#d4edda; color:#155724;">啟用中</span></td>
-                  <td style="text-align: center;">
-                    <button class="btn-sm" style="background:var(--gold); color:white;"><i class="fas fa-edit"></i>
-                      編輯</button>
-                    <button class="btn-sm" style="background:#dc3545; color:white;"><i class="fas fa-trash"></i>
-                      刪除</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- 2. 公告性質 -->
+          <div class="form-group">
+            <label>公告性質 <span class="required">*</span></label>
+            <select name="type" class="form-control" required>
+              <option value="">請選擇公告性質</option>
+              <option value="SYSTEM">系統通知</option>
+              <option value="MAINTENANCE">維護通知</option>
+              <option value="PROMOTION">促銷活動</option>
+            </select>
           </div>
-        </div>
 
-        <!-- 分頁組件佔位 -->
-        <div class="pagination-wrapper" style="margin-top: 2rem;">
-          <button class="page-btn disabled"><i class="fas fa-chevron-left"></i> 上一頁</button>
-          <button class="page-btn active">1</button>
-          <button class="page-btn">下一頁 <i class="fas fa-chevron-right"></i></button>
-        </div>
-      </div>
+          <!-- 3. 公告內容 (【已替換為 Quill.js 富文本編輯器】) -->
+          <div class="form-group">
+            <label>公告内容 <span class="required">*</span></label>
 
-      <!-- ================= 視圖 2: 發布公告 (默認隱藏) ================= -->
-      <div id="view-create" class="view-container" style="display: none;">
-        <!-- 返回列表按鈕 -->
-        <div style="margin-bottom: 1.5rem;">
-          <button class="btn btn-outline" onclick="showListView()">
-            <i class="fas fa-arrow-left"></i> 返回列表
-          </button>
-        </div>
-
-        <div class="form-section">
-          <h3>
-            <i class="fas fa-bullhorn"></i> 填寫公告資訊
-          </h3>
-          <form id="announcementForm" onsubmit="handlePublish(event)">
-            <!-- 1. 公告標題 (新增 name="title") -->
-            <div class="form-group">
-              <label>公告標題 <span class="required">*</span></label>
-              <input type="text" name="title" class="form-control" placeholder="請輸入公告標題" required>
+            <!-- 宽度提示 -->
+            <div class="editor-width-notice">
+              <i class="fas fa-ruler-horizontal"></i>
+              <strong>编辑宽度预览：</strong>
+              <span>编辑器宽度已设置为与前台公告卡片一致 (约930px)，排版效果 1:1 预览</span>
             </div>
 
-            <!-- 2. 公告性質 (新增 name="type") -->
-            <div class="form-group">
-              <label>公告性質 <span class="required">*</span></label>
-              <select name="type" class="form-control" required>
-                <option value="">請選擇公告性質</option>
-                <option value="SYSTEM">系統通知</option>
-                <option value="STOCK">到貨通知</option>
-                <option value="MAINTENANCE">維護通知</option>
-                <option value="PROMOTION">促銷活動</option>
+            <!-- 隐藏的 input，用于在表单提交时携带 Quill 生成的 HTML 数据 -->
+            <input type="hidden" name="content" id="quillContent" required>
+
+            <!-- Quill 编辑器挂载点 (添加 wrapper 类) -->
+            <div class="announcement-editor-wrapper">
+              <div id="editor-container"></div>
+            </div>
+
+            <small class="form-text">
+              <i class="fas fa-info-circle"></i> 支援文字加粗、置中对齐、段落缩进等排版。系统会自动记录格式。
+            </small>
+          </div>
+
+          <!-- 4. 發送對象 (核心) -->
+          <!-- 4. 發送對象 (核心) -->
+          <div class="form-group">
+            <label style="font-size: 1.05rem; color: var(--primary);">
+              <i class="fas fa-bullseye" style="color: var(--gold); margin-right: 0.5rem;"></i>
+              發送對象 <span class="required">*</span>
+            </label>
+            <div class="radio-group">
+              <label class="radio-item">
+                <!-- 保持 ALL 不變 -->
+                <input type="radio" name="targetType" value="ALL" checked onchange="toggleTargetField('ALL')">
+                <i class="fas fa-users" style="color: var(--gold);"></i> 全體用戶
+              </label>
+              <label class="radio-item">
+                <!-- 保持 ALL_STAFF 不變 -->
+                <input type="radio" name="targetType" value="ALL_STAFF" onchange="toggleTargetField('ALL_STAFF')">
+                <i class="fas fa-user-tie" style="color: var(--gold);"></i> 全體工作人員 (非顧客)
+              </label>
+              <label class="radio-item">
+                <!-- 【修改】value 改為 SPECIFIC_ROLE -->
+                <input type="radio" name="targetType" value="SPECIFIC_ROLE" onchange="toggleTargetField('SPECIFIC_ROLE')">
+                <i class="fas fa-user-shield" style="color: var(--gold);"></i> 指定特定角色
+              </label>
+              <label class="radio-item">
+                <!-- 【修改】value 改為 SPECIFIC_STORE -->
+                <input type="radio" name="targetType" value="SPECIFIC_STORE" onchange="toggleTargetField('SPECIFIC_STORE')">
+                <i class="fas fa-store" style="color: var(--gold);"></i> 按指定店鋪發送
+              </label>
+              <label class="radio-item">
+                <!-- 【修改】value 改為 SPECIFIC_USER -->
+                <input type="radio" name="targetType" value="SPECIFIC_USER" onchange="toggleTargetField('SPECIFIC_USER')">
+                <i class="fas fa-user" style="color: var(--gold);"></i> 指定單個用戶
+              </label>
+            </div>
+
+            <!-- 動態顯示區域：按角色 -->
+            <div id="target-role" class="dynamic-field">
+              <label><i class="fas fa-user-shield" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                選擇目標角色</label>
+              <select class="form-control" name="targetRole">
+                <option value="">請選擇角色</option>
+                <option value="COURIER">快遞人員</option>
+                <option value="ONLINE_STAFF">線上員工</option>
+                <option value="STORE_MANAGER">店鋪經理</option>
+                <option value="APPRAISER">鑒賞師</option>
+                <option value="SALES">銷售員</option>
+                <option value="ADMIN">管理員</option>
+                <option value="CUSTOMER">顧客</option>
               </select>
             </div>
 
-            <!-- 3. 公告內容 (新增 name="content") -->
-            <div class="form-group">
-              <label>公告內容 <span class="required">*</span></label>
-              <textarea name="content" class="form-control" rows="8" placeholder="請輸入公告內容" required></textarea>
-            </div>
+            <!-- 動態顯示區域：按指定店鋪 -->
+            <!-- 動態顯示區域：按指定店鋪 -->
+            <div id="target-store" class="dynamic-field">
+              <div class="form-group">
+                <label><i class="fas fa-store" style="color: var(--gold); margin-right: 0.5rem;"></i> 1. 選擇具體門店 <span class="required">*</span></label>
 
-            <!-- 4. 發送對象 (核心) -->
-            <div class="form-group">
-              <label style="font-size: 1.05rem; color: var(--primary);">
-                <i class="fas fa-bullseye" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                發送對象 <span class="required">*</span>
-              </label>
-              <div class="radio-group">
-                <label class="radio-item">
-                  <input type="radio" name="targetType" value="ALL" checked onchange="toggleTargetField('ALL')">
-                  <i class="fas fa-users" style="color: var(--gold);"></i> 全體用戶
-                </label>
-                <!-- 【新增】全體工作人員選項 -->
-                <label class="radio-item">
-                  <input type="radio" name="targetType" value="ALL_STAFF" onchange="toggleTargetField('ALL_STAFF')">
-                  <i class="fas fa-user-tie" style="color: var(--gold);"></i> 全體工作人員 (非顧客)
-                </label>
-                <label class="radio-item">
-                  <input type="radio" name="targetType" value="ROLE" onchange="toggleTargetField('ROLE')">
-                  <i class="fas fa-user-shield" style="color: var(--gold);"></i> 指定特定角色
-                </label>
-                <label class="radio-item">
-                  <input type="radio" name="targetType" value="STORE" onchange="toggleTargetField('STORE')">
-                  <i class="fas fa-store" style="color: var(--gold);"></i> 按指定店鋪發送
-                </label>
-                <label class="radio-item">
-                  <input type="radio" name="targetType" value="USER" onchange="toggleTargetField('USER')">
-                  <i class="fas fa-user" style="color: var(--gold);"></i> 指定單個用戶
-                </label>
-              </div>
-
-              <!-- 動態顯示區域：按角色 -->
-              <div id="target-role" class="dynamic-field">
-                <label><i class="fas fa-user-shield" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                  選擇目標角色</label>
-                <select class="form-control" name="targetRole">
-                  <option value="">請選擇角色</option>
-                  <option value="COURIER">快遞人員</option>
-                  <option value="ONLINE_STAFF">線上員工</option>
-                  <option value="STORE_MANAGER">店鋪經理</option>
-                  <option value="APPRAISER">鑒賞師</option>
-                  <option value="SALES">銷售員</option>
-                  <option value="ADMIN">管理員</option>
+                <!-- 【修改】移除硬編碼的 option，添加 id 供 JS 操作 -->
+                <select class="form-control" name="targetStoreId" id="targetStoreSelect" onchange="toggleStoreRoleGroup(this.value)">
+                  <option value="">請選擇門店</option>
+                  <!-- JS 將動態插入這裡 -->
                 </select>
               </div>
 
-              <!-- 動態顯示區域：按指定店鋪 -->
-              <div id="target-store" class="dynamic-field">
-                <div class="form-group">
-                  <label><i class="fas fa-store" style="color: var(--gold); margin-right: 0.5rem;"></i> 1. 選擇具體門店 <span
-                      class="required">*</span></label>
-                  <select class="form-control" name="targetStoreId" id="targetStoreSelect"
-                    onchange="toggleStoreRoleGroup(this.value)">
-                    <option value="">請選擇門店</option>
-                    <option value="1">中環旗艦店</option>
-                    <option value="2">旺角分店</option>
-                  </select>
-                </div>
-                <!-- ... 保持原有代碼不變 ... -->
-              </div>
+              <!-- 【新增】2. 選擇目標角色區域 (默認隱藏) -->
+              <div id="storeRoleGroup" style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px dashed #e9ecef;">
+                <label style="display: block; margin-bottom: 1rem; font-weight: 600; color: var(--primary);">
+                  <i class="fas fa-user-shield" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                  2. 選擇發送對象 <span class="required">*</span>
+                </label>
 
-              <!-- 動態顯示區域：指定單個用戶 -->
-              <div id="target-user" class="dynamic-field">
-                <label><i class="fas fa-search" style="color: var(--gold); margin-right: 0.5rem;"></i> 搜索指定用戶 <span
-                    class="required">*</span></label>
-                <div style="display: flex; gap: 1rem; align-items: flex-start;">
-                  <select class="form-control" name="searchType" id="userSearchType"
-                    style="width: 150px; flex-shrink: 0;">
-                    <option value="username">用戶名</option>
-                    <option value="phone">手機號碼</option>
-                  </select>
-                  <div style="flex: 1; position: relative;">
-                    <input type="text" class="form-control" name="targetId" id="userSearchInput"
-                      placeholder="請輸入對應的關鍵字...">
-                    <div id="userAutocompleteResults"
-                      style="display:none; position: absolute; top: 100%; left: 0; right: 0; border:1px solid #ddd; background:white; max-height:150px; overflow-y:auto; border-radius:4px; margin-top:4px; z-index:20; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <div class="radio-group" style="grid-template-columns: 1fr; gap: 0.8rem;">
+                  <!-- 選項 1: 該店鋪全體工作人員 -->
+                  <label class="radio-item" style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
+                    <input type="checkbox" name="storeRoles" value="ALL_STORE_STAFF" class="role-checkbox" onchange="handleStoreRoleChange(this)">
+                    <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
+                      <i class="fas fa-users" style="color: var(--gold); font-size: 1.2rem;"></i>
+                      <div>
+                        <div style="font-weight: 600; color: var(--primary);">該店鋪全體工作人員</div>
+                        <div style="font-size: 0.85rem; color: #6c757d;">包括銷售員、鑒賞師、店鋪經理等所有員工</div>
+                      </div>
                     </div>
+                  </label>
+
+                  <!-- 選項 2: 銷售員 (SALES) -->
+                  <label class="radio-item" style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
+                    <input type="checkbox" name="storeRoles" value="SALES" class="role-checkbox" onchange="handleStoreRoleChange(this)">
+                    <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
+                      <i class="fas fa-shopping-bag" style="color: var(--gold); font-size: 1.2rem;"></i>
+                      <div>
+                        <div style="font-weight: 600; color: var(--primary);">銷售員</div>
+                        <div style="font-size: 0.85rem; color: #6c757d;">僅發送給銷售人員</div>
+                      </div>
+                    </div>
+                  </label>
+
+                  <!-- 選項 3: 鑒賞師 (APPRAISER) -->
+                  <label class="radio-item" style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
+                    <input type="checkbox" name="storeRoles" value="APPRAISER" class="role-checkbox" onchange="handleStoreRoleChange(this)">
+                    <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
+                      <i class="fas fa-gem" style="color: var(--gold); font-size: 1.2rem;"></i>
+                      <div>
+                        <div style="font-weight: 600; color: var(--primary);">鑒賞師</div>
+                        <div style="font-size: 0.85rem; color: #6c757d;">僅發送給賞師</div>
+                      </div>
+                    </div>
+                  </label>
+
+                  <!-- 選項 4: 店鋪經理 (STORE_MANAGER) -->
+                  <label class="radio-item" style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
+                    <input type="checkbox" name="storeRoles" value="STORE_MANAGER" class="role-checkbox" onchange="handleStoreRoleChange(this)">
+                    <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
+                      <i class="fas fa-user-tie" style="color: var(--gold); font-size: 1.2rem;"></i>
+                      <div>
+                        <div style="font-weight: 600; color: var(--primary);">店鋪經理</div>
+                        <div style="font-size: 0.85rem; color: #6c757d;">僅發送給店鋪管理人員</div>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                <small class="form-text" style="margin-top: 0.8rem;">
+                  <i class="fas fa-info-circle"></i> 提示：可多選，若勾選「該店鋪全體工作人員」，其他選項將自動取消。
+                </small>
+              </div>
+            </div>
+
+            <!-- 動態顯示區域：指定單個用戶 -->
+            <div id="target-user" class="dynamic-field">
+              <label><i class="fas fa-search" style="color: var(--gold); margin-right: 0.5rem;"></i> 搜索指定用戶 <span
+                      class="required">*</span></label>
+              <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                <select class="form-control" name="searchType" id="userSearchType"
+                        style="width: 150px; flex-shrink: 0;">
+                  <option value="username">用戶名</option>
+                  <option value="phone">手機號碼</option>
+                </select>
+                <div style="flex: 1; position: relative;">
+                  <input type="text" class="form-control" name="targetId" id="userSearchInput"
+                         placeholder="請輸入對應的關鍵字...">
+                  <div id="userAutocompleteResults"
+                       style="display:none; position: absolute; top: 100%; left: 0; right: 0; border:1px solid #ddd; background:white; max-height:150px; overflow-y:auto; border-radius:4px; margin-top:4px; z-index:20; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <!-- 5. 操作按鈕 -->
-            <div class="form-actions">
-              <button type="button" class="btn btn-outline" onclick="alert('預覽功能開發中')">
-                <i class="fas fa-eye"></i> 預覽
-              </button>
-              <button type="submit" class="btn btn-primary" id="submitBtn">
-                <i class="fas fa-paper-plane"></i> 立即發佈
-              </button>
-            </div>
-          </form>
-        </div>
+          <!-- 5. 操作按鈕 -->
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+              <i class="fas fa-paper-plane"></i> 立即發佈
+            </button>
+          </div>
+        </form>
       </div>
-    </main>
-  </div>
-  <div th:replace="~{fragments/common :: modals}"></div>
+    </div>
+  </main>
+</div>
+<div th:replace="~{fragments/common :: modals}"></div>
 
-  <!-- 引入公共 JS -->
-  <script src="/js/common.js"></script>
-  <script src="/js/admin.js"></script>
+<!-- 引入公共 JS -->
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
 
-  <script>
-    // 1. 視圖切換邏輯
-    function showCreateView() {
-      document.getElementById('view-list').style.display = 'none';
-      document.getElementById('view-create').style.display = 'block';
-      document.getElementById('btn-show-create').style.display = 'none';
+<script>
+  // 1. 初
+  var quill = new Quill('#editor-container', {
+    theme: 'snow',
+    placeholder: '請輸入公告內容...',
+    modules: {
+      toolbar: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'align': [] }], // 提供左、中、右、兩端對齊按鈕
+        [{ 'indent': '-1'}, { 'indent': '+1' }], // 提供減少/增加縮進按鈕
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['clean'] // 清除格式按鈕
+      ]
     }
+  });
 
-    function showListView() {
-      document.getElementById('view-list').style.display = 'block';
-      document.getElementById('view-create').style.display = 'none';
-      document.getElementById('btn-show-create').style.display = 'inline-flex';
+  // 監聽 Quill 內容變化，實時同步到隱藏的 input 中，以便 FormData 可以獲取
+  quill.on('text-change', function() {
+    document.getElementById('quillContent').value = quill.root.innerHTML;
+  });
+
+  // 2. 視圖切換邏輯
+  function showCreateView() {
+    document.getElementById('view-list').style.display = 'none';
+    document.getElementById('view-create').style.display = 'block';
+    document.getElementById('btn-show-create').style.display = 'none';
+
+    // 確保編輯器在顯示時重新計算尺寸 (防止隱藏狀態下渲染異常)
+    setTimeout(() => {
+      quill.focus();
+    }, 100);
+  }
+
+  function showListView() {
+    document.getElementById('view-list').style.display = 'block';
+    document.getElementById('view-create').style.display = 'none';
+    document.getElementById('btn-show-create').style.display = 'inline-flex';
+  }
+
+  // ==========================================
+  // 3. 動態切換發送對象表單字段
+  function toggleTargetField(type) {
+    // 隱藏所有動態區塊
+    document.querySelectorAll('.dynamic-field').forEach(el => el.classList.remove('active'));
+
+    // 【修改】根據新的枚舉名稱進行判斷
+    if (type === 'SPECIFIC_ROLE') {
+      document.getElementById('target-role').classList.add('active');
+    } else if (type === 'SPECIFIC_STORE') {
+      document.getElementById('target-store').classList.add('active');
+    } else if (type === 'SPECIFIC_USER') {
+      document.getElementById('target-user').classList.add('active');
     }
+    // 注意：如果 type === 'ALL' 或 'ALL_STAFF'，不需要顯示任何額外的動態輸入框，保持隱藏即可
+  }
 
-    // 2. 動態切換發送對象表單字段
-    function toggleTargetField(type) {
-      // 隱藏所有動態區塊
-      document.querySelectorAll('.dynamic-field').forEach(el => el.classList.remove('active'));
-
-      // 根據選擇顯示對應區塊
-      if (type === 'ROLE') {
-        document.getElementById('target-role').classList.add('active');
-      } else if (type === 'STORE') {
-        document.getElementById('target-store').classList.add('active');
-      } else if (type === 'USER') {
-        document.getElementById('target-user').classList.add('active');
-      }
-      // 注意：如果 type === 'ALL' 或 'ALL_STAFF'，不需要顯示任何額外的動態輸入框，保持隱藏即可
+  function toggleStoreRoleGroup(storeId) {
+    const roleGroup = document.getElementById('storeRoleGroup');
+    if (storeId) {
+      roleGroup.style.display = 'block';
+    } else {
+      roleGroup.style.display = 'none';
     }
+  }
 
-    // 當選擇了具體門店時，顯示角色選擇區
-    function toggleStoreRoleGroup(storeId) {
-      const roleGroup = document.getElementById('storeRoleGroup');
-      if (storeId) {
-        roleGroup.style.display = 'block';
-        // 【可選擴展】：這裡可以發起 AJAX 請求，動態獲取該門店實際擁有的角色列表並渲染 checkbox
-        // 例如：fetch(`/api/admin/stores/${storeId}/roles`).then(...)
+  function toggleAllStoreStaff(checkbox) {
+    const otherCheckboxes = document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])');
+    otherCheckboxes.forEach(cb => {
+      cb.checked = checkbox.checked;
+      cb.disabled = checkbox.checked;
+    });
+  }
+
+  document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])').forEach(cb => {
+    cb.addEventListener('change', function () {
+      const allStaffCb = document.querySelector('.role-checkbox[value="ALL_STORE_STAFF"]');
+      if (!this.checked) {
+        allStaffCb.checked = false;
+        document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])').forEach(c => c.disabled = false);
       } else {
-        roleGroup.style.display = 'none';
+        const allChecked = Array.from(document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])')).every(c => c.checked);
+        if (allChecked) allStaffCb.checked = true;
+      }
+    });
+  });
+
+
+  // 4. 處理表單提交 (整合 Quill 數據)
+  async function handlePublish(event) {
+    event.preventDefault();
+
+    const form = document.getElementById('announcementForm');
+
+    // 【關鍵】在提交前，確保 Quill 的最新內容已同步到隱藏 input
+    document.getElementById('quillContent').value = quill.root.innerHTML;
+
+    // 簡單的內容非空驗證 (Quill 默認空內容是 <p><br></p>，getText() 會返回 "\n")
+    const text = quill.getText().trim();
+    if (text.length < 2) {
+      if (typeof showNotification === 'function') {
+        showNotification('❌ 公告內容不能為空！', true);
+      } else {
+        alert('❌ 公告內容不能為空！');
+      }
+      return;
+    }
+
+    // 1. 收集表單數據
+    const formData = new FormData(form);
+
+    try {
+      // 2. 發送 POST 請求到後端
+      const response = await fetch('/admin/announcements/publish', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.text();
+
+      if (result === 'success') {
+        // 3. 成功提示
+        if (typeof showNotification === 'function') {
+          showNotification('✅ 公告已成功發佈並發送給目標用戶！');
+        } else {
+          alert('✅ 公告已成功發佈！');
+        }
+
+        // 4. 重置表單並返回列表視圖
+        form.reset();
+        quill.setContents([]); // 【關鍵】清空 Quill 編輯器內容
+        toggleTargetField('ALL'); // 重置動態顯示區域
+        setTimeout(() => {
+          showListView();
+        }, 1000);
+      } else {
+        throw new Error(result);
+      }
+    } catch (error) {
+      console.error('發佈失敗:', error);
+      if (typeof showNotification === 'function') {
+        showNotification('❌ 發佈失敗：' + error.message, true);
+      } else {
+        alert('❌ 發佈失敗，請檢查網絡或聯繫管理員。');
       }
     }
+  }
 
-    // 處理「該店所有員工」的全選/反選聯動
-    function toggleAllStoreStaff(checkbox) {
-      const otherCheckboxes = document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])');
-      otherCheckboxes.forEach(cb => {
-        cb.checked = checkbox.checked;
-        cb.disabled = checkbox.checked; // 全選時禁用其他選項，防止邏輯衝突
-      });
-    }
 
-    // 監聽其他角色的點擊，若取消勾選某個角色，自動取消「全選」
-    document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])').forEach(cb => {
-      cb.addEventListener('change', function () {
-        const allStaffCb = document.querySelector('.role-checkbox[value="ALL_STORE_STAFF"]');
-        if (!this.checked) {
-          allStaffCb.checked = false;
-          // 恢復其他選項的可點擊狀態
-          document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])').forEach(c => c.disabled = false);
-        } else {
-          // 如果手動勾選了所有單獨角色，可選：自動勾選全選
-          const allChecked = Array.from(document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])')).every(c => c.checked);
-          if (allChecked) allStaffCb.checked = true;
-        }
-      });
+  // 5. 標題對齊實時預覽功能
+  document.addEventListener('DOMContentLoaded', function() {
+    const titleInput = document.querySelector('input[name="title"]');
+    const alignmentSelect = document.querySelector('select[name="titleAlignment"]');
+
+    if (!titleInput || !alignmentSelect) return;
+
+    // 初始化時應用對齊方式
+    applyTextAlignment(titleInput, alignmentSelect.value);
+
+    // 監聽對齊方式變化
+    alignmentSelect.addEventListener('change', function() {
+      applyTextAlignment(titleInput, this.value);
     });
 
-    async function handlePublish(event) {
-      event.preventDefault();
-
-      const form = document.getElementById('announcementForm');
-
-      // 1. 收集表單數據
-      const formData = new FormData(form);
-
-      try {
-        // 2. 發送 POST 請求到後端
-        const response = await fetch('/admin/announcements/publish', {
-          method: 'POST',
-          body: formData // FormData 會自動設置正確的 Content-Type (multipart/form-data)
-        });
-
-        const result = await response.text();
-
-        if (result === 'success') {
-          // 3. 成功提示
-          if (typeof showNotification === 'function') {
-            showNotification('✅ 公告已成功發佈並發送給目標用戶！');
-          } else {
-            alert('✅ 公告已成功發佈！');
-          }
-
-          // 4. 重置表單並返回列表視圖
-          form.reset();
-          toggleTargetField('ALL'); // 重置動態顯示區域
-          setTimeout(() => {
-            showListView();
-          }, 1000);
-        } else {
-          throw new Error(result);
-        }
-      } catch (error) {
-        console.error('發佈失敗:', error);
-        if (typeof showNotification === 'function') {
-          showNotification('❌ 發佈失敗：' + error.message, true);
-        } else {
-          alert('❌ 發佈失敗，請檢查網絡或聯繫管理員。');
-        }
+    function applyTextAlignment(input, alignment) {
+      if (alignment === 'CENTER') {
+        input.style.textAlign = 'center';
+      } else if (alignment === 'RIGHT') {
+        input.style.textAlign = 'right';
+      } else {
+        input.style.textAlign = 'left';
       }
-      // 移除了 finally 塊中的按鈕狀態恢復邏輯
     }
-  </script>
+  });
+
+  // ==========================================
+  // 6. 通過 JS 動態加載活躍門店列表
+  // ==========================================
+  async function loadActiveStores() {
+    const select = document.getElementById('targetStoreSelect');
+    if (!select) return;
+
+    try {
+      // 調用我們在現有 Controller 中新增的 API
+      const response = await fetch('/admin/api/stores/active');
+      if (!response.ok) throw new Error('網絡響應異常');
+
+      const stores = await response.json();
+
+      // 清空現有選項（保留第一個默認的 "請選擇門店"）
+      select.innerHTML = '<option value="">請選擇門店</option>';
+
+      // 動態生成 option 並插入
+      stores.forEach(store => {
+        const option = document.createElement('option');
+        option.value = store.storeId;   // 存入 ID
+        option.textContent = store.name; // 顯示 Name
+        select.appendChild(option);
+      });
+
+    } catch (error) {
+      console.error('加載門店列表失敗:', error);
+      select.innerHTML = '<option value="">加載失敗，請刷新頁面</option>';
+    }
+  }
+
+  function handleStoreRoleChange(checkbox) {
+    const allStaffCheckbox = document.querySelector('input[name="storeRoles"][value="ALL_STORE_STAFF"]');
+    const otherCheckboxes = document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])');
+
+    if (checkbox.value === 'ALL_STORE_STAFF') {
+      // 如果勾選了「全體工作人員」
+      if (checkbox.checked) {
+        // 取消勾選其他所有選項
+        otherCheckboxes.forEach(cb => {
+          cb.checked = false;
+          cb.disabled = true; // 禁用其他選項
+        });
+      } else {
+        // 如果取消勾選「全體工作人員」，恢復其他選項
+        otherCheckboxes.forEach(cb => {
+          cb.disabled = false;
+        });
+      }
+    } else {
+      // 如果勾選了其他任一角色，取消「全體工作人員」
+      if (checkbox.checked && allStaffCheckbox) {
+        allStaffCheckbox.checked = false;
+        allStaffCheckbox.disabled = false;
+      }
+    }
+  }
+
+
+  // 頁面初次加載時也執行一次，以防萬一
+  document.addEventListener('DOMContentLoaded', function() {
+    loadActiveStores();
+  });
+</script>
 </body>
 
 </html>

@@ -653,7 +653,7 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
               )}
             </div>
 
-            {renderStars(review.rating)}//TS2345: Argument of type number | undefined is not assignable to parameter of type number
+            {renderStars(review.rating)}
             <div className="review-date">
               {new Date(review.createdAt).toLocaleDateString()}
             </div>

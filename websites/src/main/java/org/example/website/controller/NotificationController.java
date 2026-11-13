@@ -50,7 +50,7 @@ public class NotificationController {
         String username = authentication.getName();
 
         // 1. 原本的系統通知未讀數
-        long oldSystemCount = notificationRepository.countByRecipient_UsernameAndIsReadFalse(username);//完全沒用
+        long oldSystemCount = notificationRepository.countByRecipient_UsernameAndIsReadFalse(username);
 
         // 2. 【新增】全新的公告未讀數
         long announcementCount = announcementReceiptRepository.countByUser_UsernameAndAnnouncement_TypeAndIsReadFalse(

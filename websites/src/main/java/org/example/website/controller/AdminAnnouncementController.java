@@ -2,7 +2,9 @@ package org.example.website.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.website.dto.AnnouncementRequest;
+import org.example.website.entity.OfflineStore;
 import org.example.website.entity.User;
+import org.example.website.repository.OfflineStoreRepository;
 import org.example.website.service.AnnouncementService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -10,12 +12,15 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Controller
 @RequestMapping("/admin")
 @RequiredArgsConstructor
 public class AdminAnnouncementController {
 
     private final AnnouncementService announcementService;
+    private final OfflineStoreRepository offlineStoreRepository;
 
     @GetMapping("/announcements")
     public String manageAnnouncementsPage(Model model) {
@@ -41,5 +46,13 @@ public class AdminAnnouncementController {
             e.printStackTrace();
             return "error: " + e.getMessage();
         }
+    }
+
+    // 提供一個極簡的 API 供前端 JS 調用，直接返回 Entity 列表 (無需新建 DTO)
+    @GetMapping("/api/stores/active")
+    @ResponseBody
+    public List<OfflineStore> getActiveStores() {
+        // 只返回 isActive = true 的門店，Jackson 會自動將其序列化為 JSON
+        return offlineStoreRepository.findByIsActiveTrue();
     }
 }

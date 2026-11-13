@@ -20,4 +20,6 @@ public interface StaffRepository extends JpaRepository<Staff, Long> {
 
     List<Staff> findByUser_IdIn(List<Long> userIds);
 
+    List<Staff> findByStore_StoreId(Long storeId);
+
 }

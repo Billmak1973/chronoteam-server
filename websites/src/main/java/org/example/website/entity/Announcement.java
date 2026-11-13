@@ -9,7 +9,9 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "announcements", indexes = {
         @Index(name = "idx_ann_type", columnList = "type"),
-        @Index(name = "idx_ann_target", columnList = "target_type, target_id") // 優化複合索引
+        @Index(name = "idx_ann_target", columnList = "target_type, target_id"),
+        // 按門店維度查詢公告的索引（例如：某店鋪經理只看自己店鋪的公告）
+        @Index(name = "idx_ann_target_store", columnList = "target_store_id")
 })
 @Data
 public class Announcement {
@@ -22,25 +24,51 @@ public class Announcement {
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+    // 標題對齊方式，默認值設為 LEFT
+    @Column(name = "title_alignment", length = 20)
+    private String titleAlignment = "LEFT";
+
+    /**
+     * 公告內容：必須使用 @Lob 和 TEXT 類型，才能存儲帶有 HTML 標籤的長文本
+     */
+    @Lob
+    @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 50)
     private AnnouncementType type;
 
-    // 【核心修改】：將 String 改為枚舉，並使用 EnumType.STRING 確保數據庫存儲為字符串
     @Enumerated(EnumType.STRING)
     @Column(name = "target_type", nullable = false, length = 50)
     private TargetAudience targetType;
 
-    // 【輔助字段】：當 targetType 為 SPECIFIC_ROLE 時，儲存具體的角色字符串
-    @Column(name = "target_role", length = 50)
+    /**
+     * 【輔助字段】：當 targetType 為 SPECIFIC_ROLE 時，儲存具體的角色字符串。
+     * 【擴展】：當 targetType 為 SPECIFIC_STORE 時，此字段可儲存「該店鋪內」的角色篩選，
+     * 例如 "ALL_STORE_STAFF"（全店員工）或 "SALES,APPRAISER"（多角色逗號分隔）。
+     */
+    @Column(name = "target_role", length = 100)
     private String targetRole;
 
-    // 關聯的目標 ID
+    /**
+     * 關聯的目標 ID（僅用於 SPECIFIC_USER / SPECIFIC_PRODUCT 場景）
+     */
     @Column(name = "target_id")
     private Long targetId;
+
+    // ==========================================
+    // 門店專屬外鍵
+    // ==========================================
+    /**
+     * 關聯的線下門店 ID (offline_stores.store_id)
+     * 【業務邏輯】：
+     * 僅當 targetType == SPECIFIC_STORE 時必填，其他場景必須為 null。
+     * 獨立於 targetId 的原因：targetId 需兼顧用戶/商品場景，
+     * 拆分後語義清晰，且可按門店維度建立索引與後續對賬。
+     */
+    @Column(name = "target_store_id")
+    private Long targetStoreId;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
@@ -57,19 +85,15 @@ public class Announcement {
     // 枚舉定義
     // ==========================================
     public enum AnnouncementType {
-        SYSTEM,         // 系統全局公告
-        STOCK,          // 到貨通知
-        MAINTENANCE,    // 停機維護通知
-        PROMOTION       // 專屬優惠/促銷
+        SYSTEM, STOCK, MAINTENANCE, PROMOTION
     }
 
-    // 目標受眾枚舉
     public enum TargetAudience {
-        ALL,             // 全體用戶
-        ALL_STAFF,       // 全體工作人員
-        SPECIFIC_ROLE,   // 指定角色 (配合 targetRole 字段使用)
-        SPECIFIC_STORE,  // 指定店鋪 (配合 targetId 使用)
-        SPECIFIC_USER,   // 指定用戶 (配合 targetId 使用)
-        SPECIFIC_PRODUCT // 指定商品 (配合 targetId 使用)
+        ALL,
+        ALL_STAFF,
+        SPECIFIC_ROLE,
+        SPECIFIC_STORE,   // 指定店鋪 (配合 targetStoreId + targetRole 使用)
+        SPECIFIC_USER,    // 指定用戶 (配合 targetId 使用)
+        SPECIFIC_PRODUCT  // 指定商品 (配合 targetId 使用)
     }
 }

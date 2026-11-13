@@ -597,6 +597,9 @@
     // ==========================================
     // API 3 (新增): 加載平台公告
     // ==========================================
+    // ==========================================
+    // API 3 (新增): 加載平台公告
+    // ==========================================
     async function loadAnnouncementNotifications(page) {
       if (state.announcement.loading) return;
       state.announcement.loading = true;
@@ -631,12 +634,17 @@
             const dateStr = formatDate(receipt.createdAt);
             const announcement = receipt.announcement || {};
 
-            // 根據公告類型設置不同的圖標和背景樣式
+            // 【修复 1】根據公告類型設置不同的圖標、顏色和背景樣式
             let iconClass = 'fas fa-bullhorn';
-            let iconColor = 'var(--primary)';
+            let iconColor = '#0d6efd'; // SYSTEM 使用蓝色
             let bgClass = 'system-notif';
+            let titleAlignment = announcement.titleAlignment || 'LEFT'; // 默认靠左
 
-            if (announcement.type === 'MAINTENANCE') {
+            if (announcement.type === 'SYSTEM') {
+              iconClass = 'fas fa-bell';
+              iconColor = '#0d6efd'; // 蓝色
+              bgClass = 'system-notif';
+            } else if (announcement.type === 'MAINTENANCE') {
               iconClass = 'fas fa-tools';
               iconColor = '#fd7e14'; // 橙色
               bgClass = 'maintenance-notif';
@@ -646,17 +654,38 @@
               bgClass = 'promotion-notif';
             }
 
+            // 【修复 2】根据 titleAlignment 动态生成标题样式
+            let titleStyle = '';
+            if (titleAlignment === 'CENTER') {
+              titleStyle = 'text-align: center; justify-content: center;';
+            } else if (titleAlignment === 'RIGHT') {
+              titleStyle = 'text-align: right; justify-content: flex-end;';
+            } else {
+              titleStyle = 'text-align: left; justify-content: flex-start;';
+            }
+
+            // 【🔥 修复 3】移除 padding-right，让内容正常显示
+            // 日期使用 absolute 定位，不会占用内容空间
             html += `
-        <div class="notification-card ${bgClass} ${isUnreadClass}">
-            <div class="notif-header">
-                <div class="notif-title">
-                    <i class="${iconClass}" style="color: ${iconColor};"></i>
-                    <span>${escapeHtml(announcement.title || '平台公告')}</span>
-                </div>
-                <div class="notif-date">${dateStr}</div>
+          <div class="notification-card ${bgClass} ${isUnreadClass}" style="position: relative;">
+            <!-- 标题区域 -->
+            <div class="notif-header" style="display: flex; ${titleStyle} align-items: center; margin-bottom: 0.8rem;">
+              <div class="notif-title" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--primary); font-size: 1.1rem;">
+                <i class="${iconClass}" style="color: ${iconColor};"></i>
+                <span>${announcement.title || '平台公告'}</span>
+              </div>
             </div>
-            <div class="notif-content">${escapeHtml(announcement.content || '').replace(/\n/g, '<br>')}</div>
-        </div>`;
+
+            <!-- 内容区域 - 移除 padding-right: 100px -->
+            <div class="notif-content" style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
+              ${announcement.content || ''}
+            </div>
+
+            <!-- 日期固定在右下角 -->
+            <div class="notif-date" style="position: absolute; right: 1.5rem; bottom: 1.5rem; color: var(--gray); font-size: 0.85rem;">
+              ${dateStr}
+            </div>
+          </div>`;
           });
           listContainer.innerHTML = html;
           renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'announcement');

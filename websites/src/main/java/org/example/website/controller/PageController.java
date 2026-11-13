@@ -556,7 +556,7 @@ public class PageController {
         // 3. 進入該接口時，自動將這些公告標記為已讀
         announcementReceiptRepository.markAllAsReadByUserIdAndTypes(
                 user.getId(),
-                java.util.List.of(Announcement.AnnouncementType.MAINTENANCE, Announcement.AnnouncementType.PROMOTION)
+                java.util.List.of(Announcement.AnnouncementType.MAINTENANCE, Announcement.AnnouncementType.PROMOTION,Announcement.AnnouncementType.SYSTEM)
         );
 
         // 4. 使用 PaginationUtils 構建標準分頁響應
