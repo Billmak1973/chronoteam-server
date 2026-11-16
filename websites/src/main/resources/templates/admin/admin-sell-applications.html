@@ -1103,6 +1103,7 @@
             align-items: center;
         }
 
+        /* 針對 #receiveItemModal 內部的自定義下拉框 */
         #receiveItemModal .custom-dropdown-options {
             position: absolute;
             top: 100%;
@@ -1115,7 +1116,9 @@
             z-index: 9999;
             padding: 5px 0;
             max-height: 200px;
+            /* 關鍵：限制最大高度為 200px */
             overflow-y: auto;
+            /*  關鍵：允許垂直方向滾動（下滑） */
             display: none;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
         }
@@ -1153,7 +1156,7 @@
         }
 
         /* ==========================================
-   【新增】優化購買年份和件數輸入框
+         優化購買年份和件數輸入框
    ========================================== */
         /* 針對手錶基礎資訊區塊中的特定輸入框 */
         .sell-card:has(.section-title:has(i.fa-info-circle)) .form-group input[type="number"] {
@@ -1984,9 +1987,7 @@
         // 品牌 Autocomplete 邏輯（用於創建申請）
         let createBrandSearchTimeout = null;
 
-        // ==========================================
         // 0. 中文映射表 (提升可讀性)
-        // ==========================================
         const STATUS_MAP = {
             'PENDING': {text: '待處理', cls: 'status-PENDING'},
             'APPRAISING': {text: '鑑定中', cls: 'status-APPRAISING'},
@@ -3678,13 +3679,13 @@
             if (hiddenSeries) hiddenSeries.value = series || '';
         }
 
-        // 3. 加載商品列表（用於創建申請）
         /**
          * 加載指定品牌下的商品列表，並綁定 brand 和 series (description) 到 data 屬性
          */
         async function loadCreateProducts() {
             const brandInput = document.getElementById('createBrandInput');
             const brand = brandInput ? brandInput.value.trim() : '';
+            // 1. 獲取這個空容器的 DOM 元素
             const optionsContainer = document.getElementById('createProductDropdownOptions');
             const dropdownText = document.getElementById('createProductDropdownText');
 
@@ -3707,7 +3708,7 @@
                         if (optionsContainer) optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center; color: var(--gray);">該品牌下暫無商品</div>';
                         if (dropdownText) dropdownText.textContent = '該品牌下暫無商品';
                     } else {
-                        // 生成「清空關聯」選項
+                        // 2. 拿到後端數據後，開始拼接 HTML 字串
                         let html = `<div class="custom-dropdown-option"
                     data-product-id=""
                     data-brand=""
@@ -3730,6 +3731,7 @@
                     </div>`;
                         });
 
+                        // 3.關鍵步驟：把拼接好的 HTML 注入到那個空 div 裡面
                         if (optionsContainer) optionsContainer.innerHTML = html;
                         if (dropdownText) dropdownText.textContent = '請選擇商品';
                     }
@@ -4018,9 +4020,8 @@
             return `${String(h).padStart(2, '0')}:${minutes} ${period}`;
         }
 
-        // ==========================================
+
         // 入庫功能專用：全局變量暫存待入庫的申請 ID
-        // ==========================================
         let pendingStockInId = null;
 
         /**
@@ -4108,9 +4109,7 @@
             }
         });
 
-        // ==========================================
         // 查看修改記錄彈窗邏輯
-        // ==========================================
         function showAuditLogsModal(applicationId) {
             const app = window.currentEditingApp;
             if (!app || !app.auditLogs) return;
@@ -4284,9 +4283,8 @@
                 document.body.style.overflow = '';
             }
         }
-        // ==========================================
+
         // 管理員手動創建出售申請邏輯 (具名函數)
-        // ==========================================
         async function handleConfirmApplication() {
             const form = document.getElementById('receiveItemForm');
             if (!form) return; // 防禦性編程：確保表單存在
@@ -4425,10 +4423,7 @@
         }
 
 
-        // ==========================================
         // 【核心優化】：統一管理所有 Modal 的遮罩層點擊與 ESC 鍵關閉
-        // ==========================================
-
         // 1. 定義支援此功能的 Modal 清單與對應的關閉函數
         // (未來若有新彈窗，只需在這裡新增一行即可)
         const modalCloseConfigs = [
@@ -4472,18 +4467,14 @@
             }
         });
 
-        // ==========================================
         // 6. 頁面初始化
-        // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
             // 初始化 AdminTable
             AdminTable.loadData(tableConfig);
         });
 
-        // ==========================================
         // 【核心修復】：使用事件委託阻止數字輸入框響應鼠標滾輪
         // 這樣無論 input 是何時動態生成的，都能被成功攔截
-        // ==========================================
         document.addEventListener('wheel', function (e) {
             // 檢查觸發事件的目標元素是否是帶有 .no-spin 類的數字輸入框
             if (e.target && e.target.matches('input[type="number"].no-spin')) {

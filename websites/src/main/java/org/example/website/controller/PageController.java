@@ -34,10 +34,8 @@ public class PageController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final LoginLogRepository loginLogRepository;
-    private final SellApplicationRepository sellApplicationRepository;
     private final FavoriteRepository favoriteRepository;
     private final ViewHistoryService viewHistoryService;
-    private final OrderService orderService;
     private final NotificationRepository notificationRepository;
     private final StockNotificationRepository stockNotificationRepository;
     private final UserBlockRepository userBlockRepository;
@@ -45,26 +43,20 @@ public class PageController {
     private final SecurityQuestionRepository securityQuestionRepository;
     private final AdminPenaltyRepository adminPenaltyRepository;
     private final AdminPenaltyService adminPenaltyService;
-    private final CartService cartService;
     private final ProductService productService;
     private final SiteSettingService siteSettingService;
     private final AnnouncementReceiptRepository announcementReceiptRepository;
     private final OrderRepository orderRepository;
     private final SystemConfigService systemConfigService;
-    private final ReviewRepository reviewRepository;
-    private final NotificationService notificationService;
-    private final ReviewReactionRepository reviewReactionRepository;
     private final OfflineStoreRepository offlineStoreRepository;
     private final UserAddressRepository userAddressRepository;
-    private final AfterSalesRequestRepository afterSalesRequestRepository; // 新增注入
+    private final AfterSalesRequestRepository afterSalesRequestRepository;
     private final StaffRepository staffRepository;
 
     public PageController(UserService userService,
                           LoginLogRepository loginLogRepository,
-                          SellApplicationRepository sellApplicationRepository,
                           FavoriteRepository favoriteRepository,
                           ViewHistoryService viewHistoryService,
-                          OrderService orderService,
                           NotificationRepository notificationRepository,
                           StockNotificationRepository stockNotificationRepository,
                           UserBlockRepository userBlockRepository,
@@ -72,14 +64,12 @@ public class PageController {
                           SecurityQuestionRepository securityQuestionRepository,
                           AdminPenaltyRepository adminPenaltyRepository,
                           AdminPenaltyService adminPenaltyService, SystemConfigService systemConfigService,
-                          CartService cartService, ProductService productService, AnnouncementReceiptRepository announcementReceiptRepository,
-                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository, ReviewRepository reviewRepository, NotificationService notificationService, ReviewReactionRepository reviewReactionRepository, OfflineStoreRepository offlineStoreRepository, UserAddressRepository userAddressRepository, AfterSalesRequestRepository afterSalesRequestRepository, StaffRepository staffRepository) {
+                          ProductService productService, AnnouncementReceiptRepository announcementReceiptRepository,
+                          UserRepository userRepository, SiteSettingService siteSettingService, OrderRepository orderRepository,  OfflineStoreRepository offlineStoreRepository, UserAddressRepository userAddressRepository, AfterSalesRequestRepository afterSalesRequestRepository, StaffRepository staffRepository) {
         this.userService = userService;
         this.loginLogRepository = loginLogRepository;
-        this.sellApplicationRepository = sellApplicationRepository;
         this.favoriteRepository = favoriteRepository;
         this.viewHistoryService = viewHistoryService;
-        this.orderService = orderService;
         this.notificationRepository = notificationRepository;
         this.stockNotificationRepository = stockNotificationRepository;
         this.userBlockRepository = userBlockRepository;
@@ -87,16 +77,12 @@ public class PageController {
         this.securityQuestionRepository = securityQuestionRepository;
         this.adminPenaltyRepository = adminPenaltyRepository;
         this.adminPenaltyService = adminPenaltyService;
-        this.cartService = cartService;
         this.userRepository = userRepository;
         this.productService = productService;
         this.siteSettingService = siteSettingService;
         this.announcementReceiptRepository = announcementReceiptRepository;
         this.orderRepository = orderRepository;
-        this.systemConfigService = systemConfigService; // 新增賦值
-        this.reviewRepository = reviewRepository;
-        this.notificationService = notificationService;
-        this.reviewReactionRepository = reviewReactionRepository;
+        this.systemConfigService = systemConfigService;
         this.offlineStoreRepository = offlineStoreRepository;
         this.userAddressRepository = userAddressRepository;
         this.afterSalesRequestRepository = afterSalesRequestRepository;
@@ -402,12 +388,12 @@ public class PageController {
 
     /**
      * 【API 1】獲取到貨通知列表 (獨立數據源: AnnouncementReceipt)
-     * 修改：支持 1-based 分頁
+     * 修改：支持 1-based 分頁，並自動標記為已讀
      */
     @GetMapping("/api/notifications/stock")
     @ResponseBody
     public ResponseEntity<?> getStockNotifications(
-            @RequestParam(defaultValue = "1") int page, // 改為默認 1
+            @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "25") int size,
             Authentication authentication) {
 
@@ -415,26 +401,29 @@ public class PageController {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
-        // 核心修改：前端傳入 1-based，JPA 需要 0-based，所以這裡 page - 1
-        // 同時防止 page < 1 的情況
+        // 1. 核心修改：前端傳入 1-based，JPA 需要 0-based
         int pageIndex = Math.max(0, page - 1);
         Pageable pageable = PageRequest.of(pageIndex, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // 查詢到貨通知
+        // 2. 查詢到貨通知 (使用新的 Repository 方法，確保只查 isActive=true 的公告)
         Page<AnnouncementReceipt> receiptPage = announcementReceiptRepository
-                .findByUser_IdAndAnnouncement_TypeOrderByCreatedAtDesc(
-                        user.getId(), Announcement.AnnouncementType.STOCK, pageable);
+                .findStockNotificationsByUserId(
+                        user.getId(),
+                        Announcement.AnnouncementType.STOCK,
+                        pageable
+                );
 
-        // 進入該接口時，自動標記為已讀
-        announcementReceiptRepository.markAllAsReadByUserAndType(user.getId(), Announcement.AnnouncementType.STOCK);
+        // 3. 進入該接口時，自動將這些 STOCK 公告標記為已讀
+        // 注意：這裡調用的是單個類型的標記方法，並確保內部 SQL 也檢查了 isActive
+        announcementReceiptRepository.markAllAsReadByUserAndType(
+                user.getId(),
+                Announcement.AnnouncementType.STOCK
+        );
 
-        // 使用 PaginationUtils 構建標準分頁響應
-        // PaginationUtils 內部會處理 smartPages 的生成 (它通常期望 0-based 的 currentPage 來計算，但返回的 pageNumber 是 1-based)
-        // 如果 PaginationUtils.buildPageResponse 內部使用的是 page.getNumber() (0-based)，則直接傳入 receiptPage 即可
+        // 4. 使用 PaginationUtils 構建標準分頁響應
         Map<String, Object> response = PaginationUtils.buildPageResponse(receiptPage, receiptPage.getContent());
 
-        // 確保返回給前端的 currentPage 是 1-based (方便前端直接用)
-        // 如果 PaginationUtils 已經處理了，這行可選；如果沒處理，手動覆蓋一下
+        // 5. 確保返回給前端的 currentPage 是 1-based
         response.put("currentPage", page);
 
         return ResponseEntity.ok(response);
@@ -556,7 +545,7 @@ public class PageController {
         // 3. 進入該接口時，自動將這些公告標記為已讀
         announcementReceiptRepository.markAllAsReadByUserIdAndTypes(
                 user.getId(),
-                java.util.List.of(Announcement.AnnouncementType.MAINTENANCE, Announcement.AnnouncementType.PROMOTION,Announcement.AnnouncementType.SYSTEM)
+                java.util.List.of(Announcement.AnnouncementType.MAINTENANCE, Announcement.AnnouncementType.PROMOTION,Announcement.AnnouncementType.SYSTEM,Announcement.AnnouncementType.OTHERS)
         );
 
         // 4. 使用 PaginationUtils 構建標準分頁響應

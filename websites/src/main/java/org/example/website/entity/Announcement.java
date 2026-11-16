@@ -9,9 +9,9 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "announcements", indexes = {
         @Index(name = "idx_ann_type", columnList = "type"),
-        @Index(name = "idx_ann_target", columnList = "target_type, target_id"),
-        // 按門店維度查詢公告的索引（例如：某店鋪經理只看自己店鋪的公告）
-        @Index(name = "idx_ann_target_store", columnList = "target_store_id")
+        @Index(name = "idx_ann_target_user", columnList = "target_type, target_id"),
+        @Index(name = "idx_ann_target_product", columnList = "target_type, product_id"),
+        @Index(name = "idx_ann_target_store", columnList = "target_type, target_store_id")
 })
 @Data
 public class Announcement {
@@ -57,9 +57,14 @@ public class Announcement {
     @Column(name = "target_id")
     private Long targetId;
 
-    // ==========================================
-    // 門店專屬外鍵
-    // ==========================================
+
+    /**
+     * 關聯的商品 ID（僅用於 SPECIFIC_PRODUCT / STOCK 場景）
+     * 對應 product 表的 prod_id
+     */
+    @Column(name = "product_id")
+    private Integer productId;
+
     /**
      * 關聯的線下門店 ID (offline_stores.store_id)
      * 【業務邏輯】：
@@ -73,6 +78,14 @@ public class Announcement {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    /**
+     * 發布者/操作者 ID (關聯 users 表的 user_id)
+     * 允許為 NULL 以兼容歷史數據，或可設置默認值
+     */
+    @Column(name = "publisher_id")
+    private Long publisherId;
+
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -81,11 +94,9 @@ public class Announcement {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // ==========================================
     // 枚舉定義
-    // ==========================================
     public enum AnnouncementType {
-        SYSTEM, STOCK, MAINTENANCE, PROMOTION
+        SYSTEM, STOCK, MAINTENANCE, PROMOTION,OTHERS
     }
 
     public enum TargetAudience {

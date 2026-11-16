@@ -286,7 +286,13 @@ public class StockNotificationController {
                 product.getDescription(), product.getStock()));
         announcement.setType(Announcement.AnnouncementType.STOCK); // 使用 STOCK 類型
         announcement.setTargetType(Announcement.TargetAudience.SPECIFIC_PRODUCT);            // 標記為特定商品訂閱者
-        announcement.setTargetId(productId.longValue());           // 關聯商品 ID
+        announcement.setProductId(product.getProductId());
+        announcement.setTitleAlignment("CENTER");
+        // 記錄發布者 ID
+        // SecurityUtils.isAdmin() 已通過校驗，此時可安全獲取當前管理員 ID
+        Long publisherId = org.example.website.util.SecurityUtils.getCurrentUserId();
+        announcement.setPublisherId(publisherId);
+
         announcement.setIsActive(true);
 
         Announcement savedAnnouncement = announcementRepository.save(announcement);

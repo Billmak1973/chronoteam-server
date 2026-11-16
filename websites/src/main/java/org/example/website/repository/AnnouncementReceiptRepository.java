@@ -17,14 +17,22 @@ import java.util.List;
 @Repository
 public interface AnnouncementReceiptRepository extends JpaRepository<AnnouncementReceipt, Long> {
 
+
     /**
-     * 分頁查詢用戶的特定類型公告 (例如：到貨通知 STOCK)
+     * 分頁查詢用戶的 STOCK 類型公告 (到貨通知)
+     * 【修復】：使用 @EntityGraph 避免 N+1 問題，並增加 ar.announcement.isActive = true 條件
      */
-    Page<AnnouncementReceipt> findByUser_IdAndAnnouncement_TypeOrderByCreatedAtDesc(
-            Long userId,
-            Announcement.AnnouncementType type,
+    @EntityGraph(attributePaths = {"announcement"})
+    @Query("SELECT ar FROM AnnouncementReceipt ar " +
+            "WHERE ar.user.id = :userId " +
+            "AND ar.announcement.type = :type " +
+            "AND ar.announcement.isActive = true")
+    Page<AnnouncementReceipt> findStockNotificationsByUserId(
+            @Param("userId") Long userId,
+            @Param("type") Announcement.AnnouncementType type,
             Pageable pageable
     );
+
 
     /**
      * 統計用戶某類型的未讀公告數量 (用於導航欄紅點)
@@ -48,21 +56,29 @@ public interface AnnouncementReceiptRepository extends JpaRepository<Announcemen
 
     /**
      * 分頁查詢用戶的特定類型公告 (例如：到貨通知 STOCK)
-     * 【修復】：使用 @EntityGraph 替代 JOIN FETCH，解決 Hibernate 6 Count Query 報錯
+     * 使用 @EntityGraph 替代 JOIN FETCH，解決 Hibernate 6 Count Query 報錯
+     * 增加 ar.announcement.isActive = true 條件，確保只查詢生效中的公告
      */
     @EntityGraph(attributePaths = {"announcement"})
-    @Query("SELECT ar FROM AnnouncementReceipt ar WHERE ar.user.id = :userId AND ar.announcement.type IN ('SYSTEM','MAINTENANCE', 'PROMOTION')")
+    @Query("SELECT ar FROM AnnouncementReceipt ar " +
+            "WHERE ar.user.id = :userId " +
+            "AND ar.announcement.type IN ('SYSTEM', 'MAINTENANCE', 'PROMOTION', 'OTHERS') " +
+            "AND ar.announcement.isActive = true")
     Page<AnnouncementReceipt> findPlatformAnnouncementsByUserId(@Param("userId") Long userId, Pageable pageable);
 
 
     /**
-     * 【新增】批量將用戶的特定類型公告標記為已讀
+     * 批量將用戶的特定類型公告標記為已讀
+     * 增加 a.isActive = true 條件，確保只標記生效中的公告為已讀
      */
     @Modifying
     @Transactional
     @Query("UPDATE AnnouncementReceipt ar SET ar.isRead = true " +
             "WHERE ar.user.id = :userId " +
-            "AND ar.announcement.id IN (SELECT a.id FROM Announcement a WHERE a.type IN :types) " +
+            "AND ar.announcement.id IN (SELECT a.id FROM Announcement a WHERE a.type IN :types AND a.isActive = true) " +
             "AND ar.isRead = false")
     int markAllAsReadByUserIdAndTypes(@Param("userId") Long userId, @Param("types") List<Announcement.AnnouncementType> types);
+
+
+   List <AnnouncementReceipt> findByAnnouncement_AnnouncementIdOrderByCreatedAtDesc(Long announcementId);
 }

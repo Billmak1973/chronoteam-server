@@ -11,9 +11,6 @@
   <link rel="stylesheet" href="/css/sidebar.css">
 
   <style>
-    /* ========================================== */
-    /* 1. 頁面佈局 (完全參考互動中心成功案例) */
-    /* ========================================== */
     .dashboard-container {
       display: flex;
       min-height: calc(100vh - 150px);
@@ -448,9 +445,7 @@
   <script src="/js/common.js"></script>
 
   <script>
-    // ==========================================
     // 全局狀態管理 (1-based)
-    // ==========================================
     const state = {
       stock: {page: 1, size: 25, loading: false},
       admin: {page: 1, size: 25, loading: false},
@@ -472,9 +467,7 @@
       }
     }
 
-    // ==========================================
     // API 1: 加載到貨通知
-    // ==========================================
     async function loadStockNotifications(page) {
       if (state.stock.loading) return;
       state.stock.loading = true;
@@ -509,26 +502,33 @@
             const dateStr = formatDate(receipt.createdAt);
             const announcement = receipt.announcement || {};
 
+            // 【核心修復】：使用 announcement.productId 替代 targetId
+            // 同時增加空值判斷，防止 productId 為 null 時鏈接錯誤
+            const productId = announcement.productId;
+            const productLink = productId ? `/product/${productId}` : '#';
+            const linkClass = productId ? '' : 'style="pointer-events: none; opacity: 0.6;"';
+
             html += `
-        <div class="notification-card stock-notif ${isUnreadClass}">
-            <div class="notif-header">
-                <div class="notif-title">
-                    <i class="fas fa-bell" style="color: var(--gold);"></i>
-                    <span>${escapeHtml(announcement.title || '到貨通知')}</span>
-                </div>
-                <div class="notif-date">${dateStr}</div>
+    <div class="notification-card stock-notif ${isUnreadClass}">
+        <div class="notif-header">
+            <div class="notif-title">
+                <i class="fas fa-bell" style="color: var(--gold);"></i>
+                <span>${escapeHtml(announcement.title || '到貨通知')}</span>
             </div>
-            <div class="notif-content">${escapeHtml(announcement.content || '')}</div>
-            <div class="stock-info">
-                <strong><i class="fas fa-box-open"></i> 商品資訊</strong>
-                <a href="/product/${announcement.targetId}" class="product-name" onclick="clearStockNotification(event, ${announcement.targetId})">
-                    <i class="fas fa-external-link-alt" style="font-size: 0.8rem; margin-right: 0.3rem;"></i> 點擊查看商品詳情
-                </a>
-                <div style="margin-top: 0.5rem; font-size: 0.9rem;">
-                    <span class="stock-count"><i class="fas fa-check-circle"></i> 庫存充足，立即搶購！</span>
-                </div>
+            <div class="notif-date">${dateStr}</div>
+        </div>
+        <div class="notif-content">${escapeHtml(announcement.content || '')}</div>
+        <div class="stock-info">
+            <strong><i class="fas fa-box-open"></i> 商品資訊</strong>
+            <!-- 【核心修復】：這裡改為使用 productId -->
+            <a href="${productLink}" class="product-name" ${linkClass} onclick="clearStockNotification(event, ${productId})">
+                <i class="fas fa-external-link-alt" style="font-size: 0.8rem; margin-right: 0.3rem;"></i> 點擊查看商品詳情
+            </a>
+            <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                <span class="stock-count"><i class="fas fa-check-circle"></i> 庫存充足，立即搶購！</span>
             </div>
-        </div>`;
+        </div>
+    </div>`;
           });
           listContainer.innerHTML = html;
           renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'stock');
@@ -542,9 +542,7 @@
       }
     }
 
-    // ==========================================
-    // API 2: 加載管理通知
-    // ==========================================
+    // 加載管理通知
     async function loadAdminNotifications(page) {
       if (state.admin.loading) return;
       state.admin.loading = true;
@@ -594,12 +592,7 @@
       }
     }
 
-    // ==========================================
     // API 3 (新增): 加載平台公告
-    // ==========================================
-    // ==========================================
-    // API 3 (新增): 加載平台公告
-    // ==========================================
     async function loadAnnouncementNotifications(page) {
       if (state.announcement.loading) return;
       state.announcement.loading = true;
@@ -652,6 +645,11 @@
               iconClass = 'fas fa-gift';
               iconColor = '#e83e8c'; // 粉色
               bgClass = 'promotion-notif';
+            } else if (announcement.type === 'OTHERS') {
+              // 【新增】OTHERS 類型的樣式配置
+              iconClass = 'fas fa-info-circle'; // 使用資訊圖示
+              iconColor = '#6f42c1';            // 使用紫色區分
+              bgClass = 'others-notif';         // 專屬背景類別
             }
 
             // 【修复 2】根据 titleAlignment 动态生成标题样式
@@ -664,28 +662,28 @@
               titleStyle = 'text-align: left; justify-content: flex-start;';
             }
 
-            // 【🔥 修复 3】移除 padding-right，让内容正常显示
+            // 【修复 3】移除 padding-right，让内容正常显示
             // 日期使用 absolute 定位，不会占用内容空间
             html += `
-          <div class="notification-card ${bgClass} ${isUnreadClass}" style="position: relative;">
-            <!-- 标题区域 -->
-            <div class="notif-header" style="display: flex; ${titleStyle} align-items: center; margin-bottom: 0.8rem;">
-              <div class="notif-title" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--primary); font-size: 1.1rem;">
-                <i class="${iconClass}" style="color: ${iconColor};"></i>
-                <span>${announcement.title || '平台公告'}</span>
-              </div>
-            </div>
+      <div class="notification-card ${bgClass} ${isUnreadClass}" style="position: relative;">
+        <!-- 标题区域 -->
+        <div class="notif-header" style="display: flex; ${titleStyle} align-items: center; margin-bottom: 0.8rem;">
+          <div class="notif-title" style="display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--primary); font-size: 1.1rem;">
+            <i class="${iconClass}" style="color: ${iconColor};"></i>
+            <span>${announcement.title || '平台公告'}</span>
+          </div>
+        </div>
 
-            <!-- 内容区域 - 移除 padding-right: 100px -->
-            <div class="notif-content" style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
-              ${announcement.content || ''}
-            </div>
+        <!-- 内容区域 - 移除 padding-right: 100px -->
+        <div class="notif-content" style="color: #555; line-height: 1.6; margin-bottom: 1rem;">
+          ${announcement.content || ''}
+        </div>
 
-            <!-- 日期固定在右下角 -->
-            <div class="notif-date" style="position: absolute; right: 1.5rem; bottom: 1.5rem; color: var(--gray); font-size: 0.85rem;">
-              ${dateStr}
-            </div>
-          </div>`;
+        <!-- 日期固定在右下角 -->
+        <div class="notif-date" style="position: absolute; right: 1.5rem; bottom: 1.5rem; color: var(--gray); font-size: 0.85rem;">
+          ${dateStr}
+        </div>
+      </div>`;
           });
           listContainer.innerHTML = html;
           renderPagination(paginationEl, data.currentPage, data.totalPages, data.smartPages, 'announcement');
@@ -699,9 +697,7 @@
       }
     }
 
-    // ==========================================
     // 輔助函數：構建管理通知卡片
-    // ==========================================
     function buildAdminNotifCard(notif, status, appeal, appealCount, dateStr, isUnreadClass) {
       let html = `
     <div class="notification-card ${isUnreadClass}">
@@ -999,9 +995,7 @@
       }
     }
 
-    // ==========================================
     // 頁面初始化
-    // ==========================================
     document.addEventListener('DOMContentLoaded', function () {
       // 默認加載到貨通知 (或根據你的 HTML 默認 active tab 調整)
       loadStockNotifications(1);

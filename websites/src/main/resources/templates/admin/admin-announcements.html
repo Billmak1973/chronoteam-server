@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/css/common.css">
   <link rel="stylesheet" href="/css/admin.css">
 
-  <!-- 【新增】引入 Quill.js 富文本編輯器 -->
+  <!-- 引入 Quill.js 富文本編輯器 -->
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
   <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
@@ -124,6 +124,7 @@
       background: #f8f9fa;
       padding: 0.8rem;
     }
+
     .ql-container.ql-snow {
       border: 2px solid #e9ecef;
       border-radius: 0 0 12px 12px;
@@ -132,15 +133,18 @@
       background: white;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
     /* 當編輯器獲得焦點時，展現與 input 一致的金色光暈 */
     .ql-container.ql-snow:focus-within {
       border-color: var(--gold);
       box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.12);
     }
+
     .ql-editor {
       min-height: 200px;
       line-height: 1.6;
     }
+
     .ql-editor p {
       margin-bottom: 0.5rem;
     }
@@ -298,6 +302,7 @@
       height: 300px;
     }
 
+    /*hover 起到「背景變成金黃色」作用的原始代碼，其實存在於你的 /css/common.css 全局樣式文件中：*/
     .btn-outline {
       background: white;
       color: var(--primary);
@@ -305,8 +310,6 @@
     }
 
     .btn-outline:hover {
-      border-color: var(--gold);
-      color: var(--gold);
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
     }
@@ -378,7 +381,8 @@
       line-height: 1.6;
       max-width: 100%;
       /* 模拟前台公告卡片的内边距 */
-      padding: 1.5rem !important; /* 与前台 .notification-card 的 padding 一致 */
+      padding: 1.5rem !important;
+      /* 与前台 .notification-card 的 padding 一致 */
     }
 
     .ql-container.ql-snow {
@@ -388,7 +392,8 @@
       font-size: 0.95rem;
       background: white;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      max-width: 100%; /* 确保不超出父容器 */
+      max-width: 100%;
+      /* 确保不超出父容器 */
     }
 
 
@@ -424,568 +429,1828 @@
     .editor-width-notice i {
       color: #0066cc;
     }
+
+    /* 指定用戶搜索下拉框 */
+    .user-dropdown-options {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      margin-top: 4px;
+      z-index: 9999;
+      padding: 5px 0;
+      max-height: 200px;
+      /* 關鍵：限制最大高度 */
+      overflow-y: auto;
+      /* 關鍵：允許垂直滾動（下滑） */
+      display: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .user-dropdown-option {
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .user-dropdown-option:hover {
+      background: rgba(212, 175, 55, 0.1);
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .user-dropdown-option .user-meta {
+      color: #999;
+      font-size: 0.8rem;
+      margin-left: 6px;
+    }
+
+    /* 橙色區域的「已找到用戶」提示 */
+    .user-search-result {
+      margin-top: 1rem;
+      padding: 0.8rem 1rem;
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      color: #856404;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ==================== 公告列表表格美化 ==================== */
+    .table-responsive {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+      border: 1px solid rgba(0, 0, 0, 0.03);
+      overflow-x: auto;
+    }
+
+    .table-responsive::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+      background: var(--gold);
+    }
+
+    .data-table {
+      width: 100%;
+      min-width: 1500px;
+      border-collapse: collapse;
+    }
+
+    .data-table thead th {
+      background: #f8f9fa;
+      padding: 1rem 1.25rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: left;
+      white-space: nowrap;
+      border-bottom: 2px solid #edf2f9;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .data-table tbody td {
+      padding: 1.05rem 1.25rem;
+      font-size: 0.92rem;
+      color: #334155;
+      border-bottom: 1px solid #f1f3f5;
+      vertical-align: middle;
+    }
+
+    .data-table tbody tr {
+      transition: background 0.2s ease;
+    }
+
+    .data-table tbody tr:hover {
+      background: rgba(212, 175, 55, 0.04);
+    }
+
+    .data-table tbody tr:hover td:first-child {
+      box-shadow: inset 3px 0 0 var(--gold);
+    }
+
+    .data-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ID / 時間欄位 */
+    .id-cell {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .time-cell {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      color: #64748b;
+      white-space: nowrap;
+    }
+
+    /* 標題欄：加粗 + 超長省略 */
+    .title-cell {
+      font-weight: 600;
+      color: var(--primary);
+      max-width: 260px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 發送對象欄 */
+    .target-cell {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .target-cell i {
+      color: var(--gold);
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    /* ===== 徽章系統（取代 inline style）===== */
+    .badge,
+    .status-badge {
+      padding: 0.35rem 0.85rem;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .badge i {
+      font-size: 0.7rem;
+    }
+
+    .badge-system {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .badge-maintenance {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .badge-promotion {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .badge-stock {
+      background: #fef9c3;
+      color: #a16207;
+    }
+
+    .badge-others {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    /* 狀態徽章帶小圓點 */
+    .status-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-on {
+      background: rgba(40, 167, 69, 0.12);
+      color: #15803d;
+    }
+
+    .status-off {
+      background: rgba(220, 53, 69, 0.12);
+      color: #b91c1c;
+    }
+
+    /* ===== 操作按鈕（1 行 × 2 列網格佈局）===== */
+    .action-cell {
+      display: grid;
+      grid-template-columns: repeat(2, auto);
+      /* 1*3：橫向一排三個 */
+      justify-content: center;
+      align-items: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+    }
+
+    /* 【可選】若想改為「3 行 × 1 列」直排，只需改成：
+           grid-template-columns: 1fr; */
+
+    .btn-action {
+      padding: 0.4rem 0.75rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: white;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      justify-content: center;
+    }
+
+    .btn-action:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn-action i {
+      font-size: 0.75rem;
+    }
+
+    /* 查看 - 青藍色 */
+    .btn-view {
+      background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    }
+
+    .btn-view:hover {
+      box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+    }
+
+    /* 編輯 - 金色（原樣保留） */
+    .btn-edit {
+      background: linear-gradient(135deg, var(--gold) 0%, #b8972b 100%);
+    }
+
+    .btn-edit:hover {
+      box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+    }
+
+    /* 更改狀態 - 橙色（取代原刪除紅色） */
+    .btn-status {
+      background: linear-gradient(135deg, #fd7e14 0%, #e8590c 100%);
+    }
+
+    .btn-status:hover {
+      box-shadow: 0 4px 12px rgba(253, 126, 20, 0.4);
+    }
+
+    /* 篩選列也做成卡片 */
+    .list-toolbar {
+      background: white;
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+      margin-bottom: 1.25rem;
+      display: flex;
+      gap: 0.8rem;
+    }
+
+    /* 確保 Quill 生成的富文本在彈窗中正常顯示 */
+    .announcement-modal-body img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    .announcement-modal-body p {
+      margin-bottom: 1rem;
+    }
+
+    .announcement-modal-body ul,
+    .announcement-modal-body ol {
+      margin-bottom: 1rem;
+      padding-left: 1.5rem;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* ========================================== */
+    /*   公告狀態切換專屬彈窗樣式                 */
+    /* ========================================== */
+    .status-toggle-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      z-index: 10005;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .status-toggle-box {
+      background: white;
+      padding: 2.5rem 2rem;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 450px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 頂部裝飾光暈 */
+    .status-toggle-box::before {
+      content: '';
+      position: absolute;
+      top: -50px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 100px;
+      background: radial-gradient(circle, rgba(0, 0, 0, 0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .toggle-modal-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      color: white;
+      animation: iconPulse 2s infinite;
+    }
+
+    /* 隱藏狀態圖標 (橙色警告) */
+    .toggle-modal-icon.warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+    }
+
+    /* 發布狀態圖標 (綠色積極) */
+    .toggle-modal-icon.success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+    }
+
+    .toggle-modal-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 1rem;
+    }
+
+    .toggle-modal-message {
+      color: var(--gray);
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    .toggle-modal-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    .btn-toggle-cancel {
+      padding: 0.8rem 1.5rem;
+      background: #f1f3f5;
+      color: var(--primary);
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-toggle-cancel:hover {
+      background: #e9ecef;
+      transform: translateY(-2px);
+    }
+
+    .btn-confirm-toggle {
+      padding: 0.8rem 1.5rem;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: white;
+    }
+
+    /* 隱藏按鈕樣式 (橙色) */
+    .btn-confirm-toggle.btn-warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-confirm-toggle.btn-warning:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+    }
+
+    /* 發布按鈕樣式 (綠色) */
+    .btn-confirm-toggle.btn-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-confirm-toggle.btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    @keyframes iconPulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.05);
+      }
+    }
   </style>
 </head>
 
 <body>
-<!-- 引入公共導航欄 -->
-<div th:replace="~{fragments/common :: navbar}"></div>
+  <!-- 引入公共導航欄 -->
+  <div th:replace="~{fragments/common :: navbar}"></div>
 
-<div class="admin-layout">
-  <!-- 引入左側邊欄，高亮 'announcements' -->
-  <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='announcements')}"></div>
+  <div class="admin-layout">
+    <!-- 引入左側邊欄，高亮 'announcements' -->
+    <div th:replace="~{fragments/admin-sidebar :: adminSidebar(activePage='announcements')}"></div>
 
-  <main class="admin-main">
-    <!-- 頁面頂部標題與操作區 -->
-    <div class="content-header"
-         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-      <h2 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-        <i class="fas fa-bullhorn" style="color: var(--gold);"></i> 系統公告管理
-      </h2>
-      <!-- 僅在列表視圖顯示的「發布公告」按鈕 -->
-      <button id="btn-show-create" class="btn btn-primary" onclick="showCreateView()">
-        <i class="fas fa-plus-circle"></i> 發布公告
-      </button>
-    </div>
-
-    <!-- ================= 視圖 1: 公告管理列表 ================= -->
-    <div id="view-list" class="view-container">
-      <div class="content-body">
-        <!-- 簡易篩選區 -->
-        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-          <input type="text" class="form-control" placeholder="搜索公告標題..." style="max-width: 300px;">
-          <button class="btn btn-primary"><i class="fas fa-search"></i> 查詢</button>
-        </div>
-
-        <!-- 列表表格 -->
-        <div class="table-responsive">
-          <table class="data-table">
-            <thead>
-            <tr>
-              <th style="width: 60px;">ID</th>
-              <th>公告標題</th>
-              <th style="width: 120px;">公告性質</th>
-              <th style="width: 250px;">發送對象</th>
-              <th style="width: 160px;">創建時間</th>
-              <th style="width: 100px;">狀態</th>
-              <th style="width: 150px; text-align: center;">操作</th>
-            </tr>
-            </thead>
-            <tbody>
-            <!-- Thymeleaf 循環渲染佔位 (實際開發時替換為 th:each) -->
-            <tr>
-              <td>1</td>
-              <td>系統例行維護通知</td>
-              <td><span class="badge" style="background:#e2e3e5; color:#383d41;">維護通知</span></td>
-              <td><i class="fas fa-users" style="color:var(--gold); margin-right:5px;"></i> 全體用戶</td>
-              <td>2023-10-25 10:00</td>
-              <td><span class="status-badge" style="background:#d4edda; color:#155724;">啟用中</span></td>
-              <td style="text-align: center;">
-                <button class="btn-sm" style="background:var(--gold); color:white;"><i class="fas fa-edit"></i>
-                  編輯</button>
-                <button class="btn-sm" style="background:#dc3545; color:white;"><i class="fas fa-trash"></i>
-                  刪除</button>
-              </td>
-            </tr>
-            <tr>
-              <td>2</td>
-              <td>新款勞力士到貨通知</td>
-              <td><span class="badge" style="background:#d1ecf1; color:#0c5460;">到貨通知</span></td>
-              <td><i class="fas fa-store" style="color:var(--gold); margin-right:5px;"></i> 門店: 中環店 (僅員工)</td>
-              <td>2023-10-26 14:30</td>
-              <td><span class="status-badge" style="background:#d4edda; color:#155724;">啟用中</span></td>
-              <td style="text-align: center;">
-                <button class="btn-sm" style="background:var(--gold); color:white;"><i class="fas fa-edit"></i>
-                  編輯</button>
-                <button class="btn-sm" style="background:#dc3545; color:white;"><i class="fas fa-trash"></i>
-                  刪除</button>
-              </td>
-            </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 分頁組件佔位 -->
-      <div class="pagination-wrapper" style="margin-top: 2rem;">
-        <button class="page-btn disabled"><i class="fas fa-chevron-left"></i> 上一頁</button>
-        <button class="page-btn active">1</button>
-        <button class="page-btn">下一頁 <i class="fas fa-chevron-right"></i></button>
-      </div>
-    </div>
-
-    <!-- ================= 視圖 2: 發布公告 (默認隱藏) ================= -->
-    <div id="view-create" class="view-container" style="display: none;">
-      <!-- 返回列表按鈕 -->
-      <div style="margin-bottom: 1.5rem;">
-        <button class="btn btn-outline" onclick="showListView()">
-          <i class="fas fa-arrow-left"></i> 返回列表
+    <main class="admin-main">
+      <!-- 頁面頂部標題與操作區 -->
+      <div class="content-header"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+          <i class="fas fa-bullhorn" style="color: var(--gold);"></i> 系統公告管理
+        </h2>
+        <!-- 僅在列表視圖顯示的「發布公告」按鈕 -->
+        <button id="btn-show-create" class="btn btn-primary" onclick="showCreateView()">
+          <i class="fas fa-plus-circle"></i> 發布公告
         </button>
       </div>
 
-      <div class="form-section">
-        <h3>
-          <i class="fas fa-bullhorn"></i> 填寫公告資訊
-        </h3>
-        <form id="announcementForm" onsubmit="handlePublish(event)">
-          <!-- 1. 公告標題與對齊方式 -->
-          <div class="form-group">
-            <label>公告標題 <span class="required">*</span></label>
-            <div style="display: flex; gap: 1rem; align-items: flex-start;">
-              <input type="text" name="title" class="form-control" placeholder="請輸入公告標題 (純文本，前台會自動加粗)" required style="flex: 1;">
-
-              <!-- 新增：標題對齊控制 -->
-              <select name="titleAlignment" class="form-control" style="width: 160px; flex-shrink: 0;">
-                <option value="LEFT" selected>🡠 靠左對齊</option>
-                <option value="CENTER">⬌ 置中顯示</option>
-                <option value="RIGHT">🡢 靠右對齊</option>
-              </select>
-            </div>
-            <small class="form-text">
-              <i class="fas fa-info-circle"></i> 提示：標題請輸入純文字，前台系統會自動將其顯示為加粗。您可在此選擇標題的對齊方式。
-            </small>
+      <!-- ================= 視圖 1: 公告管理列表 ================= -->
+      <div id="view-list" class="view-container">
+        <div class="content-body">
+          <!-- 簡易篩選區 -->
+          <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+            <input type="text" class="form-control" placeholder="搜索公告標題..." style="max-width: 300px;">
+            <button class="btn btn-primary"><i class="fas fa-search"></i> 查詢</button>
           </div>
 
-          <!-- 2. 公告性質 -->
-          <div class="form-group">
-            <label>公告性質 <span class="required">*</span></label>
-            <select name="type" class="form-control" required>
-              <option value="">請選擇公告性質</option>
-              <option value="SYSTEM">系統通知</option>
-              <option value="MAINTENANCE">維護通知</option>
-              <option value="PROMOTION">促銷活動</option>
-            </select>
+          <!-- 列表表格 -->
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 60px;">ID</th>
+                  <th style="min-width: 300px;">公告標題</th> <!-- ← 新增 min-width -->
+                  <th style="width: 120px;">公告性質</th>
+                  <th style="width: 250px;">發送對象</th>
+                  <th style="width: 160px;">創建時間</th>
+                  <th style="width: 160px;">更新時間</th> <!-- 新增 -->
+                  <th style="width: 100px;">狀態</th>
+                  <th style="width: 140px;">操作者</th>
+                  <th style="width: 270px; text-align: center;">操作</th>
+                </tr>
+              </thead>
+              <tbody id="announcements-tbody">
+                <!-- 由 AdminTable 動態渲染，初始顯示加載中 -->
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          <!-- 3. 公告內容 (【已替換為 Quill.js 富文本編輯器】) -->
-          <div class="form-group">
-            <label>公告内容 <span class="required">*</span></label>
+        <!-- 分頁組件容器 (修改 ID) -->
+        <div id="announcements-pagination" style="margin-top: 2rem;"></div>
+      </div>
 
-            <!-- 宽度提示 -->
-            <div class="editor-width-notice">
-              <i class="fas fa-ruler-horizontal"></i>
-              <strong>编辑宽度预览：</strong>
-              <span>编辑器宽度已设置为与前台公告卡片一致 (约930px)，排版效果 1:1 预览</span>
+      <!-- ================= 視圖 2: 發布公告 (默認隱藏) ================= -->
+      <div id="view-create" class="view-container" style="display: none;">
+        <!-- 返回列表按鈕 -->
+        <div style="margin-bottom: 1.5rem;">
+          <button class="btn btn-outline" onclick="showListView()">
+            <i class="fas fa-arrow-left"></i> 返回列表
+          </button>
+        </div>
+
+        <div class="form-section">
+          <h3>
+            <i class="fas fa-bullhorn"></i> 填寫公告資訊
+          </h3>
+          <form id="announcementForm" onsubmit="handlePublish(event)">
+            <!-- 1. 公告標題與對齊方式 -->
+            <div class="form-group">
+              <label>公告標題 <span class="required">*</span></label>
+              <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                <input type="text" name="title" class="form-control" placeholder="請輸入公告標題 (純文本，前台會自動加粗)" required
+                  style="flex: 1;">
+
+                <!-- 新增：標題對齊控制 -->
+                <select name="titleAlignment" class="form-control" style="width: 160px; flex-shrink: 0;">
+                  <option value="LEFT" selected>🡠 靠左對齊</option>
+                  <option value="CENTER">⬌ 置中顯示</option>
+                  <option value="RIGHT">🡢 靠右對齊</option>
+                </select>
+              </div>
+              <small class="form-text">
+                <i class="fas fa-info-circle"></i> 提示：標題請輸入純文字，前台系統會自動將其顯示為加粗。您可在此選擇標題的對齊方式。
+              </small>
             </div>
 
-            <!-- 隐藏的 input，用于在表单提交时携带 Quill 生成的 HTML 数据 -->
-            <input type="hidden" name="content" id="quillContent" required>
-
-            <!-- Quill 编辑器挂载点 (添加 wrapper 类) -->
-            <div class="announcement-editor-wrapper">
-              <div id="editor-container"></div>
-            </div>
-
-            <small class="form-text">
-              <i class="fas fa-info-circle"></i> 支援文字加粗、置中对齐、段落缩进等排版。系统会自动记录格式。
-            </small>
-          </div>
-
-          <!-- 4. 發送對象 (核心) -->
-          <!-- 4. 發送對象 (核心) -->
-          <div class="form-group">
-            <label style="font-size: 1.05rem; color: var(--primary);">
-              <i class="fas fa-bullseye" style="color: var(--gold); margin-right: 0.5rem;"></i>
-              發送對象 <span class="required">*</span>
-            </label>
-            <div class="radio-group">
-              <label class="radio-item">
-                <!-- 保持 ALL 不變 -->
-                <input type="radio" name="targetType" value="ALL" checked onchange="toggleTargetField('ALL')">
-                <i class="fas fa-users" style="color: var(--gold);"></i> 全體用戶
-              </label>
-              <label class="radio-item">
-                <!-- 保持 ALL_STAFF 不變 -->
-                <input type="radio" name="targetType" value="ALL_STAFF" onchange="toggleTargetField('ALL_STAFF')">
-                <i class="fas fa-user-tie" style="color: var(--gold);"></i> 全體工作人員 (非顧客)
-              </label>
-              <label class="radio-item">
-                <!-- 【修改】value 改為 SPECIFIC_ROLE -->
-                <input type="radio" name="targetType" value="SPECIFIC_ROLE" onchange="toggleTargetField('SPECIFIC_ROLE')">
-                <i class="fas fa-user-shield" style="color: var(--gold);"></i> 指定特定角色
-              </label>
-              <label class="radio-item">
-                <!-- 【修改】value 改為 SPECIFIC_STORE -->
-                <input type="radio" name="targetType" value="SPECIFIC_STORE" onchange="toggleTargetField('SPECIFIC_STORE')">
-                <i class="fas fa-store" style="color: var(--gold);"></i> 按指定店鋪發送
-              </label>
-              <label class="radio-item">
-                <!-- 【修改】value 改為 SPECIFIC_USER -->
-                <input type="radio" name="targetType" value="SPECIFIC_USER" onchange="toggleTargetField('SPECIFIC_USER')">
-                <i class="fas fa-user" style="color: var(--gold);"></i> 指定單個用戶
-              </label>
-            </div>
-
-            <!-- 動態顯示區域：按角色 -->
-            <div id="target-role" class="dynamic-field">
-              <label><i class="fas fa-user-shield" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                選擇目標角色</label>
-              <select class="form-control" name="targetRole">
-                <option value="">請選擇角色</option>
-                <option value="COURIER">快遞人員</option>
-                <option value="ONLINE_STAFF">線上員工</option>
-                <option value="STORE_MANAGER">店鋪經理</option>
-                <option value="APPRAISER">鑒賞師</option>
-                <option value="SALES">銷售員</option>
-                <option value="ADMIN">管理員</option>
-                <option value="CUSTOMER">顧客</option>
+            <!-- 2. 公告性質 -->
+            <div class="form-group">
+              <label>公告性質 <span class="required">*</span></label>
+              <select name="type" class="form-control" required>
+                <option value="">請選擇公告性質</option>
+                <option value="SYSTEM">系統通知</option>
+                <option value="MAINTENANCE">維護通知</option>
+                <option value="PROMOTION">促銷活動</option>
+                <!-- 商品訂閱通知，預設隱藏，僅編輯/查看模式顯示 -->
+                <option id="opt-stock-type" value="STOCK" style="display: none;">商品訂閲通知</option>
+                <option value="OTHERS">其他事項</option>
               </select>
             </div>
 
-            <!-- 動態顯示區域：按指定店鋪 -->
-            <!-- 動態顯示區域：按指定店鋪 -->
-            <div id="target-store" class="dynamic-field">
-              <div class="form-group">
-                <label><i class="fas fa-store" style="color: var(--gold); margin-right: 0.5rem;"></i> 1. 選擇具體門店 <span class="required">*</span></label>
+            <!-- 3. 公告內容 (【已替換為 Quill.js 富文本編輯器】) -->
+            <div class="form-group">
+              <label>公告内容 <span class="required">*</span></label>
 
-                <!-- 【修改】移除硬編碼的 option，添加 id 供 JS 操作 -->
-                <select class="form-control" name="targetStoreId" id="targetStoreSelect" onchange="toggleStoreRoleGroup(this.value)">
-                  <option value="">請選擇門店</option>
-                  <!-- JS 將動態插入這裡 -->
+              <!-- 宽度提示 -->
+              <div class="editor-width-notice">
+                <i class="fas fa-ruler-horizontal"></i>
+                <strong>编辑宽度预览：</strong>
+                <span>编辑器宽度已设置为与前台公告卡片一致 (约930px)，排版效果 1:1 预览</span>
+              </div>
+
+              <!-- 隐藏的 input，用于在表单提交时携带 Quill 生成的 HTML 数据 -->
+              <input type="hidden" name="content" id="quillContent" required>
+
+              <!-- Quill 编辑器挂载点 (添加 wrapper 类) -->
+              <div class="announcement-editor-wrapper">
+                <div id="editor-container"></div>
+              </div>
+
+              <small class="form-text">
+                <i class="fas fa-info-circle"></i> 支援文字加粗、置中对齐、段落缩进等排版。系统会自动记录格式。
+              </small>
+            </div>
+
+            <!-- 4. 發送對象 (核心) -->
+            <div class="form-group">
+              <label style="font-size: 1.05rem; color: var(--primary);">
+                <i class="fas fa-bullseye" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                發送對象 <span class="required">*</span>
+              </label>
+              <div class="radio-group">
+                <label class="radio-item">
+                  <!-- 保持 ALL 不變 -->
+                  <input type="radio" name="targetType" value="ALL" checked onchange="toggleTargetField('ALL')">
+                  <i class="fas fa-users" style="color: var(--gold);"></i> 全體用戶
+                </label>
+                <label class="radio-item">
+                  <!-- 保持 ALL_STAFF 不變 -->
+                  <input type="radio" name="targetType" value="ALL_STAFF" onchange="toggleTargetField('ALL_STAFF')">
+                  <i class="fas fa-user-tie" style="color: var(--gold);"></i> 全體工作人員 (非顧客)
+                </label>
+                <label class="radio-item">
+                  <!-- 【修改】value 改為 SPECIFIC_ROLE -->
+                  <input type="radio" name="targetType" value="SPECIFIC_ROLE"
+                    onchange="toggleTargetField('SPECIFIC_ROLE')">
+                  <i class="fas fa-user-shield" style="color: var(--gold);"></i> 指定特定角色
+                </label>
+                <label class="radio-item">
+                  <!-- 【修改】value 改為 SPECIFIC_STORE -->
+                  <input type="radio" name="targetType" value="SPECIFIC_STORE"
+                    onchange="toggleTargetField('SPECIFIC_STORE')">
+                  <i class="fas fa-store" style="color: var(--gold);"></i> 按指定店鋪發送
+                </label>
+                <label class="radio-item">
+                  <!-- 【修改】value 改為 SPECIFIC_USER -->
+                  <input type="radio" name="targetType" value="SPECIFIC_USER"
+                    onchange="toggleTargetField('SPECIFIC_USER')">
+                  <i class="fas fa-user" style="color: var(--gold);"></i> 指定單個用戶
+                </label>
+                <!-- 【新增】指定商品訂閱者，預設隱藏，僅編輯/查看模式顯示 -->
+                <label id="lbl-specific-product" class="radio-item" style="display: none;">
+                  <input type="radio" name="targetType" value="SPECIFIC_PRODUCT"
+                    onchange="toggleTargetField('SPECIFIC_PRODUCT')">
+                  <i class="fas fa-box-open" style="color: var(--gold);"></i> 指定商品訂閱者
+                </label>
+              </div>
+
+              <!-- 動態顯示區域：按角色 -->
+              <div id="target-role" class="dynamic-field">
+                <label><i class="fas fa-user-shield" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                  選擇目標角色</label>
+                <select class="form-control" name="targetRole">
+                  <option value="">請選擇角色</option>
+                  <option value="COURIER">快遞人員</option>
+                  <option value="ONLINE_STAFF">線上員工</option>
+                  <option value="STORE_MANAGER">店鋪經理</option>
+                  <option value="APPRAISER">鑒賞師</option>
+                  <option value="SALES">銷售員</option>
+                  <option value="ADMIN">管理員</option>
+                  <option value="CUSTOMER">顧客</option>
                 </select>
               </div>
 
-              <!-- 【新增】2. 選擇目標角色區域 (默認隱藏) -->
-              <div id="storeRoleGroup" style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px dashed #e9ecef;">
-                <label style="display: block; margin-bottom: 1rem; font-weight: 600; color: var(--primary);">
-                  <i class="fas fa-user-shield" style="color: var(--gold); margin-right: 0.5rem;"></i>
-                  2. 選擇發送對象 <span class="required">*</span>
-                </label>
+              <!-- 動態顯示區域：按指定店鋪 -->
+              <div id="target-store" class="dynamic-field">
+                <div class="form-group">
+                  <label><i class="fas fa-store" style="color: var(--gold); margin-right: 0.5rem;"></i> 1. 選擇具體門店 <span
+                      class="required">*</span></label>
 
-                <div class="radio-group" style="grid-template-columns: 1fr; gap: 0.8rem;">
-                  <!-- 選項 1: 該店鋪全體工作人員 -->
-                  <label class="radio-item" style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
-                    <input type="checkbox" name="storeRoles" value="ALL_STORE_STAFF" class="role-checkbox" onchange="handleStoreRoleChange(this)">
-                    <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
-                      <i class="fas fa-users" style="color: var(--gold); font-size: 1.2rem;"></i>
-                      <div>
-                        <div style="font-weight: 600; color: var(--primary);">該店鋪全體工作人員</div>
-                        <div style="font-size: 0.85rem; color: #6c757d;">包括銷售員、鑒賞師、店鋪經理等所有員工</div>
-                      </div>
-                    </div>
-                  </label>
-
-                  <!-- 選項 2: 銷售員 (SALES) -->
-                  <label class="radio-item" style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
-                    <input type="checkbox" name="storeRoles" value="SALES" class="role-checkbox" onchange="handleStoreRoleChange(this)">
-                    <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
-                      <i class="fas fa-shopping-bag" style="color: var(--gold); font-size: 1.2rem;"></i>
-                      <div>
-                        <div style="font-weight: 600; color: var(--primary);">銷售員</div>
-                        <div style="font-size: 0.85rem; color: #6c757d;">僅發送給銷售人員</div>
-                      </div>
-                    </div>
-                  </label>
-
-                  <!-- 選項 3: 鑒賞師 (APPRAISER) -->
-                  <label class="radio-item" style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
-                    <input type="checkbox" name="storeRoles" value="APPRAISER" class="role-checkbox" onchange="handleStoreRoleChange(this)">
-                    <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
-                      <i class="fas fa-gem" style="color: var(--gold); font-size: 1.2rem;"></i>
-                      <div>
-                        <div style="font-weight: 600; color: var(--primary);">鑒賞師</div>
-                        <div style="font-size: 0.85rem; color: #6c757d;">僅發送給賞師</div>
-                      </div>
-                    </div>
-                  </label>
-
-                  <!-- 選項 4: 店鋪經理 (STORE_MANAGER) -->
-                  <label class="radio-item" style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
-                    <input type="checkbox" name="storeRoles" value="STORE_MANAGER" class="role-checkbox" onchange="handleStoreRoleChange(this)">
-                    <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
-                      <i class="fas fa-user-tie" style="color: var(--gold); font-size: 1.2rem;"></i>
-                      <div>
-                        <div style="font-weight: 600; color: var(--primary);">店鋪經理</div>
-                        <div style="font-size: 0.85rem; color: #6c757d;">僅發送給店鋪管理人員</div>
-                      </div>
-                    </div>
-                  </label>
+                  <!-- 【修改】移除硬編碼的 option，添加 id 供 JS 操作 -->
+                  <select class="form-control" name="targetStoreId" id="targetStoreSelect"
+                    onchange="toggleStoreRoleGroup(this.value)">
+                    <option value="">請選擇門店</option>
+                    <!-- JS 將動態插入這裡 -->
+                  </select>
                 </div>
 
-                <small class="form-text" style="margin-top: 0.8rem;">
-                  <i class="fas fa-info-circle"></i> 提示：可多選，若勾選「該店鋪全體工作人員」，其他選項將自動取消。
-                </small>
-              </div>
-            </div>
+                <!-- 【新增】2. 選擇目標角色區域 (默認隱藏) -->
+                <div id="storeRoleGroup"
+                  style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px dashed #e9ecef;">
+                  <label style="display: block; margin-bottom: 1rem; font-weight: 600; color: var(--primary);">
+                    <i class="fas fa-user-shield" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    2. 選擇發送對象 <span class="required">*</span>
+                  </label>
 
-            <!-- 動態顯示區域：指定單個用戶 -->
-            <div id="target-user" class="dynamic-field">
-              <label><i class="fas fa-search" style="color: var(--gold); margin-right: 0.5rem;"></i> 搜索指定用戶 <span
-                      class="required">*</span></label>
-              <div style="display: flex; gap: 1rem; align-items: flex-start;">
-                <select class="form-control" name="searchType" id="userSearchType"
-                        style="width: 150px; flex-shrink: 0;">
-                  <option value="username">用戶名</option>
-                  <option value="phone">手機號碼</option>
-                </select>
-                <div style="flex: 1; position: relative;">
-                  <input type="text" class="form-control" name="targetId" id="userSearchInput"
-                         placeholder="請輸入對應的關鍵字...">
-                  <div id="userAutocompleteResults"
-                       style="display:none; position: absolute; top: 100%; left: 0; right: 0; border:1px solid #ddd; background:white; max-height:150px; overflow-y:auto; border-radius:4px; margin-top:4px; z-index:20; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                  <div class="radio-group" style="grid-template-columns: 1fr; gap: 0.8rem;">
+                    <!-- 選項 1: 該店鋪全體工作人員 -->
+                    <label class="radio-item"
+                      style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
+                      <input type="checkbox" name="storeRoles" value="ALL_STORE_STAFF" class="role-checkbox"
+                        onchange="handleStoreRoleChange(this)">
+                      <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
+                        <i class="fas fa-users" style="color: var(--gold); font-size: 1.2rem;"></i>
+                        <div>
+                          <div style="font-weight: 600; color: var(--primary);">該店鋪全體工作人員</div>
+                          <div style="font-size: 0.85rem; color: #6c757d;">包括銷售員、鑒賞師、店鋪經理等所有員工</div>
+                        </div>
+                      </div>
+                    </label>
+
+                    <!-- 選項 2: 銷售員 (SALES) -->
+                    <label class="radio-item"
+                      style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
+                      <input type="checkbox" name="storeRoles" value="SALES" class="role-checkbox"
+                        onchange="handleStoreRoleChange(this)">
+                      <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
+                        <i class="fas fa-shopping-bag" style="color: var(--gold); font-size: 1.2rem;"></i>
+                        <div>
+                          <div style="font-weight: 600; color: var(--primary);">銷售員</div>
+                          <div style="font-size: 0.85rem; color: #6c757d;">僅發送給銷售人員</div>
+                        </div>
+                      </div>
+                    </label>
+
+                    <!-- 選項 3: 鑒賞師 (APPRAISER) -->
+                    <label class="radio-item"
+                      style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
+                      <input type="checkbox" name="storeRoles" value="APPRAISER" class="role-checkbox"
+                        onchange="handleStoreRoleChange(this)">
+                      <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
+                        <i class="fas fa-gem" style="color: var(--gold); font-size: 1.2rem;"></i>
+                        <div>
+                          <div style="font-weight: 600; color: var(--primary);">鑒賞師</div>
+                          <div style="font-size: 0.85rem; color: #6c757d;">僅發送給賞師</div>
+                        </div>
+                      </div>
+                    </label>
+
+                    <!-- 選項 4: 店鋪經理 (STORE_MANAGER) -->
+                    <label class="radio-item"
+                      style="padding: 1rem; border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer;">
+                      <input type="checkbox" name="storeRoles" value="STORE_MANAGER" class="role-checkbox"
+                        onchange="handleStoreRoleChange(this)">
+                      <div style="display: flex; align-items: center; gap: 0.8rem; flex: 1;">
+                        <i class="fas fa-user-tie" style="color: var(--gold); font-size: 1.2rem;"></i>
+                        <div>
+                          <div style="font-weight: 600; color: var(--primary);">店鋪經理</div>
+                          <div style="font-size: 0.85rem; color: #6c757d;">僅發送給店鋪管理人員</div>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  <small class="form-text" style="margin-top: 0.8rem;">
+                    <i class="fas fa-info-circle"></i>
+                    提示：可多選。勾選「該店鋪全體工作人員」時其他選項會自動取消；反之，當「銷售員、鑒賞師、店鋪經理」三者全部勾選時，系統也會自動切換為「該店鋪全體工作人員」。
+                  </small>
+                </div>
+              </div>
+
+              <!-- 動態顯示區域：指定單個用戶 -->
+              <div id="target-user" class="dynamic-field">
+                <label><i class="fas fa-search" style="color: var(--gold); margin-right: 0.5rem;"></i> 搜索指定用戶 <span
+                    class="required">*</span></label>
+                <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                  <select class="form-control" name="searchType" id="userSearchType"
+                    style="width: 150px; flex-shrink: 0;">
+                    <option value="username">用戶名</option>
+                    <option value="phone">手機號碼</option>
+                  </select>
+                  <div style="flex: 1; position: relative;">
+                    <!-- 搜索框：不再帶 name，避免與 targetId 衝突 -->
+                    <input type="text" class="form-control" id="userSearchInput" autocomplete="off"
+                      placeholder="請輸入關鍵字搜索...">
+                    <!-- 真正提交給後端的字段：選中用戶的 ID (Long) -->
+                    <input type="hidden" name="targetId" id="selectedTargetUserId" value="">
+                    <!-- 下拉結果容器 -->
+                    <div id="userAutocompleteResults" class="user-dropdown-options"></div>
                   </div>
                 </div>
+                <!-- 橙色區域內的「已找到用戶」提示 -->
+                <div id="userSearchResult" class="user-search-result" style="display: none;">
+                  <i class="fas fa-check-circle"></i> <span id="userSearchResultText"></span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- 5. 操作按鈕 -->
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary" id="submitBtn">
-              <i class="fas fa-paper-plane"></i> 立即發佈
-            </button>
-          </div>
-        </form>
+            <!-- 接收者列表區域 (默認隱藏，僅在編輯/查看模式且非全體用戶時顯示) -->
+            <div id="recipients-section"
+              style="display: none; margin-top: 2rem; padding-top: 2rem; border-top: 2px dashed #e9ecef;">
+              <button type="button" class="btn btn-outline" id="toggleRecipientsBtn" onclick="toggleRecipientsList()"
+                style="width: 100%; justify-content: space-between; margin-bottom: 1rem;">
+                <span><i class="fas fa-users" style="color: var(--gold); margin-right: 0.5rem;"></i> 查看接收此公告的用戶</span>
+                <i class="fas fa-chevron-down" id="recipientsArrow"></i>
+              </button>
+
+              <!-- 用戶列表內容區 -->
+              <div id="recipients-list-container"
+                style="display: none; max-height: 400px; overflow-y: auto; background: white; border-radius: 12px; border: 1px solid #e9ecef;">
+                <div id="recipients-loading" style="padding: 2rem; text-align: center; color: #6c757d;">
+                  <i class="fas fa-spinner fa-spin"></i> 加載中...
+                </div>
+                <table style="width: 100%; border-collapse: collapse; display: none;" id="recipients-table">
+                  <thead style="position: sticky; top: 0; background: #f8f9fa; z-index: 1;">
+                    <tr>
+                      <th
+                        style="padding: 0.8rem 1rem; text-align: left; font-size: 0.8rem; color: #64748b; border-bottom: 1px solid #e9ecef;">
+                        用戶名</th>
+                      <th
+                        style="padding: 0.8rem 1rem; text-align: left; font-size: 0.8rem; color: #64748b; border-bottom: 1px solid #e9ecef;">
+                        姓名</th>
+                      <th
+                        style="padding: 0.8rem 1rem; text-align: left; font-size: 0.8rem; color: #64748b; border-bottom: 1px solid #e9ecef;">
+                        角色</th>
+                      <th
+                        style="padding: 0.8rem 1rem; text-align: center; font-size: 0.8rem; color: #64748b; border-bottom: 1px solid #e9ecef;">
+                        閱讀狀態</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recipients-tbody"></tbody>
+                </table>
+                <div id="recipients-empty" style="padding: 2rem; text-align: center; color: #999; display: none;">
+                  <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                  暫無接收記錄
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. 操作按鈕 -->
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="submitBtn">
+                <i class="fas fa-paper-plane"></i> 立即發佈
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+
+
+  <!--  公告狀態切換確認彈窗                        -->
+  <div id="statusToggleModal" class="status-toggle-overlay">
+    <div class="status-toggle-box">
+      <div id="toggleModalIcon" class="toggle-modal-icon">
+        <i class="fas fa-eye-slash"></i>
+      </div>
+      <h3 id="toggleModalTitle" class="toggle-modal-title">確認隱藏此公告？</h3>
+      <p id="toggleModalMessage" class="toggle-modal-message">
+        此公告目前正在發布中。隱藏後，將不再向用戶展示。是否確認隱藏？
+      </p>
+      <div class="toggle-modal-actions">
+        <button class="btn-toggle-cancel" onclick="closeStatusToggleModal()">
+          <i class="fas fa-times"></i> 取消
+        </button>
+        <button id="confirmToggleBtn" class="btn-confirm-toggle btn-warning" onclick="confirmToggleStatus()">
+          <i class="fas fa-eye-slash"></i> 確認隱藏
+        </button>
       </div>
     </div>
-  </main>
-</div>
-<div th:replace="~{fragments/common :: modals}"></div>
+  </div>
 
-<!-- 引入公共 JS -->
-<script src="/js/common.js"></script>
-<script src="/js/admin.js"></script>
+  <div th:replace="~{fragments/common :: modals}"></div>
 
-<script>
-  // 1. 初
-  var quill = new Quill('#editor-container', {
-    theme: 'snow',
-    placeholder: '請輸入公告內容...',
-    modules: {
-      toolbar: [
-        [{ 'header': [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'color': [] }, { 'background': [] }],
-        [{ 'align': [] }], // 提供左、中、右、兩端對齊按鈕
-        [{ 'indent': '-1'}, { 'indent': '+1' }], // 提供減少/增加縮進按鈕
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        ['clean'] // 清除格式按鈕
-      ]
-    }
-  });
+  <!-- 引入公共 JS -->
+  <script src="/js/common.js"></script>
+  <script src="/js/admin.js"></script>
+  <script src="/js/admin-table.js"></script>
 
-  // 監聽 Quill 內容變化，實時同步到隱藏的 input 中，以便 FormData 可以獲取
-  quill.on('text-change', function() {
-    document.getElementById('quillContent').value = quill.root.innerHTML;
-  });
+  <script>
 
-  // 2. 視圖切換邏輯
-  function showCreateView() {
-    document.getElementById('view-list').style.display = 'none';
-    document.getElementById('view-create').style.display = 'block';
-    document.getElementById('btn-show-create').style.display = 'none';
+    // 全局變量與狀態管理
+    // 全局緩存：用於安全存儲公告的完整數據（避免 HTML 字符串破壞 data-* 屬性）
+    window.announcementDataCache = {};
+    // 公告狀態切換彈窗邏輯
+    window.pendingToggleId = null; // 全局變量暫存待操作的 ID
+    // 編輯模式狀態
+    let isEditMode = false;
+    let editingId = null;
 
-    // 確保編輯器在顯示時重新計算尺寸 (防止隱藏狀態下渲染異常)
-    setTimeout(() => {
-      quill.focus();
-    }, 100);
-  }
-
-  function showListView() {
-    document.getElementById('view-list').style.display = 'block';
-    document.getElementById('view-create').style.display = 'none';
-    document.getElementById('btn-show-create').style.display = 'inline-flex';
-  }
-
-  // ==========================================
-  // 3. 動態切換發送對象表單字段
-  function toggleTargetField(type) {
-    // 隱藏所有動態區塊
-    document.querySelectorAll('.dynamic-field').forEach(el => el.classList.remove('active'));
-
-    // 【修改】根據新的枚舉名稱進行判斷
-    if (type === 'SPECIFIC_ROLE') {
-      document.getElementById('target-role').classList.add('active');
-    } else if (type === 'SPECIFIC_STORE') {
-      document.getElementById('target-store').classList.add('active');
-    } else if (type === 'SPECIFIC_USER') {
-      document.getElementById('target-user').classList.add('active');
-    }
-    // 注意：如果 type === 'ALL' 或 'ALL_STAFF'，不需要顯示任何額外的動態輸入框，保持隱藏即可
-  }
-
-  function toggleStoreRoleGroup(storeId) {
-    const roleGroup = document.getElementById('storeRoleGroup');
-    if (storeId) {
-      roleGroup.style.display = 'block';
-    } else {
-      roleGroup.style.display = 'none';
-    }
-  }
-
-  function toggleAllStoreStaff(checkbox) {
-    const otherCheckboxes = document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])');
-    otherCheckboxes.forEach(cb => {
-      cb.checked = checkbox.checked;
-      cb.disabled = checkbox.checked;
-    });
-  }
-
-  document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])').forEach(cb => {
-    cb.addEventListener('change', function () {
-      const allStaffCb = document.querySelector('.role-checkbox[value="ALL_STORE_STAFF"]');
-      if (!this.checked) {
-        allStaffCb.checked = false;
-        document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])').forEach(c => c.disabled = false);
-      } else {
-        const allChecked = Array.from(document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])')).every(c => c.checked);
-        if (allChecked) allStaffCb.checked = true;
+    // 1. 初始化 Quill 編輯器
+    var quill = new Quill('#editor-container', {
+      theme: 'snow',
+      placeholder: '',
+      modules: {
+        toolbar: [
+          [{'header': [1, 2, 3, false]}],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{'color': []}, {'background': []}],
+          [{'align': []}], // 提供左、中、右、兩端對齊按鈕
+          [{'indent': '-1'}, {'indent': '+1'}], // 提供減少/增加縮進按鈕
+          [{'list': 'ordered'}, {'list': 'bullet'}],
+          ['clean'] // 清除格式按鈕
+        ]
       }
     });
-  });
 
+    // 監聽 Quill 內容變化，實時同步到隱藏的 input 中，以便 FormData 可以獲取
+    quill.on('text-change', function () {
+      document.getElementById('quillContent').value = quill.root.innerHTML;
+    });
 
-  // 4. 處理表單提交 (整合 Quill 數據)
-  async function handlePublish(event) {
-    event.preventDefault();
+    // 2. 視圖切換邏輯
+    function showCreateView() {
+      document.getElementById('view-list').style.display = 'none';
+      document.getElementById('view-create').style.display = 'block';
+      document.getElementById('btn-show-create').style.display = 'none';
 
-    const form = document.getElementById('announcementForm');
-
-    // 【關鍵】在提交前，確保 Quill 的最新內容已同步到隱藏 input
-    document.getElementById('quillContent').value = quill.root.innerHTML;
-
-    // 簡單的內容非空驗證 (Quill 默認空內容是 <p><br></p>，getText() 會返回 "\n")
-    const text = quill.getText().trim();
-    if (text.length < 2) {
-      if (typeof showNotification === 'function') {
-        showNotification('❌ 公告內容不能為空！', true);
-      } else {
-        alert('❌ 公告內容不能為空！');
-      }
-      return;
+      // 確保編輯器在顯示時重新計算尺寸 (防止隱藏狀態下渲染異常)
+      setTimeout(() => {
+        quill.focus();
+      }, 100);
     }
 
-    // 1. 收集表單數據
-    const formData = new FormData(form);
+    function showListView() {
+      document.getElementById('view-list').style.display = 'block';
+      document.getElementById('view-create').style.display = 'none';
+      document.getElementById('btn-show-create').style.display = 'inline-flex';
 
-    try {
-      // 2. 發送 POST 請求到後端
-      const response = await fetch('/admin/announcements/publish', {
-        method: 'POST',
-        body: formData
+      // 重置編輯狀態與按鈕文案
+      isEditMode = false;
+      editingId = null;
+      const btn = document.getElementById('submitBtn');
+      if (btn) btn.innerHTML = '<i class="fas fa-paper-plane"></i> 立即發佈';
+      document.querySelector('.form-section h3').innerHTML = '<i class="fas fa-bullhorn"></i> 填寫公告資訊';
+      document.getElementById('recipients-section').style.display = 'none';
+    }
+
+    // 輔助函數：顯示僅限編輯/查看模式的元素
+    function showReadOnlyOnlyElements() {
+      document.getElementById('opt-stock-type').style.display = '';
+      document.getElementById('lbl-specific-product').style.display = '';
+    }
+
+    function openEditView(id) {
+      const item = window.announcementDataCache[id];
+      if (!item) return;
+
+      isEditMode = true;
+      editingId = id;
+
+      showReadOnlyOnlyElements();
+
+      // 進入編輯模式時，徹底鎖定「發送對象」區域
+      // 關鍵點：不僅要 disabled input，還要讓 label 失去指針事件
+      // 1. 禁用所有 Radio (發送對象類型)
+      document.querySelectorAll('input[name="targetType"]').forEach(el => {
+        el.disabled = true;
+        // 對 label 添加 pointer-events: none，徹底阻斷點擊
+        el.parentElement.style.pointerEvents = 'none';
+        el.parentElement.style.opacity = '0.6';
+        el.parentElement.style.cursor = 'not-allowed';
       });
 
-      const result = await response.text();
+      // 2. 禁用所有 Select (角色選擇、門店選擇、搜索類型)
+      document.querySelectorAll('#target-role select, #target-store select, #target-user select').forEach(el => {
+        el.disabled = true;
+        el.style.backgroundColor = '#e9ecef';
+        el.style.cursor = 'not-allowed';
+        // 防止 select 被聚焦
+        el.setAttribute('tabindex', '-1');
+      });
 
-      if (result === 'success') {
-        // 3. 成功提示
-        if (typeof showNotification === 'function') {
-          showNotification('✅ 公告已成功發佈並發送給目標用戶！');
+      // 3. 【重點修復】禁用所有 Checkbox (店鋪內的角色勾選)
+      document.querySelectorAll('input[name="storeRoles"]').forEach(el => {
+        el.disabled = true;
+        // 關鍵：對父級 label 設置 pointer-events: none
+        // 這樣點擊 label 的文字或圖標也不會觸發 checkbox
+        const label = el.closest('label');
+        if (label) {
+          label.style.pointerEvents = 'none';
+          label.style.opacity = '0.6';
+          label.style.cursor = 'not-allowed';
+          // 移除 hover 時的邊框高亮效果（如果 CSS 中有 :hover 樣式）
+          label.classList.remove('radio-item-hover-active');
+        }
+      });
+
+      // 4. 禁用用戶搜索輸入框
+      const userSearchInput = document.getElementById('userSearchInput');
+      if (userSearchInput) {
+        userSearchInput.disabled = true;
+        userSearchInput.style.backgroundColor = '#e9ecef';
+        userSearchInput.style.cursor = 'not-allowed';
+        userSearchInput.placeholder = "編輯模式下不可更改用戶";
+        // 隱藏下拉結果框，防止編輯時誤觸
+        const dropdown = document.getElementById('userAutocompleteResults');
+        if (dropdown) dropdown.style.display = 'none';
+      }
+
+
+      // ==========================================
+      // 原有邏輯：回填數據 (此時元素已禁用，但不影響 JS 賦值)
+      // ==========================================
+
+      // 1) 標題 + 對齊
+      document.querySelector('input[name="title"]').value = item.title || '';
+      const alignSel = document.querySelector('select[name="titleAlignment"]');
+      alignSel.value = item.titleAlignment || 'LEFT';
+      alignSel.dispatchEvent(new Event('change'));
+
+      // 2) 性質
+      document.querySelector('select[name="type"]').value = item.type;
+
+      // 3) 富文本回填（Quill）
+      quill.root.innerHTML = item.content || '';
+
+      // 4) 發送對象回填
+      const tt = item.targetType;
+      const targetRadio = document.querySelector(`input[name="targetType"][value="${tt}"]`);
+      if (targetRadio) targetRadio.checked = true;
+
+      toggleTargetField(tt);
+
+      if (tt === 'SPECIFIC_ROLE') {
+        document.querySelector('select[name="targetRole"]').value = item.targetRole || '';
+      }
+      else if (tt === 'SPECIFIC_STORE') {
+        document.getElementById('targetStoreSelect').value = item.targetStoreId || '';
+        toggleStoreRoleGroup(item.targetStoreId);
+
+        // 清空狀態
+        document.querySelectorAll('input[name="storeRoles"]').forEach(cb => {
+          cb.checked = false;
+          // 注意：這裡不要設 disabled=false，因為上面已經統一禁用了
+          // 我們只需要確保 checked 狀態正確即可
+        });
+
+        // 解析並還原勾選
+        const roles = (item.targetRole || '').split(',').map(s => s.trim()).filter(s => s !== '');
+
+        if (roles.includes('ALL_STORE_STAFF')) {
+          const all = document.querySelector('input[name="storeRoles"][value="ALL_STORE_STAFF"]');
+          if (all) all.checked = true;
         } else {
-          alert('✅ 公告已成功發佈！');
+          roles.forEach(r => {
+            const cb = document.querySelector(`input[name="storeRoles"][value="${r}"]`);
+            if (cb) cb.checked = true;
+          });
+        }
+      }
+      else if (tt === 'SPECIFIC_USER') {
+        document.getElementById('selectedTargetUserId').value = item.targetId;
+        document.getElementById('userSearchInput').value = item.targetDisplay;
+        const box = document.getElementById('userSearchResult');
+        document.getElementById('userSearchResultText').innerHTML = `已找到用戶：${item.targetDisplay} <span style="color:#999; font-weight:500; font-size:0.85rem;">（${item.targetRole || ''}）</span>`;
+        box.style.display = 'flex';
+      }
+
+      // 切換視圖 + 按鈕文案
+      showCreateView();
+      loadRecipientsSection(item.targetType, id);
+      document.querySelector('.form-section h3').innerHTML = '<i class="fas fa-edit"></i> 編輯公告資訊 (只讀模式：發送對象不可更改)';
+      const btn = document.getElementById('submitBtn');
+      btn.innerHTML = '<i class="fas fa-sync-alt"></i> 更新公告';
+    }
+
+    // 查看公告詳情（只讀模式）
+    // 特點：表單元素不可點擊，但保持原有顏色/樣式；隱藏提交按鈕
+    function openAnnouncement(id) {
+      const item = window.announcementDataCache[id];
+      if (!item) return;
+
+      showReadOnlyOnlyElements();
+
+      // 切換到編輯視圖容器（復用現有佈局）
+      showCreateView();
+
+      // 修改標題與按鈕區域
+      document.querySelector('.form-section h3').innerHTML =
+        '<i class="fas fa-eye"></i> 查看公告詳情 (只讀模式)';
+
+      // 隱藏提交按鈕
+      const btn = document.getElementById('submitBtn');
+      if (btn) btn.style.display = 'none';
+
+
+      // 設置只讀樣式：禁用交互 + 保持原色
+      const setReadOnlyStyle = (el) => {
+        if (!el) return;
+        el.disabled = true;                    // 原生禁用，防止鍵盤操作
+        el.style.pointerEvents = 'none';       // 關鍵：阻斷鼠標點擊，但不影響視覺
+        el.style.cursor = 'default';           // 恢復默認光標，暗示不可操作
+        el.style.backgroundColor = '';         // 清除灰色背景，保持白色
+        el.style.opacity = '1';                // 確保不透明度為100%
+        el.style.borderColor = '#e9ecef';      // 保持原始邊框色
+        el.removeAttribute('tabindex');        // 移除 tabindex，防止 Tab 鍵聚焦
+      };
+
+      // 1. 標題輸入框 & 對齊下拉框
+      setReadOnlyStyle(document.querySelector('input[name="title"]'));
+      setReadOnlyStyle(document.querySelector('select[name="titleAlignment"]'));
+
+      // 2. 公告性質下拉框
+      setReadOnlyStyle(document.querySelector('select[name="type"]'));
+
+      // 3. Quill 富文本編輯器（特殊處理）
+      quill.enable(false);                       // 禁用編輯
+      quill.root.style.pointerEvents = 'none';   // 阻止鼠標選中/點擊
+      quill.root.style.cursor = 'default';
+      quill.root.style.backgroundColor = 'white';
+      quill.root.style.opacity = '1';
+
+      // 隱藏工具欄
+      const toolbar = document.querySelector('.ql-toolbar');
+      if (toolbar) toolbar.style.display = 'none';
+
+      // 4. Radio 單選組（發送對象類型）
+      document.querySelectorAll('input[name="targetType"]').forEach(el => {
+        el.disabled = true;
+        el.parentElement.style.pointerEvents = 'none';
+        el.parentElement.style.cursor = 'default';
+        el.parentElement.style.opacity = '1';  // 保持金色高亮不被淡化
+      });
+
+      // 5. Select 下拉框（角色、門店、搜索類型）
+      document.querySelectorAll('#target-role select, #target-store select, #target-user select')
+        .forEach(setReadOnlyStyle);
+
+      // 6. Checkbox 複選組（店鋪角色）
+      document.querySelectorAll('input[name="storeRoles"]').forEach(el => {
+        el.disabled = true;
+        const label = el.closest('label');
+        if (label) {
+          label.style.pointerEvents = 'none';
+          label.style.cursor = 'default';
+          label.style.opacity = '1';         // 保持勾選狀態的金色邊框
+        }
+      });
+
+      // 7. 用戶搜索輸入框
+      const searchInput = document.getElementById('userSearchInput');
+      if (searchInput) {
+        setReadOnlyStyle(searchInput);
+        searchInput.placeholder = "（只讀）";
+        // 隱藏下拉結果
+        const dropdown = document.getElementById('userAutocompleteResults');
+        if (dropdown) dropdown.style.display = 'none';
+      }
+
+
+
+      // 回填數據（與 openEditView 完全一致）
+      document.querySelector('input[name="title"]').value = item.title || '';
+      const alignSel = document.querySelector('select[name="titleAlignment"]');
+      alignSel.value = item.titleAlignment || 'LEFT';
+      applyTextAlignment(alignSel.previousElementSibling, alignSel.value);
+
+      document.querySelector('select[name="type"]').value = item.type;
+      quill.root.innerHTML = item.content || '';
+
+      const tt = item.targetType;
+      const targetRadio = document.querySelector(`input[name="targetType"][value="${tt}"]`);
+      if (targetRadio) targetRadio.checked = true;
+      toggleTargetField(tt);
+
+      if (tt === 'SPECIFIC_ROLE') {
+        document.querySelector('select[name="targetRole"]').value = item.targetRole || '';
+      } else if (tt === 'SPECIFIC_STORE') {
+        document.getElementById('targetStoreSelect').value = item.targetStoreId || '';
+        toggleStoreRoleGroup(item.targetStoreId);
+        document.querySelectorAll('input[name="storeRoles"]').forEach(cb => cb.checked = false);
+        const roles = (item.targetRole || '').split(',').map(s => s.trim()).filter(s => s !== '');
+        if (roles.includes('ALL_STORE_STAFF')) {
+          const all = document.querySelector('input[name="storeRoles"][value="ALL_STORE_STAFF"]');
+          if (all) all.checked = true;
+        } else {
+          roles.forEach(r => {
+            const cb = document.querySelector(`input[name="storeRoles"][value="${r}"]`);
+            if (cb) cb.checked = true;
+          });
+        }
+      } else if (tt === 'SPECIFIC_USER') {
+        document.getElementById('selectedTargetUserId').value = item.targetId;
+        document.getElementById('userSearchInput').value = item.targetDisplay;
+        const box = document.getElementById('userSearchResult');
+        document.getElementById('userSearchResultText').innerHTML =
+          `已找到用戶：${item.targetDisplay} <span style="color:#999; font-weight:500; font-size:0.85rem;">（${item.targetRole || ''}）</span>`;
+        box.style.display = 'flex';
+      }
+      loadRecipientsSection(item.targetType, id);
+    }
+
+    // 加載接收者區域
+    function loadRecipientsSection(targetType, announcementId) {
+      const section = document.getElementById('recipients-section');
+
+      // 全體用戶不顯示此區域
+      if (targetType === 'ALL') {
+        section.style.display = 'none';
+        return;
+      }
+
+      // 其他類型都顯示按鈕
+      section.style.display = 'block';
+
+      // 重置狀態
+      document.getElementById('recipients-list-container').style.display = 'none';
+      document.getElementById('recipientsArrow').className = 'fas fa-chevron-down';
+
+      // 將公告ID綁定到按鈕上，供點擊時使用
+      document.getElementById('toggleRecipientsBtn').dataset.announcementId = announcementId;
+    }
+
+    // 切換接收者列表展開/收起
+    async function toggleRecipientsList() {
+      const container = document.getElementById('recipients-list-container');
+      const arrow = document.getElementById('recipientsArrow');
+      const announcementId = document.getElementById('toggleRecipientsBtn').dataset.announcementId;
+
+      // 如果已經展開，則收起
+      if (container.style.display === 'block') {
+        container.style.display = 'none';
+        arrow.className = 'fas fa-chevron-down';
+        return;
+      }
+
+      // 展開並加載數據
+      container.style.display = 'block';
+      arrow.className = 'fas fa-chevron-up';
+
+      const loadingEl = document.getElementById('recipients-loading');
+      const tableEl = document.getElementById('recipients-table');
+      const emptyEl = document.getElementById('recipients-empty');
+      const tbody = document.getElementById('recipients-tbody');
+
+      loadingEl.style.display = 'block';
+      tableEl.style.display = 'none';
+      emptyEl.style.display = 'none';
+
+      try {
+        const res = await fetch(`/admin/api/announcements/${announcementId}/recipients`);
+        const result = await res.json();
+
+        loadingEl.style.display = 'none';
+
+        if (!result.success || result.isAllUsers) {
+          emptyEl.innerHTML = '<i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>' +
+            (result.message || '此公告發送給了全體用戶');
+          emptyEl.style.display = 'block';
+          return;
         }
 
-        // 4. 重置表單並返回列表視圖
-        form.reset();
-        quill.setContents([]); // 【關鍵】清空 Quill 編輯器內容
-        toggleTargetField('ALL'); // 重置動態顯示區域
-        setTimeout(() => {
-          showListView();
-        }, 1000);
-      } else {
-        throw new Error(result);
-      }
-    } catch (error) {
-      console.error('發佈失敗:', error);
-      if (typeof showNotification === 'function') {
-        showNotification('❌ 發佈失敗：' + error.message, true);
-      } else {
-        alert('❌ 發佈失敗，請檢查網絡或聯繫管理員。');
+        const users = result.data || [];
+
+        if (users.length === 0) {
+          emptyEl.style.display = 'block';
+          return;
+        }
+
+        // 渲染表格
+        tbody.innerHTML = users.map(u => {
+          const readBadge = u.isRead
+            ? '<span style="background:#d4edda; color:#155724; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;"><i class="fas fa-check"></i> 已讀</span>'
+            : '<span style="background:#fff3cd; color:#856404; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;"><i class="fas fa-clock"></i> 未讀</span>';
+
+          // 1. 定義基礎角色樣式映射
+          const roleMap = {
+            'ADMIN': '<span style="color:#dc3545;">管理員</span>',
+            'STORE_MANAGER': '<span style="color:#0d6efd;">店鋪經理</span>',
+            'SALES': '銷售員',
+            'APPRAISER': '鑒賞師',
+            'COURIER': '快遞人員',
+            'ONLINE_STAFF': '線上員工',
+            'CUSTOMER': '顧客'
+          };
+
+          // 2. 獲取基礎角色顯示文本
+          let roleDisplay = roleMap[u.role] || u.role || '-';
+
+          // 3. 【核心修改】只要後端返回了 storeName，就統一拼接（xx店）
+          if (u.storeName) {
+            // 使用 span 包裹店鋪名，保持視覺一致性
+            roleDisplay += ` <span style="color:#6c757d; font-weight:500;">（${u.storeName}）</span>`;
+          }
+
+          return `
+                <tr style="border-bottom: 1px solid #f1f3f5;">
+                    <td style="padding: 0.7rem 1rem; font-weight: 600; color: var(--primary);">${u.username}</td>
+                    <td style="padding: 0.7rem 1rem; color: #334155;">${u.name || '-'}</td>
+                    <td style="padding: 0.7rem 1rem; font-size: 0.85rem;">${roleDisplay}</td>
+                    <td style="padding: 0.7rem 1rem; text-align: center;">${readBadge}</td>
+                </tr>`;
+        }).join('');
+
+        tableEl.style.display = 'table';
+
+      } catch (error) {
+        console.error('加載接收者失敗:', error);
+        loadingEl.style.display = 'none';
+        emptyEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #dc3545; font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>加載失敗，請重試';
+        emptyEl.style.display = 'block';
       }
     }
-  }
 
-
-  // 5. 標題對齊實時預覽功能
-  document.addEventListener('DOMContentLoaded', function() {
-    const titleInput = document.querySelector('input[name="title"]');
-    const alignmentSelect = document.querySelector('select[name="titleAlignment"]');
-
-    if (!titleInput || !alignmentSelect) return;
-
-    // 初始化時應用對齊方式
-    applyTextAlignment(titleInput, alignmentSelect.value);
-
-    // 監聽對齊方式變化
-    alignmentSelect.addEventListener('change', function() {
-      applyTextAlignment(titleInput, this.value);
-    });
-
+    // 輔助函數：應用文字對齊（從原有代碼中提取）
     function applyTextAlignment(input, alignment) {
-      if (alignment === 'CENTER') {
-        input.style.textAlign = 'center';
-      } else if (alignment === 'RIGHT') {
-        input.style.textAlign = 'right';
+      if (!input) return;
+      input.style.textAlign = alignment === 'CENTER' ? 'center'
+        : alignment === 'RIGHT' ? 'right' : 'left';
+    }
+
+    // 3. 動態切換發送對象表單字段
+    function toggleTargetField(type) {
+      // 隱藏所有動態區塊
+      document.querySelectorAll('.dynamic-field').forEach(el => el.classList.remove('active'));
+
+      // 根據新的枚舉名稱進行判斷
+      if (type === 'SPECIFIC_ROLE') {
+        document.getElementById('target-role').classList.add('active');
+      } else if (type === 'SPECIFIC_STORE') {
+        document.getElementById('target-store').classList.add('active');
+      } else if (type === 'SPECIFIC_USER') {
+        document.getElementById('target-user').classList.add('active');
+      }
+      // 注意：如果 type === 'ALL' 或 'ALL_STAFF'，不需要顯示任何額外的動態輸入框，保持隱藏即可
+    }
+
+    function toggleStoreRoleGroup(storeId) {
+      const roleGroup = document.getElementById('storeRoleGroup');
+      if (storeId) {
+        roleGroup.style.display = 'block';
       } else {
-        input.style.textAlign = 'left';
+        roleGroup.style.display = 'none';
       }
     }
-  });
 
-  // ==========================================
-  // 6. 通過 JS 動態加載活躍門店列表
-  // ==========================================
-  async function loadActiveStores() {
-    const select = document.getElementById('targetStoreSelect');
-    if (!select) return;
+    // 4. 處理表單提交 (整合發佈與編輯邏輯)
+    async function handlePublish(event) {
+      event.preventDefault();
+      const form = document.getElementById('announcementForm');
 
-    try {
-      // 調用我們在現有 Controller 中新增的 API
-      const response = await fetch('/admin/api/stores/active');
-      if (!response.ok) throw new Error('網絡響應異常');
+      // 【關鍵】在提交前，確保 Quill 的最新內容已同步到隱藏 input
+      document.getElementById('quillContent').value = quill.root.innerHTML;
 
-      const stores = await response.json();
+      // 簡單的內容非空驗證
+      const text = quill.getText().trim();
+      if (text.length < 2) {
+        if (typeof showNotification === 'function') showNotification('❌ 公告內容不能為空！', true);
+        else alert('❌ 公告內容不能為空！');
+        return;
+      }
 
-      // 清空現有選項（保留第一個默認的 "請選擇門店"）
-      select.innerHTML = '<option value="">請選擇門店</option>';
+      // 內容非空校驗通過之後、組裝 FormData 之前，校驗「指定用戶」模式
+      if (!validateSpecificUser()) return;
 
-      // 動態生成 option 並插入
-      stores.forEach(store => {
-        const option = document.createElement('option');
-        option.value = store.storeId;   // 存入 ID
-        option.textContent = store.name; // 顯示 Name
-        select.appendChild(option);
+      // 1. 收集表單數據
+      const formData = new FormData(form);
+
+      try {
+        // 2. 根據是否為編輯模式決定 URL 和 Method
+        const url = isEditMode ? `/admin/api/announcements/${editingId}` : '/admin/announcements/publish';
+        const method = isEditMode ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+          method: method,
+          body: formData
+        });
+
+        const result = await response.text();
+
+        if (result === 'success') {
+          // 3. 成功提示
+          const successMsg = isEditMode ? '✅ 公告已成功更新！' : '✅ 公告已成功發佈並發送給目標用戶！';
+          if (typeof showNotification === 'function') {
+            showNotification(successMsg);
+          } else {
+            alert(successMsg);
+          }
+
+          // 4. 重置表單並返回列表視圖
+          form.reset();
+          quill.setContents([]); // 【關鍵】清空 Quill 編輯器內容
+          resetStoreTargetFields(); // 清空門店 + 角色勾選 + 解鎖 disabled
+          resetUserSearch(); // 清空用戶搜索框 + 自動完成下拉 + 隱藏結果區
+          toggleTargetField('ALL'); // 重置動態顯示區域
+
+          // 重置編輯狀態與按鈕文案
+          isEditMode = false;
+          editingId = null;
+          document.getElementById('submitBtn').innerHTML = '<i class="fas fa-paper-plane"></i> 立即發佈';
+          document.querySelector('.form-section h3').innerHTML = '<i class="fas fa-bullhorn"></i> 填寫公告資訊';
+
+          setTimeout(() => {
+            showListView();
+            // 切換回列表視圖後，重新加載表格數據以顯示更新後的 updated_at
+            if (typeof AdminTable !== 'undefined' && typeof announcementTableConfig !== 'undefined') {
+              AdminTable.loadData(announcementTableConfig);
+            }
+          }, 1000);
+        } else {
+          throw new Error(result);
+        }
+      } catch (error) {
+        console.error('發佈/更新失敗:', error);
+        if (typeof showNotification === 'function') {
+          showNotification('❌ 操作失敗：' + error.message, true);
+        } else {
+          alert('❌ 操作失敗，請檢查網絡或聯繫管理員。');
+        }
+      }
+    }
+
+    // 5. 標題對齊實時預覽功能
+    document.addEventListener('DOMContentLoaded', function () {
+      const titleInput = document.querySelector('input[name="title"]');
+      const alignmentSelect = document.querySelector('select[name="titleAlignment"]');
+
+      if (!titleInput || !alignmentSelect) return;
+
+      // 初始化時應用對齊方式
+      applyTextAlignment(titleInput, alignmentSelect.value);
+
+      // 監聽對齊方式變化
+      alignmentSelect.addEventListener('change', function () {
+        applyTextAlignment(titleInput, this.value);
       });
 
-    } catch (error) {
-      console.error('加載門店列表失敗:', error);
-      select.innerHTML = '<option value="">加載失敗，請刷新頁面</option>';
-    }
-  }
+      function applyTextAlignment(input, alignment) {
+        if (alignment === 'CENTER') {
+          input.style.textAlign = 'center';
+        } else if (alignment === 'RIGHT') {
+          input.style.textAlign = 'right';
+        } else {
+          input.style.textAlign = 'left';
+        }
+      }
+    });
 
-  function handleStoreRoleChange(checkbox) {
-    const allStaffCheckbox = document.querySelector('input[name="storeRoles"][value="ALL_STORE_STAFF"]');
-    const otherCheckboxes = document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])');
+    // 6. 通過 JS 動態加載活躍門店列表
+    async function loadActiveStores() {
+      const select = document.getElementById('targetStoreSelect');
+      if (!select) return;
 
-    if (checkbox.value === 'ALL_STORE_STAFF') {
-      // 如果勾選了「全體工作人員」
-      if (checkbox.checked) {
-        // 取消勾選其他所有選項
-        otherCheckboxes.forEach(cb => {
-          cb.checked = false;
-          cb.disabled = true; // 禁用其他選項
+      try {
+        const response = await fetch('/admin/api/stores/active');
+        if (!response.ok) throw new Error('網絡響應異常');
+
+        const stores = await response.json();
+
+        // 清空現有選項（保留第一個默認的 "請選擇門店"）
+        select.innerHTML = '<option value="">請選擇門店</option>';
+
+        // 動態生成 option 並插入
+        stores.forEach(store => {
+          const option = document.createElement('option');
+          option.value = store.storeId;   // 存入 ID
+          option.textContent = store.name; // 顯示 Name
+          select.appendChild(option);
         });
+      } catch (error) {
+        console.error('加載門店列表失敗:', error);
+        select.innerHTML = '<option value="">加載失敗，請刷新頁面</option>';
+      }
+    }
+
+    function handleStoreRoleChange(checkbox) {
+      const allStaffCheckbox = document.querySelector('input[name="storeRoles"][value="ALL_STORE_STAFF"]');
+      const otherCheckboxes = document.querySelectorAll('.role-checkbox:not([value="ALL_STORE_STAFF"])');
+
+      if (checkbox.value === 'ALL_STORE_STAFF') {
+        // 情況 A：手動勾選/取消「該店鋪全體工作人員」
+        if (checkbox.checked) {
+          // 取消並禁用其他所有選項
+          otherCheckboxes.forEach(cb => {
+            cb.checked = false;
+            cb.disabled = true;
+          });
+        } else {
+          // 取消勾選「全體工作人員」，恢復其他選項
+          otherCheckboxes.forEach(cb => {
+            cb.disabled = false;
+          });
+        }
       } else {
-        // 如果取消勾選「全體工作人員」，恢復其他選項
-        otherCheckboxes.forEach(cb => {
-          cb.disabled = false;
-        });
-      }
-    } else {
-      // 如果勾選了其他任一角色，取消「全體工作人員」
-      if (checkbox.checked && allStaffCheckbox) {
-        allStaffCheckbox.checked = false;
-        allStaffCheckbox.disabled = false;
+        // 情況 B：勾選/取消單一角色（SALES / APPRAISER / STORE_MANAGER）
+        if (checkbox.checked && allStaffCheckbox) {
+          allStaffCheckbox.checked = false;
+          allStaffCheckbox.disabled = false;
+        }
+
+        // 【核心新增】三個角色全部勾選 → 自動升級為「全體工作人員」
+        const allRolesChecked = Array.from(otherCheckboxes).every(cb => cb.checked);
+        if (allRolesChecked && otherCheckboxes.length > 0) {
+          // 1. 取消這三個選項，並禁用（與手動勾選「全體」的行為保持一致）
+          otherCheckboxes.forEach(cb => {
+            cb.checked = false;
+            cb.disabled = true;
+          });
+          // 2. 自動勾選「該店鋪全體工作人員」
+          if (allStaffCheckbox) {
+            allStaffCheckbox.checked = true;
+          }
+          // 3. 給用戶一個提示，避免勾選狀態突然跳變造成困惑
+          if (typeof showNotification === 'function') {
+            showNotification('✅ 已自動切換為「該店鋪全體工作人員」');
+          } else {
+            console.log('已自動切換為「該店鋪全體工作人員」');
+          }
+        }
       }
     }
-  }
+
+    // 徹底清空「按指定店鋪發送」的所有狀態
+    function resetStoreTargetFields() {
+      // 1. 門店下拉框回到「請選擇門店」
+      const storeSelect = document.getElementById('targetStoreSelect');
+      if (storeSelect) storeSelect.value = '';
+
+      // 2. 隱藏角色選擇區塊（因為 reset 不會觸發 select 的 onchange）
+      const roleGroup = document.getElementById('storeRoleGroup');
+      if (roleGroup) roleGroup.style.display = 'none';
+
+      // 3. 清空所有 checkbox 的 checked 並解除 disabled 鎖定
+      document.querySelectorAll('input[name="storeRoles"]').forEach(cb => {
+        cb.checked = false;
+        cb.disabled = false;
+      });
+    }
+
+    // 7. 指定用戶搜索 (Autocomplete) — 顯示內容跟隨「用戶名 / 手機號碼」切換
+    (function () {
+      const searchTypeSel = document.getElementById('userSearchType');
+      const searchInput = document.getElementById('userSearchInput');
+      const dropdown = document.getElementById('userAutocompleteResults');
+      const hiddenId = document.getElementById('selectedTargetUserId');
+      const resultBox = document.getElementById('userSearchResult');
+      const resultText = document.getElementById('userSearchResultText');
+      let debounceTimer = null;
+
+      function clearSelection() {
+        hiddenId.value = '';
+        resultBox.style.display = 'none';
+      }
+      function hideDropdown() {dropdown.style.display = 'none';}
+
+      async function doSearch() {
+        const kw = searchInput.value.trim();
+        if (!kw) {hideDropdown(); return;}
+        const type = searchTypeSel.value; // 'username' | 'phone'
+        try {
+          const res = await fetch(`/admin/api/announcements/search?keyword=${encodeURIComponent(kw)}&type=${type}`);
+          const result = await res.json();
+          if (!result.success) throw new Error(result.message || '搜索失敗');
+
+          const list = result.data || [];
+          if (list.length === 0) {
+            dropdown.innerHTML = '<div class="user-dropdown-option" style="color:#999; cursor:default;">無匹配用戶</div>';
+            dropdown.style.display = 'block';
+            return;
+          }
+
+          // 主顯示文字依當前搜索模式決定：手機模式顯示手機號，用戶名模式顯示用戶名
+          dropdown.innerHTML = list.map(u => {
+            const mainText = (type === 'phone') ? (u.phone || '無手機號碼') : u.username;
+            const metaText = (type === 'phone')
+              ? `(${u.username} | ${u.name || '無姓名'})`
+              : `(${u.name || '無姓名'} | ${u.phone || '無手機'})`;
+            return `
+        <div class="user-dropdown-option"
+             data-id="${u.id}"
+             data-username="${u.username}"
+             data-phone="${u.phone || ''}">
+          <i class="fas fa-user" style="color:var(--gold); margin-right:6px;"></i>${mainText}
+          <span class="user-meta">${metaText}</span>
+        </div>`;
+          }).join('');
+          dropdown.style.display = 'block';
+        } catch (e) {
+          dropdown.innerHTML = '<div class="user-dropdown-option" style="color:#dc3545;">搜索出錯，請重試</div>';
+          dropdown.style.display = 'block';
+        }
+      }
+
+      // 輸入時防抖 300ms 再請求
+      searchInput.addEventListener('input', () => {
+        clearSelection();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(doSearch, 300);
+      });
+
+      // 切換「用戶名 / 手機號碼」時重置
+      searchTypeSel.addEventListener('change', () => {
+        searchInput.value = '';
+        clearSelection();
+        hideDropdown();
+      });
+
+      // 點擊選項 → 寫入隱藏 ID（後端仍拿 user id），顯示文字依當前模式回填
+      dropdown.addEventListener('click', (e) => {
+        const opt = e.target.closest('.user-dropdown-option');
+        if (!opt || !opt.dataset.id) return;
+
+        const type = searchTypeSel.value;
+        const username = opt.dataset.username;
+        const phone = opt.dataset.phone;
+        const displayText = (type === 'phone') ? (phone || username) : username;
+
+        // 輔助資訊：另一種標識用淺色小字顯示，方便管理員雙重確認
+        const extra = (type === 'phone')
+          ? `（用戶名：${username}）`
+          : (phone ? `（手機：${phone}）` : '');
+
+        hiddenId.value = opt.dataset.id;   // 【關鍵】提交給後端的永遠是用戶 ID，不是文字
+        searchInput.value = displayText;   // 輸入框回填與搜索模式一致的值
+        resultText.innerHTML = `已找到用戶：${displayText} <span style="color:#999; font-weight:500; font-size:0.85rem;">${extra}</span>`;
+        resultBox.style.display = 'flex';
+        hideDropdown();
+      });
+
+      // 點擊頁面其他區域關閉下拉
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('#target-user')) hideDropdown();
+      });
+
+      // 暴露給 handlePublish：發布前校驗是否真的選中了用戶
+      window.validateSpecificUser = () => {
+        const targetType = document.querySelector('input[name="targetType"]:checked')?.value;
+        if (targetType === 'SPECIFIC_USER' && !hiddenId.value) {
+          if (typeof showNotification === 'function') showNotification('❌ 請搜索並點擊選擇一個有效的用戶！', true);
+          else alert('請搜索並點擊選擇一個有效的用戶！');
+          return false;
+        }
+        return true;
+      };
+
+      // 發布成功後重置搜索區
+      window.resetUserSearch = () => {
+        searchInput.value = '';
+        clearSelection();
+        hideDropdown();
+      };
+    })();
+
+    // 8. 使用 AdminTable 加載公告列表
+    const announcementTableConfig = {
+      apiUrl: '/admin/api/announcements/list',
+      params: {page: 1, size: 25},
+      tbodySelector: '#announcements-tbody',
+      paginationId: 'announcements-pagination',
+      renderRow: renderAnnouncementRow,
+      emptyText: '暫無公告數據'
+    };
+
+    function renderAnnouncementRow(item) {
+      // 用來加載打開查看/編輯彈窗
+      window.announcementDataCache[item.announcementId] = item;
+
+      const statusBadge = item.isActive
+        ? '<span class="status-badge" style="background:#d4edda; color:#155724;">生效中</span>'
+        : '<span class="status-badge" style="background:#f8d7da; color:#721c24;">未生效</span>';
+
+      const typeMap = {
+        'SYSTEM': '<span class="badge" style="background:#e2e3e5; color:#383d41;">系統通知</span>',
+        'MAINTENANCE': '<span class="badge" style="background:#d1ecf1; color:#0c5460;">維護通知</span>',
+        'PROMOTION': '<span class="badge" style="background:#d4edda; color:#155724;">促銷活動</span>',
+        'STOCK': '<span class="badge" style="background:#fff3cd; color:#856404;">到貨通知</span>',
+        'OTHERS': '<span class="badge" style="background:#f8d7da; color:#721c24;">其他事項</span>'
+      };
+      const typeBadge = typeMap[item.type] || `<span class="badge">${item.type}</span>`;
+
+      const formatTime = (timeStr) => {
+        if (!timeStr) return '-';
+        const d = new Date(timeStr);
+        return d.getFullYear() + '-' +
+          String(d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(d.getDate()).padStart(2, '0') + ' ' +
+          String(d.getHours()).padStart(2, '0') + ':' +
+          String(d.getMinutes()).padStart(2, '0');
+      };
+
+      return `
+      <tr>
+          <td>${item.announcementId}</td>
+          <td style="word-wrap: break-word; white-space: normal; max-width: 300px;">${item.title}</td>
+          <td>${typeBadge}</td>
+          <td><i class="fas fa-bullseye" style="color:var(--gold); margin-right:5px;"></i> ${item.targetDisplay}</td>
+          <td>${formatTime(item.createdAt)}</td>
+          <td>${formatTime(item.updatedAt)}</td>
+          <td>${statusBadge}</td>
+          <td style="font-weight: 500; color: var(--primary);">
+              <i class="fas fa-user-pen" style="color: var(--gold); margin-right: 6px; font-size: 0.85rem;"></i>
+              ${item.publisherName || '-'}
+          </td>
+          <td class="action-cell">
+              <button class="btn-action btn-view"
+                      onclick="openAnnouncement(${item.announcementId})"
+                      title="查看公告詳情">
+                  <i class="fas fa-eye"></i> 查看
+              </button>
+              <button class="btn-action btn-edit"
+                      onclick="openEditView(${item.announcementId})"
+                      title="編輯公告">
+                  <i class="fas fa-edit"></i> 編輯
+              </button>
+              <button class="btn-action btn-status"
+                      onclick="openStatusToggleModal(${item.announcementId}, ${item.isActive})"
+                      title="切換公告生效/未生效狀態">
+                  <i class="fas fa-toggle-on"></i> 更改狀態
+              </button>
+          </td>
+      </tr>`;
+    }
 
 
-  // 頁面初次加載時也執行一次，以防萬一
-  document.addEventListener('DOMContentLoaded', function() {
-    loadActiveStores();
-  });
-</script>
+    function openStatusToggleModal(announcementId, currentIsActive) {
+      window.pendingToggleId = announcementId;
+
+      const modal = document.getElementById('statusToggleModal');
+      const iconEl = document.getElementById('toggleModalIcon');
+      const titleEl = document.getElementById('toggleModalTitle');
+      const messageEl = document.getElementById('toggleModalMessage');
+      const confirmBtn = document.getElementById('confirmToggleBtn');
+
+      if (currentIsActive) {
+        // 當前是生效中，準備隱藏
+        iconEl.className = 'toggle-modal-icon warning';
+        iconEl.innerHTML = '<i class="fas fa-eye-slash"></i>';
+        titleEl.innerHTML = '⚠️ 確認隱藏此公告？';
+        messageEl.textContent = '此公告目前正在發布中。隱藏後，將不再向目標用戶展示。是否確認隱藏？';
+        confirmBtn.className = 'btn-confirm-toggle btn-warning';
+        confirmBtn.innerHTML = '<i class="fas fa-eye-slash"></i> 確認隱藏';
+      } else {
+        // 當前是未生效，準備發布
+        iconEl.className = 'toggle-modal-icon success';
+        iconEl.innerHTML = '<i class="fas fa-bullhorn"></i>';
+        titleEl.innerHTML = '📢 確認發布此公告？';
+        messageEl.textContent = '此公告目前處於隱藏狀態。發布後，將立即向目標用戶展示。是否確認發布？';
+        confirmBtn.className = 'btn-confirm-toggle btn-success';
+        confirmBtn.innerHTML = '<i class="fas fa-bullhorn"></i> 確認發布';
+      }
+
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeStatusToggleModal() {
+      const modal = document.getElementById('statusToggleModal');
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+      window.pendingToggleId = null;
+    }
+
+    async function confirmToggleStatus() {
+      if (!window.pendingToggleId) return;
+
+      const id = window.pendingToggleId;
+
+      try {
+        // 從緩存獲取當前狀態並取反
+        const currentItem = window.announcementDataCache[id];
+        const newIsActive = !currentItem.isActive;
+
+        const response = await fetch(`/admin/api/announcements/${id}/toggle-status`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({isActive: newIsActive})
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          closeStatusToggleModal();
+          if (typeof showNotification === 'function') {
+            showNotification(newIsActive ? '✅ 公告已成功發布！' : '✅ 公告已成功隱藏！');
+          }
+          // 刷新表格
+          if (typeof AdminTable !== 'undefined' && typeof announcementTableConfig !== 'undefined') {
+            AdminTable.loadData(announcementTableConfig);
+          }
+        } else {
+          if (typeof showNotification === 'function') {
+            showNotification('❌ ' + (result.message || '操作失敗'), true);
+          }
+        }
+      } catch (error) {
+        console.error('更改狀態錯誤:', error);
+        if (typeof showNotification === 'function') {
+          showNotification('❌ 網絡錯誤，請稍後重試', true);
+        }
+      }
+    }
+
+    // 全局事件監聽：點擊遮罩層或按 ESC 鍵關閉彈窗 (合併優化版)
+    document.addEventListener('click', function (e) {
+
+      // 關閉狀態切換彈窗
+      const statusModal = document.getElementById('statusToggleModal');
+      if (statusModal && e.target === statusModal) {
+        closeStatusToggleModal();
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        // 關閉狀態切換彈窗
+        const statusModal = document.getElementById('statusToggleModal');
+        if (statusModal && statusModal.style.display === 'flex') {
+          closeStatusToggleModal();
+        }
+      }
+    });
+
+    // 頁面初次加載時執行
+    document.addEventListener('DOMContentLoaded', function () {
+      // 加載公告列表
+      AdminTable.loadData(announcementTableConfig);
+      // 加載活躍門店列表 (供發布/編輯公告用)
+      loadActiveStores();
+    });
+  </script>
 </body>
 
 </html>

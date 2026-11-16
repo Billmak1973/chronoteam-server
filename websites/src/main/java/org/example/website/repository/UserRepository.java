@@ -216,4 +216,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByRoleNot(User.Role role);
 
+    /**
+     * 按用戶名模糊搜索（LOWER 保證忽略大小寫），Pageable 限制返回數量
+     */
+    @Query("SELECT u FROM User u WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :kw, '%')) ORDER BY u.username ASC")
+    List<User> searchByUsernameLike(@Param("kw") String kw, Pageable pageable);
+
+    /**
+     * 按手機號碼模糊搜索
+     */
+    @Query("SELECT u FROM User u WHERE u.phone LIKE CONCAT('%', :kw, '%') ORDER BY u.username ASC")
+    List<User> searchByPhoneLike(@Param("kw") String kw, Pageable pageable);
 }
