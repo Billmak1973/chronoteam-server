@@ -7,65 +7,72 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-//  核心約束：年份 + 季度 + 商品ID + 單價 必須唯一。
+// 【核心修改】：唯一約束現在包含 store_id
+// 意義：同一季度、同一商品、同一單價、同一渠道、同一門店 -> 必須合併為一條記錄進行累加
 @Table(name = "quarterly_sales_report",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"year", "quarter", "product_id", "unit_price"}),
+        uniqueConstraints = @UniqueConstraint(columnNames = {"year", "quarter", "product_id", "unit_price", "sales_channel", "store_id"}),
         indexes = {
-                @Index(name = "idx_quarterly_year_quarter", columnList = "year, quarter")
+                @Index(name = "idx_quarterly_year_quarter", columnList = "year, quarter"),
+                @Index(name = "idx_quarterly_channel", columnList = "sales_channel"),
+                @Index(name = "idx_quarterly_store", columnList = "store_id") // 【新增】為門店ID加索引，加速按門店統計
         }
 )
 @Data
 public class QuarterlySalesReport {
 
-    //  核心規範：絕對不使用 id，使用具體的 reportId
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "report_id")
     private Long reportId;
 
-    /** 年份 (例如: 2024) */
     @Column(name = "year", nullable = false)
     private Integer year;
 
-    /** 季度 (1, 2, 3, 4) */
     @Column(name = "quarter", nullable = false)
     private Integer quarter;
 
-    /** 商品ID */
     @Column(name = "product_id", nullable = false)
     private Integer productId;
 
-    /** 商品名稱快照 */
     @Column(name = "product_name", length = 200)
     private String productName;
 
-    // ================= 銷量與價格 (歷史快照，不可篡改) =================
+    // ================= 銷售渠道 =================
+    /**
+     * ONLINE: 線上商城 (通常 store_id 為 null 或指向總倉虛擬ID)
+     * OFFLINE: 線下門店 (store_id 必填)
+     */
+    @Column(name = "sales_channel", length = 20, nullable = false)
+    private String salesChannel;
 
-    /** 成交單價 (核心：同一商品單價改變，會觸發唯一約束，生成新的記錄，絕不合併) */
+    // ================= 【新增】門店 ID =================
+    /**
+     * 關聯的門店 ID
+     * - 如果是線下銷售，這裡存具體的 store_id
+     * - 如果是純線上銷售且無門店歸屬，這裡可以為 NULL
+     */
+    @Column(name = "store_id")
+    private Long storeId;
+
+    // ================= 銷量與價格 =================
+
     @Column(name = "unit_price", precision = 15, scale = 2, nullable = false)
     private BigDecimal unitPrice;
 
-    /** 該單價下的總銷售數量 (包含後來可能被退貨的，保持原始銷售記錄) */
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    /** 總價 / 成交總額 (必須記錄：作為財務快照，防止精度誤差) */
     @Column(name = "total_amount", precision = 15, scale = 2, nullable = false)
     private BigDecimal totalAmount;
 
-    // ================= 退貨統計 (獨立記錄，不破壞銷售快照) =================
+    // ================= 退貨統計 =================
 
-    /** 該單價下的退貨數量 (發生退貨時，只增加這個字段，不去動上面的 quantity) */
     @Column(name = "refund_quantity")
     private Integer refundQuantity = 0;
 
-    /** 該單價下的退貨總金額 */
     @Column(name = "refund_amount", precision = 15, scale = 2)
     private BigDecimal refundAmount = BigDecimal.ZERO;
 
-    // ================= 其他維度 =================
-
-    /** 品牌快照 (方便按品牌維度進行季度匯總分析) */
     @Column(name = "brand", length = 50)
     private String brand;
 

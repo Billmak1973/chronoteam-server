@@ -32,14 +32,14 @@ public class DailyBusinessReportService {
             DailyBusinessReport report = new DailyBusinessReport();
             report.setReportDate(today);
             report.setNewUsers(1); // 第一個註冊的用戶
-            // 其他字段（如 totalGmv, totalOrders 等）在實體類中已有默認值 0
             dailyBusinessReportRepository.save(report);
         }
     }
 
     /**
      * 更新每日業務報告（線上支付成功 或 線下取貨完成後調用）
-     * 【核心升級】：根據 orderSource 精準區分線上與線下業績
+     * 【核心修正】：DailyBusinessReport 現在只記錄「全平台總覽」和「純線上業績」。
+     *              線下門店業績請參見 StoreDailyReport。
      */
     @Transactional
     public void updateDailyReport(Order order) {
@@ -56,23 +56,17 @@ public class DailyBusinessReportService {
         BigDecimal orderAmount = order.getTotalAmount();
         Integer totalItemsSold = calculateTotalItemsSold(order);
 
-        // 1. 更新【總計】數據 (保持向後兼容，總數始終累加)
-        //    無論線上線下，【總計】數據始終累加（保證總賬準確）
-        report.setTotalGmv(report.getTotalGmv().add(orderAmount));
+        // 1. 更新【全平台總計】數據 (無論線上還是線下訂單，都計入總賬)
         report.setTotalOrders(report.getTotalOrders() + 1);
         report.setTotalItemsSold(report.getTotalItemsSold() + totalItemsSold);
 
-        // 2. 【核心新增】：根據訂單來源 (orderSource) 分流統計
-        //     第二步：根據 orderSource 進行【明細】分流統計
-        if ("OFFLINE".equals(order.getOrderSource())) {
-            // 純線下門店開單 / POS機購買
-            report.setOfflineGmv(report.getOfflineGmv().add(orderAmount));
-            report.setOfflineOrders(report.getOfflineOrders() + 1);
-        } else {
-            // 線上商城下單 (包含線上選好去線下付款)
+        // 2. 【核心分流】：只有「純線上訂單」才累加到 online_gmv / online_orders
+        //    線下訂單 (OFFLINE) 不再影響 DailyBusinessReport 的 online 字段，也不再有 offline 字段可寫。
+        if ("ONLINE".equals(order.getOrderSource())) {
             report.setOnlineGmv(report.getOnlineGmv().add(orderAmount));
             report.setOnlineOrders(report.getOnlineOrders() + 1);
         }
+        // 注意：如果是 "OFFLINE" 來源的訂單，這裡什麼都不做，因為線下數據已由 StoreDailyReport 處理。
 
         // 保存報告
         dailyBusinessReportRepository.save(report);

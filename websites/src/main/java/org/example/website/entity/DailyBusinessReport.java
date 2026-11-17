@@ -23,18 +23,11 @@ public class DailyBusinessReport {
     @Column(name = "report_date", nullable = false, unique = true)
     private LocalDate reportDate;
 
-    // ================= 銷售與收入 =================
-    /** 總營業額 / GMV (線上 + 線下總和) */
-    @Column(name = "total_gmv", precision = 15, scale = 2)
-    private BigDecimal totalGmv = BigDecimal.ZERO;
 
-    /** 【新增】線上總營業額 (GMV) */
+    /** 線上總營業額 (GMV) */
     @Column(name = "online_gmv", precision = 15, scale = 2)
     private BigDecimal onlineGmv = BigDecimal.ZERO;
 
-    /** 【新增】線下總營業額 (GMV) */
-    @Column(name = "offline_gmv", precision = 15, scale = 2)
-    private BigDecimal offlineGmv = BigDecimal.ZERO;
 
     /** 總訂單數 */
     @Column(name = "total_orders")
@@ -44,9 +37,6 @@ public class DailyBusinessReport {
     @Column(name = "online_orders")
     private Integer onlineOrders = 0;
 
-    /** 【新增】線下訂單數 */
-    @Column(name = "offline_orders")
-    private Integer offlineOrders = 0;
 
     /** 總售出件數 */
     @Column(name = "total_items_sold")
@@ -57,9 +47,6 @@ public class DailyBusinessReport {
     @Column(name = "refund_amount", precision = 15, scale = 2)
     private BigDecimal refundAmount = BigDecimal.ZERO;
 
-    /** 【核心修正】僅記錄線下退款金額 (因售後退換貨均在門店處理) */
-    @Column(name = "offline_refund_amount", precision = 15, scale = 2)
-    private BigDecimal offlineRefundAmount = BigDecimal.ZERO;
 
     /** 退貨件數 */
     @Column(name = "refund_count")

@@ -947,10 +947,116 @@
       <!-- ================= 視圖 1: 公告管理列表 ================= -->
       <div id="view-list" class="view-container">
         <div class="content-body">
-          <!-- 簡易篩選區 -->
-          <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-            <input type="text" class="form-control" placeholder="搜索公告標題..." style="max-width: 300px;">
-            <button class="btn btn-primary"><i class="fas fa-search"></i> 查詢</button>
+          <!-- ==================== 高級篩選工具欄 ==================== -->
+          <div class="list-toolbar" style="display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end; margin-bottom: 1.5rem;">
+
+            <!-- ====== 第一行：基礎篩選條件 ====== -->
+            <div style="width: 100%; display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end;">
+
+              <!-- 【核心修改】1. 公告標題搜索 (新增切換邏輯) -->
+              <div class="form-group" style="margin-bottom: 0; min-width: 320px;">
+                <label><i class="fas fa-search" style="color: var(--gold); margin-right: 0.5rem;"></i> 公告標題</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <!-- 切換模式的下拉框 -->
+                  <select id="filter-title-mode" class="form-control" onchange="toggleTitleInput()" style="width: 130px; flex-shrink: 0;">
+                    <option value="all">全部標題</option>
+                    <option value="specific">指定關鍵字</option>
+                  </select>
+                  <!-- 只有在選擇 "指定關鍵字" 時才顯示的輸入框 -->
+                  <input type="text" id="filter-title" class="form-control" placeholder="輸入關鍵字搜索..."
+                         style="flex: 1; display: none;">
+                </div>
+              </div>
+
+              <!-- 2. 公告性質 -->
+              <div class="form-group" style="margin-bottom: 0; min-width: 180px;">
+                <label><i class="fas fa-tag" style="color: var(--gold); margin-right: 0.5rem;"></i> 公告性質</label>
+                <select id="filter-type" class="form-control">
+                  <option value="">全部類型</option>
+                  <option value="SYSTEM">系統通知</option>
+                  <option value="MAINTENANCE">維護通知</option>
+                  <option value="PROMOTION">促銷活動</option>
+                  <option value="STOCK">到貨通知</option>
+                  <option value="OTHERS">其他事項</option>
+                </select>
+              </div>
+
+              <!-- 3. 創建時間範圍 -->
+              <div class="form-group" style="margin-bottom: 0; min-width: 350px;">
+                <label><i class="fas fa-calendar-alt" style="color: var(--gold); margin-right: 0.5rem;"></i> 創建時間</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <select id="filter-create-mode" class="form-control" onchange="toggleCreateTimeInputs()" style="width: 130px;">
+                    <option value="all">全部時間</option>
+                    <option value="specific">特定某一天</option>
+                    <option value="range">開始至結束</option>
+                  </select>
+
+                  <!-- 動態輸入框容器 -->
+                  <div id="createTimeDynamicInput" style="flex: 1;">
+                    <!-- 特定某一天 -->
+                    <div id="createTimeSpecificInput" style="display: none;">
+                      <input type="date" id="filter-create-specific" class="form-control" title="特定日期">
+                    </div>
+                    <!-- 開始和結束時間 -->
+                    <div id="createTimeRangeInputs" style="display: none;">
+                      <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="date" id="filter-create-start" class="form-control" style="flex: 1;" title="開始日期">
+                        <span style="color: #6c757d; font-size: 0.9rem;">至</span>
+                        <input type="date" id="filter-create-end" class="form-control" style="flex: 1;" title="結束日期">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ====== 第二行：進階篩選與操作按鈕 ====== -->
+            <div style="width: 100%; display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end; border-top: 1px dashed #e9ecef; padding-top: 1rem; margin-top: 0.5rem;">
+
+              <!-- 4. 生效狀態 -->
+              <div class="form-group" style="margin-bottom: 0; min-width: 160px;">
+                <label><i class="fas fa-toggle-on" style="color: var(--gold); margin-right: 0.5rem;"></i> 生效狀態</label>
+                <select id="filter-status" class="form-control">
+                  <option value="">全部狀態</option>
+                  <option value="true">生效中</option>
+                  <option value="false">未生效</option>
+                </select>
+              </div>
+
+              <!-- 5. 變更狀態 -->
+              <div class="form-group" style="margin-bottom: 0; min-width: 200px;">
+                <label><i class="fas fa-history" style="color: var(--gold); margin-right: 0.5rem;"></i> 變更狀態</label>
+                <select id="filter-modified" class="form-control">
+                  <option value="">全部記錄</option>
+                  <option value="no">原文</option>
+                  <option value="yes">重新編輯</option>
+                </select>
+              </div>
+
+              <!-- 6. 操作者篩選 -->
+              <div class="form-group" style="margin-bottom: 0; min-width: 280px;">
+                <label><i class="fas fa-user-pen" style="color: var(--gold); margin-right: 0.5rem;"></i> 操作者</label>
+                <div style="display: flex; gap: 0.5rem;">
+                  <select id="filter-operator-mode" class="form-control" onchange="toggleOperatorInput()" style="width: 120px;">
+                    <option value="all">全部用戶</option>
+                    <option value="specific">指定用戶</option>
+                  </select>
+                  <input type="text" id="filter-operator-name" class="form-control" placeholder="輸入用戶名..."
+                         style="flex: 1; display: none;">
+                </div>
+              </div>
+
+              <!-- 7. 操作按鈕組 (靠右對齊) -->
+              <div style="display: flex; gap: 0.8rem; align-items: flex-end; margin-left: auto;">
+                <button class="btn btn-outline" onclick="resetAnnouncementFilters()">
+                  <i class="fas fa-redo"></i> 重置
+                </button>
+                <button class="btn btn-primary" onclick="applyAnnouncementFilters()">
+                  <i class="fas fa-filter"></i> 應用篩選
+                </button>
+              </div>
+
+            </div>
           </div>
 
           <!-- 列表表格 -->
@@ -1262,6 +1368,8 @@
                   <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
                   暫無接收記錄
                 </div>
+                <!-- 【新增】接收者分頁容器 -->
+                <div id="recipients-pagination" style="padding: 1rem; border-top: 1px solid #f1f3f5;"></div>
               </div>
             </div>
 
@@ -1642,7 +1750,10 @@
       document.getElementById('toggleRecipientsBtn').dataset.announcementId = announcementId;
     }
 
-    // 切換接收者列表展開/收起
+    // 全局變量：記錄當前打開的公告ID和頁碼
+    let currentRecipientsAnnouncementId = null;
+    let currentRecipientsPage = 1;
+
     async function toggleRecipientsList() {
       const container = document.getElementById('recipients-list-container');
       const arrow = document.getElementById('recipientsArrow');
@@ -1652,49 +1763,58 @@
       if (container.style.display === 'block') {
         container.style.display = 'none';
         arrow.className = 'fas fa-chevron-down';
+        currentRecipientsAnnouncementId = null;
         return;
       }
 
-      // 展開並加載數據
+      // 展開並初始化第一頁
       container.style.display = 'block';
       arrow.className = 'fas fa-chevron-up';
+      currentRecipientsAnnouncementId = announcementId;
+      currentRecipientsPage = 1;
 
+      await loadRecipientsPage(announcementId, 1);
+    }
+
+    // 【新增】加載指定頁碼的接收者列表
+    async function loadRecipientsPage(announcementId, page) {
       const loadingEl = document.getElementById('recipients-loading');
       const tableEl = document.getElementById('recipients-table');
       const emptyEl = document.getElementById('recipients-empty');
       const tbody = document.getElementById('recipients-tbody');
+      const paginationEl = document.getElementById('recipients-pagination');
 
       loadingEl.style.display = 'block';
       tableEl.style.display = 'none';
       emptyEl.style.display = 'none';
+      paginationEl.innerHTML = ''; // 清空舊分頁
 
       try {
-        const res = await fetch(`/admin/api/announcements/${announcementId}/recipients`);
-        const result = await res.json();
+        const res = await fetch(`/admin/api/announcements/${announcementId}/recipients?page=${page}`);
+        const data = await res.json();
 
         loadingEl.style.display = 'none';
 
-        if (!result.success || result.isAllUsers) {
+        if (!data.success || data.isAllUsers) {
           emptyEl.innerHTML = '<i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>' +
-            (result.message || '此公告發送給了全體用戶');
+                  (data.message || '此公告發送給了全體用戶');
           emptyEl.style.display = 'block';
           return;
         }
 
-        const users = result.data || [];
+        const users = data.content || [];
 
         if (users.length === 0) {
           emptyEl.style.display = 'block';
           return;
         }
 
-        // 渲染表格
+        // 渲染表格行 (保持原有邏輯不變)
         tbody.innerHTML = users.map(u => {
           const readBadge = u.isRead
-            ? '<span style="background:#d4edda; color:#155724; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;"><i class="fas fa-check"></i> 已讀</span>'
-            : '<span style="background:#fff3cd; color:#856404; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;"><i class="fas fa-clock"></i> 未讀</span>';
+                  ? '<span style="background:#d4edda; color:#155724; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;"><i class="fas fa-check"></i> 已讀</span>'
+                  : '<span style="background:#fff3cd; color:#856404; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem;"><i class="fas fa-clock"></i> 未讀</span>';
 
-          // 1. 定義基礎角色樣式映射
           const roleMap = {
             'ADMIN': '<span style="color:#dc3545;">管理員</span>',
             'STORE_MANAGER': '<span style="color:#0d6efd;">店鋪經理</span>',
@@ -1705,12 +1825,8 @@
             'CUSTOMER': '顧客'
           };
 
-          // 2. 獲取基礎角色顯示文本
           let roleDisplay = roleMap[u.role] || u.role || '-';
-
-          // 3. 【核心修改】只要後端返回了 storeName，就統一拼接（xx店）
           if (u.storeName) {
-            // 使用 span 包裹店鋪名，保持視覺一致性
             roleDisplay += ` <span style="color:#6c757d; font-weight:500;">（${u.storeName}）</span>`;
           }
 
@@ -1725,12 +1841,66 @@
 
         tableEl.style.display = 'table';
 
+        // 【新增】渲染智能分頁
+        renderRecipientsPagination(data.currentPage, data.totalPages, data.smartPages, announcementId);
+
       } catch (error) {
         console.error('加載接收者失敗:', error);
         loadingEl.style.display = 'none';
         emptyEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color: #dc3545; font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>加載失敗，請重試';
         emptyEl.style.display = 'block';
       }
+    }
+
+    // 【新增】渲染接收者專屬的智能分頁組件
+    function renderRecipientsPagination(currentPage, totalPages, smartPages, announcementId) {
+      const container = document.getElementById('recipients-pagination');
+      if (!container || totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = '<div class="pagination-wrapper">';
+
+      // 上一頁
+      if (currentPage > 1) {
+        html += `<button type="button" class="page-btn" onclick="loadRecipientsPage('${announcementId}', ${currentPage - 1})">
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                 </button>`;
+      } else {
+        html += `<button type="button" class="page-btn disabled" disabled>
+                    <i class="fas fa-chevron-left"></i> 上一頁
+                 </button>`;
+      }
+
+      // 智能頁碼
+      if (smartPages && smartPages.length > 0) {
+        smartPages.forEach(item => {
+          if (item.isEllipsis) {
+            html += `<span class="page-ellipsis">...</span>`;
+          } else {
+            const isActive = item.pageNumber === currentPage ? 'active' : '';
+            html += `<button type="button" class="page-btn ${isActive}"
+                            onclick="loadRecipientsPage('${announcementId}', ${item.pageNumber})">
+                            ${item.pageNumber}
+                         </button>`;
+          }
+        });
+      }
+
+      // 下一頁
+      if (currentPage < totalPages) {
+        html += `<button type="button" class="page-btn" onclick="loadRecipientsPage('${announcementId}', ${currentPage + 1})">
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                 </button>`;
+      } else {
+        html += `<button type="button" class="page-btn disabled" disabled>
+                    下一頁 <i class="fas fa-chevron-right"></i>
+                 </button>`;
+      }
+
+      html += '</div>';
+      container.innerHTML = html;
     }
 
     // 輔助函數：應用文字對齊（從原有代碼中提取）
@@ -2222,6 +2392,131 @@
         }
       }
     }
+    // ==========================================
+    // 公告列表篩選邏輯
+    // ==========================================
+
+    /**
+     * 【新增】切換公告標題輸入框的顯示/隱藏
+     */
+    function toggleTitleInput() {
+      const mode = document.getElementById('filter-title-mode').value;
+      const input = document.getElementById('filter-title');
+
+      if (mode === 'specific') {
+        input.style.display = 'inline-block';
+        input.focus(); // 自動聚焦提升體驗
+      } else {
+        input.style.display = 'none';
+        input.value = ''; // 隱藏時清空內容，確保後端不會收到空字符串干擾查詢
+      }
+    }
+
+    /**
+     * 切換創建時間輸入框的顯示/隱藏
+     */
+    function toggleCreateTimeInputs() {
+      const mode = document.getElementById('filter-create-mode').value;
+      const specificDiv = document.getElementById('createTimeSpecificInput');
+      const rangeDiv = document.getElementById('createTimeRangeInputs');
+
+      // 清空舊值
+      document.getElementById('filter-create-specific').value = '';
+      document.getElementById('filter-create-start').value = '';
+      document.getElementById('filter-create-end').value = '';
+
+      if (mode === 'specific') {
+        specificDiv.style.display = 'block'; // 建議改為 block 以保持寬度自適應
+        rangeDiv.style.display = 'none';
+      } else if (mode === 'range') {
+        specificDiv.style.display = 'none';
+        rangeDiv.style.display = 'block';
+      } else {
+        specificDiv.style.display = 'none';
+        rangeDiv.style.display = 'none';
+      }
+    }
+
+    /**
+     * 切換操作者輸入框的顯示/隱藏
+     */
+    function toggleOperatorInput() {
+      const mode = document.getElementById('filter-operator-mode').value;
+      const input = document.getElementById('filter-operator-name');
+
+      if (mode === 'specific') {
+        input.style.display = 'inline-block';
+        input.focus();
+      } else {
+        input.style.display = 'none';
+        input.value = '';
+      }
+    }
+
+    /**
+     * 應用篩選條件
+     */
+    function applyAnnouncementFilters() {
+      const titleMode = document.getElementById('filter-title-mode').value;
+
+      const params = {
+        page: 1,
+        size: 25,
+        title: (titleMode === 'specific') ? document.getElementById('filter-title').value.trim() : '',
+        type: document.getElementById('filter-type').value,
+        status: document.getElementById('filter-status').value,
+
+        // 【新增】傳遞變更狀態參數 (yes/no)
+        modified: document.getElementById('filter-modified').value,
+
+        // 處理創建時間
+        createMode: document.getElementById('filter-create-mode').value,
+        createSpecific: document.getElementById('filter-create-specific').value,
+        createStart: document.getElementById('filter-create-start').value,
+        createEnd: document.getElementById('filter-create-end').value,
+
+        // 【新增】傳遞操作者參數 (僅當模式為 specific 時傳遞)
+        operatorMode: document.getElementById('filter-operator-mode').value,
+        operatorName: (document.getElementById('filter-operator-mode').value === 'specific')
+                ? document.getElementById('filter-operator-name').value.trim()
+                : ''
+      };
+
+      console.log('🔍 當前篩選參數:', params);
+      announcementTableConfig.params = params;
+      AdminTable.loadData(announcementTableConfig);
+    }
+
+    /**
+     * 重置所有篩選條件
+     */
+    function resetAnnouncementFilters() {
+      document.getElementById('filter-title-mode').value = 'all';
+      document.getElementById('filter-title').value = '';
+      document.getElementById('filter-type').value = '';
+      document.getElementById('filter-status').value = '';
+      document.getElementById('filter-modified').value = ''; // 重置為全部記錄
+      document.getElementById('filter-operator-mode').value = 'all';
+      document.getElementById('filter-operator-name').value = '';
+      document.getElementById('filter-create-mode').value = 'all';
+      document.getElementById('filter-create-specific').value = '';
+      document.getElementById('filter-create-start').value = '';
+      document.getElementById('filter-create-end').value = '';
+
+      toggleTitleInput();
+      toggleCreateTimeInputs();
+      toggleOperatorInput();
+
+      announcementTableConfig.params = { page: 1, size: 25 };
+      AdminTable.loadData(announcementTableConfig);
+    }
+
+    // 頁面加載時初始化篩選器狀態
+    document.addEventListener('DOMContentLoaded', function () {
+      toggleTitleInput();       // 確保初始狀態正確
+      toggleCreateTimeInputs();
+      toggleOperatorInput();
+    });
 
     // 全局事件監聽：點擊遮罩層或按 ESC 鍵關閉彈窗 (合併優化版)
     document.addEventListener('click', function (e) {

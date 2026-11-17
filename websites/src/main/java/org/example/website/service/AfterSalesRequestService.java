@@ -22,13 +22,13 @@ public class AfterSalesRequestService {
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
     private final OrderItemRepository orderItemRepository;
-    private final DailyBusinessReportRepository dailyReportRepository;
     private final StoreDailyReportRepository storeDailyReportRepository;
     private final OfflineStoreRepository offlineStoreRepository;
     private final ProductRepository productRepository; // 【新增】用於創建換貨新訂單
     private final StoreInventoryRepository storeInventoryRepository;
     private final AfterSalesRequestItemRepository afterSalesRequestItemRepository;
     private final InventoryAdjustmentLogRepository adjustmentLogRepository;
+    private final QuarterlySalesReportService quarterlySalesReportService;
 
     @Transactional
     public AfterSalesRequest createAfterSalesRequest(String username, ReturnRequestDTO dto, AfterSalesRequest.RequestType reqType) {
@@ -41,7 +41,7 @@ public class AfterSalesRequestService {
 
         // 2. 創建主申請記錄
         AfterSalesRequest request = new AfterSalesRequest();
-        request.setRequestType(reqType); // 【核心修改】：設置動態傳入的類型
+        request.setRequestType(reqType);
         request.setOriginalOrder(order);
         request.setUser(user);
         request.setStoreId(String.valueOf(dto.getStoreId()));
@@ -83,10 +83,6 @@ public class AfterSalesRequestService {
             throw new RuntimeException("狀態未發生改變");
         }
 
-        // ==========================================
-        // 【核心修復】：將記錄操作員的邏輯移到 if (COMPLETED) 的外面！
-        // 這樣無論是變成 COMPLETED, REJECTED 還是 CANCELLED，都會記錄當前操作員
-        // ==========================================
         if (operatorUsername != null && !operatorUsername.trim().isEmpty()) {
             User operatorUser = userRepository.findByUsername(operatorUsername)
                     .orElseThrow(() -> new RuntimeException("操作員不存在: " + operatorUsername));
@@ -105,23 +101,21 @@ public class AfterSalesRequestService {
             request.setTotalRefundAmount(totalRefund);
             request.setCompletedAt(LocalDateTime.now());
 
-            // 2. 觸發原訂單狀態的全局同步 (處理原訂單的退貨狀態)
-            syncOrderStatusAfterSalesCompletion(request.getOriginalOrder(),request);
+            // 2. 觸發原訂單狀態的全局同步
+            syncOrderStatusAfterSalesCompletion(request.getOriginalOrder(), request);
 
             // 3. 【核心修正】：換貨 = 退貨 + 購物。分別處理財務報表與新訂單生成
             if (request.getRequestType() == AfterSalesRequest.RequestType.RETURN) {
-                updateDailyReportForReturn(request);
                 if (request.getStoreId() != null && !request.getStoreId().trim().isEmpty()) {
                     updateStoreDailyReportForReturn(request);
                 }
             } else if (request.getRequestType() == AfterSalesRequest.RequestType.EXCHANGE) {
                 // 【核心】：換貨包含「購物」流程，必須生成一筆全新的線下訂單來代表這次購買！
                 Order newOrder = createExchangePurchaseOrder(request, exchangeData);
-                request.setNewOrder(newOrder); // 關聯新訂單到售後申請
+                request.setNewOrder(newOrder);
 
-                // 更新財務報表：記錄「舊商品退貨」 + 「新商品購物(GMV)」
-                updateDailyReportForExchange(request, newOrder);
                 if (request.getStoreId() != null && !request.getStoreId().trim().isEmpty()) {
+                    // ✅【保留這行】：這個方法負責更新 StoreDailyReport 和 QuarterlySalesReport
                     updateStoreDailyReportForExchange(request, newOrder);
                 }
             }
@@ -185,48 +179,10 @@ public class AfterSalesRequestService {
         return orderRepository.save(newOrder);
         // 注意：此新訂單的 GMV 統計將在下面的 updateDailyReportForExchange 中統一處理
     }
-    private void updateDailyReportForExchange(AfterSalesRequest request, Order newOrder) {
-        LocalDate reportDate = request.getCompletedAt().toLocalDate();
-        DailyBusinessReport report = dailyReportRepository.findByReportDate(reportDate)
-                .orElseGet(() -> {
-                    DailyBusinessReport newReport = new DailyBusinessReport();
-                    newReport.setReportDate(reportDate);
-                    return newReport;
-                });
-
-        // A. 記錄「舊商品退貨」部分
-        BigDecimal refundAmount = request.getTotalRefundAmount() != null ? request.getTotalRefundAmount() : BigDecimal.ZERO;
-        if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal currentRefund = report.getRefundAmount() != null ? report.getRefundAmount() : BigDecimal.ZERO;
-            report.setRefundAmount(currentRefund.add(refundAmount));
-
-            int totalItems = request.getItems().stream().mapToInt(AfterSalesRequestItem::getReturnQuantity).sum();
-            report.setRefundCount(report.getRefundCount() + totalItems);
-        }
-
-        // B. 記錄「新商品購物」部分 (透過新生成的線下訂單)
-        if (newOrder != null) {
-            // 1. 計入總 GMV 和總訂單數
-            BigDecimal currentGmv = report.getTotalGmv() != null ? report.getTotalGmv() : BigDecimal.ZERO;
-            report.setTotalGmv(currentGmv.add(newOrder.getTotalAmount()));
-
-            Integer currentOrders = report.getTotalOrders() != null ? report.getTotalOrders() : 0;
-            report.setTotalOrders(currentOrders + 1);
-
-            // 2. 因為是線下訂單，同時累加線下專屬欄位
-            BigDecimal currentOfflineGmv = report.getOfflineGmv() != null ? report.getOfflineGmv() : BigDecimal.ZERO;
-            report.setOfflineGmv(currentOfflineGmv.add(newOrder.getTotalAmount()));
-
-            Integer currentOfflineOrders = report.getOfflineOrders() != null ? report.getOfflineOrders() : 0;
-            report.setOfflineOrders(currentOfflineOrders + 1);
-        }
-
-        dailyReportRepository.save(report);
-    }
 
     /**
      * 【核心修正】：更新【門店】每日業務報表中的「換貨」財務數據
-     * 邏輯：1. 記錄舊商品退回 (storeRefundAmount)  2. 記錄新商品賣出 (storeGmv)
+     * 並且同步更新【門店】季度銷售報表
      */
     private void updateStoreDailyReportForExchange(AfterSalesRequest request, Order newOrder) {
         try {
@@ -236,6 +192,7 @@ public class AfterSalesRequestService {
             OfflineStore store = offlineStoreRepository.findById(storeId)
                     .orElseThrow(() -> new RuntimeException("關聯的門店不存在，ID: " + storeId));
 
+            // 1. 更新門店每日報表 (StoreDailyReport) - 原有邏輯
             StoreDailyReport storeReport = storeDailyReportRepository.findByStore_StoreIdAndReportDate(storeId, reportDate)
                     .orElseGet(() -> {
                         StoreDailyReport newReport = new StoreDailyReport();
@@ -257,10 +214,28 @@ public class AfterSalesRequestService {
             // B. 記錄「新商品購物」部分 (透過新生成的線下訂單)
             if (newOrder != null) {
                 BigDecimal currentGmv = storeReport.getStoreGmv() != null ? storeReport.getStoreGmv() : BigDecimal.ZERO;
-                storeReport.setStoreGmv(currentGmv.add(newOrder.getTotalAmount())); // 新商品總價計入門店 GMV
+                storeReport.setStoreGmv(currentGmv.add(newOrder.getTotalAmount()));
 
                 Integer currentOrders = storeReport.getStoreOrders() != null ? storeReport.getStoreOrders() : 0;
                 storeReport.setStoreOrders(currentOrders + 1);
+
+                // 2. 【新增核心邏輯】：更新門店季度銷售報表 (QuarterlySalesReport)
+                for (OrderItem item : newOrder.getItems()) {
+                    Product product = item.getProduct();
+                    BigDecimal itemTotalAmount = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+
+                    // 調用 recordSale，傳入 "OFFLINE" 渠道和具體的 storeId
+                    quarterlySalesReportService.recordSale(
+                            product.getProductId(),
+                            product.getDescription(), // productName 快照
+                            product.getBrand(),       // brand 快照
+                            product.getPrice(),       // unitPrice
+                            item.getQuantity(),       // quantity
+                            itemTotalAmount,          // totalAmount
+                            "OFFLINE",                // salesChannel: 線下門店銷售
+                            storeId                   // storeId: 具體門店ID
+                    );
+                }
             }
 
             storeDailyReportRepository.save(storeReport);
@@ -269,61 +244,30 @@ public class AfterSalesRequestService {
             System.err.println("⚠️ 無效的門店ID，無法更新門店換貨報表: " + request.getStoreId());
         } catch (Exception e) {
             System.err.println("⚠️ 更新門店換貨報表失敗: " + e.getMessage());
+            e.printStackTrace(); // 建議打印堆棧以便調試
         }
     }
 
-    /**
-     * 【新增方法】：更新每日業務報表中的退貨數據
-     */
-    private void updateDailyReportForReturn(AfterSalesRequest request) {
-        // 1. 確定報表日期 (使用退貨完成的日期)
-        LocalDate reportDate = request.getCompletedAt().toLocalDate();
-
-        // 2. 查找當日報表，如果不存在則創建新記錄
-        DailyBusinessReport report = dailyReportRepository.findByReportDate(reportDate)
-                .orElseGet(() -> {
-                    DailyBusinessReport newReport = new DailyBusinessReport();
-                    newReport.setReportDate(reportDate);
-                    return newReport;
-                });
-
-        // 3. 計算本次退貨的總金額和總件數
-        BigDecimal totalRefundAmount = BigDecimal.ZERO;
-        int totalReturnItems = 0;
-
-        for (AfterSalesRequestItem item : request.getItems()) {
-            // 累加退款金額 (使用明細中的最終結算金額)
-            if (item.getFinalSettleAmount() != null) {
-                totalRefundAmount = totalRefundAmount.add(item.getFinalSettleAmount());
-            }
-            // 累加退貨件數
-            totalReturnItems += item.getReturnQuantity();
-        }
-
-        // 4. 累加到報表字段中
-        // 退款金額 = 原退款金額 + 本次退款金額
-        report.setRefundAmount(report.getRefundAmount().add(totalRefundAmount));
-        // 退貨件數 = 原退貨件數 + 本次退貨件數
-        report.setRefundCount(report.getRefundCount() + totalReturnItems);
-
-        // 5. 保存更新後的報表
-        dailyReportRepository.save(report);
-    }
 
     /**
      * 【新增 4】：更新門店每日業務報表中的退貨/換貨數據
+     * 【核心修改】：同時更新門店季度銷售報表中的退貨統計
      */
     private void updateStoreDailyReportForReturn(AfterSalesRequest request) {
         try {
             // 1. 解析門店 ID
+            if (request.getStoreId() == null || request.getStoreId().trim().isEmpty()) {
+                System.err.println("⚠️ 售後申請未關聯門店，跳過門店報表更新");
+                return;
+            }
             Long storeId = Long.parseLong(request.getStoreId());
             LocalDate reportDate = request.getCompletedAt().toLocalDate();
 
-            // 2. 獲取門店實體 (為了滿足 JPA 的 @ManyToOne 關聯)
+            // 2. 獲取門店實體
             OfflineStore store = offlineStoreRepository.findById(storeId)
                     .orElseThrow(() -> new RuntimeException("關聯的門店不存在，ID: " + storeId));
 
-            // 3. 查找或創建該門店當天的報表
+            // 3. 查找或創建該門店當天的日报表
             StoreDailyReport storeReport = storeDailyReportRepository.findByStore_StoreIdAndReportDate(storeId, reportDate)
                     .orElseGet(() -> {
                         StoreDailyReport newReport = new StoreDailyReport();
@@ -332,29 +276,49 @@ public class AfterSalesRequestService {
                         return newReport;
                     });
 
-            // 4. 計算本次退貨/換貨的總金額和總件數
+            // 4. 計算本次退貨/換貨的總金額和總件數，並更新季度報表
             BigDecimal totalRefundAmount = BigDecimal.ZERO;
             int totalReturnItems = 0;
 
             for (AfterSalesRequestItem item : request.getItems()) {
                 if (item.getFinalSettleAmount() != null) {
-                    // 注意：如果是換貨且用戶補差價，finalSettleAmount 可能是負數。
-                    // 這裡使用 abs() 確保累加的是「處理的金額規模」，或者你可以根據具體財務規則調整為直接 add
+                    // 累加退款金額 (取絕對值，因為財務報表中退款通常記為正數支出或負數收入，這裡假設 storeRefundAmount 存的是正數規模)
                     totalRefundAmount = totalRefundAmount.add(item.getFinalSettleAmount().abs());
                 }
                 totalReturnItems += item.getReturnQuantity();
+
+                // ==========================================
+                // 【核心新增】：更新季度銷售報表 (QuarterlySalesReport)
+                // ==========================================
+                Product product = item.getProduct();
+                BigDecimal itemRefundAmount = item.getFinalSettleAmount() != null ? item.getFinalSettleAmount().abs() : BigDecimal.ZERO;
+
+                // 調用新增的 recordReturn 方法
+                // 參數說明: productId, productName, brand, unitPrice, returnQuantity, returnAmount, salesChannel, storeId
+                quarterlySalesReportService.recordReturn(
+                        product.getProductId(),
+                        product.getDescription(),
+                        product.getBrand(),
+                        product.getPrice(),       // 使用原單價作為匹配依據
+                        item.getReturnQuantity(),
+                        itemRefundAmount,
+                        "OFFLINE",                // 線下渠道
+                        storeId                   // 具體門店ID
+                );
             }
 
-            // 5. 累加到門店報表字段中
+            // 5. 累加到門店日報表字段中
             storeReport.setStoreRefundAmount(storeReport.getStoreRefundAmount().add(totalRefundAmount));
             storeReport.setStoreRefundCount(storeReport.getStoreRefundCount() + totalReturnItems);
 
-            // 6. 保存更新後的門店報表
+            // 6. 保存更新後的門店日報表
             storeDailyReportRepository.save(storeReport);
 
         } catch (NumberFormatException e) {
-            // 防呆處理：如果 storeId 格式錯誤，記錄日誌但不中斷主流程
             System.err.println("⚠️ 無效的門店ID，無法更新門店報表: " + request.getStoreId());
+        } catch (Exception e) {
+            System.err.println("⚠️ 更新門店退貨報表失敗: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -371,22 +335,16 @@ public class AfterSalesRequestService {
      */
     @Transactional
     public void syncOrderStatusAfterSalesCompletion(Order order, AfterSalesRequest currentRequest) {
-        // ==========================================
         // 1. 獲取訂單基準數據：查詢該訂單下的所有商品明細
-        // ==========================================
         List<OrderItem> orderItems = orderItemRepository.findByOrder_OrderId(order.getOrderId());
         // 防禦性編程：如果訂單沒有明細（理論上不應發生），則直接終止邏輯
         if (orderItems == null || orderItems.isEmpty()) return;
 
-        // ==========================================
         // 2. 獲取歷史售後數據：查詢該訂單下所有狀態為「已完成 (COMPLETED)」的售後申請
-        // ==========================================
         List<AfterSalesRequest> completedRequests = afterSalesRequestRepository
                 .findByOriginalOrder_OrderIdAndStatus(order.getOrderId(), AfterSalesRequest.RequestStatus.COMPLETED);
 
-        // ==========================================
         // 3. 統計每個 OrderItem 已經被售後處理的總數量
-        // ==========================================
         Map<Long, Integer> processedQuantityMap = new HashMap<>();
 
         // 3.1 累加「歷史已經成功」的退/換貨數量 (每項物品都要找)

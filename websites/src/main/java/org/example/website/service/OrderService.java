@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -31,7 +32,8 @@ public class OrderService {
     private final StoreInventoryRepository storeInventoryRepository;
     private final NotificationRepository notificationRepository;
     private final UserAddressRepository userAddressRepository;
-
+    private final StoreDailyReportRepository storeDailyReportRepository;
+    private final StaffRepository staffRepository;
     /**
      * 1. 創建訂單 (移除庫存扣減，僅校驗庫存是否充足)
      */
@@ -182,6 +184,7 @@ public class OrderService {
             OfflineStore store = offlineStoreRepository.findById(storeId)
                     .orElseThrow(() -> new RuntimeException("門店不存在"));
             order.setOfflineStore(store);
+            order.setOrderSource("OFFLINE");
 
             if (appointmentDate != null) {
                 order.setAppointmentDate(appointmentDate);
@@ -216,27 +219,85 @@ public class OrderService {
         // 11. 線上支付成功，呼叫線上專屬的庫存扣減方法！
         deductOnlineStock(savedOrder);
         // ==========================================
-        // 12. 記錄季度銷售報表數據
+        // 12. 記錄銷售報表數據 (核心修改區)
         // ==========================================
+
+        // 判斷是否為「線下門店自取」
+        boolean isStorePickup = "STORE_PICKUP".equals(deliveryMethod) && savedOrder.getOfflineStore() != null;
+        Long targetStoreId = isStorePickup ? savedOrder.getOfflineStore().getStoreId() : null;
+
         for (OrderItem item : savedOrder.getItems()) {
             Product product = item.getProduct();
             BigDecimal itemTotalAmount = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
 
-            // 調用記錄服務
-            quarterlySalesReportService.recordSale(
-                    product.getProductId(),
-                    product.getDescription(), // 作為 productName 快照
-                    product.getBrand(),       // 作為 brand 快照
-                    product.getPrice(),       // unitPrice
-                    item.getQuantity(),       // quantity
-                    itemTotalAmount           // totalAmount
-            );
+            if (isStorePickup) {
+                // === 情況 A：線上支付，線下取貨 -> 業績歸門店 ===
+
+                // 1. 更新門店每日業務報表
+                updateStoreDailyReportForPickup(savedOrder, targetStoreId);
+
+                // 2. 更新季度銷售報表 (標記為 OFFLINE 渠道，並綁定 storeId)
+                quarterlySalesReportService.recordSale(
+                        product.getProductId(),
+                        product.getDescription(),
+                        product.getBrand(),
+                        product.getPrice(),
+                        item.getQuantity(),
+                        itemTotalAmount,
+                        "OFFLINE",  // 渠道標記為線下，因為業績歸門店
+                        targetStoreId // 傳入門店 ID
+                );
+            } else {
+                // === 情況 B：純線上快遞 -> 業績歸線上總倉 ===
+
+                // 1. 更新每日業務報表 (線上部分)
+                dailyBusinessReportService.updateDailyReport(savedOrder);
+
+                // 2. 更新季度銷售報表 (標記為 ONLINE 渠道，storeId 為 null)
+                quarterlySalesReportService.recordSale(
+                        product.getProductId(),
+                        product.getDescription(),
+                        product.getBrand(),
+                        product.getPrice(),
+                        item.getQuantity(),
+                        itemTotalAmount,
+                        "ONLINE",
+                        null
+                );
+            }
         }
 
-        // 13. 更新每日業務報表
-        dailyBusinessReportService.updateDailyReport(savedOrder);
-
         return savedOrder;
+    }
+
+    /**
+     * 【新增輔助方法】更新門店每日業務報表 (針對線上支付線下取貨場景)
+     */
+    private void updateStoreDailyReportForPickup(Order order, Long storeId) {
+        if (storeId == null) return;
+
+        LocalDate reportDate = LocalDate.now(); // 或使用 order.getPaidAt().toLocalDate()
+
+        // 查找或創建該門店當日的報表
+        StoreDailyReport report = storeDailyReportRepository.findByStore_StoreIdAndReportDate(storeId, reportDate)
+                .orElseGet(() -> {
+                    StoreDailyReport newReport = new StoreDailyReport();
+                    OfflineStore store = offlineStoreRepository.findById(storeId)
+                            .orElseThrow(() -> new RuntimeException("門店不存在"));
+                    newReport.setStore(store);
+                    newReport.setReportDate(reportDate);
+                    return newReport;
+                });
+
+        // 累加門店 GMV
+        BigDecimal currentGmv = report.getStoreGmv() != null ? report.getStoreGmv() : BigDecimal.ZERO;
+        report.setStoreGmv(currentGmv.add(order.getTotalAmount()));
+
+        // 累加門店訂單數
+        Integer currentOrders = report.getStoreOrders() != null ? report.getStoreOrders() : 0;
+        report.setStoreOrders(currentOrders + 1);
+
+        storeDailyReportRepository.save(report);
     }
 
     /**
@@ -273,7 +334,7 @@ public class OrderService {
         order.setPaymentStatus(Order.PaymentStatus.PENDING_OFFLINE);
         order.setPaymentMethod("OFFLINE_STORE");
         order.setOfflineStore(store);
-
+        order.setOrderSource("OFFLINE");
         order.setDeliveryMethod("STORE_PICKUP");
         order.setDelivery(false); // 線下支付=門店自取，delivery=false
 
@@ -440,10 +501,16 @@ public class OrderService {
         // 4. 恢復庫存 (這就是您提到的缺失部分)
         restoreStock(order);
 
-        // 5. 更新每日業務報表 (記錄退款，不修改原始銷售數據)
-        updateDailyBusinessReportForCancellation(order);
+        // 5. 【核心修改】：根據訂單來源更新不同的報表
+        if ("OFFLINE".equals(order.getOrderSource())) {
+            // 線下訂單：更新門店日報表
+            updateStoreDailyReportForCancellation(order);
+        } else {
+            // 線上訂單：更新全局日報表
+            updateDailyBusinessReportForCancellation(order);
+        }
 
-        // 6. 更新季度銷售報表 (記錄退貨，不修改原始銷售快照)
+        // 6. 季度報表更新 (保持不變，因為 QuarterlySalesReport 已經區分了 channel 和 store_id)
         updateQuarterlySalesReportForCancellation(order);
     }
 
@@ -475,12 +542,16 @@ public class OrderService {
 
 
     /**
-     * 更新每日業務報告 (記錄退款)
-     * 核心原則：totalGmv, totalOrders 保持不變，只增加 refundAmount。
-     * 【核心升級】：根據 orderSource 區分線下退款金額。
+     * 更新每日業務報告 (記錄退款) - 僅針對線上訂單
+     * 注意：線下訂單的退款現在由 updateStoreDailyReportForCancellation 處理
      */
     @Transactional
     public void updateDailyBusinessReportForCancellation(Order order) {
+        // 【核心判斷】：如果是線下訂單，直接跳過，不操作全局報表
+        if ("OFFLINE".equals(order.getOrderSource())) {
+            return;
+        }
+
         // 使用訂單創建日期或付款日期作為報表日期
         LocalDate reportDate = order.getPaidAt() != null ? order.getPaidAt().toLocalDate() : order.getCreatedAt().toLocalDate();
 
@@ -490,36 +561,68 @@ public class OrderService {
         int itemCount = order.getItems().stream().mapToInt(OrderItem::getQuantity).sum();
         BigDecimal refundAmount = order.getTotalAmount();
 
-        // 1. 增加總退貨件數和總退款金額
+        // 1. 增加總退貨件數和總退款金額 (僅線上)
         report.setRefundCount(report.getRefundCount() + itemCount);
         report.setRefundAmount(report.getRefundAmount().add(refundAmount));
-
-        // 2. 【核心新增】：如果是線下訂單，額外累加到 offlineRefundAmount
-        if ("OFFLINE".equals(order.getOrderSource())) {
-            BigDecimal currentOfflineRefund = report.getOfflineRefundAmount() != null ? report.getOfflineRefundAmount() : BigDecimal.ZERO;
-            report.setOfflineRefundAmount(currentOfflineRefund.add(refundAmount));
-        }
 
         dailyBusinessReportRepository.save(report);
     }
 
     /**
-     * 更新季度銷售報告 (記錄退貨)
-     * 核心原則：quantity, totalAmount 保持不變，只增加 refundQuantity 和 refundAmount
+     * 更新【門店】每日業務報告 (記錄線下訂單取消/退款)
+     * 核心原則：減少門店當日 GMV 和訂單數，增加門店當日退款額。
      */
+    @Transactional
+    public void updateStoreDailyReportForCancellation(Order order) {
+        // 【核心判斷】：如果不是線下訂單，或者沒有關聯門店，則不處理
+        if (!"OFFLINE".equals(order.getOrderSource()) || order.getOfflineStore() == null) {
+            return;
+        }
+
+        OfflineStore store = order.getOfflineStore();
+        // 使用訂單付款日期或創建日期作為報表日期
+        LocalDate reportDate = order.getPaidAt() != null ? order.getPaidAt().toLocalDate() : order.getCreatedAt().toLocalDate();
+
+        // 查找該門店當天的報表
+        StoreDailyReport storeReport = storeDailyReportRepository.findByStore_StoreIdAndReportDate(store.getStoreId(), reportDate)
+                .orElseThrow(() -> new RuntimeException("找不到該門店當日的業務報表，無法記錄退款"));
+
+        int itemCount = order.getItems().stream().mapToInt(OrderItem::getQuantity).sum();
+        BigDecimal refundAmount = order.getTotalAmount();
+
+        // 1. 增加門店當日退款金額
+        BigDecimal currentRefund = storeReport.getStoreRefundAmount() != null ? storeReport.getStoreRefundAmount() : BigDecimal.ZERO;
+        storeReport.setStoreRefundAmount(currentRefund.add(refundAmount));
+
+        // 2. 增加門店當日退貨件數
+        Integer currentRefundCount = storeReport.getStoreRefundCount() != null ? storeReport.getStoreRefundCount() : 0;
+        storeReport.setStoreRefundCount(currentRefundCount + itemCount);
+
+        storeDailyReportRepository.save(storeReport);
+    }
+
     @Transactional
     public void updateQuarterlySalesReportForCancellation(Order order) {
         int year = order.getCreatedAt().getYear();
         int quarter = (order.getCreatedAt().getMonthValue() - 1) / 3 + 1;
 
+        // 【核心判斷】：確定銷售渠道和門店ID
+        // 如果訂單是線下門店支付或自取，則為 OFFLINE，否則為 ONLINE
+        boolean isOffline = "OFFLINE_STORE".equals(order.getPaymentMethod()) ||
+                "STORE_PICKUP".equals(order.getDeliveryMethod());
+        String salesChannel = isOffline ? "OFFLINE" : "ONLINE";
+        Long storeId = isOffline && order.getOfflineStore() != null ? order.getOfflineStore().getStoreId() : null;
+
         for (OrderItem item : order.getItems()) {
-            // 根據 年份、季度、商品ID、單價 查找唯一的歷史快照記錄
+            // 【核心修改】：調用新的 Repository 方法，傳入 channel 和 storeId
             QuarterlySalesReport report = quarterlySalesReportRepository
-                    .findByYearAndQuarterAndProductIdAndUnitPrice(
+                    .findByYearAndQuarterAndProductIdAndUnitPriceAndSalesChannelAndStoreId(
                             year,
                             quarter,
                             item.getProduct().getProductId(),
-                            item.getPrice()
+                            item.getPrice(),
+                            salesChannel,
+                            storeId
                     )
                     .orElseThrow(() -> new RuntimeException("找不到對應的季度報表記錄，無法記錄退貨"));
 
@@ -535,6 +638,7 @@ public class OrderService {
             quarterlySalesReportRepository.save(report);
         }
     }
+
     /**
      * 隱藏訂單 (用戶端的「刪除」操作，實際為軟刪除/隱藏)
      * 僅允許對已取消或已退貨的訂單執行此操作
@@ -559,36 +663,74 @@ public class OrderService {
 
     @Transactional
     public void confirmPickup(String orderNo, String currentUserUsername) {
-        // 1. 判斷當前用戶是否是管理員
+        // 1. 獲取當前用戶實體
         User currentUser = userRepository.findByUsername(currentUserUsername)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
-        boolean isAdmin = currentUser.getRole()== User.Role.ADMIN;
-
+        // 2. 查找訂單
         Order order;
-        if (isAdmin) {
+
+        // 【核心修改】：判斷權限邏輯
+        // A. 如果是 ADMIN，可以操作所有訂單
+        // B. 如果是 SALES 或 STORE_MANAGER，需要檢查他們是否屬於該訂單關聯的門店
+        // C. 否則，只能操作自己的訂單
+
+        boolean isGlobalAdmin = currentUser.getRole() == User.Role.ADMIN;
+
+        if (isGlobalAdmin) {
             // 管理員：只校驗訂單號是否存在
             order = orderRepository.findByOrderNo(orderNo)
                     .orElseThrow(() -> new RuntimeException("訂單不存在"));
         } else {
-            // 普通用戶：校驗訂單號和用戶名（只能確認自己的訂單）
-            order = orderRepository.findByOrderNoAndUser_Username(orderNo, currentUserUsername)
-                    .orElseThrow(() -> new RuntimeException("訂單不存在或無權操作"));
+            // 非管理員：先查出訂單（不帶用戶限制），然後進行細緻的權限校驗
+            order = orderRepository.findByOrderNo(orderNo)
+                    .orElseThrow(() -> new RuntimeException("訂單不存在"));
+
+            boolean isAuthorized = false;
+
+            // 情況 1：是訂單的主人（買家）
+            if (order.getUser().getUsername().equals(currentUserUsername)) {
+                isAuthorized = true;
+            }
+            // 情況 2：是該訂單關聯門店的員工 (SALES 或 STORE_MANAGER)
+            else if (order.getOfflineStore() != null &&
+                    (currentUser.getRole() == User.Role.SALES || currentUser.getRole() == User.Role.STORE_MANAGER)) {
+
+                // 通過 Staff 表查詢該用戶是否隸屬於此門店
+                Optional<Staff> staffOpt = staffRepository.findByUser(currentUser);
+                if (staffOpt.isPresent()) {
+                    Staff staff = staffOpt.get();
+                    // 檢查員工所屬門店是否與訂單門店一致
+                    if (staff.getStore() != null &&
+                            staff.getStore().getStoreId().equals(order.getOfflineStore().getStoreId())) {
+                        isAuthorized = true;
+                    }
+                }
+            }
+
+            if (!isAuthorized) {
+                throw new RuntimeException("訂單不存在或無權操作此訂單");
+            }
         }
 
-        // 2. 核心校驗：必須是門店自取
+        // 3. 核心校驗：必須是門店自取
         if (!"STORE_PICKUP".equals(order.getDeliveryMethod())) {
             throw new RuntimeException("此訂單非門店自取，無法執行取貨操作");
         }
 
-        // 3. 記錄實際收貨時間
+        // 確保訂單關聯了門店，否則無法更新門店報表
+        if (order.getOfflineStore() == null) {
+            throw new RuntimeException("訂單未關聯門店，無法執行門店取貨邏輯");
+        }
+
+        // 4. 記錄實際收貨時間
         LocalDateTime now = LocalDateTime.now();
         order.setReceivedAt(now);
 
         // 標記是否需要更新報表（防止已付款訂單在取貨時重複計算）
         boolean shouldUpdateReport = false;
 
-        // 4. 根據當前支付狀態執行不同邏輯
+        // 5. 根據當前支付狀態執行不同邏輯
         if (order.getPaymentStatus() == Order.PaymentStatus.PENDING_OFFLINE) {
             // 情況 A：待線下付款 -> 變為已線下付款，訂單直接完成
             // 【關鍵】此時才真正產生銷售，需要更新報表
@@ -610,33 +752,60 @@ public class OrderService {
             throw new RuntimeException("當前訂單狀態不允許執行取貨操作");
         }
 
-        // 5. 保存訂單狀態更新
+        // 6. 保存訂單狀態更新
         orderRepository.save(order);
 
-        // 6. 【新增】如果需要，更新業務報表 (僅針對情況 A：待線下付款轉為已完成)
+        // 7. 【核心修改】如果需要，更新業務報表 (僅針對情況 A：待線下付款轉為已完成)
         if (shouldUpdateReport) {
-            // 6.1 更新每日業務報表 (自動處理: total_gmv += totalAmount, total_orders += 1, total_items_sold += 訂單內所有物品數量總和)
-            dailyBusinessReportService.updateDailyReport(order);
+            // 7.1 更新【門店】每日業務報表 (StoreDailyReport)
+            OfflineStore store = order.getOfflineStore();
+            LocalDate reportDate = now.toLocalDate(); // 使用當前日期作為報表日期
 
-            // 6.2 更新季度銷售報表 (根據 product_id, quarter, unit_price 匹配並累加 quantity 和 total_amount)
+            // 查找或創建該門店當日的報表記錄
+            StoreDailyReport storeReport = storeDailyReportRepository
+                    .findByStore_StoreIdAndReportDate(store.getStoreId(), reportDate)
+                    .orElseGet(() -> {
+                        StoreDailyReport newReport = new StoreDailyReport();
+                        newReport.setStore(store);
+                        newReport.setReportDate(reportDate);
+                        return newReport;
+                    });
+
+            // 累加門店 GMV
+            BigDecimal currentGmv = storeReport.getStoreGmv() != null ? storeReport.getStoreGmv() : BigDecimal.ZERO;
+            storeReport.setStoreGmv(currentGmv.add(order.getTotalAmount()));
+
+            // 累加門店訂單數
+            Integer currentOrders = storeReport.getStoreOrders() != null ? storeReport.getStoreOrders() : 0;
+            storeReport.setStoreOrders(currentOrders + 1);
+
+            // 保存門店報表
+            storeDailyReportRepository.save(storeReport);
+
+
+            // 7.2 更新季度銷售報表 (QuarterlySalesReport)
+            Long storeId = store.getStoreId();
+
             for (OrderItem item : order.getItems()) {
                 Product product = item.getProduct();
                 // 計算該商品的總成交額
                 BigDecimal itemTotalAmount = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
 
-                // 調用現有的 recordSale 方法，它內部已經完美實現了：
-                // "根據年份、季度、商品ID和單價查找，若存在則累加 quantity 和 totalAmount，若不存在則新建"
+                // 調用現有的 recordSale 方法，傳遞線下渠道和門店ID
                 quarterlySalesReportService.recordSale(
                         product.getProductId(),
                         product.getDescription(), // productName 快照
                         product.getBrand(),       // brand 快照
                         product.getPrice(),       // unitPrice
                         item.getQuantity(),       // quantity
-                        itemTotalAmount           // totalAmount
+                        itemTotalAmount,          // totalAmount
+                        "OFFLINE",                // salesChannel: 線下門店銷售
+                        storeId                   // storeId: 具體門店ID
                 );
             }
         }
     }
+
     @Transactional
     public void cancelExpiredOrder(String orderNo, String customMessage) {
         // 1. 查找訂單

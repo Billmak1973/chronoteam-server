@@ -375,44 +375,6 @@ public class CheckoutController {
         }
     }
 
-    /**
-     * 根據配送模式計算截止時間 (統一傳入 offset)
-     */
-    private LocalDateTime calculateCutoffDateTime(String deliveryMode, int cutoffDayOffset) {
-        LocalDateTime now = LocalDateTime.now();
-        String cutoffTimeStr = systemConfigService.getGlobalCutoffTime(); // 例如 "16:00"
-
-        String[] timeParts = cutoffTimeStr.split(":");
-        int cutoffHour = Integer.parseInt(timeParts[0]);
-        int cutoffMinute = Integer.parseInt(timeParts[1]);
-
-        switch (deliveryMode) {
-            case "NEXT_DAY":
-                return calculateNextDayCutoff(now, cutoffHour, cutoffMinute, cutoffDayOffset);
-            case "SPECIFIC_DAYS":
-                return calculateSpecificDaysCutoff(now, cutoffHour, cutoffMinute, cutoffDayOffset);
-            case "CUSTOM":
-                return calculateCustomDaysCutoff(now, cutoffHour, cutoffMinute, cutoffDayOffset);
-            default:
-                return calculateNextDayCutoff(now, cutoffHour, cutoffMinute, cutoffDayOffset);
-        }
-    }
-
-    private LocalDateTime calculateNextDayCutoff(LocalDateTime now, int cutoffHour, int cutoffMinute, int cutoffDayOffset) {
-        // 次日達：基準送貨日是明天
-        LocalDate baseDeliveryDate = now.toLocalDate().plusDays(1);
-        // 截單日 = 基準送貨日 + offset (通常 offset = -1，所以截單日就是今天)
-        LocalDate cutoffDate = baseDeliveryDate.plusDays(cutoffDayOffset);
-        LocalDateTime cutoffDateTime = cutoffDate.atTime(cutoffHour, cutoffMinute, 0);
-
-        // 如果當前時間已過截單時間，說明錯過這一班，基準送貨日順延1天，截單日也順延1天
-        if (now.isAfter(cutoffDateTime)) {
-            baseDeliveryDate = baseDeliveryDate.plusDays(1);
-            cutoffDate = baseDeliveryDate.plusDays(cutoffDayOffset);
-            cutoffDateTime = cutoffDate.atTime(cutoffHour, cutoffMinute, 0);
-        }
-        return cutoffDateTime;
-    }
 
     private LocalDateTime calculateSpecificDaysCutoff(LocalDateTime now, int cutoffHour, int cutoffMinute, int cutoffDayOffset) {
         List<Integer> specificDays = systemConfigService.getDeliverySpecificDays();
@@ -433,23 +395,6 @@ public class CheckoutController {
         return cutoffDateTime;
     }
 
-    private LocalDateTime calculateCustomDaysCutoff(LocalDateTime now, int cutoffHour, int cutoffMinute, int cutoffDayOffset) {
-        Integer customDays = systemConfigService.getDeliveryCustomDays();
-
-        // 基準送貨日 = 今天 + customDays
-        LocalDate baseDeliveryDate = now.toLocalDate().plusDays(customDays);
-        // 截單日 = 基準送貨日 + offset
-        LocalDate cutoffDate = baseDeliveryDate.plusDays(cutoffDayOffset);
-        LocalDateTime cutoffDateTime = cutoffDate.atTime(cutoffHour, cutoffMinute, 0);
-
-        // 如果已過截單時間，順延一個 customDays 週期
-        if (now.isAfter(cutoffDateTime)) {
-            baseDeliveryDate = baseDeliveryDate.plusDays(customDays);
-            cutoffDate = baseDeliveryDate.plusDays(cutoffDayOffset);
-            cutoffDateTime = cutoffDate.atTime(cutoffHour, cutoffMinute, 0);
-        }
-        return cutoffDateTime;
-    }
 
     /**
      * 輔助方法：從指定日期開始，尋找下一個符合 specificDays 的日期

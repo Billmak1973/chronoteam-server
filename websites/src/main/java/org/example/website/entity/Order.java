@@ -63,7 +63,7 @@ public class Order {
 
     /**
      * 【新增】訂單來源
-     * "ONLINE" : 線上商城下單 (包含線上選好去線下付款)
+     * "ONLINE" : 線上商城下單 (不包含線上選好去線下付款，只適合綫上訂單+快遞)
      * "OFFLINE": 純線下門店直接開單 / POS機購買 (店員後台直接創建)
      */
     @Column(name = "order_source", length = 20)
