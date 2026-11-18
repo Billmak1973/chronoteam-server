@@ -98,4 +98,54 @@ public interface StoreInventoryRepository extends JpaRepository<StoreInventory, 
 
     // 根據門店ID獲取該門店的所有庫存記錄
     List<StoreInventory> findByStore_StoreId(Long storeId);
+
+    /**
+     * 【新增】原子增加門店預留庫存 (用於線下預訂/待付款訂單)
+     * 核心邏輯：只有當 (物理庫存 - 預留庫存) >= 預訂數量時，才允許增加預留數。
+     * 這防止了超賣。
+     */
+    @Modifying
+    @Query("UPDATE StoreInventory si SET si.reservedQuantity = si.reservedQuantity + :reserveQty " +
+            "WHERE si.store.storeId = :storeId " +
+            "AND si.product.productId = :productId " +
+            "AND (si.quantity - si.reservedQuantity) >= :reserveQty")
+    int reserveStoreStock(@Param("storeId") Long storeId,
+                          @Param("productId") Integer productId,
+                          @Param("reserveQty") Integer reserveQty);
+
+    /**
+     * 【新增】原子釋放門店預留庫存
+     * 核心條件：AND si.reserved_quantity >= :releaseQty 確保不會減成負數
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE StoreInventory si SET si.reservedQuantity = si.reservedQuantity - :releaseQty " +
+            "WHERE si.store.storeId = :storeId " +
+            "AND si.product.productId = :productId " +
+            "AND si.reservedQuantity >= :releaseQty")
+    int releaseReservedStock(@Param("storeId") Long storeId,
+                             @Param("productId") Integer productId,
+                             @Param("releaseQty") Integer releaseQty);
+
+    /**
+     * 【原子操作】同時扣減物理庫存與釋放預留庫存
+     * 用於線下門店取貨/支付成功場景
+     *
+     * @param storeId   門店 ID
+     * @param productId 商品 ID
+     * @param deductQty 需要扣減/釋放的數量
+     * @return 受影響的行數 (1=成功, 0=庫存或預留不足)
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE StoreInventory si " +
+            "SET si.quantity = si.quantity - :deductQty, " +
+            "    si.reservedQuantity = si.reservedQuantity - :deductQty " +
+            "WHERE si.store.storeId = :storeId " +
+            "AND si.product.productId = :productId " +
+            "AND si.quantity >= :deductQty " +
+            "AND si.reservedQuantity >= :deductQty")
+    int deductAndReleaseReservedStock(@Param("storeId") Long storeId,
+                                      @Param("productId") Integer productId,
+                                      @Param("deductQty") Integer deductQty);
 }

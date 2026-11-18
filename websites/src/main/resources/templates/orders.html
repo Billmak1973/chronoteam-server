@@ -1709,6 +1709,7 @@
             currentPage: 1,
             pendingDeleteOrderNo: null,
             pendingDeleteButton: null,
+            pendingDeleteOrderType: null, // 用於區分 'unpaid' 或 'pending-offline'
             currentCancelOrderNo: null,
 
             // 售後相關狀態 (通用：支援退貨與換貨)
@@ -2091,7 +2092,25 @@
                     actionsHtml += `<button class="btn-sm btn-contact" onclick="showNotification(\`${notifyMsg}\`)"><i class="fas fa-phone"></i> 聯繫店鋪</button>`;
                 }
                 if (isPaid && order.status === 'PAID' || order.status === 'SHIPPED') actionsHtml += `<button class="btn-sm btn-cancel-order" onclick="ChronoTeamOrders.openCancelOrderModal('${order.orderNo}')" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none;"><i class="fas fa-times-circle"></i> 取消訂單</button>`;
-                if (isUnpaid || isPendingOffline) actionsHtml += `<button class="btn-sm btn-delete-order" onclick="ChronoTeamOrders.openDeleteOrderModal(this)" data-order-no="${order.orderNo}"><i class="fas fa-trash-alt"></i> 刪除訂單</button>`;
+
+                // 替換原有的 if (isUnpaid || isPendingOffline) 代碼塊
+                if (isUnpaid) {
+                    actionsHtml += `<button class="btn-sm btn-delete-order"
+        onclick="ChronoTeamOrders.openDeleteOrderModal(this)"
+        data-order-no="${order.orderNo}"
+        data-type="unpaid">
+        <i class="fas fa-trash-alt"></i> 刪除訂單
+    </button>`;
+                }
+                if (isPendingOffline) {
+                    actionsHtml += `<button class="btn-sm btn-delete-order"
+        onclick="ChronoTeamOrders.openDeleteOrderModal(this)"
+        data-order-no="${order.orderNo}"
+        data-type="pending-offline">
+        <i class="fas fa-trash-alt"></i> 刪除訂單
+    </button>`;
+                }
+
                 actionsHtml += `<button class="btn-sm btn-view toggle-details-btn" onclick="ChronoTeamOrders.toggleOrderDetails(this)" data-order-no="${order.orderNo}"><i class="fas fa-eye"></i> 查看詳情</button>`;
 
                 if (isPaid && order.status === 'PAID') {
@@ -2578,7 +2597,21 @@
         function openDeleteOrderModal(button) {
             CTO.pendingDeleteOrderNo = button.getAttribute('data-order-no');
             CTO.pendingDeleteButton = button;
+
+            // 獲取訂單類型並存儲
+            const orderType = button.getAttribute('data-type') || 'unpaid';
+            CTO.pendingDeleteOrderType = orderType;
+
             document.getElementById('deleteOrderNoDisplay').textContent = CTO.pendingDeleteOrderNo;
+
+            // 【核心修改】根據類型動態更新提示文字
+            const warningTextEl = document.querySelector('#deleteOrderModal .warning-box p:last-child');
+            if (orderType === 'pending-offline') {
+                warningTextEl.innerHTML = '此操作將<strong>永久刪除</strong>該訂單記錄，並<span style="color:#dc3545;font-weight:bold;">自動釋放門店預留庫存</span>！<br><small>僅限刪除「待線下付款」狀態的訂單。</small>';
+            } else {
+                warningTextEl.innerHTML = '此操作將<strong>永久刪除</strong>該訂單記錄，且無法恢復！<br><small>僅限刪除「待付款」狀態的訂單。</small>';
+            }
+
             document.getElementById('deleteOrderModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
         }
@@ -2593,10 +2626,18 @@
         async function confirmDeleteOrder() {
             if (!CTO.pendingDeleteOrderNo) return;
             const orderNoToDelete = CTO.pendingDeleteOrderNo;
+            const orderType = CTO.pendingDeleteOrderType || 'unpaid'; // 默認為 unpaid
+
             closeDeleteOrderModal();
+
             try {
-                const res = await fetch(`/api/order/${orderNoToDelete}`, {method: 'DELETE', headers: {'Content-Type': 'application/json'}});
+                // 【核心修改】在 URL 中附加 type 參數
+                const res = await fetch(`/api/order/${orderNoToDelete}?type=${orderType}`, {
+                    method: 'DELETE',
+                    headers: {'Content-Type': 'application/json'}
+                });
                 const result = await res.json();
+
                 if (res.ok && result.success) {
                     showNotification('✅ 訂單已成功刪除');
                     loadOrders(CTO.currentTab, CTO.currentPage);

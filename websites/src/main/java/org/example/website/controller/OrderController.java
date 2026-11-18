@@ -282,9 +282,7 @@ public class OrderController {
                 map.put("courier", null);
             }
 
-            // ==========================================
             // 提取收貨地址資訊 (userAddress)
-            // ==========================================
             if (order.getUserAddress() != null) {
                 Map<String, Object> addressMap = new HashMap<>();
                 addressMap.put("fullAddress", order.getUserAddress().getFullAddress());
@@ -490,35 +488,25 @@ public class OrderController {
         }
     }
 
-    @Operation(
-            summary = "刪除訂單",
-            description = "刪除指定的訂單記錄。為保障數據安全，僅允許刪除「未付款」或「待線下付款」狀態的訂單。"
-    )
+    @Operation(summary = "刪除訂單", description = "刪除指定的訂單記錄。若為待線下付款訂單，將同步釋放門店預留庫存。")
     @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "刪除成功",
-                    content = @Content(schema = @Schema(implementation = Result.class))
-            ),
-            @ApiResponse(responseCode = "400", description = "業務異常 (如：已付款無法刪除)"),
+            @ApiResponse(responseCode = "200", description = "刪除成功"),
+            @ApiResponse(responseCode = "400", description = "業務異常"),
             @ApiResponse(responseCode = "401", description = "未登入")
     })
     @DeleteMapping("/{orderNo}")
     public ResponseEntity<Result> deleteOrder(
-            @Parameter(description = "訂單編號", example = "ORD-1715600000000-ABC123", required = true)
-            @PathVariable String orderNo,
+            @Parameter(description = "訂單編號", required = true) @PathVariable String orderNo,
+            @Parameter(description = "訂單類型 (unpaid / pending-offline)", example = "pending-offline")
+            @RequestParam(defaultValue = "unpaid") String type, // 【新增】接收類型參數
+            @Parameter(hidden = true) Authentication authentication) {
 
-            @Parameter(hidden = true)
-            Authentication authentication) {
         try {
             String username = authentication.getName();
-            // 調用 Service 層執行刪除
-            orderService.deleteOrder(orderNo, username);
-
-            // 返回成功響應 (前端依賴 success 和 message 字段)
+            // 【核心修改】調用 Service 時傳入 type
+            orderService.deleteOrder(orderNo, username, type);
             return ResponseEntity.ok(Result.ok("訂單已成功刪除"));
         } catch (RuntimeException e) {
-            // 捕獲業務異常 (如：訂單不存在、已付款無法刪除等)
             return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Result.error("系統錯誤，刪除失敗"));

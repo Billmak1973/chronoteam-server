@@ -2916,7 +2916,7 @@
                         showNotification('❌ ' + (result.message || '支付失敗'), true);
                     }
                 } else {
-                    // 線下支付邏輯
+                    // 線下支付+綫下到店取貨邏輯     CheckoutController的createOfflinePayment
                     const response = await fetch('/checkout/api/offline-payment', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},

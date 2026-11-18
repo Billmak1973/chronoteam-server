@@ -66,18 +66,37 @@ public class CheckoutController {
         model.addAttribute("activeStores", activeStores);
         model.addAttribute("hasStores", !activeStores.isEmpty());
 
+        // 【核心修復】：構建門店可售庫存映射 (quantity - reserved_quantity)
         if (!activeStores.isEmpty()) {
             Map<Long, Map<Integer, Integer>> storeStockMap = new HashMap<>();
+
             for (OfflineStore store : activeStores) {
                 Map<Integer, Integer> productStockMap = new HashMap<>();
+
                 for (OrderItem item : orderItems) {
-                    Optional<StoreInventory> storeInv = storeInventoryRepository
-                            .findByStore_StoreIdAndProduct_ProductId(store.getStoreId(), item.getProduct().getProductId());
-                    int stock = storeInv.map(StoreInventory::getQuantity).orElse(0);
-                    productStockMap.put(item.getProduct().getProductId(), stock);
+                    Integer productId = item.getProduct().getProductId();
+
+                    // 1. 查詢該門店該商品的庫存記錄
+                    Optional<StoreInventory> storeInvOpt = storeInventoryRepository
+                            .findByStore_StoreIdAndProduct_ProductId(store.getStoreId(), productId);
+
+                    int availableStock = 0;
+
+                    if (storeInvOpt.isPresent()) {
+                        StoreInventory inv = storeInvOpt.get();
+                        int physicalQty = inv.getQuantity() != null ? inv.getQuantity() : 0;
+                        int reservedQty = inv.getReservedQuantity() != null ? inv.getReservedQuantity() : 0;
+
+                        // 2. 【關鍵公式】：真實可售 = 物理庫存 - 已預留庫存
+                        availableStock = Math.max(0, physicalQty - reservedQty);
+                    }
+
+                    productStockMap.put(productId, availableStock);
                 }
+
                 storeStockMap.put(store.getStoreId(), productStockMap);
             }
+
             model.addAttribute("storeStockMap", storeStockMap);
         }
 

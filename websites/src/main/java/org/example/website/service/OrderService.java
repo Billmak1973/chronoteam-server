@@ -87,53 +87,18 @@ public class OrderService {
         return savedOrder;
     }
 
-    /**
-     * 線上訂單支付成功後的庫存扣減 (扣減線上總倉)
-     */
-    private void deductOnlineStock(Order order) {
-        for (OrderItem item : order.getItems()) {
-            Product product = item.getProduct();
-            int qty = item.getQuantity();
-
-            // 二次校驗防超賣
-            if (product.getStock() < qty) {
-                throw new RuntimeException("支付失敗：線上商品 [" + product.getDescription() + "] 庫存不足！");
-            }
-
-            // 扣減線上庫存
-            product.setStock(product.getStock() - qty);
-            productRepository.save(product);
-        }
-    }
-
-    /**
-     * 線下門店訂單確認後的庫存扣減 (扣減特定門店)
-     */
-    private void deductOfflineStock(Order order) {
-        OfflineStore store = order.getOfflineStore();
-        if (store == null) {
-            throw new RuntimeException("線下訂單未關聯門店，無法扣減庫存");
-        }
-
-        for (OrderItem item : order.getItems()) {
-            Integer productId = item.getProduct().getProductId();
-            int qty = item.getQuantity();
-
-            // 使用原子更新語句扣減，如果返回 0 說明庫存不足(执行乐观锁更新，获取受影响的行数)
-            int updatedRows = storeInventoryRepository.deductStoreStock(store.getStoreId(), productId, qty);
-
-            if (updatedRows == 0) {
-                throw new RuntimeException("支付失敗：門店 [" + store.getName() + "] 的商品 [" + item.getProduct().getDescription() + "] 庫存不足！");
-            }
-        }
-    }
 
     /**
      * 2. 線上模擬支付處理 (支付成功後扣減庫存，並正確處理運費)
+     * 根據配送方式決定扣減線上總倉庫存還是線下門店庫存
      */
     @Transactional
-    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount, String deliveryMethod,
-                                 Long storeId, LocalDate customerSelectedDeliveryDate,LocalDate appointmentDate,Long addressId) {
+    public Order simulatePayment(String orderNo, String username, BigDecimal payAmount,
+                                 String deliveryMethod, Long storeId,
+                                 LocalDate customerSelectedDeliveryDate,
+                                 LocalDate appointmentDate,
+                                 Long addressId) { // <--- 新增 addressId 參數
+
         // 1. 查詢訂單並校驗權限
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
@@ -148,95 +113,134 @@ public class OrderService {
         BigDecimal realThreshold = systemConfigRepository.findById("FREE_SHIPPING_THRESHOLD")
                 .map(c -> new BigDecimal(c.getConfigValue())).orElse(new BigDecimal("50000"));
 
-        // 3. 獲取純商品總價 (創建訂單時存入的 totalAmount 就是純商品總價)
-        BigDecimal realSubtotal = order.getTotalAmount();
-        BigDecimal realTotal = realSubtotal; // 默認總價等於商品總價
+        // 獲取純商品總價 (創建訂單時存入的 totalAmount 就是純商品總價，這裡重新計算以防萬一，或者直接使用 order.getTotalAmount() 如果之前沒加運費)
+        // 注意：createOrder 時 totalAmount 是純商品價。simulatePayment 時需要加上運費才是最終支付金額。
+        BigDecimal subtotal = order.getItems().stream()
+                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // 4. 重新計算真實的應付總價
-        if ("EXPRESS".equals(deliveryMethod) && realSubtotal.compareTo(realThreshold) < 0) {
-            realTotal = realTotal.add(realShippingFee);
+        BigDecimal finalTotal = subtotal;
+
+        // 3. 重新計算真實的應付總價 (包含運費邏輯)
+        boolean isExpress = "EXPRESS".equals(deliveryMethod);
+        if (isExpress && subtotal.compareTo(realThreshold) < 0) {
+            finalTotal = finalTotal.add(realShippingFee);
         }
 
-//        System.out.println("====== 支付金额校验失败调试 ======");
-//        System.out.println("1. 前端传来的金额 (payAmount): " + payAmount);
-//        System.out.println("2. 订单原始商品总额 (realSubtotal): " + realSubtotal);
-//        System.out.println("3. 当前数据库配置的运费: " + realShippingFee);
-//        System.out.println("4. 当前数据库配置的免邮门槛: " + realThreshold);
-//        System.out.println("5. 前端传来的配送方式: " + deliveryMethod);
-//        System.out.println("6. 后端最终计算总额 (realTotal): " + realTotal);
-//        System.out.println("================================");
-
-        // 5. 核心安全校驗：比對前端傳來的金額與後端計算的真實總價是否一致
-        if (payAmount.compareTo(realTotal) != 0) {
-            throw new RuntimeException("安全警告：訂單金額與後端計算不符，可能存在篡改行為！");
+        // 4. 核心安全校驗：比對前端傳來的金額與後端計算的真實總價是否一致
+        if (payAmount.compareTo(finalTotal) != 0) {
+            throw new RuntimeException("安全警告：訂單金額與後端計算不符 (" + payAmount + " vs " + finalTotal + ")，可能存在篡改行為！");
         }
 
-        // 6. 更新訂單的真實總價與運費記錄 (寫入數據庫)
-        order.setTotalAmount(realTotal);
-        order.setShippingFee(realTotal.compareTo(realSubtotal) > 0 ? realShippingFee : BigDecimal.ZERO);
-
-        // 7. 設置配送方式和 delivery 字段
+        // 5. 更新訂單的基本信息
+        order.setTotalAmount(finalTotal);
+        order.setShippingFee(isExpress && subtotal.compareTo(realThreshold) < 0 ? realShippingFee : BigDecimal.ZERO);
         order.setDeliveryMethod(deliveryMethod);
-        order.setDelivery("EXPRESS".equals(deliveryMethod)); // 如果是快遞配送，delivery=true；門店自取=false
+        order.setDelivery(isExpress); // 如果是快遞配送，delivery=true；門店自取=false
 
-        // 如果是門店自取，且前端傳來了有效的 storeId，則保存到數據庫
-        if ("STORE_PICKUP".equals(deliveryMethod) && storeId != null) {
+        // 6. 處理地址與門店關聯
+        if ("STORE_PICKUP".equals(deliveryMethod)) {
+            if (storeId == null) {
+                throw new RuntimeException("門店自取必須選擇門店");
+            }
             OfflineStore store = offlineStoreRepository.findById(storeId)
                     .orElseThrow(() -> new RuntimeException("門店不存在"));
             order.setOfflineStore(store);
-            order.setOrderSource("OFFLINE");
+            order.setOrderSource("OFFLINE"); // 標記為線下業績
 
             if (appointmentDate != null) {
                 order.setAppointmentDate(appointmentDate);
             }
-        }
-
-        // 8. 如果是快遞配送，且前端傳來了有效的 addressId，則關聯收貨地址
-        if ("EXPRESS".equals(deliveryMethod) && addressId != null) {
-            UserAddress userAddress = userAddressRepository.findById(addressId)
-                    .orElseThrow(() -> new RuntimeException("收貨地址不存在"));
-
-            // 【安全校驗】：確保該地址確實屬於當前登錄用戶，防止越權漏洞
-            if (!userAddress.getUser().getUsername().equals(username)) {
-                throw new RuntimeException("無權使用此收貨地址");
+        } else if (isExpress) {
+            order.setOrderSource("ONLINE"); // 標記為線上業績
+            if (addressId != null) {
+                UserAddress userAddress = userAddressRepository.findById(addressId)
+                        .orElseThrow(() -> new RuntimeException("收貨地址不存在"));
+                // 安全校驗：確保地址屬於當前用戶
+                if (!userAddress.getUser().getUsername().equals(username)) {
+                    throw new RuntimeException("無權使用此收貨地址");
+                }
+                order.setUserAddress(userAddress);
             }
-
-            order.setUserAddress(userAddress);
         }
 
-        // 9. 【核心修正】設置預計送達日期 (如果顧客選擇了快遞且指定了日期)
-        if (customerSelectedDeliveryDate != null && "EXPRESS".equals(deliveryMethod)) {
+        // 7. 【核心修復】設置預計送達日期
+        if (customerSelectedDeliveryDate != null && isExpress) {
             order.setEstimatedDeliveryDate(customerSelectedDeliveryDate);
         }
 
-        // 10. 更新支付狀態
+        // 8. ==========================================
+        //    【最关键步骤】：支付成功，立即扣減庫存！
+        //    根據配送方式決定扣減哪裡的庫存
+        // ==========================================
+        deductStockUponPayment(order, deliveryMethod, storeId);
+
+        // 9. 更新支付狀態
         order.setPaymentStatus(Order.PaymentStatus.PAID_SIMULATED);
         order.setStatus(Order.OrderStatus.PAID);
         order.setPaidAt(LocalDateTime.now());
 
         Order savedOrder = orderRepository.save(order);
 
-        // 11. 線上支付成功，呼叫線上專屬的庫存扣減方法！
-        deductOnlineStock(savedOrder);
-        // ==========================================
-        // 12. 記錄銷售報表數據 (核心修改區)
-        // ==========================================
+        // 10. 記錄銷售報表數據 (保持原有邏輯，但需根據 orderSource 區分)
+        recordSalesReports(savedOrder);
 
-        // 判斷是否為「線下門店自取」
-        boolean isStorePickup = "STORE_PICKUP".equals(deliveryMethod) && savedOrder.getOfflineStore() != null;
-        Long targetStoreId = isStorePickup ? savedOrder.getOfflineStore().getStoreId() : null;
+        return savedOrder;
+    }
 
-        for (OrderItem item : savedOrder.getItems()) {
+    /**
+     * 【新增輔助方法】：根據配送方式扣減對應庫存
+     * - EXPRESS: 扣減 Product.stock (線上總倉)
+     * - STORE_PICKUP: 扣減 StoreInventory.quantity (特定門店)
+     */
+    private void deductStockUponPayment(Order order, String deliveryMethod, Long storeId) {
+        for (OrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            int qty = item.getQuantity();
+
+            if ("STORE_PICKUP".equals(deliveryMethod)) {
+                // === 情況 A：線下門店自取 ===
+                if (storeId == null) {
+                    throw new RuntimeException("系統錯誤：門店自取訂單未關聯門店ID");
+                }
+
+                // 使用原子更新語句扣減門店庫存
+                // deductStoreStock 返回受影響行數，若為 0 則表示庫存不足或記錄不存在
+                int updatedRows = storeInventoryRepository.deductStoreStock(storeId, product.getProductId(), qty);
+
+                if (updatedRows == 0) {
+                    // 如果扣減失敗，拋出異常，事務會回滾，訂單不會變成已支付
+                    throw new RuntimeException("支付失敗：門店 [" + order.getOfflineStore().getName() + "] 的商品 [" + product.getDescription() + "] 庫存不足！");
+                }
+
+            } else {
+                // === 情況 B：線上快遞配送 ===
+                // 二次校驗防超賣 (雖然創建訂單時校驗過，但支付瞬間可能庫存變動)
+                if (product.getStock() < qty) {
+                    throw new RuntimeException("支付失敗：線上商品 [" + product.getDescription() + "] 庫存不足！");
+                }
+
+                // 扣減線上總倉庫存
+                product.setStock(product.getStock() - qty);
+                productRepository.save(product);
+            }
+        }
+    }
+
+    /**
+     * 【新增輔助方法】：記錄銷售報表
+     */
+    private void recordSalesReports(Order order) {
+        boolean isStorePickup = "STORE_PICKUP".equals(order.getDeliveryMethod()) && order.getOfflineStore() != null;
+        Long targetStoreId = isStorePickup ? order.getOfflineStore().getStoreId() : null;
+
+        for (OrderItem item : order.getItems()) {
             Product product = item.getProduct();
             BigDecimal itemTotalAmount = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
 
             if (isStorePickup) {
-                // === 情況 A：線上支付，線下取貨 -> 業績歸門店 ===
-
-                // 1. 更新門店每日業務報表
-                updateStoreDailyReportForPickup(savedOrder, targetStoreId);
-
-                // 2. 更新季度銷售報表 (標記為 OFFLINE 渠道，並綁定 storeId)
+                // 線下業績：更新門店日報表 + 季度報表(渠道OFFLINE)
+                updateStoreDailyReportForPickup(order, targetStoreId);
                 quarterlySalesReportService.recordSale(
                         product.getProductId(),
                         product.getDescription(),
@@ -244,16 +248,12 @@ public class OrderService {
                         product.getPrice(),
                         item.getQuantity(),
                         itemTotalAmount,
-                        "OFFLINE",  // 渠道標記為線下，因為業績歸門店
-                        targetStoreId // 傳入門店 ID
+                        "OFFLINE",
+                        targetStoreId
                 );
             } else {
-                // === 情況 B：純線上快遞 -> 業績歸線上總倉 ===
-
-                // 1. 更新每日業務報表 (線上部分)
-                dailyBusinessReportService.updateDailyReport(savedOrder);
-
-                // 2. 更新季度銷售報表 (標記為 ONLINE 渠道，storeId 為 null)
+                // 線上業績：更新全局日報表 + 季度報表(渠道ONLINE)
+                dailyBusinessReportService.updateDailyReport(order);
                 quarterlySalesReportService.recordSale(
                         product.getProductId(),
                         product.getDescription(),
@@ -266,12 +266,10 @@ public class OrderService {
                 );
             }
         }
-
-        return savedOrder;
     }
 
     /**
-     * 【新增輔助方法】更新門店每日業務報表 (針對線上支付線下取貨場景)
+     * 更新門店每日業務報表 (針對線上支付線下取貨場景)
      */
     private void updateStoreDailyReportForPickup(Order order, Long storeId) {
         if (storeId == null) return;
@@ -309,23 +307,17 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權查看"));
     }
 
-    /**
-     * 獲取用戶的所有訂單
-     */
-    public List<Order> getUserOrders(String username) {
-        return orderRepository.findByUser_UsernameOrderByCreatedAtDesc(username);
-    }
 
     /**
-     * 4. 處理線下支付邏輯 (確認線下支付訂單後扣減庫存)
+     * 4. 處理線下支付邏輯 (確認線下支付訂單後【預留】庫存，而非扣減)
      */
     @Transactional
-    public Order processOfflinePayment(String orderNo, String username, Long storeId,String deliveryMethod,LocalDate appointmentDate) {
+    public Order processOfflinePayment(String orderNo, String username, Long storeId, String deliveryMethod, LocalDate appointmentDate) {
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或您無權操作此訂單"));
 
         OfflineStore store = offlineStoreRepository.findById(storeId)
-                .orElseThrow(() -> new RuntimeException("门店不存在"));
+                .orElseThrow(() -> new RuntimeException("門店不存在"));
 
         if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID) {
             throw new RuntimeException("訂單狀態異常，無法更改支付方式。當前狀態: " + order.getPaymentStatus());
@@ -341,36 +333,97 @@ public class OrderService {
         if(appointmentDate != null) {
             order.setAppointmentDate(appointmentDate);
         }
-        order.setDeadlineAt(LocalDateTime.now());
 
         Order savedOrder = orderRepository.save(order);
 
-        // 【修改處 3】：線下支付確認生成訂單後，扣減庫存。
-        // (註：由於前端流程在此直接跳轉成功頁，此處視為「確認支付」並扣減。
-        // 若未來有「後台店員確認收款」的功能，應將此行移至後台確認收款的 API 中)
-        deductOfflineStock(savedOrder);
+        // 【核心修改】：線下預訂生成訂單後，【預留】庫存，而不是扣減庫存！
+        reserveOfflineStock(savedOrder);
 
         return savedOrder;
     }
 
     /**
-     * 刪除訂單 (僅允許刪除待付款狀態的訂單)
+     * 線下門店訂單預訂後的庫存預留 (增加 reserved_quantity)
+     */
+    private void reserveOfflineStock(Order order) {
+        OfflineStore store = order.getOfflineStore();
+        if (store == null) {
+            throw new RuntimeException("線下訂單未關聯門店，無法預留庫存");
+        }
+
+        for (OrderItem item : order.getItems()) {
+            Integer productId = item.getProduct().getProductId();
+            int qty = item.getQuantity();
+
+            // 使用原子更新語句增加預留數量
+            // 如果返回 0，說明可售庫存不足 (quantity - reservedQuantity < qty)
+            int updatedRows = storeInventoryRepository.reserveStoreStock(store.getStoreId(), productId, qty);
+
+            if (updatedRows == 0) {
+                // 【重要】：如果預留失敗，應該回滾訂單狀態或拋出異常告知用戶庫存不足
+                // 由於這裡是在 @Transactional 方法中，拋出異常會自動回滾訂單保存操作
+                throw new RuntimeException("預訂失敗：門店 [" + store.getName() + "] 的商品 [" + item.getProduct().getDescription() + "] 可售庫存不足！");
+            }
+        }
+    }
+
+    /**
+     * 刪除訂單 (支援普通待付款與待線下付款兩種模式)
      */
     @Transactional
-    public void deleteOrder(String orderNo, String username) {
-        // 1. 查找訂單並校驗權限 (確保只能刪自己的訂單)
+    public void deleteOrder(String orderNo, String username, String type) {
+        // 1. 查找訂單並校驗權限
         Order order = orderRepository.findByOrderNoAndUser_Username(orderNo, username)
                 .orElseThrow(() -> new RuntimeException("訂單不存在或無權操作"));
 
-        // 2. 核心校驗：只允許刪除「未付款」或「待線下付款」的訂單
-        if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID &&
-                order.getPaymentStatus() != Order.PaymentStatus.PENDING_OFFLINE) {
-            throw new RuntimeException("已付款或正在處理中的訂單無法刪除");
+        // 2. 狀態校驗
+        if ("pending-offline".equals(type)) {
+            if (order.getPaymentStatus() != Order.PaymentStatus.PENDING_OFFLINE) {
+                throw new RuntimeException("只有「待線下付款」狀態的訂單才能以此方式刪除");
+            }
+            // 【核心邏輯】釋放門店預留庫存
+            releaseOfflineStoreReservedStock(order);
+        } else {
+            // 默認 unpaid 邏輯
+            if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID) {
+                throw new RuntimeException("只有「待付款」狀態的訂單才能刪除");
+            }
         }
 
-        // 3. 執行刪除
-        // (因為 Order 實體中配置了 cascade = CascadeType.ALL，關聯的 OrderItem 會自動級聯刪除)
+        // 3. 執行物理刪除 (級聯刪除 OrderItem)
         orderRepository.delete(order);
+    }
+
+    /**
+     * 【私有輔助方法】釋放待線下付款訂單的門店預留庫存
+     * 邏輯：orders.offline_store_id + order_items.prod_id -> store_inventory.store_id + product_id
+     *       reserved_quantity -= order_items.quantity
+     */
+    private void releaseOfflineStoreReservedStock(Order order) {
+        OfflineStore store = order.getOfflineStore();
+        if (store == null) {
+            throw new RuntimeException("待線下付款訂單未關聯門店，無法釋放庫存");
+        }
+
+        for (OrderItem item : order.getItems()) {
+            Integer productId = item.getProduct().getProductId();
+            int qtyToRelease = item.getQuantity();
+
+            // 使用原子更新語句扣減 reserved_quantity
+            // 注意：這裡假設你的 StoreInventoryRepository 有對應方法，如果沒有請添加
+            int updatedRows = storeInventoryRepository.releaseReservedStock(
+                    store.getStoreId(),
+                    productId,
+                    qtyToRelease
+            );
+
+            if (updatedRows == 0) {
+                // 防禦性編程：如果沒更新到行，說明預留庫存可能已經被其他地方消耗或數據不一致
+                System.err.println("⚠️ 警告：釋放訂單 [" + order.getOrderNo() + "] 的商品 [" + productId + "] 預留庫存失敗，當前預留數量可能不足。");
+                // 根據業務需求，這裡可以選擇拋出異常終止刪除，或者僅記錄日誌繼續刪除
+                // throw new RuntimeException("門店 [" + store.getName() + "] 的商品 [" + item.getProduct().getDescription() + "] 預留庫存釋放失敗！");
+            }
+        }
     }
 
 
@@ -661,46 +714,34 @@ public class OrderService {
         orderRepository.save(order);
     }
 
+    /**
+     * 確認門店取貨 (核心修改版：增加 PENDING_OFFLINE 狀態下的庫存精確扣減)
+     */
     @Transactional
     public void confirmPickup(String orderNo, String currentUserUsername) {
         // 1. 獲取當前用戶實體
         User currentUser = userRepository.findByUsername(currentUserUsername)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
-        // 2. 查找訂單
+        // 2. 查找訂單並進行權限校驗 (保持原有邏輯不變)
         Order order;
-
-        // 【核心修改】：判斷權限邏輯
-        // A. 如果是 ADMIN，可以操作所有訂單
-        // B. 如果是 SALES 或 STORE_MANAGER，需要檢查他們是否屬於該訂單關聯的門店
-        // C. 否則，只能操作自己的訂單
-
         boolean isGlobalAdmin = currentUser.getRole() == User.Role.ADMIN;
 
         if (isGlobalAdmin) {
-            // 管理員：只校驗訂單號是否存在
             order = orderRepository.findByOrderNo(orderNo)
                     .orElseThrow(() -> new RuntimeException("訂單不存在"));
         } else {
-            // 非管理員：先查出訂單（不帶用戶限制），然後進行細緻的權限校驗
             order = orderRepository.findByOrderNo(orderNo)
                     .orElseThrow(() -> new RuntimeException("訂單不存在"));
 
             boolean isAuthorized = false;
-
-            // 情況 1：是訂單的主人（買家）
             if (order.getUser().getUsername().equals(currentUserUsername)) {
                 isAuthorized = true;
-            }
-            // 情況 2：是該訂單關聯門店的員工 (SALES 或 STORE_MANAGER)
-            else if (order.getOfflineStore() != null &&
+            } else if (order.getOfflineStore() != null &&
                     (currentUser.getRole() == User.Role.SALES || currentUser.getRole() == User.Role.STORE_MANAGER)) {
-
-                // 通過 Staff 表查詢該用戶是否隸屬於此門店
                 Optional<Staff> staffOpt = staffRepository.findByUser(currentUser);
                 if (staffOpt.isPresent()) {
                     Staff staff = staffOpt.get();
-                    // 檢查員工所屬門店是否與訂單門店一致
                     if (staff.getStore() != null &&
                             staff.getStore().getStoreId().equals(order.getOfflineStore().getStoreId())) {
                         isAuthorized = true;
@@ -713,55 +754,54 @@ public class OrderService {
             }
         }
 
-        // 3. 核心校驗：必須是門店自取
+        // 3. 核心校驗：必須是門店自取且關聯了門店
         if (!"STORE_PICKUP".equals(order.getDeliveryMethod())) {
             throw new RuntimeException("此訂單非門店自取，無法執行取貨操作");
         }
-
-        // 確保訂單關聯了門店，否則無法更新門店報表
         if (order.getOfflineStore() == null) {
             throw new RuntimeException("訂單未關聯門店，無法執行門店取貨邏輯");
         }
 
-        // 4. 記錄實際收貨時間
         LocalDateTime now = LocalDateTime.now();
         order.setReceivedAt(now);
-
-        // 標記是否需要更新報表（防止已付款訂單在取貨時重複計算）
         boolean shouldUpdateReport = false;
 
-        // 5. 根據當前支付狀態執行不同邏輯
+        // ==========================================
+        // 【核心修改區】：根據支付狀態執行不同的庫存與財務邏輯
+        // ==========================================
         if (order.getPaymentStatus() == Order.PaymentStatus.PENDING_OFFLINE) {
-            // 情況 A：待線下付款 -> 變為已線下付款，訂單直接完成
-            // 【關鍵】此時才真正產生銷售，需要更新報表
+            // === 情況 A：待線下付款 -> 變為已線下付款，訂單直接完成 ===
+
+            // 1. 更新訂單狀態與支付時間
             order.setPaidAt(now);
             order.setPaymentStatus(Order.PaymentStatus.PAID_OFFLINE);
-
             order.setStatus(Order.OrderStatus.COMPLETED);
             shouldUpdateReport = true;
+
+            // 2. 【關鍵新增】執行門店庫存的「釋放預留 + 扣減物理」操作
+            processOfflineStockDeduction(order);
 
         } else if (order.getPaymentStatus() == Order.PaymentStatus.PAID_SIMULATED ||
                 order.getPaymentStatus() == Order.PaymentStatus.PAID_REAL ||
                 order.getPaymentStatus() == Order.PaymentStatus.PAID_OFFLINE) {
-            // 情況 B：已付款狀態 -> 僅將訂單狀態改為已完成
-            // 【關鍵】報表已在支付成功時記錄過，此處不可重複記錄！
+            // === 情況 B：已付款狀態 -> 僅將訂單狀態改為已完成 ===
+            // 注意：如果是 PAID_OFFLINE 且之前已經扣過庫存了，這裡就不應該再扣一次。
+            // 如果你的業務中 PAID_OFFLINE 可能來自其他途徑且未扣庫存，請在此處也調用 processOfflineStockDeduction
             order.setStatus(Order.OrderStatus.COMPLETED);
             shouldUpdateReport = false;
-
         } else {
             throw new RuntimeException("當前訂單狀態不允許執行取貨操作");
         }
 
-        // 6. 保存訂單狀態更新
+        // 4. 保存訂單狀態更新
         orderRepository.save(order);
 
-        // 7. 【核心修改】如果需要，更新業務報表 (僅針對情況 A：待線下付款轉為已完成)
+        // 5. 如果需要，更新業務報表 (僅針對情況 A)
         if (shouldUpdateReport) {
-            // 7.1 更新【門店】每日業務報表 (StoreDailyReport)
             OfflineStore store = order.getOfflineStore();
-            LocalDate reportDate = now.toLocalDate(); // 使用當前日期作為報表日期
+            LocalDate reportDate = now.toLocalDate();
 
-            // 查找或創建該門店當日的報表記錄
+            // 5.1 更新【門店】每日業務報表
             StoreDailyReport storeReport = storeDailyReportRepository
                     .findByStore_StoreIdAndReportDate(store.getStoreId(), reportDate)
                     .orElseGet(() -> {
@@ -771,41 +811,70 @@ public class OrderService {
                         return newReport;
                     });
 
-            // 累加門店 GMV
             BigDecimal currentGmv = storeReport.getStoreGmv() != null ? storeReport.getStoreGmv() : BigDecimal.ZERO;
             storeReport.setStoreGmv(currentGmv.add(order.getTotalAmount()));
 
-            // 累加門店訂單數
             Integer currentOrders = storeReport.getStoreOrders() != null ? storeReport.getStoreOrders() : 0;
             storeReport.setStoreOrders(currentOrders + 1);
-
-            // 保存門店報表
             storeDailyReportRepository.save(storeReport);
 
-
-            // 7.2 更新季度銷售報表 (QuarterlySalesReport)
+            // 5.2 更新季度銷售報表
             Long storeId = store.getStoreId();
-
             for (OrderItem item : order.getItems()) {
                 Product product = item.getProduct();
-                // 計算該商品的總成交額
                 BigDecimal itemTotalAmount = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
 
-                // 調用現有的 recordSale 方法，傳遞線下渠道和門店ID
                 quarterlySalesReportService.recordSale(
                         product.getProductId(),
-                        product.getDescription(), // productName 快照
-                        product.getBrand(),       // brand 快照
-                        product.getPrice(),       // unitPrice
-                        item.getQuantity(),       // quantity
-                        itemTotalAmount,          // totalAmount
-                        "OFFLINE",                // salesChannel: 線下門店銷售
-                        storeId                   // storeId: 具體門店ID
+                        product.getDescription(),
+                        product.getBrand(),
+                        product.getPrice(),
+                        item.getQuantity(),
+                        itemTotalAmount,
+                        "OFFLINE",
+                        storeId
                 );
             }
         }
     }
 
+    /**
+     * 【新增私有輔助方法】處理門店取貨時的庫存扣減
+     * 邏輯：quantity -= qty AND reserved_quantity -= qty
+     * 使用原子更新防止併發超賣或預留數變成負數
+     */
+    private void processOfflineStockDeduction(Order order) {
+        OfflineStore store = order.getOfflineStore();
+        if (store == null) return;
+
+        for (OrderItem item : order.getItems()) {
+            Integer productId = item.getProduct().getProductId();
+            int qty = item.getQuantity();
+
+            // 使用 Repository 中的原子更新語句同時扣減兩個字段
+            // SQL 邏輯: UPDATE store_inventory
+            // SET quantity = quantity - :qty, reserved_quantity = reserved_quantity - :qty
+            // WHERE store_id = :storeId AND product_id = :productId
+            // AND quantity >= :qty AND reserved_quantity >= :qty
+            int updatedRows = storeInventoryRepository.deductAndReleaseReservedStock(
+                    store.getStoreId(),
+                    productId,
+                    qty
+            );
+
+            if (updatedRows == 0) {
+                // 如果更新失敗，說明庫存不足或預留數量異常，拋出異常回滾整個事務
+                throw new RuntimeException(
+                        String.format("門店 [%s] 商品 [%s] 庫存或預留數量不足，無法完成取貨扣減！",
+                                store.getName(), item.getProduct().getDescription())
+                );
+            }
+        }
+    }
+
+    /**
+     * 取消過期訂單 (支援普通待付款與待線下付款兩種模式)
+     */
     @Transactional
     public void cancelExpiredOrder(String orderNo, String customMessage) {
         // 1. 查找訂單
@@ -813,11 +882,43 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("訂單不存在"));
 
         // 2. 核心校驗：只允許取消「未付款」或「待線下付款」的訂單
-        // 3. 更新訂單狀態為已取消
+        if (order.getPaymentStatus() != Order.PaymentStatus.UNPAID &&
+                order.getPaymentStatus() != Order.PaymentStatus.PENDING_OFFLINE) {
+            throw new RuntimeException("只有待付款或待線下付款的訂單才能執行取消操作");
+        }
+
+        // 3. 【核心新增】：如果是 PENDING_OFFLINE，必須先釋放預留庫存！
+        if (order.getPaymentStatus() == Order.PaymentStatus.PENDING_OFFLINE) {
+            OfflineStore store = order.getOfflineStore();
+            if (store == null) {
+                throw new RuntimeException("待線下付款訂單未關聯門店，無法釋放預留庫存");
+            }
+
+            for (OrderItem item : order.getItems()) {
+                Integer productId = item.getProduct().getProductId();
+                int qtyToRelease = item.getQuantity();
+
+                // 使用原子更新語句釋放 reserved_quantity
+                // SQL: UPDATE store_inventory SET reserved_quantity = reserved_quantity - :qty
+                //      WHERE store_id = :storeId AND product_id = :productId AND reserved_quantity >= :qty
+                int updatedRows = storeInventoryRepository.releaseReservedStock(
+                        store.getStoreId(),
+                        productId,
+                        qtyToRelease
+                );
+
+                if (updatedRows == 0) {
+                    // 防禦性編程：記錄警告日誌，但不阻斷取消流程
+                    System.err.println("⚠️ 警告：釋放訂單 [" + order.getOrderNo() + "] 的商品 [" + productId + "] 預留庫存失敗，當前預留數量可能不足。");
+                }
+            }
+        }
+
+        // 4. 更新訂單狀態為已取消
         order.setStatus(Order.OrderStatus.CANCELLED);
         orderRepository.save(order);
 
-        // 4. 【核心新增】：發送系統通知給買家
+        // 5. 【核心新增】：發送系統通知給買家
         if (customMessage != null && !customMessage.trim().isEmpty()) {
             try {
                 Notification notification = new Notification();
