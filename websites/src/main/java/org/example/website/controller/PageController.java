@@ -313,15 +313,6 @@ public class PageController {
         return "security";
     }
 
-    /**
-     * 管理中心首頁
-     */
-    @GetMapping("/admin/dashboard")
-    public String adminDashboard(Model model) {
-        // 這裡可以添加數據統計邏輯
-        return "admin/admin-dashboard";
-    }
-
 
     /**
      *  新增：我的收藏頁面路由 (支援分頁) - 重構版

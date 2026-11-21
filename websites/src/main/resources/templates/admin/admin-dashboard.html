@@ -8,7 +8,265 @@
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/admin.css">
     <style>
-        /* 頁面專屬樣式可以放在這裡 */
+        /* === 基礎趨勢與標籤樣式 === */
+        .trend-indicator {
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+        }
+
+        .trend-up {
+            color: #28a745;
+        }
+
+        .trend-down {
+            color: #dc3545;
+        }
+
+        .trend-flat {
+            color: var(--gray);
+        }
+
+        .alert-value {
+            color: #dc3545 !important;
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .sub-tags {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .sub-tag {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            background: rgba(26, 26, 46, 0.05);
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        .sub-tag.online {
+            background: rgba(0, 123, 255, 0.1);
+            color: #007bff;
+        }
+
+        .sub-tag.store {
+            background: rgba(212, 175, 55, 0.1);
+            color: #b8972b;
+        }
+
+        .blink-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 12px;
+            height: 12px;
+            background: #dc3545;
+            border-radius: 50%;
+            border: 2px solid white;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+        }
+
+        .stat-card {
+            position: relative;
+        }
+
+        /* === 新增：獨立門店明細卡片樣式 (來自方案1) === */
+        .store-detail-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .store-detail-header {
+            font-size: 0.9rem;
+            color: var(--primary);
+            font-weight: 700;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid #f1f3f5;
+            padding-bottom: 0.8rem;
+        }
+
+        .store-detail-header i {
+            color: var(--gold);
+            font-size: 1.1rem;
+        }
+
+        .store-list-container {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 280px;
+            /* 核心：限制高度以觸發滾動 */
+            padding-right: 5px;
+        }
+
+        /* 美化滾動條 */
+        .store-list-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .store-list-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .store-list-container::-webkit-scrollbar-thumb {
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .store-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.7rem 0;
+            border-bottom: 1px dashed #f1f3f5;
+            transition: all 0.2s;
+        }
+
+        .store-row:last-child {
+            border-bottom: none;
+        }
+
+        .store-row:hover {
+            background: rgba(212, 175, 55, 0.03);
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            margin: 0 -0.5rem;
+            border-radius: 6px;
+        }
+
+        .store-name {
+            font-size: 0.85rem;
+            color: var(--gray);
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 60%;
+        }
+
+        .store-gmv {
+            font-size: 0.9rem;
+            color: var(--primary);
+            font-weight: 700;
+            font-family: monospace;
+        }
+
+        .load-more-btn {
+            margin-top: 1rem;
+            padding: 0.6rem;
+            background: transparent;
+            border: 1px solid #e9ecef;
+            color: var(--gray);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            width: 100%;
+        }
+
+        .load-more-btn:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .load-more-btn.expanded i {
+            transform: rotate(180deg);
+        }
+
+        /* === 財務明細 Modal 專屬樣式 === */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .custom-modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 
@@ -30,37 +288,196 @@
                 </div>
             </div>
 
-            <!-- 動態內容容器 -->
             <div class="content-body" id="contentBody">
                 <!-- 默認顯示：總覽頁 -->
                 <div id="page-dashboard">
                     <h3 style="margin-bottom: 1.5rem; color: var(--primary);">核心數據概覽</h3>
-                    <div class="stats-grid">
-                        <div class="stat-card"><i class="fas fa-clipboard-list"></i>
+
+                    <!-- 調整網格列數以適應更多卡片 -->
+                    <div class="stats-grid"
+                        style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+
+                        <!-- 1. 今日總營收 -->
+                        <div class="stat-card">
+                            <i class="fas fa-wallet"></i>
                             <div class="stat-info">
-                                <h4>12</h4>
+                                <p
+                                    style="margin: 0 0 0.5rem 0; font-size: 0.9rem; color: var(--gray); font-weight: 500;">
+                                    今日總營收</p>
+                                <h4
+                                    style="display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                                    <span style="font-size: 2rem; font-weight: 800; color: var(--primary);">
+                                        HK$ <span
+                                            th:text="${todayTotalGmv != null ? #numbers.formatDecimal(todayTotalGmv, 1, 'COMMA', 0, 'POINT') : '0'}">0</span>
+                                    </span>
+                                    <!-- JS 趨勢指示器 -->
+                                    <span class="trend-indicator" th:data-trend="${gmvTrendPercent}"
+                                        style="font-size: 0.9rem;"></span>
+                                </h4>
+                                <div
+                                    style="display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.85rem; color: var(--gray); font-weight: 500;">
+                                    <span title="線上平台營業額">線上: HK$ <span
+                                            th:text="${onlineGmvToday != null ? #numbers.formatDecimal(onlineGmvToday, 1, 'COMMA', 0, 'POINT') : '0'}">0</span></span>
+                                    <span title="線下門店營業額">線下: HK$ <span
+                                            th:text="${offlineGmvToday != null ? #numbers.formatDecimal(offlineGmvToday, 1, 'COMMA', 0, 'POINT') : '0'}">0</span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. 門店收入明細 (獨立卡片) -->
+                        <div class="store-detail-card" th:if="${storeReports != null}">
+                            <!-- ==================== 情況 A：有門店收入數據 ==================== -->
+                            <div th:if="${!storeReports.isEmpty()}">
+                                <div class="store-detail-header">
+                                    <i class="fas fa-cash-register"></i> 門店收入明細
+                                </div>
+
+                                <div class="store-list-container" id="store-reports-list">
+                                    <div th:each="report : ${storeReports}" class="store-row">
+                                        <span class="store-name"
+                                            th:text="${report.store != null ? report.store.name : '未知門店'}"
+                                            title="${report.store != null ? report.store.name : '未知門店'}">
+                                            門店名稱
+                                        </span>
+                                        <span class="store-gmv"
+                                            th:text="'HK$ ' + ${#numbers.formatDecimal(report.storeGmv != null ? report.storeGmv : 0, 1, 'COMMA', 0, 'POINT')}">
+                                            0
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- 僅當門店數 > 5 時顯示查看更多按鈕 -->
+                                <button th:if="${storeReports.size() > 5}" id="loadMoreStoresBtn"
+                                    onclick="toggleStoreReports()" class="load-more-btn">
+                                    <i class="fas fa-chevron-down"></i>
+                                    <span th:text="'查看全部 ' + ${storeReports.size()} + ' 家門店'">查看全部 X 家門店</span>
+                                </button>
+                            </div>
+
+                            <!-- ==================== 情況 B：今日暫無門店收入 ==================== -->
+                            <div th:unless="${!storeReports.isEmpty()}"
+                                style="text-align: center; padding: 3rem 1.5rem; color: var(--gray);">
+                                <i class="fas fa-store-slash"
+                                    style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.4;"></i>
+                                <h4 style="margin: 0 0 0.5rem; color: var(--primary); font-weight: 600;">今日暫無門店收入</h4>
+                                <p style="margin: 0; font-size: 0.9rem; line-height: 1.6;">
+                                    當前日期尚未產生線下門店交易記錄<br>
+                                    或所有門店今日營業額均為 0
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- 3. 今日毛利潤 -->
+                        <div class="stat-card">
+                            <i class="fas fa-chart-line"></i>
+                            <div class="stat-info">
+                                <p>今日毛利潤</p>
+                                <!-- 當毛利潤為負數時，自動添加 alert-value 類顯示紅色警示 -->
+                                <h4 th:classappend="${isGrossProfitNegative} ? 'alert-value' : ''">
+                                    HK$
+                                    <span
+                                        th:text="${todayGrossProfit != null ? #numbers.formatDecimal(todayGrossProfit, 1, 'COMMA', 2, 'POINT') : '0.00'}">0.00</span>
+                                </h4>
+
+                                <button th:if="${showProfitDetailBtn}" onclick="openProfitModal()"
+                                    style="width: 100%; padding: 0.6rem; background: rgba(212, 175, 55, 0.1); border: 1px dashed var(--gold); color: var(--primary); border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+                                    onmouseover="this.style.background='rgba(212, 175, 55, 0.2)'"
+                                    onmouseout="this.style.background='rgba(212, 175, 55, 0.1)'">
+                                    <i class="fas fa-file-invoice-dollar"></i> 查看營收構成明細
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 4. 今日新增出售申請 -->
+                        <div class="stat-card">
+                            <i class="fas fa-clipboard-list"></i>
+                            <div class="stat-info">
+                                <h4 th:text="${todayNewApplications != null ? todayNewApplications : 0}">0</h4>
                                 <p>今日新增出售申請</p>
                             </div>
                         </div>
-                        <div class="stat-card"><i class="fas fa-search"></i>
+
+                        <!-- 5. 今日訂單量 -->
+                        <div class="stat-card">
+                            <i class="fas fa-shopping-bag"></i>
                             <div class="stat-info">
-                                <h4>8</h4>
-                                <p>待鑑定數量</p>
+                                <h4 th:text="${todayOrderCount != null ? todayOrderCount : 0}">0</h4>
+                                <p>今日訂單量</p>
+                                <div class="sub-tags">
+                                    <span class="sub-tag online">線上: <span
+                                            th:text="${todayOnlineOrders != null ? todayOnlineOrders : 0}">0</span></span>
+                                    <span class="sub-tag store">門店: <span
+                                            th:text="${todayStoreOrders != null ? todayStoreOrders : 0}">0</span></span>
+                                </div>
                             </div>
                         </div>
-                        <div class="stat-card"><i class="fas fa-dollar-sign"></i>
+
+                        <!-- 6. 售出件數 -->
+                        <div class="stat-card">
+                            <i class="fas fa-box-open"></i>
                             <div class="stat-info">
-                                <h4>HK$ 245K</h4>
-                                <p>本月成交總額</p>
+                                <h4 th:text="${todayItemsSold != null ? todayItemsSold : 0}">0</h4>
+                                <p>今日售出件數</p>
                             </div>
                         </div>
-                        <div class="stat-card"><i class="fas fa-coins"></i>
+
+                        <!-- 7. 待鑑定申請 -->
+                        <div class="stat-card">
+                            <span th:if="${pendingAppraisals != null && pendingAppraisals > 10}"
+                                class="blink-badge"></span>
+                            <i class="fas fa-search"></i>
                             <div class="stat-info">
-                                <h4>HK$ 18.5K</h4>
-                                <p>平台淨收入</p>
+                                <h4 th:text="${pendingAppraisals != null ? pendingAppraisals : 0}">0</h4>
+                                <p>待鑑定申請</p>
                             </div>
                         </div>
+
+                        <!-- 8. 退貨/退款額 -->
+                        <div class="stat-card">
+                            <i class="fas fa-undo-alt"></i>
+                            <div class="stat-info">
+                                <h4>
+                                    HK$ <span
+                                        th:text="${todayRefundAmount != null ? #numbers.formatDecimal(todayRefundAmount, 1, 'COMMA', 0, 'POINT') : '0'}">0</span>
+                                    <span th:if="${refundRatio != null && refundRatio > 10}" class="trend-down">
+                                        <i class="fas fa-exclamation-triangle"></i> <span
+                                            th:text="${refundRatio}">0</span>%
+                                    </span>
+                                </h4>
+                                <p>今日退貨/退款額</p>
+                            </div>
+                        </div>
+
+                        <!-- 9. 收購支出 -->
+                        <div class="stat-card">
+                            <i class="fas fa-hand-holding-usd"></i>
+                            <div class="stat-info">
+                                <h4>
+                                    HK$ <span
+                                        th:text="${todayAcquisitionCost != null ? #numbers.formatDecimal(todayAcquisitionCost, 1, 'COMMA', 0, 'POINT') : '0'}">0</span>
+                                </h4>
+                                <p>今日收購支出</p>
+                            </div>
+                        </div>
+
+                        <!-- 10. 新增用戶數 -->
+                        <div class="stat-card">
+                            <i class="fas fa-user-plus"></i>
+                            <div class="stat-info">
+                                <h4>
+                                    <span th:text="${todayNewUsers != null ? todayNewUsers : 0}">0</span>
+                                    <span class="trend-up">
+                                        <i class="fas fa-arrow-up"></i> <span
+                                            th:text="${registrationConversionRate != null ? registrationConversionRate : '0'}">0</span>%
+                                    </span>
+                                </h4>
+                                <p>新增用戶數 / 轉化率</p>
+                            </div>
+                        </div>
+
                     </div>
+
+                    <!-- 圖表區域保持不變 -->
                     <div class="placeholder-box">
                         <i class="fas fa-chart-pie"></i>
                         <h3>圖表區域佔位</h3>
@@ -71,6 +488,122 @@
         </main>
     </div>
 
+    <!-- ==================== 財務明細 Modal  ==================== -->
+    <div id="profitDetailModal" class="custom-modal-overlay" style="display: none; z-index: 9999;">
+        <div class="custom-modal-box" style="max-width: 700px; max-height: 85vh; overflow-y: auto; text-align: left;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 2px solid #f1f3f5; padding-bottom: 1rem;">
+                <h3 style="margin: 0; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-calculator" style="color: var(--gold);"></i> 今日毛利潤構成分析
+                </h3>
+                <button onclick="closeProfitModal()"
+                    style="background: none; border: none; font-size: 1.5rem; color: var(--gray); cursor: pointer;">&times;</button>
+            </div>
+
+            <!-- 1. 線上平台區塊 -->
+            <div
+                style="background: #f8f9fa; padding: 1.2rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #007bff;">
+                <h4 style="margin: 0 0 1rem 0; color: var(--primary); font-size: 1rem;"><i class="fas fa-laptop"
+                        style="color: #007bff; margin-right: 0.5rem;"></i> 線上平台業績</h4>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--gray);">營業額</div>
+                        <div style="font-weight: 700; color: var(--primary);">HK$ <span
+                                th:text="${#numbers.formatDecimal(onlineGmvToday, 1, 'COMMA', 2, 'POINT')}">0</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--gray);">退款支出</div>
+                        <div style="font-weight: 700; color: #dc3545;">- HK$ <span
+                                th:text="${#numbers.formatDecimal(onlineRefund, 1, 'COMMA', 2, 'POINT')}">0</span></div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--gray);">收購成本</div>
+                        <div style="font-weight: 700; color: #fd7e14;">- HK$ <span
+                                th:text="${#numbers.formatDecimal(onlineAcqCost, 1, 'COMMA', 2, 'POINT')}">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 線下門店區塊 (逐店展示) -->
+            <div
+                style="background: #f8f9fa; padding: 1.2rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid var(--gold);">
+                <h4 style="margin: 0 0 1rem 0; color: var(--primary); font-size: 1rem;"><i class="fas fa-store"
+                        style="color: var(--gold); margin-right: 0.5rem;"></i> 線下門店業績明細</h4>
+
+                <!-- 門店列表表格 -->
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-bottom: 1rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #dee2e6; color: var(--gray);">
+                            <th style="text-align: left; padding: 0.5rem;">門店名稱</th>
+                            <th style="text-align: right; padding: 0.5rem;">營業額</th>
+                            <th style="text-align: right; padding: 0.5rem;">退款</th>
+                            <th style="text-align: right; padding: 0.5rem;">收購成本</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="report : ${storeReports}" style="border-bottom: 1px solid #e9ecef;">
+                            <td style="padding: 0.6rem 0.5rem; font-weight: 600;"
+                                th:text="${report.store != null ? report.store.name : '未知門店'}">門店名</td>
+                            <td style="padding: 0.6rem 0.5rem; text-align: right; color: var(--primary);"
+                                th:text="'HK$ ' + ${#numbers.formatDecimal(report.storeGmv != null ? report.storeGmv : 0, 1, 'COMMA', 2, 'POINT')}">
+                                0</td>
+                            <td style="padding: 0.6rem 0.5rem; text-align: right; color: #dc3545;"
+                                th:text="'- HK$ ' + ${#numbers.formatDecimal(report.storeRefundAmount != null ? report.storeRefundAmount : 0, 1, 'COMMA', 2, 'POINT')}">
+                                0</td>
+                            <td style="padding: 0.6rem 0.5rem; text-align: right; color: #fd7e14;"
+                                th:text="'- HK$ ' + ${#numbers.formatDecimal(report.storeAcquisitionCost != null ? report.storeAcquisitionCost : 0, 1, 'COMMA', 2, 'POINT')}">
+                                0</td>
+                        </tr>
+                        <!-- 如果沒有門店數據時的提示 -->
+                        <tr th:if="${storeReports == null or storeReports.isEmpty()}">
+                            <td colspan="4" style="text-align: center; padding: 2rem; color: var(--gray);">今日暫無線下門店交易記錄
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- 線下合計行 -->
+                <div
+                    style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; border-top: 2px dashed #dee2e6; padding-top: 1rem;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--gray);">線下總營業額</div>
+                        <div style="font-weight: 700; color: var(--primary);">HK$ <span
+                                th:text="${#numbers.formatDecimal(offlineGmvToday, 1, 'COMMA', 2, 'POINT')}">0</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--gray);">線下總退款</div>
+                        <div style="font-weight: 700; color: #dc3545;">- HK$ <span
+                                th:text="${#numbers.formatDecimal(offlineRefund, 1, 'COMMA', 2, 'POINT')}">0</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: var(--gray);">線下總收購</div>
+                        <div style="font-weight: 700; color: #fd7e14;">- HK$ <span
+                                th:text="${#numbers.formatDecimal(offlineAcqCost, 1, 'COMMA', 2, 'POINT')}">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最終核算公式 -->
+            <div
+                style="background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; padding: 1.2rem; border-radius: 10px; text-align: center;">
+                <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">今日最終毛利潤核算</div>
+                <div style="font-size: 1.5rem; font-weight: 800; letter-spacing: 1px;">
+                    HK$ <span th:text="${#numbers.formatDecimal(todayGrossProfit, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button onclick="closeProfitModal()"
+                    style="padding: 0.8rem 3rem; background: var(--gold); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 1rem;">關閉明細</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 引入公共彈窗 -->
     <div th:replace="~{fragments/common :: modals}"></div>
 
@@ -78,7 +611,112 @@
         window.isLoggedIn = [[${#authorization.expression('isAuthenticated()')} ?: false]];
     </script>
     <script src="/js/common.js"></script>
-    <script src="/js/admin.js"></script> <!-- 新建 admin.js -->
+    <script src="/js/admin.js"></script>
+
+    <!-- ==================== 專屬 JS 邏輯 ==================== -->
+    <script>
+        /**
+         * 切換門店列表的展開/收起狀態
+         * 採用方案2邏輯：收起時限制高度並滾動，展開時取消高度限制
+         */
+        function toggleStoreReports() {
+            const btn = document.getElementById('loadMoreStoresBtn');
+            if (!btn) return;
+
+            const listContainer = document.querySelector('.store-list-container');
+            const rows = listContainer.querySelectorAll('.store-row');
+            const icon = btn.querySelector('i');
+            // 使用 querySelector 獲取 span 比 childNodes 更安全，避免 Thymeleaf 渲染空格導致的節點偏移
+            const textSpan = btn.querySelector('span');
+
+            const isExpanded = btn.classList.contains('expanded');
+
+            if (!isExpanded) {
+                // === 展開狀態 ===
+                rows.forEach(row => row.style.display = 'flex');
+                listContainer.style.maxHeight = 'none'; // 取消高度限制，顯示全部
+                btn.classList.add('expanded');
+                icon.className = 'fas fa-chevron-up';
+                textSpan.textContent = '收起列表';
+            } else {
+                // === 收起狀態 ===
+                rows.forEach((row, index) => {
+                    row.style.display = index < 5 ? 'flex' : 'none';
+                });
+                listContainer.style.maxHeight = '280px'; // 恢復滾動高度
+                btn.classList.remove('expanded');
+                icon.className = 'fas fa-chevron-down';
+
+                // 從 Thymeleaf 注入的總數中計算提示文字
+                const totalStores = /*[[${storeReports != null ? storeReports.size() : 0}]]*/ 0;
+                textSpan.textContent = '查看全部 ' + totalStores + ' 家門店';
+            }
+        }
+
+        // 打開財務明細 Modal
+        function openProfitModal() {
+            const modal = document.getElementById('profitDetailModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            }
+        }
+
+        // 關閉財務明細 Modal
+        function closeProfitModal() {
+            const modal = document.getElementById('profitDetailModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = ''; // 恢復背景滾動
+            }
+        }
+
+        // 點擊遮罩層也可以關閉
+        document.addEventListener('click', function (e) {
+            const modal = document.getElementById('profitDetailModal');
+            if (e.target === modal) closeProfitModal();
+        });
+
+        // ESC 鍵關閉
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('profitDetailModal');
+                if (modal && modal.style.display === 'flex') closeProfitModal();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. 初始化趨勢指示器 (保持原有邏輯)
+            const indicators = document.querySelectorAll('.trend-indicator');
+            indicators.forEach(indicator => {
+                const trendValue = parseFloat(indicator.getAttribute('data-trend'));
+                if (isNaN(trendValue)) return;
+
+                let html = '';
+                let className = '';
+
+                if (trendValue > 0) {
+                    className = 'trend-up';
+                    html = `<i class="fas fa-arrow-up"></i> ${trendValue.toFixed(1)}%`;
+                } else if (trendValue < 0) {
+                    className = 'trend-down';
+                    html = `<i class="fas fa-arrow-down"></i> ${Math.abs(trendValue).toFixed(1)}%`;
+                } else {
+                    className = 'trend-flat';
+                    html = `<i class="fas fa-minus"></i> 0.0%`;
+                }
+
+                indicator.className = `trend-indicator ${className}`;
+                indicator.innerHTML = html;
+            });
+
+            // 2. 初始化門店列表隱藏邏輯 (方案2核心)
+            const rows = document.querySelectorAll('.store-row');
+            rows.forEach((row, index) => {
+                if (index >= 8) row.style.display = 'none';
+            });
+        });
+    </script>
 </body>
 
 </html>

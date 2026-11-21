@@ -155,4 +155,25 @@ public interface SellApplicationRepository extends JpaRepository<SellApplication
             @Param("finalPriceVal2") BigDecimal finalPriceVal2,
             Pageable pageable
     );
+
+    /**
+     * 統計今日新增的出售申請數量
+     * 使用 FUNCTION('DATE', s.createdAt) 兼容 MySQL/MariaDB 提取日期部分進行比較
+     * 注意s大小寫
+     */
+    @Query("SELECT COUNT(s) FROM SellApplication s WHERE FUNCTION('DATE', s.createdAt) = :today")
+    long countByCreatedAtToday(LocalDate today);
+
+    /**
+     * 根據狀態統計數量
+     * @param status 申請狀態 (例如: APPRAISING)
+     * @return 該狀態下的記錄總數
+     */
+    long countByStatus(SellApplication.ApplicationStatus status);
+
+    @Query("SELECT COUNT(s) FROM SellApplication s WHERE s.createdAt >= :start AND s.createdAt < :end AND s.storeId = :storeId")
+    long countByCreatedAtTodayAndStoreId(@Param("start") LocalDateTime start,
+                                         @Param("end") LocalDateTime end,
+                                         @Param("storeId") String storeId);
+
 }

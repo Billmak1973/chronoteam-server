@@ -320,4 +320,26 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("orderStatus") Order.OrderStatus orderStatus,
             Pageable pageable
     );
+
+    /**
+     * 統計今日【線上】有效訂單數量
+     * 條件：orderSource='ONLINE' AND status IN ('PAID','SHIPPED','COMPLETED') AND createdAt 在今天範圍內
+     */
+    @Query("SELECT COUNT(o) FROM Order o " +
+            "WHERE o.orderSource = 'ONLINE' " +
+            "AND o.status IN ('PAID', 'SHIPPED', 'COMPLETED') " +
+            "AND o.createdAt >= :startOfDay AND o.createdAt < :endOfDay")
+    long countTodayOnlineOrders(@Param("startOfDay") LocalDateTime startOfDay,
+                                @Param("endOfDay") LocalDateTime endOfDay);
+
+    /**
+     * 統計今日【線下】有效訂單數量
+     * 條件：orderSource='OFFLINE' AND status IN ('PAID','SHIPPED','COMPLETED') AND createdAt 在今天範圍內
+     */
+    @Query("SELECT COUNT(o) FROM Order o " +
+            "WHERE o.orderSource = 'OFFLINE' " +
+            "AND o.status IN ('PAID', 'SHIPPED', 'COMPLETED') " +
+            "AND o.createdAt >= :startOfDay AND o.createdAt < :endOfDay")
+    long countTodayOfflineOrders(@Param("startOfDay") LocalDateTime startOfDay,
+                                 @Param("endOfDay") LocalDateTime endOfDay);
 }
