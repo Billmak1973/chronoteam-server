@@ -148,4 +148,6 @@ public interface StoreInventoryRepository extends JpaRepository<StoreInventory, 
     int deductAndReleaseReservedStock(@Param("storeId") Long storeId,
                                       @Param("productId") Integer productId,
                                       @Param("deductQty") Integer deductQty);
+
+    List<StoreInventory> findByProduct_ProductIdOrderByStore_StoreIdAsc(Integer productId);
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-// 定義 props 類型
+// 定義 props 類型 只是商品詳情頁使用了該tsx代碼
 interface FavoriteButtonProps {
     productId: number
     initialIsFavorite: boolean

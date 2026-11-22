@@ -3,33 +3,46 @@ import React, { useState, useEffect, useCallback } from 'react';
 // ==========================================
 // 1. 類型定義 (建議提取到單獨的 types.ts 文件中)
 // ==========================================
+/**
+ * CartProduct: 定義購物車中商品的基本信息結構
+ */
 export interface CartProduct {
-  productId: number;
-  description: string;
-  image: string;
-  stock: number;
+  productId: number;// 商品唯一 ID
+  description: string;// 商品描述/名稱
+  image: string;// 商品圖片路徑
+  stock: number;// 當前庫存數量
 }
 
+/**
+ * CartItemData: 定義購物車中每一項數據的完整結構
+ */
 export interface CartItemData {
-  cartId: number;
-  product: CartProduct;
-  quantity: number;
-  price: number;
-  selected: boolean;
+  cartId: number;// 購物車記錄 ID
+  product: CartProduct;// 關聯的商品信息
+  quantity: number;// 購買數量
+  price: number;// 單價
+  selected: boolean;// 是否被選中（用於結算）
 }
 
+/**
+ * CartItemProps: CartItem 子組件的屬性接口定義
+ */
 interface CartItemProps {
-  item: CartItemData;
-  onUpdateQuantity: (cartId: number, newQuantity: number) => Promise<void>;
-  onRemove: (productId: number) => Promise<void>;
-  onToggleSelection: (cartId: number, currentStatus: boolean) => Promise<void>;
-  formatPrice: (price: number) => string;
-  isUpdating: boolean;
+  item: CartItemData; // 當前購物車項目的數據
+  onUpdateQuantity: (cartId: number, newQuantity: number) => Promise<void>;// 更新數量的回調函數
+  onRemove: (productId: number) => Promise<void>;// 刪除商品的回調函數
+  onToggleSelection: (cartId: number, currentStatus: boolean) => Promise<void>;// 切換選中狀態的回調
+  formatPrice: (price: number) => string; // 價格格式化函數
+  isUpdating: boolean; // 是否正在進行異步更新（用於禁用按鈕防止重複點擊）
 }
 
 // ==========================================
 // 2. CartItem 子組件
 // ==========================================
+/**
+ * CartItem: 渲染購物車中的單一商品卡片
+ * 負責顯示商品信息、數量控制、選中狀態以及刪除操作
+ */
 const CartItem: React.FC<CartItemProps> = ({
                                              item,
                                              onUpdateQuantity,
@@ -38,35 +51,41 @@ const CartItem: React.FC<CartItemProps> = ({
                                              formatPrice,
                                              isUpdating
                                            }) => {
+  // 解構商品數據以便直接使用
   const { product, quantity, cartId, price, selected } = item;
 
   return (
       <div className={`cart-item ${isUpdating ? 'updating' : ''}`}>
-        {/* Checkbox */}
+        {/* Checkbox : 用戶勾選此商品以加入結算 */}
         <input
             type="checkbox"
             checked={selected}
-            onChange={() => onToggleSelection(cartId, selected)}
+            onChange={() => onToggleSelection(cartId, selected)} // 觸發父組件的切換選中邏輯
             style={{ marginRight: '10px', cursor: 'pointer', transform: 'scale(1.2)', flexShrink: 0 }}
         />
 
+        {/* 商品圖片區域 */}
         <div className="cart-item-image">
           <img
               src={`/images/products/${product.image}`}
               alt={product.description}
               onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                // 圖片加載失敗時顯示佔位圖
                 e.currentTarget.src = '/images/placeholder.png';
               }}
           />
         </div>
 
+        {/* 商品詳細信息區域 */}
         <div className="cart-item-info">
           <div className="cart-item-name">{product.description}</div>
           <div className="cart-item-price">
             HK$ {formatPrice(price)}
           </div>
 
+          {/* 數量控制與刪除按鈕區域 */}
           <div className="cart-item-quantity">
+            {/* 減少數量按鈕：當數量為1或正在更新時禁用 */}
             <button
                 className="qty-btn"
                 onClick={() => onUpdateQuantity(cartId, quantity - 1)}
@@ -74,7 +93,9 @@ const CartItem: React.FC<CartItemProps> = ({
             >
               <i className="fas fa-minus"></i>
             </button>
+            {/* 顯示當前數量 */}
             <span className="qty-value">{quantity}</span>
+            {/* 增加數量按鈕：當達到庫存上限或正在更新時禁用 */}
             <button
                 className="qty-btn"
                 onClick={() => onUpdateQuantity(cartId, quantity + 1)}
@@ -82,6 +103,7 @@ const CartItem: React.FC<CartItemProps> = ({
             >
               <i className="fas fa-plus"></i>
             </button>
+            {/* 刪除按鈕：點擊觸發移除邏輯 */}
             <i
                 className="fas fa-trash-alt cart-item-remove"
                 onClick={() => onRemove(product.productId)}
@@ -91,6 +113,7 @@ const CartItem: React.FC<CartItemProps> = ({
             />
           </div>
 
+          {/* 庫存警告：當購買數量大於等於庫存時顯示 */}
           {quantity >= product.stock && (
               <div className="stock-warning">
                 <i className="fas fa-exclamation-triangle"></i>

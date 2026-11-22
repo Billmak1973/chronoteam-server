@@ -95,6 +95,14 @@ public class ProductController {
                 .orElseThrow(() -> new RuntimeException("商品不存在"));
         model.addAttribute("product", product);
 
+        // 查詢該商品在所有門店的庫存
+        // findByProduct_ProductIdOrderByStore_StoreIdAsc: 按門店ID排序，確保顯示順序穩定
+        List<StoreInventory> storeInventories = storeInventoryRepository
+                .findByProduct_ProductIdOrderByStore_StoreIdAsc(id);
+
+        model.addAttribute("storeInventories", storeInventories);
+
+
         // 2. 根據 sort 參數構建動態排序規則（加入置頂權重）
         Sort dynamicSort;
         switch (sort) {

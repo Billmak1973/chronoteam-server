@@ -9,9 +9,7 @@
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" th:href="@{/react-assets/assets/index.css}" />
     <style>
-        /* ========================================== */
         /*  0. 全局修復與變數 (確保優先級) */
-        /* ========================================== */
         :root {
             --primary: #1a1a2e;
             --secondary: #16213e;
@@ -3380,9 +3378,79 @@
             <h1 th:text="${product.description}">手錶名稱</h1>
             <p style="color: var(--gray); margin: 0.5rem 0;">
                 分類：<span th:text="${product.category}" style="font-weight: 600;">Watch</span> |
-                庫存：<span th:text="${product.stock}" style="font-weight: 600;">0</span> 隻
+                綫上庫存：<span th:text="${product.stock}" style="font-weight: 600;">0</span> 隻
             </p>
-            <div class="price" th:text="'HK$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 0, 'POINT')}">HK$ 0
+            <div class="price" th:text="'HK$ ' + ${#numbers.formatDecimal(product.price, 1, 'COMMA', 0, 'POINT')}">HK$ 0</div>
+
+            <div th:if="${storeInventories != null and !storeInventories.isEmpty()}"
+                 style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--gold);">
+
+                <h4 style="margin: 0 0 0.8rem 0; font-size: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-store" style="color: var(--gold);"></i> 線下門店庫存
+                </h4>
+
+                <!-- 添加了 max-height, overflow-y, 以及自定義滾動條樣式 -->
+                <div style="display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 0.8rem;
+                max-height: 210px; /* 限制高度約為3個卡片的高度 (60px * 3 + gap) */
+                overflow-y: auto;  /* 內容超出時顯示垂直滾動條 */
+                padding-right: 5px; /* 防止內容貼著滾動條 */
+
+                /* 自定義滾動條樣式 (Chrome/Safari/Edge) */
+                scrollbar-width: thin; /* Firefox 支持 */
+                scrollbar-color: var(--gold) #e9ecef;" >
+
+                    <!-- Webkit 瀏覽器滾動條細節樣式 -->
+                    <style>
+                        /* 針對該特定 div 的滾動條樣式 */
+                        div[style*="max-height: 210px"]::-webkit-scrollbar {
+                            width: 6px;
+                        }
+                        div[style*="max-height: 210px"]::-webkit-scrollbar-track {
+                            background: #e9ecef;
+                            border-radius: 4px;
+                        }
+                        div[style*="max-height: 210px"]::-webkit-scrollbar-thumb {
+                            background: var(--gold); /* 使用你的金色主題變量 */
+                            border-radius: 4px;
+                        }
+                        div[style*="max-height: 210px"]::-webkit-scrollbar-thumb:hover {
+                            background: #b8972b; /* 懸停時深一點的金色 */
+                        }
+                    </style>
+
+                    <div th:each="inv : ${storeInventories}"
+                         style="background: white; padding: 0.8rem; border-radius: 6px; border: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                        <!-- flex-shrink: 0 防止卡片在滾動區域內被壓縮 -->
+
+                        <!-- 門店名稱與電話 -->
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600; color: var(--primary); font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                 th:text="${inv.store.name}">門店名稱</div>
+                        </div>
+
+                        <!-- 庫存數量 -->
+                        <div style="text-align: right; margin-left: 1rem;">
+                            <div th:if="${inv.quantity > 0}"
+                                 style="font-size: 1.2rem; font-weight: 700; color: #28a745;"
+                                 th:text="${inv.quantity} + ' 隻'">5 隻</div>
+                            <div th:unless="${inv.quantity > 0}"
+                                 style="font-size: 0.85rem; color: #dc3545; font-weight: 600;">缺貨</div>
+
+                            <!-- 可選：顯示預留數量 -->
+                            <div th:if="${inv.reservedQuantity > 0}"
+                                 style="font-size: 0.75rem; color: #fd7e14; margin-top: 0.2rem;">
+                                (<span th:text="${inv.reservedQuantity}">2</span> 隻已預留)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 如果沒有任何門店有該商品的庫存記錄 -->
+            <div th:if="${storeInventories == null or storeInventories.isEmpty()}"
+                 style="margin-top: 1rem; padding: 0.8rem; background: #fff3cd; border-radius: 6px; color: #856404; font-size: 0.9rem;">
+                <i class="fas fa-info-circle"></i> 目前暫無線下門店庫存資訊
             </div>
 
             <h3 style="margin-top: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
@@ -3421,9 +3489,6 @@
                         th:onclick="'openEditModal(' + ${product.productId} + ', ' + ${product.stock} + ')'">
                     <i class="fas fa-edit"></i> 编辑商品
                 </button>
-<!--                <button sec:authorize="hasRole('ADMIN')" type="button" class="btn-stock" onclick="openEditModal()">-->
-<!--                    <i class="fas fa-edit"></i> 编辑商品-->
-<!--                </button>-->
             </div>
         </div>
     </div>
@@ -3914,9 +3979,7 @@
     <script src="/js/common.js"></script>
     <script type="module" th:src="@{/react-assets/assets/index.js}"></script>
     <script th:inline="javascript">
-        // ==========================================
         // 0. 從 Thymeleaf 安全注入後端變數
-        // ==========================================
         const SERVER_DATA = {
             productId: [[${product.productId}]],
             sortOrder: '[[${sortOrder}]]',
@@ -3924,9 +3987,7 @@
             isAdmin: [[${isAdmin}]] || false
         };
 
-        // ==========================================
         // 1. 命名空間初始化 (避免全域污染)
-        // ==========================================
         window.ChronoTeamProduct = window.ChronoTeamProduct || {
             // 拉黑相關狀態
             blacklistTargetUser: '',
@@ -3945,9 +4006,7 @@
         // 簡寫引用 (可選，方便內部使用)
         const CTP = window.ChronoTeamProduct;
 
-        // ==========================================
         // 2. 分頁跳轉函數 (供 Fragment 調用)
-        // ==========================================
         window.changePage = function (page) {
             // 修復：使用 SERVER_DATA.productId 而非未定義的 currentProductId
             if (!SERVER_DATA.productId) {
@@ -3958,10 +4017,8 @@
             window.location.href = `/product/${SERVER_DATA.productId}?page=${page}&sort=${sort}`;
         };
 
-        // ==========================================
         // 3. 全域彈窗函數 (Bridge Layer)
         // 確保 React 組件與 HTML onclick 均可調用
-        // ==========================================
 
         // --- 普通用戶互相禁言提示 ---
         window.showBlockedModal = function (message) {
