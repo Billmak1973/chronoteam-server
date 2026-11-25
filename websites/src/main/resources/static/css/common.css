@@ -787,6 +787,37 @@ body {
     font-size: 1.3rem;
 }
 
+/* 購物車下拉菜單中的店鋪來源標籤 */
+.cart-item-store {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: var(--gold); /* 使用主題金色，與您的設計一致 */
+    margin-top: 2px;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.cart-item-store i {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+/* 如果您希望在購物車詳情頁 (cart-detail.html) 也顯示同樣的效果 */
+.cart-items-list .cart-item-store {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: var(--gold);
+    margin-top: 4px;
+    background: rgba(212, 175, 55, 0.08);
+    padding: 2px 8px;
+    border-radius: 12px;
+    width: fit-content;
+}
+
 /* ==========================================
    購物車商品復選框 (Checkbox) 與選中狀態樣式
    ========================================== */

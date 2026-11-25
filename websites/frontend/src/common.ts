@@ -66,7 +66,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 }));
 
 // ==========================================
-// 3. 模塊接口定義 (解決 TS2304 找不到內部方法的問題)
+// 3. 模塊接口定義
 // ==========================================
 interface CartModule {
     toggleDropdown: (event?: Event) => void;
@@ -220,16 +220,22 @@ export const Cart: CartModule = {
         }
     },
 
-    renderItems: (cartItems: any[], totalAmount: number) => {
+    renderItems: (cartItems, totalAmount) => {
         const container = document.getElementById('cartItemsContainer');
-        if (!container || !container.closest('.cart-dropdown-menu')) {
-            console.warn('🛡️ [安全攔截] 阻止了 renderCartItems 覆蓋詳情頁 DOM！');
+
+        // 1. 嚴格校驗容器是否存在且位於正確的下拉菜單內
+        if (!container) {
+            console.error('❌ 找不到 #cartItemsContainer 元素！');
             return;
         }
-        if (!container) return;
+        if (!container.closest('.cart-dropdown-menu')) {
+            console.warn('⚠️ 當前容器不在 .cart-dropdown-menu 內，跳過渲染以防覆蓋詳情頁。');
+            return;
+        }
 
         useCartStore.getState().selectedItems.clear();
 
+        // 2. 空狀態處理
         if (!cartItems || cartItems.length === 0) {
             container.innerHTML = `<div class="cart-empty"><i class="fas fa-shopping-basket" style="font-size: 3rem; color: #ddd; margin-bottom: 1rem;"></i><p>購物車是空的</p></div>`;
             const totalEl = document.getElementById('cartTotalAmount');
@@ -238,27 +244,63 @@ export const Cart: CartModule = {
         }
 
         let html = '';
-        cartItems.forEach((item) => {
+        cartItems.forEach((item: any) => { // 臨時使用 any 確保能拿到所有動態字段
             const isChecked = item.selected !== false;
             if (isChecked) useCartStore.getState().selectedItems.add(item.cartId);
+
+            // 3. 【核心修復】獲取店鋪名稱並強制生成 HTML
+            // 兼容後端可能傳回 null, undefined, "" 的情況
+            const rawStoreName = item.storeName || item.store_name || '';
+            const storeName = String(rawStoreName).trim();
+
+            let storeNameHtml = '';
+            if (storeName) {
+                // 使用內聯樣式 !important 防止被全局 CSS 隱藏
+                storeNameHtml = `
+                <div class="cart-item-store" style="
+                    font-size: 0.75rem !important; 
+                    color: #6c757d !important; 
+                    margin-top: 4px !important; 
+                    display: flex !important; 
+                    align-items: center !important; 
+                    gap: 4px !important;
+                    visibility: visible !important;
+                ">
+                    <i class="fas fa-store" style="color: #d4af37; font-size: 0.7rem;"></i>
+                    <span>來自：${storeName}</span>
+                </div>
+            `;
+            } else {
+                // 調試用：如果沒顯示，取消下面這行的註釋來確認是否進入了 else
+                // storeNameHtml = `<div style="color:red; font-size:10px;">[DEBUG: 無店鋪數據]</div>`;
+            }
+
+            // 4. 拼接商品卡片 HTML
             html += `<div class="cart-item" data-cart-id="${item.cartId}" data-product-id="${item.product.productId}">
-                <div class="cart-item-checkbox">
-                    <input type="checkbox" class="cart-item-select" data-cart-id="${item.cartId}" 
-                           onchange="window.Cart.toggleSelection(${item.cartId}, this.checked)" ${isChecked ? 'checked' : ''}>
+            <div class="cart-item-checkbox">
+                <input type="checkbox" class="cart-item-select" data-cart-id="${item.cartId}" 
+                       onchange="window.Cart.toggleSelection(${item.cartId}, this.checked)" ${isChecked ? 'checked' : ''}>
+            </div>
+            <div class="cart-item-img">
+                <img src="/images/products/${item.product.image}" alt="${item.product.description}" onerror="this.src='/images/placeholder.png'">
+            </div>
+            <div class="cart-item-info">
+                <div class="cart-item-name">${item.product.description}</div>
+                
+                <!-- 【插入點】店鋪名稱 -->
+                ${storeNameHtml}
+                
+                <div class="cart-item-price">HK$ ${window.formatPrice(item.price)}</div>
+                <div class="cart-item-quantity">
+                    <button class="qty-btn" onclick="window.Cart.updateQuantity(${item.cartId}, ${item.quantity - 1})" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
+                    <span class="qty-value">${item.quantity}</span>
+                    <button class="qty-btn" onclick="window.Cart.updateQuantity(${item.cartId}, ${item.quantity + 1})" ${item.quantity >= item.product.stock ? 'disabled' : ''}>+</button>
                 </div>
-                <div class="cart-item-img"><img src="/images/products/${item.product.image}" alt="${item.product.description}" onerror="this.src='/images/placeholder.png'"></div>
-                <div class="cart-item-info">
-                    <div class="cart-item-name">${item.product.description}</div>
-                    <div class="cart-item-price">HK$ ${window.formatPrice(item.price)}</div>
-                    <div class="cart-item-quantity">
-                        <button class="qty-btn" onclick="window.Cart.updateQuantity(${item.cartId}, ${item.quantity - 1})" ${item.quantity <= 1 ? 'disabled' : ''}>-</button>
-                        <span class="qty-value">${item.quantity}</span>
-                        <button class="qty-btn" onclick="window.Cart.updateQuantity(${item.cartId}, ${item.quantity + 1})" ${item.quantity >= item.product.stock ? 'disabled' : ''}>+</button>
-                    </div>
-                </div>
-                <div class="cart-item-remove" onclick="window.Cart.removeFromCart(${item.product.productId})"><i class="fas fa-trash-alt"></i></div>
-            </div>`;
+            </div>
+            <div class="cart-item-remove" onclick="window.Cart.removeFromCart(${item.product.productId})"><i class="fas fa-trash-alt"></i></div>
+        </div>`;
         });
+
         container.innerHTML = html;
         const totalEl = document.getElementById('cartTotalAmount');
         if (totalEl) totalEl.textContent = 'HK$ ' + window.formatPrice(totalAmount);

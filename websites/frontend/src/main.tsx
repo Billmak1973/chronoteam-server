@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client'
 
 // 組件導入 (確保這些文件已經改為 .tsx)
 import FavoriteButton from './components/FavoriteButton'
-import CartDropdown from './components/CartDropdown'
 import ReviewsContainer from './components/ReviewsContainer'
 
 // 樣式導入
@@ -57,17 +56,6 @@ if (favoriteMountNode) {
   )
 }
 
-// ==========================================
-// 2. 掛載「購物車下拉菜單」組件
-// ==========================================
-const cartMountNode = document.getElementById('react-cart-dropdown')
-if (cartMountNode) {
-  ReactDOM.createRoot(cartMountNode).render(
-      <React.StrictMode>
-        <CartDropdown />
-      </React.StrictMode>
-  )
-}
 
 // ==========================================
 // 3. 掛載「完整評論區」組件 (核心修復)

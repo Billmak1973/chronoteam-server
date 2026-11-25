@@ -1044,6 +1044,7 @@
 
         // 控制用户名输入框的显示/隐藏
         function toggleUserInput() {
+            //getElementById:去 HTML 畫面中找到 id="filterUserMode" 的那個 <select> 下拉選單元素
             const mode = document.getElementById('filterUserMode').value;
             const input = document.getElementById('filterUsername');
             if (mode === 'specific') {
@@ -1060,6 +1061,7 @@
         // =========================================
         function applyFilter() {
             // 獲取所有篩選條件的值
+            //querySelector 是 JavaScript 裡用來從網頁（DOM）中尋找並抓取「第一個符合條件的 HTML 元素」的方法。
             const status = document.querySelector('select[name="status"]').value;
             const type = document.querySelector('select[name="type"]').value;
 
@@ -1292,14 +1294,28 @@
             quantityInput.max = ''; // 清空最大值
 
             try {
+                //fetch(...)：瀏覽器內建用來發送網路請求的函式，這裡請求的路徑是 /brands/.../store/.../products。
+                //反引號 `...` 與 ${...}（模板字串）：把變數動態拼進網址裡。
+                //encodeURIComponent(brand)：把 brand（品牌名稱）做 URL 編碼。如果品牌名包含空白、斜線、中文或特殊字元（例如 "A & B" 或 "測試/品牌"），編碼後才不會把網址結構弄壞。
+                //await：因為網路請求需要時間，加上 await 會讓程式在這裡等伺服器回傳結果，拿到後再往下執行（通常寫在 async 函式裡）。
+                //const response = ...：把伺服器回傳的「回應物件（Response）」存起來。注意：這時候的 response 還不是最終的商品資料，而是包含狀態碼（如 200、404）、標頭（headers）以及尚未解析的資料串流。
                 const response = await fetch(`/brands/${encodeURIComponent(brand)}/store/${currentStoreId}/products`);
+
+                //response.json()：讀取 response 裡的內容，並把它從 JSON 字串轉換成 JavaScript 物件或陣列。
+                //await：解析內容也是非同步操作，所以同樣要用 await 等它轉完。
+                //const result = ...：把解析好的資料存進 result，之後你就可以用 result.data、result.products 或直接當陣列處理（視後端回傳的 JSON 結構而定）。
                 const result = await response.json();
 
+               // result.success：後端回傳的狀態旗標，表示這次請求業務邏輯上是成功的（通常是 true）。
+                //result.data：確認 data 存在且不是 null 或 undefined。
+                //result.data.length > 0：確認商品陣列裡至少有一筆商品（長度大於 0）。
                 if (result.success && result.data && result.data.length > 0) {
                     productSelect.innerHTML = '<option value="">請選擇商品</option>';
 
                     result.data.forEach(product => {
+                        //document.createElement('option')在記憶體中建立一個新的 <option> 元素。
                         const option = document.createElement('option');
+                        //設定這個選項實際送出或讀取時的「值」（通常是商品 ID），而畫面上看到的文字則由後面的 textContent 決定。
                         option.value = product.productId;
                         const stock = product.stock || 0;
 
@@ -1314,7 +1330,7 @@
                             option.style.color = '#999';
                             option.style.backgroundColor = '#f5f5f5';
                         }
-
+                        //把剛剛組好的 <option> 真正塞進 <select> 下拉選單裡顯示出來。
                         productSelect.appendChild(option);
                     });
                 } else {
@@ -1401,6 +1417,7 @@
 
             // 獲取舊商品退款總額
             let oldProductRefund = 0;
+            //querySelectorAll會抓所有符合條件的元素，並打包成一個類似陣列的集合 NodeList 回傳（如果一個都沒找到，就回傳空的 NodeList，長度為 0）。
             const refundInputs = document.querySelectorAll('.refund-amount-input');
             refundInputs.forEach(input => {
                 oldProductRefund += parseFloat(input.value) || 0;

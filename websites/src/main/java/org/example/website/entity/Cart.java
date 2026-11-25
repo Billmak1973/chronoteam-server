@@ -52,6 +52,23 @@ public class Cart {
     @Column(name = "selected", nullable = false)
     private Boolean selected = true;
 
+ /**
+  * 線下門店 ID
+  * 當 isOffline 為 true 時，此字段記錄具體的門店 ID。
+  * 若為線上訂單 (isOffline = false)，此字段應為 null。
+  */
+ @ManyToOne(fetch = FetchType.LAZY)
+ @JoinColumn(name = "store_id")
+ @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+ private OfflineStore store;
+
+ /**
+  * 【新增 2】是否為線下/門店訂單標識
+  * true: 代表該商品是從線下門店購買或預留的。
+  * false: 代表該商品來自線上總倉。
+  */
+ @Column(name = "is_offline", nullable = false)
+ private Boolean isOffline = false; // 默認為線上
 
     @UpdateTimestamp//Hibernate 提供的自動時間戳註解。每當這條購物車記錄被更新 (Update) 時，
     @Column(name = "updated_at")

@@ -87,4 +87,6 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      * @param username 用戶名
      */
     void deleteByUser_UsernameAndSelectedTrue(String username);
+
+    Cart findByUser_UsernameAndProduct_ProductIdAndStore_StoreId(String username, Integer productId, Long storeId);
 }

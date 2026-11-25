@@ -229,14 +229,7 @@ public class CartController {
         }
     }
 
-    @Operation(
-            summary = "獲取購物車列表",
-            description = "獲取當前登入用戶的購物車所有項目、總件數及總價 (主要供導航欄下拉菜單或購物車頁面初始化使用)。"
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "獲取成功，返回包含 cartItems, cartCount, totalAmount 的 JSON"),
-            @ApiResponse(responseCode = "401", description = "未登入 (返回空列表與 0)")
-    })
+
     @GetMapping("/api/list")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getCartList(Authentication authentication) {
@@ -248,14 +241,46 @@ public class CartController {
             response.put("totalAmount", 0.0);
             return ResponseEntity.ok(response);
         }
+
         String username = authentication.getName();
         List<Cart> cartItems = cartService.getCartItems(username);
+
+        // 【核心修改】：手動構建返回數據，以便注入門店名稱
+        List<Map<String, Object>> cleanCartItems = new ArrayList<>();
+        for (Cart item : cartItems) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("cartId", item.getCartId());
+            map.put("quantity", item.getQuantity());
+            map.put("price", item.getPrice());
+            map.put("selected", item.getSelected());
+
+            // 處理商品基本信息
+            if (item.getProduct() != null) {
+                Map<String, Object> prodMap = new HashMap<>();
+                prodMap.put("productId", item.getProduct().getProductId());
+                prodMap.put("description", item.getProduct().getDescription());
+                prodMap.put("image", item.getProduct().getImage());
+                prodMap.put("stock", item.getProduct().getStock());
+                map.put("product", prodMap);
+            }
+
+            // 【新增邏輯】：判斷是否為線下門店商品，並獲取門店名稱
+            if (Boolean.TRUE.equals(item.getIsOffline()) && item.getStore() != null) {
+                map.put("storeName", item.getStore().getName());
+            } else {
+                map.put("storeName", null);
+            }
+
+            cleanCartItems.add(map);
+        }
+
         double totalAmount = cartItems.stream()
                 .filter(Cart::getSelected)
                 .mapToDouble(item -> item.getPrice().doubleValue() * item.getQuantity())
                 .sum();
+
         response.put("success", true);
-        response.put("cartItems", cartItems);
+        response.put("cartItems", cleanCartItems); // 使用清洗後的數據
         response.put("cartCount", cartService.getCartCount(username));
         response.put("totalAmount", totalAmount);
         return ResponseEntity.ok(response);
@@ -304,5 +329,51 @@ public class CartController {
         }
         cartService.toggleSelection(authentication.getName(), cartId, isSelected);
         return ResponseEntity.ok(Result.ok("更新成功"));
+    }
+
+    @Operation(
+            summary = "添加線下門店商品到購物車",
+            description = "將指定門店的指定商品加入購物車，並標記為線下訂單 (isOffline=true)，同時預留庫存。"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "添加成功"),
+            @ApiResponse(responseCode = "400", description = "庫存不足或參數錯誤"),
+            @ApiResponse(responseCode = "401", description = "未登入")
+    })
+    @PostMapping("/api/add-store-item")
+    @ResponseBody
+    public ResponseEntity<Result> addStoreItemToCart(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "包含 productId, storeId, quantity 的請求體",
+                    required = true
+            )
+            @RequestBody Map<String, Integer> payload,
+            Authentication authentication) {
+
+        if (!isAuthenticated(authentication)) {
+            return ResponseEntity.status(401).body(Result.error("請先登入"));
+        }
+
+        try {
+            Integer productId = payload.get("productId");
+            Long storeId = Long.valueOf(payload.get("storeId"));
+            Integer quantity = payload.getOrDefault("quantity", 1);
+
+            if (productId == null || storeId == null) {
+                return ResponseEntity.badRequest().body(Result.error("缺少必要參數"));
+            }
+
+            // 調用 Service 層處理業務邏輯
+            Cart cart = cartService.addStoreItemToCart(
+                    authentication.getName(),
+                    productId,
+                    storeId,
+                    quantity
+            );
+
+            return ResponseEntity.ok(Result.ok("已加入購物車"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
+        }
     }
 }

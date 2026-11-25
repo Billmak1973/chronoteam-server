@@ -3422,27 +3422,35 @@
 
                     <div th:each="inv : ${storeInventories}"
                          style="background: white; padding: 0.8rem; border-radius: 6px; border: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-                        <!-- flex-shrink: 0 防止卡片在滾動區域內被壓縮 -->
 
-                        <!-- 門店名稱與電話 -->
+                        <!-- 左側：門店信息 -->
                         <div style="flex: 1; min-width: 0;">
                             <div style="font-weight: 600; color: var(--primary); font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
                                  th:text="${inv.store.name}">門店名稱</div>
+                            <!-- 可選：顯示電話或地址 -->
                         </div>
 
-                        <!-- 庫存數量 -->
-                        <div style="text-align: right; margin-left: 1rem;">
+                        <!-- 右側：庫存與操作 -->
+                        <div style="text-align: right; margin-left: 1rem; display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;">
+
+                            <!-- 庫存數量顯示 (保持原樣) -->
                             <div th:if="${inv.quantity > 0}"
                                  style="font-size: 1.2rem; font-weight: 700; color: #28a745;"
                                  th:text="${inv.quantity} + ' 隻'">5 隻</div>
                             <div th:unless="${inv.quantity > 0}"
                                  style="font-size: 0.85rem; color: #dc3545; font-weight: 600;">缺貨</div>
 
-                            <!-- 可選：顯示預留數量 -->
-                            <div th:if="${inv.reservedQuantity > 0}"
-                                 style="font-size: 0.75rem; color: #fd7e14; margin-top: 0.2rem;">
-                                (<span th:text="${inv.reservedQuantity}">2</span> 隻已預留)
-                            </div>
+                            <!-- 加入購物車按鈕 -->
+                            <!-- 僅當庫存 > 0 且用戶已登入時顯示 -->
+                            <button type="button"
+                                    th:if="${inv.quantity > 0 }"
+                                    class="btn-add-to-cart-store"
+                                    th:data-store-id="${inv.store.storeId}"
+                                    th:data-product-id="${product.productId}"
+                                    onclick="addStoreItemToCart(this)"
+                                    style="margin-top: 0.3rem; padding: 0.3rem 0.6rem; font-size: 0.75rem; background: var(--gold); color: white; border: none; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+                                <i class="fas fa-cart-plus"></i> 加入購物車
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -4766,6 +4774,82 @@
                     addToCart(CTP.productId);
                 }
             }
+
+
+            // ==========================================
+            // 2. 加入購物車(綫下店鋪數量）
+            // ==========================================
+            // 【修改處】將此函數移到 ChronoTeamProduct IIFE 閉包之外，並掛載到 window
+            /**
+             * 將指定門店的商品加入購物車
+             * @param {HTMLElement} btn - 被點擊的按鈕元素
+             */
+            window.addStoreItemToCart = async function(btn) {
+                // 1. 獲取數據
+                const storeId = btn.getAttribute('data-store-id');
+                const productId = btn.getAttribute('data-product-id');
+
+                // 2. 檢查登入狀態 (使用全局變量 isLoggedIn)
+                if (typeof window.isLoggedIn !== 'undefined' && !window.isLoggedIn) {
+                    if (typeof Auth !== 'undefined' && typeof Auth.openLoginModal === 'function') {
+                        Auth.openLoginModal();
+                    } else {
+                        window.location.href = '/login';
+                    }
+                    return;
+                }
+
+                // 3. 視覺反饋
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                btn.style.opacity = '0.7';
+                btn.disabled = true; // 防止重複點擊
+
+                try {
+                    // 4. 調用 API
+                    const response = await fetch('/cart/api/add-store-item', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            productId: parseInt(productId),
+                            storeId: parseInt(storeId),
+                            quantity: 1
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    // 5. 處理結果
+                    if (response.ok && result.success) {
+                        if (typeof showNotification === 'function') {
+                            showNotification('✅ 已加入購物車 (線下門店預留)');
+                        } else {
+                            alert('已加入購物車');
+                        }
+
+                        // 更新導航欄購物車角標
+                        if (typeof Cart !== 'undefined' && typeof Cart.loadItems === 'function') {
+                            Cart.loadItems();
+                        }
+                    } else {
+                        throw new Error(result.message || '加入失敗');
+                    }
+                } catch (error) {
+                    console.error('加入購物車錯誤:', error);
+                    if (typeof showNotification === 'function') {
+                        showNotification('❌ ' + error.message, true);
+                    } else {
+                        alert('加入失敗: ' + error.message);
+                    }
+                } finally {
+                    // 6. 恢復按鈕狀態
+                    btn.innerHTML = originalHtml;
+                    btn.style.opacity = '1';
+                    btn.disabled = false;
+                }
+            };
 
             // ==========================================
             // 3. 管理員專屬：等待名單模態框
