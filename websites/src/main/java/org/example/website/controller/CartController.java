@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.Result;
 import org.example.website.entity.Cart;
 import org.example.website.entity.User;
+import org.example.website.repository.CartRepository;
 import org.example.website.service.CartService;
 import org.example.website.service.UserService;
 import org.example.website.util.PaginationUtils;
@@ -35,15 +36,14 @@ public class CartController {
 
     private final CartService cartService;
     private final UserService userService;
+    private final CartRepository cartRepository;
 
-    public CartController(CartService cartService, UserService userService) {
+    public CartController(CartService cartService, UserService userService, CartRepository cartRepository) {
         this.cartService = cartService;
         this.userService = userService;
+        this.cartRepository = cartRepository;
     }
 
-    // ==========================================
-    // 頁面渲染 (從 PageController 遷移過來)
-    // ==========================================
 
     /**
      * 購物車頁面 (支援分頁 + 日期分組)
@@ -234,6 +234,8 @@ public class CartController {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> getCartList(Authentication authentication) {
         Map<String, Object> response = new HashMap<>();
+
+        // 1. 未登入或無權限處理
         if (!isAuthenticated(authentication)) {
             response.put("success", true);
             response.put("cartItems", List.of());
@@ -245,7 +247,7 @@ public class CartController {
         String username = authentication.getName();
         List<Cart> cartItems = cartService.getCartItems(username);
 
-        // 【核心修改】：手動構建返回數據，以便注入門店名稱
+        // 2. 【原有邏輯】手動構建清洗後的購物車商品數據
         List<Map<String, Object>> cleanCartItems = new ArrayList<>();
         for (Cart item : cartItems) {
             Map<String, Object> map = new HashMap<>();
@@ -264,7 +266,7 @@ public class CartController {
                 map.put("product", prodMap);
             }
 
-            // 【新增邏輯】：判斷是否為線下門店商品，並獲取門店名稱
+            // 判斷是否為線下門店商品，並獲取門店名稱
             if (Boolean.TRUE.equals(item.getIsOffline()) && item.getStore() != null) {
                 map.put("storeName", item.getStore().getName());
             } else {
@@ -274,15 +276,76 @@ public class CartController {
             cleanCartItems.add(map);
         }
 
+        // 3. 【新增邏輯】構建配送方式下拉選項
+        List<Map<String, Object>> deliveryOptions = new ArrayList<>();
+
+        // 檢查是否有線上商品 (isOffline == false 或 null)
+        boolean hasOnlineItems = cartItems.stream()
+                .anyMatch(item -> !Boolean.TRUE.equals(item.getIsOffline()));
+
+        if (hasOnlineItems) {
+            Map<String, Object> onlineOption = new HashMap<>();
+            onlineOption.put("value", "ONLINE");
+            onlineOption.put("label", "📦 網購配送 (線上總倉)");
+            deliveryOptions.add(onlineOption);
+        }
+
+        // 檢查是否有線下商品，並按門店分組 (使用 LinkedHashMap 保持插入順序)
+        Map<Long, String> offlineStoresMap = new LinkedHashMap<>();
+        for (Cart item : cartItems) {
+            if (Boolean.TRUE.equals(item.getIsOffline()) && item.getStore() != null) {
+                Long storeId = item.getStore().getStoreId();
+                // 避免重複添加同一個門店
+                if (!offlineStoresMap.containsKey(storeId)) {
+                    offlineStoresMap.put(storeId, item.getStore().getName());
+                }
+            }
+        }
+
+        for (Map.Entry<Long, String> entry : offlineStoresMap.entrySet()) {
+            Map<String, Object> storeOption = new HashMap<>();
+            storeOption.put("value", "STORE_" + entry.getKey()); // 標識符: STORE_門店ID
+            storeOption.put("label", "🏪 門店自取 - " + entry.getValue());
+            storeOption.put("storeId", entry.getKey());
+            deliveryOptions.add(storeOption);
+        }
+
+        // 【新增】智能計算默認配送方式
+        String defaultDeliveryValue = "ONLINE"; // 默認為網購
+
+        // 檢查當前購物車中是否有「已勾選」且屬於「線下門店」的商品
+        boolean hasSelectedOfflineItems = cartItems.stream()
+                .filter(Cart::getSelected) // 只看已勾選的商品
+                .anyMatch(item -> Boolean.TRUE.equals(item.getIsOffline()) && item.getStore() != null);
+
+        if (hasSelectedOfflineItems) {
+            // 獲取第一個已勾選的線下商品的門店ID
+            Long firstStoreId = cartItems.stream()
+                    .filter(Cart::getSelected)
+                    .filter(item -> Boolean.TRUE.equals(item.getIsOffline()) && item.getStore() != null)
+                    .findFirst()
+                    .map(item -> item.getStore().getStoreId())
+                    .orElse(null);
+
+            if (firstStoreId != null) {
+                defaultDeliveryValue = "STORE_" + firstStoreId;
+            }
+        }
+
+        // 4. 計算選中商品的總金額
         double totalAmount = cartItems.stream()
                 .filter(Cart::getSelected)
                 .mapToDouble(item -> item.getPrice().doubleValue() * item.getQuantity())
                 .sum();
 
+        // 5. 組裝最終響應
         response.put("success", true);
-        response.put("cartItems", cleanCartItems); // 使用清洗後的數據
+        response.put("cartItems", cleanCartItems);
         response.put("cartCount", cartService.getCartCount(username));
         response.put("totalAmount", totalAmount);
+        response.put("deliveryOptions", deliveryOptions); // 返回結構化選項列表
+        response.put("defaultDeliveryValue", defaultDeliveryValue); // 將默認值傳給前端
+
         return ResponseEntity.ok(response);
     }
 
@@ -375,5 +438,48 @@ public class CartController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Result.error(e.getMessage()));
         }
+    }
+
+    @PutMapping("/api/update-selection-by-delivery")
+    @ResponseBody
+    public ResponseEntity<Result> updateSelectionByDelivery(
+            Authentication authentication,
+            @RequestParam(required = false) Long storeId) {
+
+        if (!isAuthenticated(authentication)) {
+            return ResponseEntity.status(401).body(Result.error("請先登入"));
+        }
+
+        String username = authentication.getName();
+        List<Cart> allCartItems = cartService.getCartItems(username);
+
+        int updatedCount = 0;
+        for (Cart item : allCartItems) {
+            boolean shouldBeSelected = false;
+
+            // 情況 A: 選擇了特定門店自取 -> 只有該門店且 isOffline=true 的商品才選中
+            if (storeId != null) {
+                if (item.getStore() != null &&
+                        item.getStore().getStoreId().equals(storeId) &&
+                        Boolean.TRUE.equals(item.getIsOffline())) {
+                    shouldBeSelected = true;
+                }
+            }
+            // 情況 B: 選擇了網購配送 -> 只有 isOffline=false (或 null) 的商品才選中
+            else {
+                if (!Boolean.TRUE.equals(item.getIsOffline())) {
+                    shouldBeSelected = true;
+                }
+            }
+
+            // 僅當狀態發生變化時才執行更新，減少不必要的 DB 操作
+            if (item.getSelected() != shouldBeSelected) {
+                item.setSelected(shouldBeSelected);
+                cartRepository.save(item);
+                updatedCount++;
+            }
+        }
+
+        return ResponseEntity.ok(Result.ok("已根據配送方式自動篩選商品 (" + updatedCount + " 項變更)"));
     }
 }

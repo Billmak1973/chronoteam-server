@@ -1032,3 +1032,12 @@ body {
         justify-content: center;
     }
 }
+
+#cart-delivery-dropdown select:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+#cart-delivery-dropdown select option {
+    padding: 8px;
+}

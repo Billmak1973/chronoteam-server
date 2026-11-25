@@ -78,7 +78,11 @@ Cart.loadItems = async function () {
     const data = await response.json();
 
     if (data.success) {
-      Cart.renderItems(data.cartItems, data.totalAmount);
+      // 【修改】保存後端返回的默認配送值
+      Cart.defaultDeliveryValue = data.defaultDeliveryValue || "ONLINE";
+      // 【核心修復】：必須傳遞第三個參數 deliveryOptions
+      Cart.renderItems(data.cartItems, data.totalAmount, data.deliveryOptions);
+
       updateCartBadge(data.cartCount);
 
       // 替換內部引用 -> Cart.selectedItems
@@ -104,7 +108,7 @@ Cart.loadItems = async function () {
  * @param {number} totalAmount - 選中商品的總金額
  * @returns {void}
  */
-Cart.renderItems = function (cartItems, totalAmount) {
+Cart.renderItems = function (cartItems, totalAmount,deliveryOptions) {
   const container = document.getElementById("cartItemsContainer");
 
   // 🛡️ 終極防禦：防止覆蓋詳情頁 DOM
@@ -166,7 +170,81 @@ Cart.renderItems = function (cartItems, totalAmount) {
 
   const totalEl = document.getElementById("cartTotalAmount");
   if (totalEl) totalEl.textContent = "HK$ " + formatPrice(totalAmount);
+  Cart.renderDeliveryDropdown(deliveryOptions);
 };
+
+// 【新增函數】渲染下拉選單並綁定變更事件 (已整合智能默認值邏輯)
+Cart.renderDeliveryDropdown = function(options) {
+  // 1. 移除舊的下拉選單（如果存在）
+  const oldDropdown = document.getElementById("cart-delivery-dropdown");
+  if (oldDropdown) oldDropdown.remove();
+
+  // 2. 如果沒有選項，不渲染
+  if (!options || options.length === 0) return;
+
+  // 3. 創建下拉選單容器
+  // 【核心修改】遍歷 options 時，對比 Cart.defaultDeliveryValue 來決定是否加 selected
+  // 這個 defaultDeliveryValue 是在 Cart.loadItems() 中從後端 API 獲取並保存的
+  const currentDefault = Cart.defaultDeliveryValue || "ONLINE";
+
+  const optionsHtml = options.map(opt => {
+    // 如果當前選項的 value 等於後端推薦的默認值，則加上 selected
+    const isSelected = opt.value === currentDefault ? 'selected' : '';
+    return `<option value="${opt.value}" data-store-id="${opt.storeId || ''}" ${isSelected}>${opt.icon || ''} ${opt.label}</option>`;
+  }).join('');
+
+  const dropdownHtml = `
+    <div id="cart-delivery-dropdown" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">
+      <label style="font-size: 0.85rem; color: #6c757d; margin-bottom: 5px; display: block; font-weight: 600;">
+        <i class="fas fa-shipping-fast"></i> 選擇配送/取貨方式：
+      </label>
+      <select id="cart-delivery-select" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem; background: white; cursor: pointer; outline: none;">
+        ${optionsHtml}
+      </select>
+    </div>
+  `;
+
+  // 4. 插入 DOM (保持原有邏輯不變)
+  const cartFooter = document.querySelector(".cart-footer");
+  if (cartFooter) {
+    cartFooter.insertAdjacentHTML('afterbegin', dropdownHtml);
+  } else {
+    const container = document.getElementById("cartItemsContainer");
+    if (container) container.insertAdjacentHTML('beforeend', dropdownHtml);
+  }
+
+  // 5. 綁定 change 事件 (保持原有邏輯不變)
+  const selectEl = document.getElementById("cart-delivery-select");
+  if (selectEl) {
+    selectEl.addEventListener('change', async function() {
+      const selectedOption = this.options[this.selectedIndex];
+      const storeId = selectedOption.getAttribute('data-store-id');
+
+      // 構建請求參數：如果是網購(ONLINE)，storeId 為空字符串或 null；如果是門店，傳遞具體 ID
+      const params = new URLSearchParams();
+      if (storeId && storeId !== '') params.append('storeId', storeId);
+
+      try {
+        // 調用後端 API 批量更新 selected 狀態
+        const response = await fetch(`/cart/api/update-selection-by-delivery?${params.toString()}`, { method: 'PUT' });
+
+        if (response.ok) {
+          // 重新加載購物車數據並渲染 (這會自動根據新的 selected 狀態勾選/取消勾選，並觸發新的默認值計算)
+          await Cart.loadItems();
+
+          // 可選：給用戶一個輕量級提示
+          showNotification(`✅ 已切換為「${selectedOption.text.trim()}」模式`);
+        } else {
+          showNotification('❌ 切換配送方式失敗', true);
+        }
+      } catch (error) {
+        console.error('更新購物車選中狀態錯誤:', error);
+        showNotification('❌ 網絡錯誤', true);
+      }
+    });
+  }
+};
+
 
 /**
  * 切換單個購物車項的選中狀態，並同步後端與詳情頁 UI
