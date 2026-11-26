@@ -453,33 +453,40 @@ public class CartController {
         String username = authentication.getName();
         List<Cart> allCartItems = cartService.getCartItems(username);
 
-        int updatedCount = 0;
+        int deselectedCount = 0;
+
         for (Cart item : allCartItems) {
-            boolean shouldBeSelected = false;
+            boolean shouldDeselect = false;
 
-            // 情況 A: 選擇了特定門店自取 -> 只有該門店且 isOffline=true 的商品才選中
+            // 情況 A: 選擇了特定門店自取 (storeId != null)
+            // 規則：取消選中 [網購商品] 以及 [非該門店的線下商品]
             if (storeId != null) {
-                if (item.getStore() != null &&
-                        item.getStore().getStoreId().equals(storeId) &&
-                        Boolean.TRUE.equals(item.getIsOffline())) {
-                    shouldBeSelected = true;
+                // 如果是網購商品 (isOffline 為 false 或 null)，取消選中
+                if (!Boolean.TRUE.equals(item.getIsOffline())) {
+                    shouldDeselect = true;
+                }
+                // 如果是線下商品，但店鋪 ID 不匹配，取消選中
+                else if (item.getStore() == null || !item.getStore().getStoreId().equals(storeId)) {
+                    shouldDeselect = true;
                 }
             }
-            // 情況 B: 選擇了網購配送 -> 只有 isOffline=false (或 null) 的商品才選中
+            // 情況 B: 選擇了網購配送 (storeId == null)
+            // 規則：取消選中 [所有線下商品]
             else {
-                if (!Boolean.TRUE.equals(item.getIsOffline())) {
-                    shouldBeSelected = true;
+                if (Boolean.TRUE.equals(item.getIsOffline())) {
+                    shouldDeselect = true;
                 }
             }
 
-            // 僅當狀態發生變化時才執行更新，減少不必要的 DB 操作
-            if (item.getSelected() != shouldBeSelected) {
-                item.setSelected(shouldBeSelected);
+            // 【核心邏輯】：只有當需要取消選中，且當前確實是被選中的時候，才執行更新
+            if (shouldDeselect && Boolean.TRUE.equals(item.getSelected())) {
+                item.setSelected(false);
                 cartRepository.save(item);
-                updatedCount++;
+                deselectedCount++;
             }
+            // 注意：這裡沒有 else 分支去設置 setSelected(true)，所以原本沒選中的商品不會被自動選中
         }
 
-        return ResponseEntity.ok(Result.ok("已根據配送方式自動篩選商品 (" + updatedCount + " 項變更)"));
+        return ResponseEntity.ok(Result.ok("已清理不符合配送方式的商品 (" + deselectedCount + " 項取消選中)"));
     }
 }

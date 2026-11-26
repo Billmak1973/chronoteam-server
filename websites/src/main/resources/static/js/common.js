@@ -213,7 +213,7 @@ Cart.renderDeliveryDropdown = function(options) {
     if (container) container.insertAdjacentHTML('beforeend', dropdownHtml);
   }
 
-  // 5. 綁定 change 事件 (保持原有邏輯不變)
+  // 5. 綁定 change 事件
   const selectEl = document.getElementById("cart-delivery-select");
   if (selectEl) {
     selectEl.addEventListener('change', async function() {
@@ -226,14 +226,16 @@ Cart.renderDeliveryDropdown = function(options) {
 
       try {
         // 調用後端 API 批量更新 selected 狀態
+        // 注意：後端現在只負責「取消選中不符合條件的商品」
         const response = await fetch(`/cart/api/update-selection-by-delivery?${params.toString()}`, { method: 'PUT' });
 
         if (response.ok) {
-          // 重新加載購物車數據並渲染 (這會自動根據新的 selected 狀態勾選/取消勾選，並觸發新的默認值計算)
+          // 重新加載購物車數據並渲染
+          // 這會反映後端取消選中後的最新狀態
           await Cart.loadItems();
 
           // 可選：給用戶一個輕量級提示
-          showNotification(`✅ 已切換為「${selectedOption.text.trim()}」模式`);
+          showNotification(`✅ 已切換為「${selectedOption.text.trim()}」模式 (不符商品已取消選中)`);
         } else {
           showNotification('❌ 切換配送方式失敗', true);
         }

@@ -3386,7 +3386,7 @@
                  style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--gold);">
 
                 <h4 style="margin: 0 0 0.8rem 0; font-size: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fas fa-store" style="color: var(--gold);"></i> 線下門店庫存
+                    <i class="fas fa-store" style="color: var(--gold);"></i> 線下門店可售庫存
                 </h4>
 
                 <!-- 添加了 max-height, overflow-y, 以及自定義滾動條樣式 -->
@@ -3434,16 +3434,16 @@
                         <div style="text-align: right; margin-left: 1rem; display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem;">
 
                             <!-- 庫存數量顯示 (保持原樣) -->
-                            <div th:if="${inv.quantity > 0}"
+                            <div th:if="${inv.availableStock > 0}"
                                  style="font-size: 1.2rem; font-weight: 700; color: #28a745;"
-                                 th:text="${inv.quantity} + ' 隻'">5 隻</div>
-                            <div th:unless="${inv.quantity > 0}"
+                                 th:text="${inv.availableStock} + ' 隻'">5 隻</div>
+                            <div th:unless="${inv.availableStock > 0}"
                                  style="font-size: 0.85rem; color: #dc3545; font-weight: 600;">缺貨</div>
 
                             <!-- 加入購物車按鈕 -->
                             <!-- 僅當庫存 > 0 且用戶已登入時顯示 -->
                             <button type="button"
-                                    th:if="${inv.quantity > 0 }"
+                                    th:if="${inv.availableStock > 0 }"
                                     class="btn-add-to-cart-store"
                                     th:data-store-id="${inv.store.storeId}"
                                     th:data-product-id="${product.productId}"

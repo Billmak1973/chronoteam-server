@@ -2,12 +2,10 @@ package org.example.website.repository;
 
 import org.example.website.entity.Cart;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 購物車數據訪問層 (Repository) 介面
@@ -88,5 +86,23 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
      */
     void deleteByUser_UsernameAndSelectedTrue(String username);
 
-    Cart findByUser_UsernameAndProduct_ProductIdAndStore_StoreId(String username, Integer productId, Long storeId);
+
+    /**
+     * 專門查找「線上總倉」的購物車記錄
+     * 條件：用戶名 + 商品ID + 門店ID為NULL
+     */
+    Optional<Cart> findByUser_UsernameAndProduct_ProductIdAndStoreIsNull(
+            String username,
+            Integer productId
+    );
+
+    /**
+     * 查詢指定用戶、指定商品、指定門店的購物車記錄
+     * 用於判斷線下商品是否已在購物車中
+     */
+    Cart findByUser_UsernameAndProduct_ProductIdAndStore_StoreId(
+            String username,
+            Integer productId,
+            Long storeId
+    );
 }

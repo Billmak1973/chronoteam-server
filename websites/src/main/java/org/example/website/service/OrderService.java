@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,41 +35,122 @@ public class OrderService {
     private final UserAddressRepository userAddressRepository;
     private final StoreDailyReportRepository storeDailyReportRepository;
     private final StaffRepository staffRepository;
+
     /**
      * 1. 創建訂單 (移除庫存扣減，僅校驗庫存是否充足)
      */
     @Transactional
     public Order createOrder(String username) {
+        // 1. 獲取所有選中的購物車商品
         List<Cart> cartItems = cartRepository.findByUser_UsernameAndSelectedTrue(username);
+
         if (cartItems == null || cartItems.isEmpty()) {
             throw new RuntimeException("購物車是空的，無法創建訂單");
         }
+
+        // ==========================================
+        // 【核心新增】：結帳前的來源一致性校驗
+        // ==========================================
+
+        // A. 分離線上商品和線下商品
+        List<Cart> onlineItems = cartItems.stream()
+                .filter(item -> !Boolean.TRUE.equals(item.getIsOffline()))
+                .collect(Collectors.toList());
+
+        List<Cart> offlineItems = cartItems.stream()
+                .filter(item -> Boolean.TRUE.equals(item.getIsOffline()))
+                .collect(Collectors.toList());
+
+        // B. 規則 1：不能同時存在線上商品(is_offline=0) 和 線下商品(is_offline=1)
+        if (!onlineItems.isEmpty() && !offlineItems.isEmpty()) {
+            throw new RuntimeException("結帳失敗：網購配送商品與門店自取商品不能混合結帳。請分開下單或調整購物車選中狀態。");
+        }
+
+        // C. 規則 2：如果全是線下商品，必須屬於同一個門店
+        if (!offlineItems.isEmpty()) {
+            // 獲取第一個線下商品的門店ID作為基準
+            Long targetStoreId = offlineItems.get(0).getStore().getStoreId();
+
+            // 檢查其他線下商品是否都屬於這個門店
+            boolean isSameStore = offlineItems.stream()
+                    .allMatch(item -> item.getStore().getStoreId().equals(targetStoreId));
+
+            if (!isSameStore) {
+                throw new RuntimeException("結帳失敗：不同門店的商品不能合併為一筆訂單結帳。請按門店分開下單。");
+            }
+        }
+
+        // ==========================================
+        // 原有邏輯繼續執行
+        // ==========================================
 
         BigDecimal totalAmount = cartItems.stream()
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        //  核心修改 1：使用 UserRepository 獲取 User 實體
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用戶不存在"));
 
         Order order = new Order();
         order.setOrderNo("ORD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase());
-
-        //  核心修改 2：設置 User 關聯，不再是 setCustomer
         order.setUser(user);
-        order.setOrderSource("ONLINE");
+
+        // 根據商品類型設置訂單來源
+        if (!offlineItems.isEmpty()) {
+            order.setOrderSource("OFFLINE");
+            // 如果是線下訂單，需要關聯門店
+            order.setOfflineStore(offlineItems.get(0).getStore());
+            order.setDeliveryMethod("STORE_PICKUP"); // 默認為門店自取
+            order.setDelivery(false);
+        } else {
+            order.setOrderSource("ONLINE");
+            order.setDeliveryMethod("EXPRESS"); // 默認為快遞
+            order.setDelivery(true);
+        }
 
         order.setTotalAmount(totalAmount);
         order.setStatus(Order.OrderStatus.PENDING);
         order.setPaymentStatus(Order.PaymentStatus.UNPAID);
         order.setPaymentMethod("PAYPAL_SIM");
 
-        //  僅校驗庫存，不再扣減庫存！
+        // ==========================================
+        // 【核心修改】：庫存校驗 (區分線上總倉與線下門店)
+        // ==========================================
         for (Cart item : cartItems) {
             Product product = item.getProduct();
-            if (product.getStock() < item.getQuantity()) {
-                throw new RuntimeException("商品 [" + product.getDescription() + "] 庫存不足，當前庫存: " + product.getStock());
+            int requiredQty = item.getQuantity();
+
+            if (Boolean.TRUE.equals(item.getIsOffline())) {
+                // === 線下門店庫存校驗 ===
+                if (item.getStore() == null) {
+                    throw new RuntimeException("線下商品未關聯門店，數據異常");
+                }
+
+                // 1. 查詢該門店該商品的庫存記錄
+                Optional<StoreInventory> storeInvOpt = storeInventoryRepository
+                        .findByStoreAndProduct(item.getStore(), product);
+
+                if (!storeInvOpt.isPresent()) {
+                    throw new RuntimeException("商品 [" + product.getDescription() + "] 在門店 [" + item.getStore().getName() + "] 無庫存記錄");
+                }
+
+                StoreInventory storeInv = storeInvOpt.get();
+
+                // 2. 計算可售庫存 = 物理庫存 - 預留庫存
+                int physicalQty = storeInv.getQuantity() != null ? storeInv.getQuantity() : 0;
+                int reservedQty = storeInv.getReservedQuantity() != null ? storeInv.getReservedQuantity() : 0;
+                int availableStock = physicalQty - reservedQty;
+
+                // 3. 校驗
+                if (availableStock < requiredQty) {
+                    throw new RuntimeException("結帳失敗：門店 [" + item.getStore().getName() + "] 的商品 [" + product.getDescription() + "] 庫存不足。當前可售: " + availableStock + ", 您需要: " + requiredQty);
+                }
+
+            } else {
+                // === 線上總倉庫存校驗 ===
+                if (product.getStock() < requiredQty) {
+                    throw new RuntimeException("商品 [" + product.getDescription() + "] 線上庫存不足，當前庫存: " + product.getStock());
+                }
             }
         }
 
@@ -86,7 +168,6 @@ public class OrderService {
         cartRepository.deleteByUser_UsernameAndSelectedTrue(username);
         return savedOrder;
     }
-
 
     /**
      * 2. 線上模擬支付處理 (支付成功後扣減庫存，並正確處理運費)
