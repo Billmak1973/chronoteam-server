@@ -1350,6 +1350,10 @@
     <div th:replace="~{fragments/common :: navbar}"></div>
 
     <div class="checkout-container">
+        <!-- 隱藏字段：儲存訂單當前的配送方式和門店ID -->
+        <input type="hidden" id="initialDeliveryMethod" th:value="${order.deliveryMethod}">
+        <input type="hidden" id="initialStoreId"
+            th:value="${order.offlineStore != null ? order.offlineStore.storeId : ''}">
         <h2 style="margin-bottom: 1.5rem; color: var(--primary);">
             <i class="fas fa-lock" style="color: var(--gold);"></i> 安全結賬
         </h2>
@@ -2136,7 +2140,28 @@
 
             const qtyElement = card.querySelector('.qty-value');
             let currentQty = parseInt(qtyElement.textContent);
-            const maxStock = parseInt(card.getAttribute('data-stock'));
+
+            // ==========================================
+            // 【核心修改】：不再使用 card.getAttribute('data-stock')
+            // 而是根據當前選中的店鋪，計算真實的可售庫存
+            // ==========================================
+            let maxStock = 0;
+            const storeSelect = document.getElementById('storeSelect');
+            const storeId = storeSelect ? storeSelect.value : '';
+
+            if (storeId && storeId !== '') {
+                // 如果已選擇店鋪，從 storeStockMap 中獲取真實庫存
+                //通過 Thymeleaf 的內聯語法 /*[[${storeStockMap}]]*/ 將後端傳遞過來的 Map 直接嵌入到 JavaScript 變量中。
+                //checkoutcontroller的checkoutpage有 Map<Long, Map<Integer, Integer>> storeStockMap = new HashMap<>();
+                const storeStockMap = /*[[${storeStockMap}]]*/ {};
+                const productId = parseInt(card.getAttribute('data-product-id'));
+                const storeStock = storeStockMap[storeId] || {};
+                maxStock = storeStock[productId] || 0;
+            } else {
+                // 如果未選擇店鋪（例如快遞模式），則回退到使用線上總倉庫存
+                maxStock = parseInt(card.getAttribute('data-stock')) || 0;
+            }
+
             const itemName = card.querySelector('.item-name').textContent;
             let newQty = currentQty + change;
 
@@ -2148,7 +2173,6 @@
 
             // 如果是點擊「-」按鈕且新數量仍大於庫存
             if (change < 0 && newQty > maxStock) {
-                // 【關鍵修復】傳遞 currentQty（原本的數量），而不是 newQty
                 showStockExceedModal(orderItemId, currentQty, maxStock, itemName);
                 return;
             }
@@ -2162,7 +2186,6 @@
             // 正常更新數量
             await performQuantityUpdate(orderItemId, newQty, card, qtyElement, maxStock);
         }
-
         // 顯示庫存超額選擇彈窗
         function showStockExceedModal(orderItemId, newQty, maxStock, itemName) {
             CO.pendingOrderItemId = orderItemId;
@@ -3160,14 +3183,51 @@
             // 1. 初始化總價與按鈕狀態
             updateTotal();
 
-            // 2. 初始化頁面載入時的支付方式狀態 (確保配送區塊正確顯示)
-            togglePaymentMethod();
+
+            // 2.根據訂單原始狀態恢復界面選擇
+            const initialDeliveryMethod = document.getElementById('initialDeliveryMethod')?.value;
+            const initialStoreId = document.getElementById('initialStoreId')?.value;
+
+            // 如果訂單已經是線下支付或門店自取，恢復對應選項
+            if (initialDeliveryMethod === 'STORE_PICKUP' || initialDeliveryMethod === 'OFFLINE_DIRECT') {
+                // 1. 切換到「線下店鋪支付」或確保「門店自取」被選中
+                // 注意：如果你的業務邏輯是「線下支付」必然伴隨「門店自取」，則選中 pay-offline
+                const offlineRadio = document.getElementById('pay-offline');
+                const pickupRadio = document.getElementById('delivery-pickup');
+
+                if (offlineRadio) {
+                    offlineRadio.checked = true;
+                    togglePaymentMethod(); // 觸發 UI 變化，顯示 storeSelection
+                }
+
+                if (pickupRadio) {
+                    pickupRadio.checked = true;
+                    toggleDeliveryMethod(); // 觸發 UI 變化，確保 storeSelection 顯示
+                }
+
+                // 2. 如果有初始門店 ID，自動選中下拉框中的對應門店
+                if (initialStoreId && initialStoreId !== '') {
+                    const storeSelect = document.getElementById('storeSelect');
+                    if (storeSelect) {
+                        storeSelect.value = initialStoreId;
+                        // 觸發 onchange 事件以加載門店詳情和營業時間
+                        storeSelect.dispatchEvent(new Event('change'));
+                    }
+                }
+            } else {
+                // 如果是快遞 (EXPRESS)，確保線上支付被選中
+                const onlineRadio = document.getElementById('pay-online');
+                if (onlineRadio) {
+                    onlineRadio.checked = true;
+                    togglePaymentMethod();
+                }
+            }
 
             // 3. 初始化日期選擇器（只對 NEXT_DAY 模式）
             initDeliveryDateSelector();
 
             // ==========================================
-            // 4. 【新增】處理無配送模式 (NONE) 的初始化邏輯
+            // 4. 處理無配送模式 (NONE) 的初始化邏輯
             // ==========================================
             const deliveryMode = /*[[${deliveryMode}]]*/ 'NEXT_DAY';
             const expressOption = document.getElementById('delivery-express');
@@ -3192,6 +3252,47 @@
 
             // 初始化地址下拉框的隱藏域
             updateDeliveryAddressSelection();
+
+            // 監聽店鋪下拉框變化，實時更新庫存限制
+            const storeSelectEl = document.getElementById('storeSelect');
+            if (storeSelectEl) {
+                storeSelectEl.addEventListener('change', function () {
+                    const currentStoreId = this.value;
+                    const storeStockMap = /*[[${storeStockMap}]]*/ {};
+
+                    // 遍歷所有購物車卡片，更新其庫存限制和按鈕狀態
+                    document.querySelectorAll('.cart-item-card').forEach(card => {
+                        const productId = parseInt(card.getAttribute('data-product-id'));
+                        const qtyElement = card.querySelector('.qty-value');
+                        const currentQty = parseInt(qtyElement.textContent);
+
+                        // 獲取該店鋪該商品的真實庫存
+                        let realMaxStock = 0;
+                        if (currentStoreId && currentStoreId !== '') {
+                            const storeStock = storeStockMap[currentStoreId] || {};
+                            realMaxStock = storeStock[productId] || 0;
+                        } else {
+                            // 未選店鋪時回退到總倉庫存
+                            realMaxStock = parseInt(card.getAttribute('data-stock')) || 0;
+                        }
+
+                        // 更新 "+" 按鈕的禁用狀態
+                        const plusBtn = card.querySelector('.qty-btn:last-child');
+                        if (plusBtn) {
+                            plusBtn.disabled = (currentQty >= realMaxStock);
+                        }
+
+                        // 如果當前數量已經超過了新店鋪的庫存，強制提示或重置
+                        if (currentQty > realMaxStock && realMaxStock > 0) {
+                            // 可以選擇自動重置為最大庫存，或者僅禁用按鈕讓用戶手動減
+                            // 這裡為了安全，僅禁用加號按鈕，並在用戶點擊加號時觸發上面的 updateQuantity 攔截
+                        }
+                    });
+
+                    // 同時觸發原有的店鋪信息渲染和庫存驗證
+                    updateStoreInfo();
+                });
+            }
         });
 
         // 点击遮罩层关闭确认框 (包含取消全選 和 取消訂單)

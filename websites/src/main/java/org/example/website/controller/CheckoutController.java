@@ -54,6 +54,10 @@ public class CheckoutController {
         model.addAttribute("user", currentUser);
 
         Order order = orderService.getOrderByOrderNoAndUsername(orderNo, username);
+
+        if (order.getOfflineStore()!=null) {
+            order.getOfflineStore().getName();
+        }
         List<OrderItem> orderItems = orderItemRepository.findByOrder_OrderNo(orderNo);
 
         model.addAttribute("order", order);

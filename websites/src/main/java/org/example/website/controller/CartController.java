@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.website.dto.Result;
 import org.example.website.entity.Cart;
+import org.example.website.entity.OfflineStore;
 import org.example.website.entity.User;
 import org.example.website.repository.CartRepository;
 import org.example.website.service.CartService;
@@ -66,17 +67,20 @@ public class CartController {
         User user = userService.findByUsername(username);
         model.addAttribute("user", user);
 
-        // 2. 獲取所有購物車數據
+        // 2. 獲取所有購物車數據 (用於分頁與配送選項構建)
         List<Cart> allCartItems = cartService.getCartItems(username);
         long cartCount = cartService.getCartCount(username);
 
-        // 3. 計算總價 (基於所有選中商品，不受分頁影響)
-        double totalAmount = allCartItems.stream()
-                .filter(Cart::getSelected)
+        // 【核心修復】：不再依賴內存分頁後的列表計算，而是直接查庫獲取全局已選中數據
+        // 確保無論用戶在第幾頁，統計數據都來自數據庫真實狀態
+        List<Cart> allSelectedItems = cartRepository.findByUser_UsernameAndSelectedTrue(username);
+
+        long selectedCount = allSelectedItems.size();
+        double globalTotalAmount = allSelectedItems.stream()
                 .mapToDouble(item -> item.getPrice().doubleValue() * item.getQuantity())
                 .sum();
 
-        // 4. 內存分頁計算
+        // 3. 內存分頁計算
         int size = 20;
         int totalElements = allCartItems.size();
         int totalPages = (totalElements == 0) ? 1 : (int) Math.ceil((double) totalElements / size);
@@ -85,7 +89,7 @@ public class CartController {
         if (page < 1) page = 1;
         if (page > totalPages) page = totalPages;
 
-        // 5. 按時間倒序排序後截取當前頁數據
+        // 4. 按時間倒序排序後截取當前頁數據
         allCartItems.sort(Comparator.comparing(Cart::getCreatedAt).reversed());
         int fromIndex = (page - 1) * size;
         int toIndex = Math.min(fromIndex + size, totalElements);
@@ -93,7 +97,7 @@ public class CartController {
                 ? allCartItems.subList(fromIndex, toIndex)
                 : new ArrayList<>();
 
-        // 6. 僅對【當前頁數據】進行日期分組
+        // 5. 僅對【當前頁數據】進行日期分組
         Function<Cart, String> dateClassifier = item -> {
             LocalDate date = item.getCreatedAt().toLocalDate();
             LocalDate today = LocalDate.now();
@@ -121,19 +125,81 @@ public class CartController {
                         sortedListCollector
                 ));
 
-        // 7. 使用 PaginationUtils 生成智能分頁 (傳入 0-based 索引)
+        // 6. 使用 PaginationUtils 生成智能分頁 (傳入 0-based 索引)
         List<PaginationUtils.PageItem> smartPages =
                 PaginationUtils.generateSmartPagination(page - 1, totalPages);
 
-        // 8. 傳遞數據給 Thymeleaf
+        // ==========================================
+        // 【新增】構建配送方式下拉選項與智能默認值
+        // ==========================================
+        List<Map<String, Object>> deliveryOptions = new ArrayList<>();
+
+        // 檢查是否有線上商品 (isOffline == false 或 null)
+        boolean hasOnlineItems = allCartItems.stream()
+                .anyMatch(item -> !Boolean.TRUE.equals(item.getIsOffline()));
+
+        if (hasOnlineItems) {
+            Map<String, Object> onlineOption = new HashMap<>();
+            onlineOption.put("value", "ONLINE");
+            onlineOption.put("label", "📦 網購配送 (線上總倉)");
+            onlineOption.put("storeId", null);
+            deliveryOptions.add(onlineOption);
+        }
+
+        // 檢查是否有線下商品，並按門店分組 (使用 LinkedHashMap 保持插入順序)
+        Map<Long, String> offlineStoresMap = new LinkedHashMap<>();
+        for (Cart item : allCartItems) {
+            if (Boolean.TRUE.equals(item.getIsOffline()) && item.getStore() != null) {
+                Long storeId = item.getStore().getStoreId();
+                // 避免重複添加同一個門店
+                if (!offlineStoresMap.containsKey(storeId)) {
+                    offlineStoresMap.put(storeId, item.getStore().getName());
+                }
+            }
+        }
+
+        for (Map.Entry<Long, String> entry : offlineStoresMap.entrySet()) {
+            Map<String, Object> storeOption = new HashMap<>();
+            storeOption.put("value", "STORE_" + entry.getKey()); // 標識符: STORE_門店ID
+            storeOption.put("label", "🏪 門店自取 - " + entry.getValue());
+            storeOption.put("storeId", entry.getKey());
+            deliveryOptions.add(storeOption);
+        }
+
+        // 【新增】智能計算默認配送方式
+        String defaultDeliveryValue = "ONLINE"; // 默認為網購
+
+        // 檢查當前購物車中是否有「已勾選」且屬於「線下門店」的商品
+        boolean hasSelectedOfflineItems = allCartItems.stream()
+                .filter(Cart::getSelected) // 只看已勾選的商品
+                .anyMatch(item -> Boolean.TRUE.equals(item.getIsOffline()) && item.getStore() != null);
+
+        if (hasSelectedOfflineItems) {
+            // 獲取第一個已勾選的線下商品的門店ID
+            Long firstStoreId = allCartItems.stream()
+                    .filter(Cart::getSelected)
+                    .filter(item -> Boolean.TRUE.equals(item.getIsOffline()) && item.getStore() != null)
+                    .findFirst()
+                    .map(item -> item.getStore().getStoreId())
+                    .orElse(null);
+
+            if (firstStoreId != null) {
+                defaultDeliveryValue = "STORE_" + firstStoreId;
+            }
+        }
+
+        // 7. 傳遞數據給 Thymeleaf (使用全局真實數據)
         model.addAttribute("cartItems", pagedCartItems);
         model.addAttribute("groupedCartItems", groupedPagedCartItems);
-        model.addAttribute("totalAmount", totalAmount);
+        model.addAttribute("totalAmount", globalTotalAmount); //  使用全局總計
+        model.addAttribute("selectedCount", selectedCount);   //  使用全局數量
         model.addAttribute("cartCount", cartCount);
         model.addAttribute("currentPage", page);         // 1-based 給前端顯示
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalElements", totalElements);
         model.addAttribute("smartPages", smartPages);
+        model.addAttribute("deliveryOptions", deliveryOptions);
+        model.addAttribute("defaultDeliveryValue", defaultDeliveryValue);
 
         return "cart-detail";
     }
@@ -338,11 +404,17 @@ public class CartController {
                 .mapToDouble(item -> item.getPrice().doubleValue() * item.getQuantity())
                 .sum();
 
+        // 【核心修復】：統計全局已選中的商品件數
+        long selectedCount = cartItems.stream()
+                .filter(Cart::getSelected)
+                .count();
+
         // 5. 組裝最終響應
         response.put("success", true);
         response.put("cartItems", cleanCartItems);
         response.put("cartCount", cartService.getCartCount(username));
         response.put("totalAmount", totalAmount);
+        response.put("selectedCount", selectedCount);
         response.put("deliveryOptions", deliveryOptions); // 返回結構化選項列表
         response.put("defaultDeliveryValue", defaultDeliveryValue); // 將默認值傳給前端
 

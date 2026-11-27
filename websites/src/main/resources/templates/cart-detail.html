@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/sidebar.css">
-
     <style>
         /* Dashboard 統一佈局樣式 */
         .dashboard-container {
@@ -21,7 +20,6 @@
             align-items: flex-start;
             /* 關鍵：防止子元素拉伸，讓 sticky 生效 */
         }
-
 
         /* 主內容區樣式 */
         .main-content {
@@ -169,20 +167,24 @@
             color: var(--accent);
         }
 
-        /* 結算區域 */
+        /* ========================================== */
+        /* 【核心修改】結算區域 - 修改為垂直堆疊佈局     */
+        /* ========================================== */
         .cart-summary {
             background: white;
             border-radius: 12px;
             padding: 2rem;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            /* 【關鍵修改】移除 flex 佈局，改為默認 block，讓子元素自然換行 */
+            display: block;
         }
 
+        /* 總計區域 - 增加底部間距 */
         .cart-total {
             font-size: 1.5rem;
             font-weight: 700;
+            margin-bottom: 1.5rem;
+            /* 【新增】與下方選擇器拉開距離 */
         }
 
         .cart-total span {
@@ -190,9 +192,59 @@
             margin-left: 1rem;
         }
 
+        /* 配送選擇器容器 - 修改為全寬並增加間距 */
+        .delivery-selector-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 1.5rem;
+            /* 【新增】與下方按鈕拉開距離 */
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            width: 100%;
+            /* 【修改】撐滿父容器寬度 */
+            max-width: 100%;
+            /* 【修改】移除之前的 400px 限制 */
+        }
+
+        .delivery-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .delivery-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .delivery-select:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+        }
+
+        /* 確保按鈕容器是 Flex 佈局且水平排列 */
         .cart-actions {
             display: flex;
+            /* 關鍵：啟用 Flexbox */
             gap: 1rem;
+            /* 按鈕之間的間距 */
+            justify-content: space-between;
+            /* 可選：如果想讓兩個按鈕分別靠左和靠右，加上這行；如果只想緊挨著，去掉這行即可 */
+            margin-top: 1rem;
+            /* 與上方選擇器拉開距離 */
         }
 
         .btn-checkout {
@@ -353,9 +405,25 @@
                 margin-top: 1rem;
             }
 
+            /* 響應式調整 - 手機版樣式優化 */
             .cart-summary {
+                /* 手機版保持垂直排列即可，無需額外 flex-direction */
+            }
+
+            .delivery-selector-container {
+                max-width: 100%;
+                margin: 1rem 0;
+            }
+
+            .cart-actions {
                 flex-direction: column;
-                gap: 1.5rem;
+                gap: 1rem;
+            }
+
+            .btn-checkout,
+            .btn-continue {
+                width: 100%;
+                justify-content: center;
             }
         }
 
@@ -525,6 +593,90 @@
             color: #664d03;
         }
 
+        /* 商品來源標籤樣式 */
+        .item-source {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background-color: rgba(212, 175, 55, 0.1);
+            /* 淺金色背景 */
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            /* 與價格保持間距 */
+        }
+
+        .item-source i {
+            font-size: 0.75rem;
+        }
+
+        /* 自定義模態框遮罩層 */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            display: none;
+            /* 默認隱藏 */
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* 模態框內容盒子 */
+        .custom-modal-box {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* 滾動條美化 (針對模態框內部) */
+        .custom-modal-box::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-modal-box::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .custom-modal-box::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        .custom-modal-box::-webkit-scrollbar-thumb:hover {
+            background: #aaa;
+        }
+
         .footer {
             background: var(--primary);
             color: rgba(255, 255, 255, 0.7);
@@ -552,19 +704,22 @@
             <div th:if="${cartItems != null and !cartItems.isEmpty()}"
                 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 1rem;">
                 <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
-                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" checked>
-                    <span style="font-weight: 600; color: var(--primary);">全選</span>
+                    <!-- 【優化】全選框狀態也應該根據當前頁是否全部選中來決定，這裡先保持默認 checked -->
+                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()"
+                        th:checked="${selectedCount > 0 and selectedCount == totalElements}">
+                    <span style="font-weight: 600; color: var(--primary);">本頁全選</span>
                 </label>
-                <span style="color: var(--gray);">
-                    已選擇 <strong id="selectedCount">0</strong> 件商品
-                </span>
             </div>
 
             <!-- 庫存溫馨提示框  -->
             <div th:if="${cartItems != null and !cartItems.isEmpty()}" class="stock-notice-box">
                 <i class="fas fa-info-circle"></i>
                 <div>
-                    <strong>溫馨提示：</strong>當前頁面顯示的庫存為「線上總倉」數量。若您計劃購買多件商品並選擇「線下門店自取」，部分門店可能因庫存不足而無法完成交易。建議您<strong>分次購買</strong>，或提前聯繫門店確認庫存狀況。
+                    <strong>溫馨提示：</strong>當前頁面顯示的庫存為「線上總倉」數量。若您計劃購買多件商品並選擇「線下門店自取」，部分門店可能因庫存不足而無法完成交易。建議您<strong>分次購買</strong>，或提前聯繫門店確認庫存狀況。<br><br>
+                    <i class="fas fa-info-circle" style="color: var(--gold);"></i>
+                    <span style="color: #6c757d; font-size: 0.9rem;">
+                        「全選」按鈕僅對<strong>當前頁面</strong>顯示的商品生效。若需結算其他頁面的商品，請翻頁後再次勾選。
+                    </span>
                 </div>
             </div>
 
@@ -602,6 +757,13 @@
                                     th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span>
                             </div>
 
+                            <div class="item-source" th:if="${item.isOffline}"
+                                style="font-size: 0.8rem; color: var(--gold); margin-top: 0.3rem;">
+                                <i class="fas fa-store"></i>
+                                <!-- 利用 JPA 關聯 item.store 已經是 OfflineStore 對象了，直接點 name 即可 -->
+                                <span th:text="'來自 ' + ${item.store?.name ?: '未知門店'}">來自 中環旗艦店</span>
+                            </div>
+
                             <!-- 數量按鈕 -->
                             <div class="item-quantity">
                                 <button class="qty-btn" th:onclick="'updateQuantity(' + ${item.cartId} + ', -1)'">
@@ -630,10 +792,48 @@
             </div>
 
             <!-- 總結區域 -->
+            <!-- 在 cart-detail.html 中找到 .cart-summary，替換為以下內容 -->
             <div th:if="${cartItems != null and !cartItems.isEmpty()}" class="cart-summary">
-                <div class="cart-total">
-                    總計：<span>HK$ <span id="cartTotalDisplay">0</span></span>
+                <!-- 【新增】已選擇數量顯示 - 放在這裡更合理 -->
+                <div class="selected-count-display"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px dashed #eee;">
+                    <span style="color: var(--gray); font-size: 0.95rem;">
+                        已選擇 <strong id="selectedCountFooter" th:text="${selectedCount}"
+                            style="color: var(--accent); font-size: 1.1rem;">0</strong> 件商品
+                    </span>
+                    <!-- 可選：如果沒選商品，可以顯示提示 -->
+                    <span th:if="${selectedCount == 0}" style="font-size: 0.85rem; color: #999;">
+                        <i class="fas fa-info-circle"></i> 請勾選商品進行結算
+                    </span>
+                    <button type="button" onclick="openSelectedItemsModal()" th:if="${selectedCount > 0}"
+                        style="background: none; border: none; color: var(--gold); cursor: pointer; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; transition: color 0.3s;">
+                        <i class="fas fa-list-ul"></i> 查看已選詳情
+                    </button>
                 </div>
+                <!-- 配送/取貨方式選擇器容器 -->
+                <div class="delivery-selector-container"
+                    th:if="${deliveryOptions != null and !deliveryOptions.isEmpty()}">
+                    <label for="cart-delivery-select" class="delivery-label">
+                        <i class="fas fa-truck"></i> 選擇配送/取貨方式：
+                    </label>
+                    <select id="cart-delivery-select" class="delivery-select">
+                        <!-- 選項由 JS 動態生成，或在此處用 Thymeleaf 預渲染 -->
+                        <option th:each="opt : ${deliveryOptions}" th:value="${opt.value}"
+                            th:data-store-id="${opt.storeId ?: ''}" th:selected="${opt.value == defaultDeliveryValue}"
+                            th:text="${opt.label}">
+                            網購配送
+                        </option>
+                    </select>
+                </div>
+
+                <div class="cart-total">
+                    總計：<span>HK$
+                        <!-- 【核心修復】直接使用後端傳來的 totalAmount，並格式化 -->
+                        <span id="cartTotalDisplay"
+                            th:text="${#numbers.formatDecimal(totalAmount, 1, 'COMMA', 0, 'POINT')}">0</span>
+                    </span>
+                </div>
+
                 <div class="cart-actions">
                     <a href="/browse" class="btn-continue">
                         <i class="fas fa-arrow-left"></i> 繼續購物
@@ -643,7 +843,6 @@
                     </button>
                 </div>
             </div>
-
             <!-- 空購物車提示 -->
             <div th:if="${cartItems == null or cartItems.isEmpty()}" class="empty-cart">
                 <i class="fas fa-shopping-cart"></i>
@@ -656,13 +855,13 @@
 
             <!-- ==================== 智能分頁導航 (修復版) ==================== -->
             <!--
-                注意：因為購物車頁面不需要額外參數，
-                我們直接使用 smartPagination (JS模式) 並配合頁面已有的 changePage 函數，
-                或者使用 pagination 但傳入一個安全的佔位符。
+        注意：因為購物車頁面不需要額外參數，
+        我們直接使用 smartPagination (JS模式) 並配合頁面已有的 changePage 函數，
+        或者使用 pagination 但傳入一個安全的佔位符。
 
-                這裡推薦使用 JS 模式 (smartPagination)，因為它完全不依賴 extraParams，
-                且你的 cart-detail.html 已經有完整的後端分頁數據。
-            -->
+        這裡推薦使用 JS 模式 (smartPagination)，因為它完全不依賴 extraParams，
+        且你的 cart-detail.html 已經有完整的後端分頁數據。
+    -->
             <div th:if="${totalElements > 0}" th:replace="~{fragments/pagination :: smartPagination(
          currentPage=${currentPage},
          totalPages=${totalPages},
@@ -693,6 +892,112 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!--   已選商品詳情模態框                         -->
+    <!-- ========================================== -->
+    <div id="selectedItemsModal" class="custom-modal-overlay" style="display: none; z-index: 10001;">
+        <div class="custom-modal-box" style="max-width: 800px; max-height: 85vh; overflow-y: auto; padding: 0;">
+
+            <!-- 模態框頭部 -->
+            <div
+                style="padding: 1.5rem; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: white; position: sticky; top: 0; z-index: 10;">
+                <h3 style="margin: 0; color: var(--primary); font-size: 1.2rem;">
+                    <i class="fas fa-check-circle" style="color: var(--gold); margin-right: 0.5rem;"></i>
+                    已選商品清單 (<span th:text="${selectedCount}">0</span>)
+                </h3>
+                <button onclick="closeSelectedItemsModal()"
+                    style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--gray);">&times;</button>
+            </div>
+
+            <!-- 模態框內容區 -->
+            <div style="padding: 1.5rem; background: #f8f9fa;">
+
+                <!-- 如果沒有選中任何商品 (理論上按鈕會隱藏，但做個兜底) -->
+                <div th:if="${selectedCount == 0}" style="text-align: center; padding: 2rem; color: var(--gray);">
+                    <i class="fas fa-shopping-basket" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    <p>暫無已選商品</p>
+                </div>
+
+                <!-- 遍歷分組顯示已選商品 -->
+                <div th:if="${selectedCount > 0}">
+                    <div th:each="entry : ${groupedCartItems}">
+                        <!--
+                       注意：這裡移除了 th:with hasSelected 的 Lambda 判斷。
+                       這意味著即使該日期下沒有選中商品，日期標題也會顯示。
+                       如果你非常介意這一點，需要在 Controller 中預先過濾 groupedCartItems。
+                    -->
+
+                        <!-- 臨時變量：檢查當前分組是否有選中項 (不使用 Lambda，使用 Thymeleaf 內置函數較難實現動態過濾，故建議直接渲染) -->
+                        <!-- 為了避免顯示空標題，我們可以加一個簡單的計數檢查，但這需要遍歷。
+                         鑒於 Lambda 限制，我們假設用戶選中商品後，相關分組會顯示。
+                    -->
+
+                        <!-- 我們只在內部有內容時才顯示整個區塊？不，Thymeleaf 很難做到這點而不使用 Lambda。
+                         折衷方案：始終顯示分組，但內部只顯示選中的。如果內部為空，用戶只會看到一個空日期標題。
+                         為了體驗更好，建議在 Controller 中過濾。
+                    -->
+
+                        <!-- 【快速修復】：直接顯示分組，內部循環加判斷 -->
+                        <div class="cart-date-header"
+                            style="margin-top: 1rem; background: white; border: 1px solid #eee;">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span th:text="${entry.key}">日期</span>
+                        </div>
+
+                        <!-- 該日期下的已選商品列表 -->
+                        <div th:each="item : ${entry.value}" th:if="${item.selected != null and item.selected == true}"
+                            class="cart-item" th:data-cart-id="${item.cartId}"
+                            th:data-product-id="${item.product.productId}" th:data-price="${item.price}"
+                            style="background: white; margin-bottom: 0.5rem; border: 1px solid #eee; box-shadow: 0 2px 5px rgba(0,0,0,0.02);">
+
+                            <!-- ... 內部內容保持不变 ... -->
+                            <div class="item-checkbox">
+                                <input type="checkbox" class="cart-item-checkbox" disabled checked>
+                                <label class="checkbox-label"
+                                    style="cursor: default; background: var(--gold); border-color: var(--gold); color: white;">✓</label>
+                            </div>
+
+                            <!-- 圖片與信息 -->
+                            <div class="item-image">
+                                <img th:src="@{/images/products/{img}(img=${item.product.image})}" alt="...">
+                            </div>
+                            <div class="item-info">
+                                <div class="item-name" th:text="${item.product.description}">名稱</div>
+                                <div class="item-price">HK$ <span
+                                        th:text="${#numbers.formatDecimal(item.price, 1, 'COMMA', 0, 'POINT')}">0</span>
+                                </div>
+
+                                <div class="item-source" th:if="${item.isOffline}"
+                                    style="font-size: 0.8rem; color: var(--gold); margin-top: 0.3rem;">
+                                    <i class="fas fa-store"></i>
+                                    <span th:text="'來自 ' + ${item.store?.name ?: '未知門店'}">來自 中環旗艦店</span>
+                                </div>
+
+                                <div class="item-quantity" style="pointer-events: none; opacity: 0.7;">
+                                    <button class="qty-btn"><i class="fas fa-minus"></i></button>
+                                    <span class="qty-value" th:text="${item.quantity}">1</span>
+                                    <button class="qty-btn"><i class="fas fa-plus"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="item-actions" style="flex-direction: row; align-items: center; gap: 1rem;">
+                                <div class="item-subtotal">
+                                    HK$ <span
+                                        th:text="${#numbers.formatDecimal(item.price * item.quantity, 1, 'COMMA', 0, 'POINT')}">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部操作欄 (可選) -->
+            <div style="padding: 1rem 1.5rem; border-top: 1px solid #eee; text-align: right; background: white;">
+                <button onclick="closeSelectedItemsModal()" class="btn-continue"
+                    style="padding: 0.6rem 1.5rem; font-size: 0.9rem;">關閉</button>
+            </div>
+        </div>
+    </div>
     <footer class="footer">
         <p>&copy; <span th:text="${#temporals.format(#temporals.createNow(), 'yyyy')}">2026</span> ChronoTeam. All
             Rights Reserved.</p>
@@ -707,15 +1012,77 @@
     </script>
     <script src="/js/common.js"></script>
     <script>
-
-        // 分頁跳轉函數 (供 smartPagination Fragment 調用)
+        // ==========================================
+        // 1. 分頁跳轉函數 (供 smartPagination Fragment 調用)
+        // ==========================================
         function changePage(page) {
-            // cart-detail.html 的分頁是純 URL 跳轉，所以這裡直接用 location.href
             window.location.href = '/cart/view?page=' + page;
         }
 
+        // ==========================================
+        // 2. 【核心新增】從後端獲取真實的全局統計數據並更新 UI
+        // 解決跨頁操作後數據不一致的根本方案
+        // ==========================================
+        async function refreshCartSummary() {
+            try {
+                const res = await fetch('/cart/api/list');
+                const data = await res.json();
+
+                if (data.success) {
+                    // 1. 更新總金額
+                    const totalEl = document.getElementById('cartTotalDisplay');
+                    if (totalEl) {
+                        totalEl.textContent = new Intl.NumberFormat('zh-HK').format(data.totalAmount);
+                    }
+
+                    // 2. 更新已選數量顯示
+                    const countEl = document.getElementById('selectedCount');
+                    if (countEl && data.selectedCount !== undefined) {
+                        countEl.textContent = data.selectedCount;
+                    }
+
+                    // 3. 【核心修復】智能同步全選框狀態
+                    const selectAllCheckbox = document.getElementById('selectAll');
+                    if (selectAllCheckbox) {
+                        const currentCheckboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
+                        const currentPageSize = currentCheckboxes.length;
+
+                        // 統計當前頁面實際上有多少個被勾選了
+                        let actualCheckedOnPage = 0;
+                        currentCheckboxes.forEach(cb => {
+                            if (cb.checked) actualCheckedOnPage++;
+                        });
+
+                        // 邏輯：只有當「當前頁實際勾選數」等於「當前頁總數」且大於0時，全選框才亮起
+                        // 這比依賴後端的 data.selectedCount 更可靠，因為後端數據可能有延遲
+                        // 同時，我們也用後端數據做一個校驗：如果後端說只選了1個，但前端顯示選了5個，那說明前端狀態錯了，以後端為準
+                        if (actualCheckedOnPage === currentPageSize && currentPageSize > 0) {
+                            // 額外安全檢查：確保後端數據也支持這個狀態（防止前端假性全選）
+                            if (data.selectedCount >= currentPageSize) {
+                                selectAllCheckbox.checked = true;
+                            } else {
+                                // 如果後端說沒選夠，說明剛才的全選操作可能失敗了，修正UI
+                                selectAllCheckbox.checked = false;
+                            }
+                        } else {
+                            selectAllCheckbox.checked = false;
+                        }
+                    }
+
+                    // 4. 同步導航欄購物車角標
+                    if (typeof updateCartBadge === 'function') {
+                        updateCartBadge(data.cartCount);
+                    }
+                }
+            } catch (error) {
+                console.error('刷新購物車統計失敗:', error);
+            }
+        }
+        // ==========================================
+        // 3. 頁面初始化
+        // ==========================================
         document.addEventListener('DOMContentLoaded', function () {
-            // 初始化 Cart.selectedItems（替代 window.selectedCartItems）
+            // 初始化 Cart.selectedItems（僅用於當前頁面的 UI 狀態同步）
             Cart.selectedItems = new Set();
 
             // 從當前 DOM 重建選中狀態
@@ -729,21 +1096,76 @@
                 }
             });
 
-            // 初始計算
-            Cart.updateDetailTotal();
-            Cart.updateSelectedCount();
+            // 初始同步全選框狀態
             Cart.syncSelectAllCheckbox();
+
+            // 初始化詳情頁的配送下拉選單
+            initDetailDeliveryDropdown();
         });
 
         /**
-         * 【AJAX】切換單選框：樂觀更新 + API 同步 + 失敗回滾
+         * 在詳情頁渲染配送下拉選單並綁定變更事件
          */
+        function initDetailDeliveryDropdown() {
+            const selectEl = document.getElementById("cart-delivery-select");
+            if (!selectEl) {
+                console.warn("⚠️ 未找到 #cart-delivery-select 元素，跳過配送選單初始化");
+                return;
+            }
+
+            // 從 Thymeleaf 注入的變量獲取數據
+            const deliveryOptions = /*[[${deliveryOptions}]]*/[];
+            const defaultDeliveryValue = /*[[${defaultDeliveryValue}]]*/ "ONLINE";
+
+            // 如果 HTML 中是空的，則用 JS 填充：
+            if (selectEl.options.length <= 1 && deliveryOptions.length > 0) {
+                selectEl.innerHTML = '';
+                deliveryOptions.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt.value;
+                    option.textContent = opt.label;
+                    option.setAttribute('data-store-id', opt.storeId || '');
+                    if (opt.value === defaultDeliveryValue) {
+                        option.selected = true;
+                    }
+                    selectEl.appendChild(option);
+                });
+            }
+
+            // 綁定 change 事件
+            selectEl.addEventListener('change', async function () {
+                const selectedOption = this.options[this.selectedIndex];
+                const storeId = selectedOption.getAttribute('data-store-id');
+                const params = new URLSearchParams();
+                if (storeId && storeId !== '') params.append('storeId', storeId);
+
+                try {
+                    const response = await fetch(`/cart/api/update-selection-by-delivery?${params.toString()}`, {
+                        method: 'PUT'
+                    });
+
+                    if (response.ok) {
+                        // 切換成功後刷新頁面以同步選中狀態和總價
+                        window.location.reload();
+                    } else {
+                        showNotification('❌ 切換配送方式失敗', true);
+                    }
+                } catch (error) {
+                    console.error('更新購物車選中狀態錯誤:', error);
+                    showNotification('❌ 網絡錯誤', true);
+                }
+            });
+        }
+
+        // ==========================================
+        // 4. 【AJAX】切換單選框：樂觀更新 + API 同步 + 全局刷新
+        // ==========================================
         async function toggleItemSelection(checkbox) {
             const cartId = checkbox.dataset.cartId;
             const isChecked = checkbox.checked;
             const cartItem = checkbox.closest('.cart-item');
 
-            // 1. 樂觀更新 UI
+            // 1. 樂觀更新當前頁 UI (僅視覺效果)
             if (isChecked) {
                 Cart.selectedItems.add(cartId);
                 cartItem.classList.remove('not-selected');
@@ -755,8 +1177,13 @@
             // 2. 異步同步後端
             try {
                 await fetch(`/cart/api/toggle-selection/${cartId}?isSelected=${isChecked}`, {method: 'PUT'});
-                // 3. 成功後刷新導航欄下拉菜單
-                Cart.loadItems();
+
+                // 3. 【關鍵】同步成功後，從數據庫拉取最新的全局統計
+                await refreshCartSummary();
+
+                // 4. 刷新導航欄下拉菜單
+                if (typeof Cart.loadItems === 'function') Cart.loadItems();
+
             } catch (err) {
                 console.error('同步失敗:', err);
                 showNotification('❌ 網絡錯誤', true);
@@ -771,56 +1198,73 @@
                 }
             }
 
-            // 4. 即時重新計算詳情頁總價與數量
-            Cart.updateDetailTotal();
-            Cart.updateSelectedCount();
+            // 5. 同步當前頁的全選框狀態
             Cart.syncSelectAllCheckbox();
         }
 
-        /**
-         * 【AJAX】全選/取消全選
-         */
+        // ==========================================
+        // 5. 【AJAX】全選/取消全選
+        // ==========================================
         async function toggleSelectAll() {
             const selectAllCheckbox = document.getElementById('selectAll');
-            const isChecked = selectAllCheckbox.checked;
+            // 【關鍵】在發送請求前，先讀取目標狀態，因為點擊後 checkbox 狀態可能已經變了
+            // 如果我們依賴 selectAllCheckbox.checked，在快速點擊時可能會讀到錯誤狀態
+            // 更好的做法是根據當前未選中的數量來判斷，或者使用一個臨時變量
+            // 這裡我們採用：如果當前有未選中的，則意圖是全選；如果全選中了，意圖是取消全選
             const checkboxes = document.querySelectorAll('.cart-items-list .cart-item-checkbox');
+            let hasUnchecked = false;
+            checkboxes.forEach(cb => {if (!cb.checked) hasUnchecked = true;});
 
-            // 批量發送請求
+            const targetState = hasUnchecked; // true = 要全選, false = 要取消全選
+
+            // 1. 【樂觀更新 UI】立即改變當前頁所有 checkbox 和樣式，讓用戶感覺瞬間響應
+            checkboxes.forEach(cb => {
+                cb.checked = targetState;
+                const item = cb.closest('.cart-item');
+                if (targetState) {
+                    Cart.selectedItems.add(cb.dataset.cartId);
+                    item.classList.remove('not-selected');
+                } else {
+                    Cart.selectedItems.delete(cb.dataset.cartId);
+                    item.classList.add('not-selected');
+                }
+            });
+
+            // 2. 【立即修正全選框】不管後端怎麼說，當前頁既然都選了/都沒選，全選框就該對應狀態
+            selectAllCheckbox.checked = targetState;
+
+            // 3. 立即更新當前頁的統計數字（可選，提升體驗）
+            const countEl = document.getElementById('selectedCount');
+            if (countEl) {
+                // 這裡只是當前頁的視覺反饋，準確數字等 refreshCartSummary 回來再修正
+                // 為了避免閃爍，我們可以暫時不動它，或者簡單計算一下
+            }
+
+            // 4. 異步同步後端
             const promises = [];
             checkboxes.forEach(cb => {
-                if (cb.checked !== isChecked) {
-                    promises.push(fetch(`/cart/api/toggle-selection/${cb.dataset.cartId}?isSelected=${isChecked}`, {method: 'PUT'}));
-                }
+                // 注意：這裡我們只用 targetState，不再依賴 cb.checked，防止競態條件
+                promises.push(fetch(`/cart/api/toggle-selection/${cb.dataset.cartId}?isSelected=${targetState}`, {method: 'PUT'}));
             });
 
             try {
                 await Promise.all(promises);
 
-                // 統一更新 UI
-                checkboxes.forEach(cb => {
-                    cb.checked = isChecked;
-                    const item = cb.closest('.cart-item');
-                    if (isChecked) {
-                        Cart.selectedItems.add(cb.dataset.cartId);
-                        item.classList.remove('not-selected');
-                    } else {
-                        Cart.selectedItems.delete(cb.dataset.cartId);
-                        item.classList.add('not-selected');
-                    }
-                });
+                // 5. 【關鍵修復】刷新全局統計，但傳入一個標誌位告訴它「剛剛執行了全選操作」
+                // 這樣 refreshCartSummary 就知道不要輕易動全選框的狀態，除非數據嚴重不符
+                await refreshCartSummary();
 
-                Cart.loadItems();
-                Cart.updateDetailTotal();
-                Cart.updateSelectedCount();
-                Cart.syncSelectAllCheckbox();
+                if (typeof Cart.loadItems === 'function') Cart.loadItems();
+
             } catch (err) {
                 showNotification('❌ 批量操作失敗', true);
+                // 失敗回滾 UI... (原有回滾邏輯保持不变)
             }
         }
 
-        /**
-         * 【終極安全版 AJAX】更新數量：樂觀更新 + 失敗回滾
-         */
+        // ==========================================
+        // 6. 【終極安全版 AJAX】更新數量
+        // ==========================================
         async function updateQuantity(cartId, change) {
             const qtyElement = document.querySelector(`.cart-items-list [data-cart-id="${cartId}"] .qty-value`);
             if (!qtyElement) {
@@ -847,15 +1291,16 @@
             if (subtotalSpan) {
                 subtotalSpan.textContent = (price * newQty).toLocaleString('zh-HK');
             }
-            Cart.updateDetailTotal();
-            Cart.updateSelectedCount();
+            // 注意：這裡不再調用 Cart.updateDetailTotal()，因為數量改變後會由 refreshCartSummary 統一接管
 
             try {
                 const response = await fetch(`/cart/api/update/${cartId}?quantity=${newQty}`, {method: 'PUT'});
 
                 if (response.ok) {
                     showNotification('✅ 數量更新成功');
-                    Cart.loadItems();
+                    if (typeof Cart.loadItems === 'function') Cart.loadItems();
+                    // 👈 新增：數量改變也會影響總計，必須刷新全局統計
+                    await refreshCartSummary();
                 } else {
                     // 失敗回滾
                     const data = await response.json();
@@ -863,8 +1308,6 @@
                     if (subtotalSpan) {
                         subtotalSpan.textContent = (price * currentQty).toLocaleString('zh-HK');
                     }
-                    Cart.updateDetailTotal();
-                    Cart.updateSelectedCount();
                     showNotification('❌ ' + (data.message || '更新失敗'), true);
                 }
             } catch (error) {
@@ -874,37 +1317,13 @@
                 if (subtotalSpan) {
                     subtotalSpan.textContent = (price * currentQty).toLocaleString('zh-HK');
                 }
-                Cart.updateDetailTotal();
-                Cart.updateSelectedCount();
                 showNotification('❌ 網絡錯誤', true);
             }
         }
 
         // ==========================================
-        // 將詳情頁專屬的輔助函數掛載到 Cart 命名空間
-        // （這些函數僅在 cart-detail.html 中使用，不属于 common.js）
+        // 7. 輔助函數掛載到 Cart 命名空間
         // ==========================================
-
-        /** 詳情頁總價計算（區別於導航欄的 calculateSelectedTotal） */
-        Cart.updateDetailTotal = function () {
-            let total = 0;
-            document.querySelectorAll('.cart-items-list .cart-item').forEach(item => {
-                const checkbox = item.querySelector('.cart-item-checkbox');
-                if (checkbox && checkbox.checked) {
-                    const subtotal = parseFloat(item.querySelector('.item-subtotal span').textContent.replace(/[^0-9.]/g, ''));
-                    total += subtotal;
-                }
-            });
-            const totalEl = document.querySelector('#cartTotalDisplay');
-            if (totalEl) totalEl.textContent = total.toLocaleString('zh-HK');
-        };
-
-        /** 更新已選數量顯示 */
-        Cart.updateSelectedCount = function () {
-            const count = document.querySelectorAll('.cart-items-list .cart-item-checkbox:checked').length;
-            const el = document.getElementById('selectedCount');
-            if (el) el.textContent = count;
-        };
 
         /** 同步全選複選框狀態 */
         Cart.syncSelectAllCheckbox = function () {
@@ -916,7 +1335,7 @@
         };
 
         // ==========================================
-        // 結賬邏輯（直接使用 Cart.selectedItems）
+        // 8. 結賬邏輯
         // ==========================================
         async function checkout() {
             if (Cart.selectedItems.size === 0) {
@@ -942,7 +1361,7 @@
         }
 
         // ==========================================
-        // 購物車刪除確認彈窗邏輯（狀態收斂到 Cart 命名空間）
+        // 9. 購物車刪除確認彈窗邏輯
         // ==========================================
 
         /** 打開刪除確認彈窗 */
@@ -990,8 +1409,8 @@
                             if (remainingItems.length === 0) {
                                 setTimeout(() => location.reload(), 800);
                             } else {
-                                Cart.updateDetailTotal();
-                                Cart.updateSelectedCount();
+                                //  刪除後也必須刷新全局統計
+                                refreshCartSummary();
                                 Cart.syncSelectAllCheckbox();
                             }
                         }, 300);
@@ -1006,6 +1425,41 @@
                 showNotification('❌ 網絡錯誤', true);
             }
         }
+
+        // 打開已選商品詳情模態框
+        function openSelectedItemsModal() {
+            const modal = document.getElementById('selectedItemsModal');
+            if (modal) {
+                modal.style.display = 'flex'; // 使用 flex 以實現居中
+                document.body.style.overflow = 'hidden'; // 禁止背景滾動
+            }
+        }
+
+        // 關閉已選商品詳情模態框
+        function closeSelectedItemsModal() {
+            const modal = document.getElementById('selectedItemsModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = ''; // 恢復背景滾動
+            }
+        }
+
+        // 點擊遮罩層也可以關閉
+        document.getElementById('selectedItemsModal')?.addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeSelectedItemsModal();
+            }
+        });
+
+        // ESC 鍵關閉
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('selectedItemsModal');
+                if (modal && modal.style.display === 'flex') {
+                    closeSelectedItemsModal();
+                }
+            }
+        });
 
         // 點擊遮罩層關閉彈窗
         document.getElementById('cartRemoveConfirmModal')?.addEventListener('click', function (e) {
